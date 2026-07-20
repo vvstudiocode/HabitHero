@@ -60,7 +60,8 @@ create table public.task_templates (
   icon text not null check (char_length(trim(icon)) between 1 and 32),
   sort_order integer not null default 0,
   created_at timestamptz not null default timezone('utc', now()),
-  updated_at timestamptz not null default timezone('utc', now())
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (family_id, id)
 );
 
 create table public.tasks (
@@ -78,6 +79,7 @@ create table public.tasks (
   completed_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
+  unique (family_id, id),
   foreign key (family_id, child_profile_id)
     references public.child_profiles (family_id, id)
     on delete cascade,
@@ -97,6 +99,7 @@ create table public.rewards (
   sort_order integer not null default 0,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
+  unique (family_id, id),
   foreign key (family_id, child_profile_id)
     references public.child_profiles (family_id, id)
     on delete cascade
@@ -125,6 +128,7 @@ create table public.reward_redemptions (
   status text not null default 'pending' check (status in ('pending', 'fulfilled', 'cancelled')),
   created_at timestamptz not null default timezone('utc', now()),
   fulfilled_at timestamptz,
+  unique (family_id, id),
   foreign key (family_id, child_profile_id)
     references public.child_profiles (family_id, id)
     on delete cascade,
