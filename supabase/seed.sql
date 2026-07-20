@@ -1,0 +1,3 @@
+-- HabitHero seed is intentionally empty: profiles reference auth.users, and
+-- test identities must be created by the local Auth test harness.
+-- Use synthetic UUIDs and names only in an isolated test fixture, never here.

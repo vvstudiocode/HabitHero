@@ -1,0 +1,962 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { useAppStore } from '../store';
+import { cn } from '../lib/utils';
+import { CheckCircle2, Circle, Clock, Gift, LayoutList, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
+import { TaskStatus, Task, Reward } from '../types';
+
+interface ParentDashboardProps {
+  onSwitchToChild: () => void;
+  onLogout: () => void;
+}
+
+type GroupedTask = {
+  id: string;
+  name: string;
+  points: number;
+  duration?: number;
+  children: { childId: string; childName: string; taskId: string }[];
+};
+
+type GroupedReward = {
+  id: string;
+  name: string;
+  points: number;
+  children: { childId: string; childName: string; rewardId: string }[];
+};
+
+export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardProps) {
+  const { state, loading, error, retry, stale, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = useAppStore();
+  const [activeTab, setActiveTab] = useState<'tasks' | 'templates' | 'rewards' | 'wishlist'>('tasks');
+  const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
+  const observedLoading = useRef(false);
+
+  const allTasks = state.children.flatMap(c => c.tasks.map(t => ({ ...t, childId: c.id, childName: c.name })));
+  const pendingTasks = allTasks.filter(t => t.status === 'pending');
+  const todoTasks = allTasks.filter(t => t.status === 'todo');
+  const completedTasks = allTasks.filter(t => t.status === 'completed');
+
+  const groupedTodoTasks = Object.values(todoTasks.reduce((acc, task) => {
+    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.isDaily ? 'daily' : 'once'}`;
+    if (!acc[key]) {
+      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, isDaily: task.isDaily, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
+    } else {
+      acc[key].children.push({ childId: task.childId, childName: task.childName, taskId: task.id });
+    }
+    return acc;
+  }, {} as Record<string, GroupedTask & { isDaily?: boolean }>)) as (GroupedTask & { isDaily?: boolean })[];
+
+  const allRewards = state.children.flatMap(c => c.rewards.map(r => ({ ...r, childId: c.id, childName: c.name })));
+  const groupedRewards = Object.values(allRewards.reduce((acc, reward) => {
+    const key = `${reward.name}-${reward.points}`;
+    if (!acc[key]) {
+      acc[key] = { id: key, name: reward.name, points: reward.points, children: [{ childId: reward.childId, childName: reward.childName, rewardId: reward.id }] };
+    } else {
+      acc[key].children.push({ childId: reward.childId, childName: reward.childName, rewardId: reward.id });
+    }
+    return acc;
+  }, {} as Record<string, GroupedReward>)) as GroupedReward[];
+
+  const allTickets = state.children.flatMap(c => c.tickets.map(t => ({ ...t, childId: c.id, childName: c.name })));
+  const pendingTickets = allTickets.filter(t => t.status === 'pending');
+
+  const allWishlist = state.children.flatMap(c => c.wishlist.map(w => ({ ...w, childId: c.id, childName: c.name })));
+  const totalPoints = state.children.reduce((acc, c) => acc + c.points, 0);
+
+  // Task form
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<(GroupedTask & { isDaily?: boolean }) | null>(null);
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newTaskPoints, setNewTaskPoints] = useState(5);
+  const [newTaskDuration, setNewTaskDuration] = useState<number | ''>(''); // in minutes
+  const [newTaskIsDaily, setNewTaskIsDaily] = useState(true);
+  const [newTaskTargetChildIds, setNewTaskTargetChildIds] = useState<string[]>([]);
+
+  // Reward form
+  const [showRewardForm, setShowRewardForm] = useState(false);
+  const [editingReward, setEditingReward] = useState<GroupedReward | null>(null);
+  const [newRewardName, setNewRewardName] = useState('');
+  const [newRewardPoints, setNewRewardPoints] = useState(50);
+  const [newRewardTargetChildIds, setNewRewardTargetChildIds] = useState<string[]>([]);
+
+  // Templates
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<import('../types').TaskTemplate | null>(null);
+  const [assigningTemplate, setAssigningTemplate] = useState<import('../types').TaskTemplate | null>(null);
+
+  // Settings Modal
+  const [showSettings, setShowSettings] = useState(false);
+  const [newChildName, setNewChildName] = useState('');
+  const [newParentPin, setNewParentPin] = useState('');
+  const [oldParentPin, setOldParentPin] = useState('');
+
+  // Wishlist Pricing
+  const [wishlistPricing, setWishlistPricing] = useState<Record<string, number>>({});
+
+  // Confirm Modals
+  const [taskToDelete, setTaskToDelete] = useState<GroupedTask | null>(null);
+  const [rewardToDelete, setRewardToDelete] = useState<GroupedReward | null>(null);
+  const [childToDelete, setChildToDelete] = useState<string | null>(null);
+  const [deleteChildPin, setDeleteChildPin] = useState('');
+  const [deleteChildPinError, setDeleteChildPinError] = useState('');
+  const [childNameDrafts, setChildNameDrafts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!mutationKind) return;
+    if (loading) {
+      observedLoading.current = true;
+      return;
+    }
+    if (error) {
+      setMutationKind(null);
+      return;
+    }
+    if (!observedLoading.current) return;
+    if (mutationKind === 'task') setShowTaskForm(false);
+    if (mutationKind === 'template') setShowTemplateForm(false);
+    if (mutationKind === 'reward') setShowRewardForm(false);
+    observedLoading.current = false;
+    setMutationKind(null);
+  }, [error, loading, mutationKind]);
+
+  const openTaskForm = (group?: GroupedTask & { isDaily?: boolean }) => {
+    if (group) {
+      setEditingTask(group);
+      setNewTaskName(group.name);
+      setNewTaskPoints(group.points);
+      setNewTaskDuration(group.duration || '');
+      setNewTaskIsDaily(group.isDaily ?? false);
+      setNewTaskTargetChildIds(group.children.map(c => c.childId));
+    } else {
+      setEditingTask(null);
+      setNewTaskName('');
+      setNewTaskPoints(5);
+      setNewTaskDuration('');
+      setNewTaskIsDaily(true);
+      setNewTaskTargetChildIds(state.children.map(c => c.id));
+    }
+    setShowTaskForm(true);
+  };
+
+  const handleSaveTask = async () => {
+    if (!newTaskName || newTaskTargetChildIds.length === 0) return;
+    const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
+    observedLoading.current = false;
+    setMutationKind('task');
+
+    try {
+    if (editingTask) {
+      // Handle updates/deletes/adds for grouped task
+      const existingChildIds = editingTask.children.map(c => c.childId);
+      
+      // Update or add
+      for (const childId of newTaskTargetChildIds) {
+        const existingChild = editingTask.children.find(c => c.childId === childId);
+        if (existingChild) {
+          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, isDaily: newTaskIsDaily });
+        } else {
+          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily });
+        }
+      }
+
+      // Delete removed
+      for (const childId of existingChildIds.filter(childId => !newTaskTargetChildIds.includes(childId))) {
+        if (!newTaskTargetChildIds.includes(childId)) {
+          const existingChild = editingTask.children.find(c => c.childId === childId);
+          if (existingChild) await deleteTask(childId, existingChild.taskId);
+        }
+      }
+    } else {
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily });
+    }
+    } catch { /* provider error is rendered above the tabs; keep form values intact */ }
+  };
+
+  const handleAssignTemplate = async () => {
+    if (!assigningTemplate || newTaskTargetChildIds.length === 0) return;
+    try {
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, isDaily: newTaskIsDaily });
+    } catch { /* provider error is rendered above the tabs; keep assignment open */ }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!newTaskName) return;
+    const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
+    observedLoading.current = false;
+    setMutationKind('template');
+    try {
+    if (editingTemplate) {
+      await updateTaskTemplate(editingTemplate.id, { name: newTaskName, points: newTaskPoints, duration });
+    } else {
+      await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration });
+    }
+    } catch { /* provider error is rendered above the tabs; keep form values intact */ }
+  };
+
+  const openTemplateForm = (template?: import('../types').TaskTemplate) => {
+    if (template) {
+      setEditingTemplate(template);
+      setNewTaskName(template.name);
+      setNewTaskPoints(template.points);
+      setNewTaskDuration(template.duration || '');
+    } else {
+      setEditingTemplate(null);
+      setNewTaskName('');
+      setNewTaskPoints(5);
+      setNewTaskDuration('');
+    }
+    setShowTemplateForm(true);
+  };
+
+  const openAssignTemplate = (template: import('../types').TaskTemplate) => {
+    setAssigningTemplate(template);
+    setNewTaskIsDaily(true);
+    setNewTaskTargetChildIds(state.children.map(c => c.id));
+  };
+
+  const handleDeleteTaskGroup = (group: GroupedTask) => {
+    group.children.forEach(c => deleteTask(c.childId, c.taskId));
+  };
+
+  const openRewardForm = (group?: GroupedReward) => {
+    if (group) {
+      setEditingReward(group);
+      setNewRewardName(group.name);
+      setNewRewardPoints(group.points);
+      setNewRewardTargetChildIds(group.children.map(c => c.childId));
+    } else {
+      setEditingReward(null);
+      setNewRewardName('');
+      setNewRewardPoints(50);
+      setNewRewardTargetChildIds(state.children.map(c => c.id));
+    }
+    setShowRewardForm(true);
+  };
+
+  const handleSaveReward = async () => {
+    if (!newRewardName || newRewardTargetChildIds.length === 0) return;
+    observedLoading.current = false;
+    setMutationKind('reward');
+    if (editingReward) {
+      const existingChildIds = editingReward.children.map(c => c.childId);
+      
+      await Promise.all(newRewardTargetChildIds.map(async childId => {
+        const existingChild = editingReward.children.find(c => c.childId === childId);
+        if (existingChild) {
+          await updateReward(childId, existingChild.rewardId, { name: newRewardName, points: newRewardPoints });
+        } else {
+          await addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' });
+        }
+      }));
+
+      await Promise.all(existingChildIds.filter(childId => !newRewardTargetChildIds.includes(childId)).map(async childId => {
+        if (!newRewardTargetChildIds.includes(childId)) {
+          const existingChild = editingReward.children.find(c => c.childId === childId);
+          if (existingChild) await deleteReward(childId, existingChild.rewardId);
+        }
+      }));
+    } else {
+      await Promise.all(newRewardTargetChildIds.map(childId => addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' })));
+    }
+  };
+
+  const handleDeleteRewardGroup = (group: GroupedReward) => {
+    group.children.forEach(c => deleteReward(c.childId, c.rewardId));
+  };
+
+  const handleApproveWishlist = (childId: string, wishlistId: string) => {
+    const points = wishlistPricing[wishlistId];
+    if (points > 0) {
+      approveWishlist(childId, wishlistId, points);
+      setWishlistPricing(prev => {
+        const next = { ...prev };
+        delete next[wishlistId];
+        return next;
+      });
+    } else {
+      alert("請輸入定價點數");
+    }
+  };
+  
+  const handleAddChild = () => {
+    if (!newChildName.trim()) return;
+    alert('目前無法建立孩子邀請：migration 的安全 RPC 只接受已存在的孩子 Auth profile，家長端不得自行產生授權 token。請先完成孩子 Auth profile，再由產品支援流程建立邀請。');
+  };
+
+  return (
+    <div className="flex flex-col min-h-[100dvh] bg-gray-50 pb-20">
+      {/* Header */}
+      <header className="bg-blue-600 text-white p-6 rounded-b-[2rem] shadow-md">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-full">
+              <User size={28} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">家長管理端</h1>
+              <p className="text-blue-200 text-sm mt-1">{state.children.length} 位小孩</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onSwitchToChild} className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-xl text-sm transition-colors whitespace-nowrap">
+              小孩視角
+            </button>
+            <button onClick={() => setShowSettings(true)} className="bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
+              <Settings size={20} />
+            </button>
+          </div>
+        </div>
+        
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/10 rounded-2xl p-4">
+            <div className="text-blue-200 text-sm mb-1">家庭總點數</div>
+            <div className="text-3xl font-bold">{totalPoints} <span className="text-sm font-normal">pt</span></div>
+          </div>
+          <div className="bg-white/10 rounded-2xl p-4">
+            <div className="text-blue-200 text-sm mb-1">待審核項目</div>
+            <div className="text-3xl font-bold">{pendingTasks.length + pendingTickets.length}</div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 p-6">
+        {(isOffline || stale || mutationPending) && (
+          <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <span>{isOffline ? '目前離線，尚未同步的變更不會被視為成功。' : mutationPending ? '正在等待伺服器確認變更…' : '資料可能不是最新狀態。'}</span>
+            <button type="button" onClick={() => void retry()} disabled={loading || isOffline} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
+          </div>
+        )}
+        {error && (
+          <div role="alert" className="mb-6 flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <span>{error}</span>
+            <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
+          </div>
+        )}
+        {/* Tabs */}
+        <div className="flex bg-white rounded-2xl shadow-sm mb-6 p-1 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
+              activeTab === 'tasks' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+            )}
+          >
+            <CheckCircle2 size={16} />
+            任務
+            {pendingTasks.length > 0 && <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('templates')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
+              activeTab === 'templates' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+            )}
+          >
+            <LayoutList size={16} />
+            任務模板
+          </button>
+          <button
+            onClick={() => setActiveTab('rewards')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
+              activeTab === 'rewards' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+            )}
+          >
+            <Gift size={16} />
+            獎勵商店
+            {pendingTickets.length > 0 && <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('wishlist')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 rounded-xl text-xs sm:text-sm font-medium transition-colors relative",
+              activeTab === 'wishlist' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+            )}
+          >
+            <Star size={16} />
+            許願池
+            {allWishlist.length > 0 && (
+              <span className="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 origin-center leading-none">
+                {allWishlist.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {activeTab === 'tasks' && (
+          <div className="space-y-6">
+            {/* Pending Tasks */}
+            {pendingTasks.length > 0 && (
+              <section>
+                <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Clock size={20} className="text-orange-500" />
+                  待審核 ({pendingTasks.length})
+                </h2>
+                <div className="space-y-3">
+                  {pendingTasks.map(task => (
+                    <div key={task.id} className="bg-white p-4 rounded-2xl shadow-sm border border-orange-100 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-bold">{task.childName}</span>
+                        </div>
+                        <div className="font-medium text-gray-900">{task.name}</div>
+                        <div className="text-orange-500 text-sm font-bold">+{task.points} pt</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => void updateTaskStatus(task.childId, task.id, 'todo')} disabled={loading} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg disabled:cursor-wait disabled:opacity-50">
+                          <X size={20} />
+                        </button>
+                        <button onClick={() => void updateTaskStatus(task.childId, task.id, 'completed')} disabled={loading} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:cursor-wait disabled:opacity-50">
+                          過關
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Todo Tasks */}
+            <section>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-gray-900">今日任務清單</h2>
+                <button onClick={() => openTaskForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
+                  <Plus size={16} /> 新增
+                </button>
+              </div>
+              <div className="space-y-3">
+                {groupedTodoTasks.map(group => (
+                  <div key={group.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group-item relative">
+                    <div className="flex items-center gap-3">
+                      <Circle size={20} className="text-gray-300" />
+                      <div>
+                        <div className="flex items-center gap-1 mb-1 flex-wrap">
+                          {group.children.map(c => (
+                            <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold">{c.childName}</span>
+                          ))}
+                        </div>
+                        <div className="font-medium text-gray-700 flex items-center gap-2">
+                          {group.name}
+                          {group.isDaily && (
+                            <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold border border-green-100">每日</span>
+                          )}
+                          {group.duration && (
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              <PlayCircle size={12}/> {group.duration}m
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-blue-500 text-sm font-bold">+{group.points} pt</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => openTaskForm(group)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg">
+                        <Edit2 size={18} />
+                      </button>
+                      <button onClick={() => setTaskToDelete(group)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {todoTasks.length === 0 && pendingTasks.length === 0 && completedTasks.length === 0 && (
+                  <div className="text-center py-8 text-gray-400 text-sm">目前沒有任務，趕快新增吧！</div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {activeTab === 'templates' && (
+          <div className="space-y-6">
+            <section>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-gray-900">任務模板庫</h2>
+                <button onClick={() => openTemplateForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
+                  <Plus size={16} /> 新增模板
+                </button>
+              </div>
+              <p className="text-gray-500 text-sm mb-4">將常用的任務儲存為模板，隨時快速派發給孩子。</p>
+              <div className="space-y-3">
+                {state.taskTemplates.map(template => (
+                  <div key={template.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group-item relative">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
+                        <Star size={20} />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 flex items-center gap-2">
+                          {template.name}
+                          {template.duration && (
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              <PlayCircle size={12}/> {template.duration}m
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-blue-500 text-sm font-bold">+{template.points} pt</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 items-center">
+                      <button onClick={() => openAssignTemplate(template)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold transition-colors">
+                        派發
+                      </button>
+                      <button onClick={() => openTemplateForm(template)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg">
+                        <Edit2 size={18} />
+                      </button>
+                      <button onClick={() => void deleteTaskTemplate(template.id)} disabled={loading} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg disabled:cursor-wait disabled:opacity-50">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {state.taskTemplates.length === 0 && (
+                  <div className="text-center py-8 text-gray-400 text-sm">目前沒有任務模板，點擊右上角新增。</div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {activeTab === 'rewards' && (
+          <div className="space-y-6">
+            {/* Pending Tickets */}
+            {pendingTickets.length > 0 && (
+              <section>
+                <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Gift size={20} className="text-purple-500" />
+                  待兌現獎勵 ({pendingTickets.length})
+                </h2>
+                <div className="space-y-3">
+                  {pendingTickets.map(ticket => (
+                    <div key={ticket.id} className="bg-purple-50 p-4 rounded-2xl shadow-sm border border-purple-100 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="bg-purple-200 text-purple-800 text-xs px-2 py-0.5 rounded font-bold">{ticket.childName}</span>
+                        </div>
+                        <div className="font-medium text-purple-900">{ticket.rewardName}</div>
+                        <div className="text-purple-600 text-xs mt-1">等待家長實現</div>
+                      </div>
+                      <button onClick={() => void fulfillTicket(ticket.childId, ticket.id)} disabled={loading} className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:cursor-wait disabled:opacity-50">
+                        已兌現
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Rewards */}
+            <section>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-gray-900">獎勵商店</h2>
+                <button onClick={() => openRewardForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
+                  <Plus size={16} /> 新增
+                </button>
+              </div>
+              <div className="space-y-3">
+                {groupedRewards.map(group => (
+                  <div key={group.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group-item relative">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
+                        <Gift size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-1 flex-wrap">
+                          {group.children.map(c => (
+                            <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold">{c.childName}</span>
+                          ))}
+                        </div>
+                        <div className="font-medium text-gray-900">{group.name}</div>
+                        <div className="text-blue-500 font-bold text-sm">{group.points} pt</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => openRewardForm(group)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg">
+                        <Edit2 size={18} />
+                      </button>
+                      <button onClick={() => setRewardToDelete(group)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {activeTab === 'wishlist' && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <Star size={20} className="text-yellow-500" />
+              小孩許願池
+            </h2>
+            {allWishlist.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-2xl">許願池空空的</div>
+            ) : (
+              <div className="space-y-3">
+                {allWishlist.map(item => (
+                  <div key={item.id} className="bg-yellow-50 p-5 rounded-2xl shadow-sm border border-yellow-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="bg-yellow-200 text-yellow-800 text-xs px-2 py-0.5 rounded font-bold">{item.childName}</span>
+                    </div>
+                    <div className="font-medium text-gray-900 mb-4">{item.name}</div>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number"
+                        min="1"
+                        placeholder="定價 (pt)"
+                        className="flex-1 p-3 rounded-xl border border-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        value={wishlistPricing[item.id] || ''}
+                        onChange={(e) => setWishlistPricing(p => ({...p, [item.id]: Number(e.target.value)}))}
+                      />
+                      <button 
+                        onClick={() => void handleApproveWishlist(item.childId, item.id)} 
+                        disabled={loading}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-xl text-sm font-bold shadow-sm disabled:cursor-wait disabled:opacity-50"
+                      >
+                        上架
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/40 flex justify-end z-50">
+          <div className="bg-white w-full sm:max-w-sm h-full p-6 shadow-xl overflow-y-auto animate-slide-left">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold flex items-center gap-2"><Settings size={24} className="text-gray-500" /> 設定</h3>
+              <button onClick={() => setShowSettings(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X size={24} /></button>
+            </div>
+            
+            <div className="space-y-8">
+              {/* Children List */}
+              <section>
+                <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                  <Users size={18} /> 小孩名單與連線碼
+                </h4>
+                <div className="space-y-4">
+                  {state.children.map(child => (
+                    <div key={child.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <input
+                          type="text"
+                          value={childNameDrafts[child.id] ?? child.name}
+                          onChange={(e) => setChildNameDrafts((drafts) => ({ ...drafts, [child.id]: e.target.value }))}
+                          onBlur={(e) => {
+                            const name = e.target.value.trim();
+                            if (name && name !== child.name) void updateChildName(child.id, name);
+                          }}
+                          className="font-bold text-lg bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none w-1/2 min-w-0"
+                          placeholder="小孩名字"
+                        />
+                        {state.children.length > 1 && (
+                          <button onClick={() => setChildToDelete(child.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg text-sm flex items-center gap-1 shrink-0">
+                            <Trash2 size={16} /> 刪除
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-amber-700">
+                        <KeyRound size={16} className="mt-0.5 shrink-0" />
+                        <span>孩子邀請需使用 migration 提供的單次 RPC。孩子 Auth profile 尚未存在或無法由前端安全查找時，邀請會被阻塞；不使用 4 碼或自製 token。</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Add Child */}
+              <section className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                <h4 className="text-md font-bold text-blue-900 mb-3 flex items-center gap-2">
+                  <Plus size={18} /> 新增小孩（目前受限）
+                </h4>
+                <div className="mb-2">
+                  <input
+                    type="text"
+                    placeholder="名字"
+                    value={newChildName}
+                    onChange={e => setNewChildName(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-blue-200 outline-none focus:ring-2 focus:ring-blue-400 min-w-0"
+                  />
+                </div>
+                <p className="mb-3 text-xs leading-5 text-blue-800">需要孩子先有 Supabase Auth profile；目前 migration 沒有提供可由家長以姓名查找 profile 的安全 client contract，因此此流程會清楚顯示阻塞，不會假裝建立成功。</p>
+                <button onClick={handleAddChild} disabled={!newChildName.trim() || loading} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-xl font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50">
+                  查看建立限制
+                </button>
+              </section>
+
+              <section className="bg-gray-50 p-4 rounded-2xl border border-gray-200 mt-4">
+                 <h4 className="text-md font-bold text-gray-800 mb-3">修改家長密碼</h4>
+                 <div className="flex flex-col gap-2">
+                   <input type="text" value={oldParentPin} onChange={e => setOldParentPin(e.target.value)} placeholder="輸入舊密碼" className="w-full p-2.5 rounded-xl border border-gray-300 outline-none min-w-0"/>
+                   <div className="flex gap-2">
+                     <input type="text" value={newParentPin} onChange={e => setNewParentPin(e.target.value)} placeholder="輸入新密碼" className="w-full p-2.5 rounded-xl border border-gray-300 outline-none min-w-0"/>
+                     <button onClick={() => {
+                       if (oldParentPin !== state.parentPin) { alert("舊密碼錯誤"); return; }
+                       if (newParentPin.length < 4) { alert("新密碼至少4碼"); return; }
+                       setParentPin(newParentPin);
+                       alert("密碼更新成功");
+                       setOldParentPin('');
+                       setNewParentPin('');
+                     }} className="shrink-0 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl font-bold transition-colors text-gray-700">更新</button>
+                   </div>
+                 </div>
+              </section>
+
+              {/* System */}
+              <section className="pt-4 border-t border-gray-100 pb-8">
+                <button onClick={() => { setShowSettings(false); onLogout(); }} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold transition-colors">
+                  <LogOut size={20} /> 登出家長端
+                </button>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Overlays */}
+      {showTaskForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">{editingTask ? '編輯任務' : '新增任務'}</h3>
+              <button onClick={() => setShowTaskForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
+                <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：刷牙洗臉" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+              </div>
+              {state.children.length > 1 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">指定小孩</label>
+                  <div className="flex flex-wrap gap-2">
+                    {state.children.map(c => (
+                      <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 text-blue-500 rounded focus:ring-blue-400"
+                          checked={newTaskTargetChildIds.includes(c.id)}
+                          onChange={e => {
+                            if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
+                            else setNewTaskTargetChildIds(p => p.filter(id => id !== c.id));
+                          }}
+                        />
+                        <span className="text-sm font-medium text-gray-700">{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">獲得點數</label>
+                  <input type="number" min="0" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">限時 (分鐘, 選填)</label>
+                  <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                </div>
+              </div>
+              <label className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-4 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                <input type="checkbox" checked={newTaskIsDaily} onChange={e => setNewTaskIsDaily(e.target.checked)} className="w-5 h-5 text-blue-500 rounded focus:ring-blue-400" />
+                <div>
+                  <span className="block text-sm font-bold text-gray-800">每日任務</span>
+                  <span className="block text-xs text-gray-500">每天自動重置為未完成狀態</span>
+                </div>
+              </label>
+              <button onClick={() => void handleSaveTask()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTemplateForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">{editingTemplate ? '編輯模板' : '新增模板'}</h3>
+              <button onClick={() => setShowTemplateForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
+                <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：洗碗" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">預設點數</label>
+                  <input type="number" min="0" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">限時 (分鐘, 選填)</label>
+                  <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                </div>
+              </div>
+              <button onClick={() => void handleSaveTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : '儲存模板'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {assigningTemplate && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">派發任務：{assigningTemplate.name}</h3>
+              <button onClick={() => setAssigningTemplate(null)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              {state.children.length > 1 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">選擇小孩</label>
+                  <div className="flex flex-wrap gap-2">
+                    {state.children.map(c => (
+                      <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 text-blue-500 rounded focus:ring-blue-400"
+                          checked={newTaskTargetChildIds.includes(c.id)}
+                          onChange={e => {
+                            if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
+                            else setNewTaskTargetChildIds(p => p.filter(id => id !== c.id));
+                          }}
+                        />
+                        <span className="text-sm font-medium text-gray-700">{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <label className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-4 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                <input type="checkbox" checked={newTaskIsDaily} onChange={e => setNewTaskIsDaily(e.target.checked)} className="w-5 h-5 text-blue-500 rounded focus:ring-blue-400" />
+                <div>
+                  <span className="block text-sm font-bold text-gray-800">設為每日任務</span>
+                  <span className="block text-xs text-gray-500">每天自動重置為未完成狀態</span>
+                </div>
+              </label>
+              <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRewardForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">{editingReward ? '編輯獎勵' : '新增獎勵'}</h3>
+              <button onClick={() => setShowRewardForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">獎勵名稱</label>
+                <input type="text" value={newRewardName} onChange={e => setNewRewardName(e.target.value)} placeholder="例如：看卡通 30 分鐘" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+              </div>
+              {state.children.length > 1 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">指定小孩</label>
+                  <div className="flex flex-wrap gap-2">
+                    {state.children.map(c => (
+                      <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 text-blue-500 rounded focus:ring-blue-400"
+                          checked={newRewardTargetChildIds.includes(c.id)}
+                          onChange={e => {
+                            if (e.target.checked) setNewRewardTargetChildIds(p => [...p, c.id]);
+                            else setNewRewardTargetChildIds(p => p.filter(id => id !== c.id));
+                          }}
+                        />
+                        <span className="text-sm font-medium text-gray-700">{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">所需點數</label>
+                <input type="number" min="1" value={newRewardPoints} onChange={e => setNewRewardPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+              </div>
+              <button onClick={() => void handleSaveReward()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingReward ? '儲存變更' : '上架獎勵'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modals */}
+      {taskToDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+            <h3 className="text-xl font-bold mb-2">刪除任務</h3>
+            <p className="text-gray-500 mb-6">確定要刪除「{taskToDelete.name}」嗎？這個動作無法復原。</p>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setTaskToDelete(null)} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
+              <button onClick={() => {
+                handleDeleteTaskGroup(taskToDelete);
+                setTaskToDelete(null);
+              }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確定刪除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rewardToDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+            <h3 className="text-xl font-bold mb-2">刪除獎勵</h3>
+            <p className="text-gray-500 mb-6">確定要刪除「{rewardToDelete.name}」嗎？這個動作無法復原。</p>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setRewardToDelete(null)} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
+              <button onClick={() => {
+                handleDeleteRewardGroup(rewardToDelete);
+                setRewardToDelete(null);
+              }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確定刪除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {childToDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+            <h3 className="text-xl font-bold mb-2 text-red-600">刪除小孩帳號</h3>
+            <p className="text-gray-500 mb-4">這將會清除該小孩的所有任務與點數紀錄，並且無法復原。請輸入家長密碼以確認。</p>
+            <input
+              type="password"
+              value={deleteChildPin}
+              onChange={e => { setDeleteChildPin(e.target.value); setDeleteChildPinError(''); }}
+              className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-lg mb-2"
+              placeholder="輸入家長密碼"
+            />
+            {deleteChildPinError && <p className="text-red-500 text-sm mb-4">{deleteChildPinError}</p>}
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => {
+                setChildToDelete(null);
+                setDeleteChildPin('');
+                setDeleteChildPinError('');
+              }} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
+              <button onClick={() => {
+                if (deleteChildPin === state.parentPin) {
+                  deleteChild(childToDelete);
+                  setChildToDelete(null);
+                  setDeleteChildPin('');
+                  setDeleteChildPinError('');
+                } else {
+                  setDeleteChildPinError('密碼錯誤');
+                }
+              }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確認刪除</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

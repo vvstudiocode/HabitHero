@@ -1,0 +1,6 @@
+{
+  "name": "親子習慣養成",
+  "description": "用「點數 + 實體許願」建立家中的小經濟圈，讓小孩主動完成任務。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
