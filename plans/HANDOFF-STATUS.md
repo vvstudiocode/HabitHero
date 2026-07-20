@@ -49,7 +49,7 @@
 
 ## 09 已完成項目
 
-- Remote migration history：`20260720171257`、`20260720171304`、`20260720171307`、`child_password_auth`、`child_rls_hardening`、`child_binding_lock`、`parent_family_bootstrap`。
+- Remote migration history：`20260720171257`、`20260720171304`、`20260720171307`、`child_password_auth`、`child_rls_hardening`、`child_binding_lock`、`parent_family_bootstrap`、`enable_pgcrypto_search_path`。
 - 所有核心表已建立並啟用 RLS；本機 security/lint/build 通過。
 - Vercel production deployment：`dpl_CooVCGpGB85xv4QNXFAyj9aZ8pQ2`；`https://habit-hero-gilt.vercel.app`。
 - Git commits：`105d342`、`89c79fd`、`4986325`、`1b87721`、`281fbb2`，已 push 到 `origin/main`。
