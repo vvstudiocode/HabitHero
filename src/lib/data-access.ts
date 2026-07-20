@@ -8,7 +8,7 @@ import {
   taskRowToViewModel,
 } from './data-contracts';
 import type {
-  ChildProfileRow, FamilyMemberRow, FamilyRow, ProfileRow, RewardRow,
+  ChildProfileRow, FamilyMemberRow, ProfileRow, RewardRow,
   RewardRedemptionRow, TaskRow, TaskTemplateRow, WishlistItemRow, PointLedgerRow,
 } from '../types';
 import type { AppState, Child, Reward, Task, TaskStatus, TaskTemplate } from '../types';
@@ -71,9 +71,8 @@ export async function loadAppData(client: SupabaseClient, userId: string, isAnon
   // also repairs accounts created by an earlier build that have a profile but
   // no family membership, instead of sending a valid parent back to landing.
   if (members.length === 0 && !isAnonymous) {
-    const family = check(await client.from('families').insert({ name: `${profile.display_name} 的家庭`, created_by: userId }).select().single()) as FamilyRow;
-    check(await client.from('family_members').insert({ family_id: family.id, profile_id: userId, role: 'parent' }));
-    members = [{ id: `${family.id}:parent`, family_id: family.id, profile_id: userId, role: 'parent', created_at: new Date().toISOString() }];
+    const familyId = check(await client.rpc('ensure_parent_family')) as string;
+    members = [{ id: `${familyId}:parent`, family_id: familyId, profile_id: userId, role: 'parent', created_at: new Date().toISOString() }];
   }
   if (members.length === 0) {
     throw new Error('此帳號尚未加入家庭，請使用有效邀請 token 後重試。');
