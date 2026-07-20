@@ -16,3 +16,5 @@
 ## Blocker / Risk
 
 `loadAppData` currently provisions a new authenticated user with no family membership as a parent workspace. A newly authenticated child joining through an invite can race this provider bootstrap before `redeem_family_child_invite` completes. The child UI refuses to render data unless the final DB-derived role is `child` and an owned child profile exists, but resolving the bootstrap race requires a provider/data-access change outside the Task 06 allowed file scope or a backend contract decision.
+- Child login no longer asks for email, child name, or invite token. It starts an anonymous Supabase session and binds it through `authenticate_child` using only the parent-created password.
+- The child password is stored only as a bcrypt hash in `private.child_passwords`; parent password reset uses `update_child_password`.

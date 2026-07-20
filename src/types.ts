@@ -40,7 +40,8 @@ export interface FamilyMemberRow {
 export interface ChildProfileRow {
   id: Id;
   family_id: Id;
-  profile_id: Id;
+  profile_id: Id | null;
+  display_name: string;
   points_balance: Points;
   created_at: Timestamp;
   updated_at: Timestamp;
@@ -263,7 +264,7 @@ export interface FamilyMemberViewModel {
 export interface ChildViewModel {
   id: Id;
   familyId: Id;
-  profileId: Id;
+  profileId: Id | null;
   name: string;
   points: Points;
 }

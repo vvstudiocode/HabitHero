@@ -5,10 +5,11 @@ import { signIn, toAuthErrorMessage, useAuthSession } from '../auth';
 
 interface ParentLoginProps {
   onBack: () => void;
+  onGoSignup: () => void;
   onComplete: () => void;
 }
 
-export function ParentLogin({ onBack, onComplete }: ParentLoginProps) {
+export function ParentLogin({ onBack, onGoSignup, onComplete }: ParentLoginProps) {
   const { session, loading: sessionLoading, error: sessionError } = useAuthSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,9 +41,14 @@ export function ParentLogin({ onBack, onComplete }: ParentLoginProps) {
 
   return (
     <form onSubmit={handleLogin} className="flex flex-col min-h-[100dvh] bg-blue-50 p-6">
-      <button type="button" onClick={onBack} className="self-start p-2 text-blue-600 mb-8 rounded-full hover:bg-blue-100 transition-colors">
-        <ArrowLeft size={24} />
-      </button>
+      <div className="mb-8 flex items-center justify-between">
+        <button type="button" onClick={onBack} aria-label="返回" className="rounded-full p-2 text-blue-600 transition-colors hover:bg-blue-100">
+          <ArrowLeft size={24} />
+        </button>
+        <button type="button" onClick={onGoSignup} className="rounded-xl px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100">
+          還沒有帳號？註冊
+        </button>
+      </div>
 
       <div className="flex-1 flex flex-col items-center justify-center max-w-sm w-full mx-auto pb-20">
         <div className="bg-blue-100 p-4 rounded-full text-blue-600 mb-6"><User size={40} /></div>

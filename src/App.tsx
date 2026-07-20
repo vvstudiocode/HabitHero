@@ -14,7 +14,7 @@ import { ParentDashboard } from './components/ParentDashboard';
 import { ChildDashboard } from './components/ChildDashboard';
 
 function MainApp() {
-  const { state, clearProtectedState, hasSession, loading, role, error, retry } = useAppStore();
+  const { clearProtectedState, hasSession, loading, role, error, retry } = useAppStore();
   
   // 'landing' | 'parentSetup' | 'parentLogin' | 'childLogin' | 'parentDashboard' | 'childDashboard'
   const [currentView, setCurrentView] = useState<'landing' | 'parentSetup' | 'parentLogin' | 'childLogin' | 'parentDashboard' | 'childDashboard'>('landing');
@@ -28,18 +28,14 @@ function MainApp() {
     if (selectedRole === 'parent') {
       if (hasSession && role === 'parent') {
         setCurrentView('parentDashboard');
-      } else if (state.parentPin) {
-        setCurrentView('parentLogin');
       } else {
         setCurrentView('parentSetup');
       }
     } else {
       if (hasSession && role === 'child') {
         setCurrentView('childDashboard');
-      } else if (state.children.length > 0) {
-        setCurrentView('childLogin');
       } else {
-        alert('請先由家長端設定小孩資料！');
+        setCurrentView('childLogin');
       }
     }
   };
@@ -63,9 +59,9 @@ function MainApp() {
     case 'landing':
       return <LandingScreen onSelectRole={handleSelectRole} />;
     case 'parentSetup':
-      return <ParentSetup onBack={() => setCurrentView('landing')} onComplete={() => setCurrentView('parentDashboard')} />;
+      return <ParentSetup onBack={() => setCurrentView('landing')} onGoLogin={() => setCurrentView('parentLogin')} onComplete={() => setCurrentView('parentDashboard')} />;
     case 'parentLogin':
-      return <ParentLogin onBack={() => setCurrentView('landing')} onComplete={() => setCurrentView('parentDashboard')} />;
+      return <ParentLogin onBack={() => setCurrentView('landing')} onGoSignup={() => setCurrentView('parentSetup')} onComplete={() => setCurrentView('parentDashboard')} />;
     case 'childLogin':
       return <ChildLogin onBack={() => setCurrentView('landing')} onComplete={() => setCurrentView('childDashboard')} />;
     case 'parentDashboard':

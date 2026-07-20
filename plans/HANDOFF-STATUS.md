@@ -39,6 +39,12 @@
 - 沒有 `service_role` key、真實密碼或兒童個資進入 source、bundle、GitHub 或公開環境。
 - Web production 已部署；若 runtime 測試失敗，停在 09，不進入 10。
 
+## Auth 流程變更
+
+- 家長註冊使用 `mailer_autoconfirm=true`，不需要 Email 收件驗證。
+- 小孩只輸入家長設定的至少 6 碼英數密碼；不輸入 Email、名字或 invite token。
+- Supabase Anonymous Sign-ins 已啟用；小孩 session 綁定由 `authenticate_child` RPC 完成。
+
 ## 09 已完成項目
 
 - Remote migration history：`20260720171257`、`20260720171304`、`20260720171307`。

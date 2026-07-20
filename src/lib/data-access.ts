@@ -40,14 +40,14 @@ function asRows<T>(data: unknown): T[] {
 
 function childFromRows(
   child: ChildProfileRow,
-  profile: ProfileRow,
+  profile: ProfileRow | undefined,
   tasks: TaskRow[],
   rewards: RewardRow[],
   wishlist: WishlistItemRow[],
   tickets: RewardRedemptionRow[],
 ): Child {
   return {
-    ...childProfileRowToViewModel(child, profileRowToViewModel(profile)),
+    ...childProfileRowToViewModel(child, profile ? profileRowToViewModel(profile) : undefined),
     code: '',
     tasks: tasks.filter((row) => row.child_profile_id === child.id).map(taskRowToViewModel),
     rewards: rewards.filter((row) => row.child_profile_id === child.id).map((row) => ({ id: row.id, name: row.name, points: row.points, icon: row.icon })),
@@ -56,10 +56,13 @@ function childFromRows(
   };
 }
 
-export async function loadAppData(client: SupabaseClient, userId: string): Promise<LoadedAppData> {
+export async function loadAppData(client: SupabaseClient, userId: string, isAnonymous = false): Promise<LoadedAppData> {
   const profileResult = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
   let profile = check(profileResult) as ProfileRow | null;
   const profileWasCreated = !profile;
+  if (!profile && isAnonymous) {
+    throw new Error('孩子驗證尚未完成，請輸入小孩密碼。');
+  }
   if (!profile) {
     profile = check(await client.from('profiles').insert({ id: userId, display_name: userId.slice(0, 8) }).select().single()) as ProfileRow;
   }
@@ -116,8 +119,8 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
   }
   const profileById = new Map(profiles.map((row) => [row.id, row]));
   state.children = children.flatMap((child) => {
-    const childProfile = profileById.get(child.profile_id);
-    return childProfile ? [childFromRows(child, childProfile, tasks, rewards, wishlist, tickets)] : [];
+    const childProfile = child.profile_id ? profileById.get(child.profile_id) : undefined;
+    return [childFromRows(child, childProfile, tasks, rewards, wishlist, tickets)];
   });
   state.ledger = ledger.map(pointLedgerRowToViewModel);
   const ownChild = children.find((child) => child.profile_id === userId);
@@ -127,8 +130,9 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
 }
 
 export interface DataRepository {
-  load(userId: string): Promise<LoadedAppData>;
-  insertChild(familyId: string, name: string): Promise<void>;
+  load(userId: string, isAnonymous?: boolean): Promise<LoadedAppData>;
+  insertChild(familyId: string, name: string, password: string): Promise<void>;
+  updateChildPassword(familyId: string, childId: string, password: string): Promise<void>;
   updateChild(familyId: string, childId: string, name: string): Promise<void>;
   deleteChild(familyId: string, childId: string): Promise<void>;
   insertTemplate(familyId: string, template: Omit<TaskTemplate, 'id'>): Promise<void>;
@@ -149,11 +153,25 @@ export interface DataRepository {
 
 export function createDataRepository(client: SupabaseClient): DataRepository {
   return {
-    load: (userId) => loadAppData(client, userId),
-    async insertChild() { throw new Error('目前資料庫尚未提供 child invite/join token，無法安全建立可登入的孩子帳號。'); },
+    load: (userId, isAnonymous) => loadAppData(client, userId, isAnonymous),
+    async insertChild(familyId, name, password) {
+      check(await client.rpc('create_child_profile', {
+        target_family_id: familyId,
+        child_name: name,
+        child_password: password,
+      }));
+    },
+    async updateChildPassword(familyId, childId, password) {
+      check(await client.rpc('update_child_password', {
+        target_family_id: familyId,
+        target_child_profile_id: childId,
+        child_password: password,
+      }));
+    },
     async updateChild(familyId, childId, name) {
-      const child = check(await client.from('child_profiles').select('profile_id').eq('family_id', familyId).eq('id', childId).single()) as { profile_id: string };
-      check(await client.from('profiles').update({ display_name: name }).eq('id', child.profile_id));
+      const child = check(await client.from('child_profiles').select('profile_id').eq('family_id', familyId).eq('id', childId).single()) as { profile_id: string | null };
+      check(await client.from('child_profiles').update({ display_name: name }).eq('family_id', familyId).eq('id', childId));
+      if (child.profile_id) check(await client.from('profiles').update({ display_name: name }).eq('id', child.profile_id));
     },
     async deleteChild(familyId, childId) { check(await client.from('child_profiles').delete().eq('family_id', familyId).eq('id', childId)); },
     async insertTemplate(familyId, template) { check(await client.from('task_templates').insert({ family_id: familyId, name: template.name, points: template.points, icon: template.icon, duration_minutes: template.duration ?? null })); },

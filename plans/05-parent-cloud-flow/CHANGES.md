@@ -15,3 +15,5 @@
 
 - Child invitation cannot complete until a product-approved flow supplies the target Auth profile ID and calls the migration RPC. This is a product/API contract blocker, not a frontend-generated token path.
 - The existing data layer's wishlist approval is two writes, as documented by Task 04; production should replace it with a transaction RPC.
+- Parent registration now auto-confirms through Supabase Auth; the UI provides a direct login link above the registration form.
+- Parent child creation now uses `create_child_profile` with a hashed six-character alphanumeric password; child Auth profiles are not required beforehand.

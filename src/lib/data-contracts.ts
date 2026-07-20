@@ -42,12 +42,12 @@ export const familyMemberRowToViewModel = (
 
 export const childProfileRowToViewModel = (
   row: ChildProfileRow,
-  profile: ProfileViewModel,
+  profile?: ProfileViewModel,
 ): ChildViewModel => ({
   id: row.id,
   familyId: row.family_id,
   profileId: row.profile_id,
-  name: profile.displayName,
+  name: profile?.displayName ?? row.display_name,
   points: row.points_balance,
 });
 

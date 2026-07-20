@@ -3,6 +3,7 @@ import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
 import { CheckCircle2, Circle, Clock, Gift, LayoutList, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
+import { validateChildPassword, validatePasswordConfirmation } from '../lib/auth-validation';
 
 interface ParentDashboardProps {
   onSwitchToChild: () => void;
@@ -25,7 +26,7 @@ type GroupedReward = {
 };
 
 export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardProps) {
-  const { state, loading, error, retry, stale, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = useAppStore();
+  const { state, loading, error, retry, stale, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = useAppStore();
   const [activeTab, setActiveTab] = useState<'tasks' | 'templates' | 'rewards' | 'wishlist'>('tasks');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
   const observedLoading = useRef(false);
@@ -86,6 +87,13 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false);
   const [newChildName, setNewChildName] = useState('');
+  const [newChildPassword, setNewChildPassword] = useState('');
+  const [newChildPasswordConfirmation, setNewChildPasswordConfirmation] = useState('');
+  const [newChildError, setNewChildError] = useState('');
+  const [resetChildId, setResetChildId] = useState<string | null>(null);
+  const [resetChildPassword, setResetChildPassword] = useState('');
+  const [resetChildPasswordConfirmation, setResetChildPasswordConfirmation] = useState('');
+  const [resetChildError, setResetChildError] = useState('');
   const [newParentPin, setNewParentPin] = useState('');
   const [oldParentPin, setOldParentPin] = useState('');
 
@@ -277,9 +285,30 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     }
   };
   
-  const handleAddChild = () => {
-    if (!newChildName.trim()) return;
-    alert('目前無法建立孩子邀請：migration 的安全 RPC 只接受已存在的孩子 Auth profile，家長端不得自行產生授權 token。請先完成孩子 Auth profile，再由產品支援流程建立邀請。');
+  const handleAddChild = async () => {
+    setNewChildError('');
+    if (!newChildName.trim()) {
+      setNewChildError('請輸入小孩名字。');
+      return;
+    }
+    const passwordValidation = validateChildPassword(newChildPassword);
+    if ('message' in passwordValidation) {
+      setNewChildError(passwordValidation.message);
+      return;
+    }
+    const confirmationValidation = validatePasswordConfirmation(newChildPassword, newChildPasswordConfirmation);
+    if ('message' in confirmationValidation) {
+      setNewChildError(confirmationValidation.message);
+      return;
+    }
+    try {
+      await addChild(newChildName.trim(), newChildPassword);
+      setNewChildName('');
+      setNewChildPassword('');
+      setNewChildPasswordConfirmation('');
+    } catch {
+      // Provider error is already shown above the tabs; keep the form values.
+    }
   };
 
   return (
@@ -639,8 +668,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             <div className="space-y-8">
               {/* Children List */}
               <section>
-                <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-                  <Users size={18} /> 小孩名單與連線碼
+                  <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                  <Users size={18} /> 小孩名單與登入密碼
                 </h4>
                 <div className="space-y-4">
                   {state.children.map(child => (
@@ -665,8 +694,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                       </div>
                       <div className="flex items-start gap-2 text-xs text-amber-700">
                         <KeyRound size={16} className="mt-0.5 shrink-0" />
-                        <span>孩子邀請需使用 migration 提供的單次 RPC。孩子 Auth profile 尚未存在或無法由前端安全查找時，邀請會被阻塞；不使用 4 碼或自製 token。</span>
+                        <span>小孩只需輸入家長設定的密碼；密碼不會顯示在這裡，忘記時請由家長重新設定。</span>
                       </div>
+                      <button onClick={() => { setResetChildId(child.id); setResetChildError(''); }} className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50">
+                        重設小孩密碼
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -675,7 +707,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               {/* Add Child */}
               <section className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
                 <h4 className="text-md font-bold text-blue-900 mb-3 flex items-center gap-2">
-                  <Plus size={18} /> 新增小孩（目前受限）
+                  <Plus size={18} /> 新增小孩
                 </h4>
                 <div className="mb-2">
                   <input
@@ -686,9 +718,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                     className="w-full p-2.5 rounded-xl border border-blue-200 outline-none focus:ring-2 focus:ring-blue-400 min-w-0"
                   />
                 </div>
-                <p className="mb-3 text-xs leading-5 text-blue-800">需要孩子先有 Supabase Auth profile；目前 migration 沒有提供可由家長以姓名查找 profile 的安全 client contract，因此此流程會清楚顯示阻塞，不會假裝建立成功。</p>
-                <button onClick={handleAddChild} disabled={!newChildName.trim() || loading} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-xl font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50">
-                  查看建立限制
+                <input type="password" autoComplete="new-password" placeholder="小孩密碼（至少 6 碼英數）" value={newChildPassword} onChange={e => { setNewChildPassword(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
+                <input type="password" autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => { setNewChildPasswordConfirmation(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
+                {newChildError && <p role="alert" className="mb-3 text-xs leading-5 text-red-600">{newChildError}</p>}
+                <p className="mb-3 text-xs leading-5 text-blue-800">密碼只用來辨識小孩，請每位小孩設定不同密碼；資料庫只保存雜湊值。</p>
+                <button onClick={() => void handleAddChild()} disabled={!newChildName.trim() || !newChildPassword || !newChildPasswordConfirmation || loading} className="w-full rounded-xl bg-blue-500 py-2 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50">
+                  建立小孩
                 </button>
               </section>
 
@@ -953,6 +988,33 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                   setDeleteChildPinError('密碼錯誤');
                 }
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確認刪除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resetChildId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-xl font-bold text-blue-900">重設小孩密碼</h3>
+            <p className="mb-4 text-sm text-gray-500">重設後請把新密碼告訴小孩；舊密碼會立即失效。</p>
+            <div className="space-y-3">
+              <input type="password" autoComplete="new-password" value={resetChildPassword} onChange={e => { setResetChildPassword(e.target.value); setResetChildError(''); }} placeholder="新密碼（至少 6 碼英數）" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
+              <input type="password" autoComplete="new-password" value={resetChildPasswordConfirmation} onChange={e => { setResetChildPasswordConfirmation(e.target.value); setResetChildError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
+              {resetChildError && <p role="alert" className="text-sm text-red-500">{resetChildError}</p>}
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); setResetChildError(''); }} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
+                <button onClick={() => void (async () => {
+                  const valid = validateChildPassword(resetChildPassword);
+                  if ('message' in valid) { setResetChildError(valid.message); return; }
+                  const confirmed = validatePasswordConfirmation(resetChildPassword, resetChildPasswordConfirmation);
+                  if ('message' in confirmed) { setResetChildError(confirmed.message); return; }
+                  try {
+                    await updateChildPassword(resetChildId, resetChildPassword);
+                    setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation('');
+                  } catch { /* provider error is shown above the tabs */ }
+                })()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">儲存</button>
+              </div>
             </div>
           </div>
         </div>

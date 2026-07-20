@@ -16,6 +16,10 @@ export async function signUp(credentials: AuthCredentials) {
   return getSupabaseClient().auth.signUp(credentials);
 }
 
+export async function signInAnonymously() {
+  return getSupabaseClient().auth.signInAnonymously();
+}
+
 export async function signOut() {
   return getSupabaseClient().auth.signOut();
 }
@@ -33,7 +37,8 @@ export function toAuthErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     const message = error.message.toLowerCase();
     if (message.includes('invalid login credentials')) return 'Email 或密碼錯誤，請重新輸入。';
-    if (message.includes('email not confirmed')) return '請先完成 Email 驗證，再登入。';
+    if (message.includes('email not confirmed')) return '目前帳號尚未啟用，請重新註冊或聯絡管理者。';
+    if (message.includes('anonymous sign-ins are disabled') || message.includes('anonymous sign-in')) return '小孩登入功能尚未在 Supabase 啟用，請稍後再試。';
     if (message.includes('network') || message.includes('fetch')) return '目前無法連線，請檢查網路後重試。';
     return error.message;
   }
