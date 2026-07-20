@@ -38,7 +38,14 @@ export function ChildLogin({ onBack, onComplete }: ChildLoginProps) {
       const { error: authenticateError } = await getSupabaseClient().rpc('authenticate_child', { child_password: password });
       if (authenticateError) {
         await signOut();
-        setError('密碼錯誤或尚未由家長建立，請重新輸入。');
+        const message = authenticateError.message.toLowerCase();
+        if (message.includes('already bound')) {
+          setError('這組密碼已綁定其他裝置，請家長重設小孩密碼後再登入。');
+        } else if (message.includes('anonymous session')) {
+          setError('小孩登入連線已失效，請重新按「進入我的任務」。');
+        } else {
+          setError('密碼錯誤或尚未由家長建立，請重新輸入。');
+        }
         return;
       }
 
