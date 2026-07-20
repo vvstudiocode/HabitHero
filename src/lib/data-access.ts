@@ -59,7 +59,6 @@ function childFromRows(
 export async function loadAppData(client: SupabaseClient, userId: string, isAnonymous = false): Promise<LoadedAppData> {
   const profileResult = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
   let profile = check(profileResult) as ProfileRow | null;
-  const profileWasCreated = !profile;
   if (!profile && isAnonymous) {
     throw new Error('孩子驗證尚未完成，請輸入小孩密碼。');
   }
@@ -68,9 +67,10 @@ export async function loadAppData(client: SupabaseClient, userId: string, isAnon
   }
 
   let members = asRows<FamilyMemberRow>(check(await client.from('family_members').select('*').eq('profile_id', userId)));
-  // Existing profiles can be invite targets. Do not provision them as parents
-  // before the child invite redemption transaction gets a chance to run.
-  if (members.length === 0 && profileWasCreated) {
+  // Every non-anonymous account is a parent account in the current flow. This
+  // also repairs accounts created by an earlier build that have a profile but
+  // no family membership, instead of sending a valid parent back to landing.
+  if (members.length === 0 && !isAnonymous) {
     const family = check(await client.from('families').insert({ name: `${profile.display_name} 的家庭`, created_by: userId }).select().single()) as FamilyRow;
     check(await client.from('family_members').insert({ family_id: family.id, profile_id: userId, role: 'parent' }));
     members = [{ id: `${family.id}:parent`, family_id: family.id, profile_id: userId, role: 'parent', created_at: new Date().toISOString() }];
