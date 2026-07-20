@@ -5,7 +5,7 @@
 - Child dashboard selects `activeChild` only from `state.childLoggedInId`, which the provider derives from the authenticated user's DB membership and child profile. It never falls back to the first child.
 - Child task completion submits only `pending`; it does not call the parent-only approval RPC.
 - Reward redemption remains delegated to the repository's atomic `redeem_reward` RPC, with the existing client-side affordability check as a UX guard.
-- Child login accepts an optional one-time invite token in memory and redeems it through `redeem_family_child_invite` after authentication. The token is cleared after success and is never persisted.
+- Child login uses only the parent-created password. The browser creates an anonymous Supabase session and calls `authenticate_child`; no child name, email, or invite token is requested.
 - Child loading, session/role mismatch, missing-profile, error, retry, logout, and back-navigation states are guarded in the child flow.
 
 ## Verification
@@ -15,6 +15,5 @@
 
 ## Blocker / Risk
 
-`loadAppData` currently provisions a new authenticated user with no family membership as a parent workspace. A newly authenticated child joining through an invite can race this provider bootstrap before `redeem_family_child_invite` completes. The child UI refuses to render data unless the final DB-derived role is `child` and an owned child profile exists, but resolving the bootstrap race requires a provider/data-access change outside the Task 06 allowed file scope or a backend contract decision.
-- Child login no longer asks for email, child name, or invite token. It starts an anonymous Supabase session and binds it through `authenticate_child` using only the parent-created password.
+- Anonymous child sessions with no successful password binding are rejected before protected family data is loaded. The app also clears an old authenticated session that has no family and returns to the landing page, preventing the stale-session 403 screen.
 - The child password is stored only as a bcrypt hash in `private.child_passwords`; parent password reset uses `update_child_password`.

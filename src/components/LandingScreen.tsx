@@ -4,9 +4,10 @@ import { cn } from '../lib/utils';
 
 interface LandingScreenProps {
   onSelectRole: (role: 'parent' | 'child') => void;
+  onParentLogin: () => void;
 }
 
-export function LandingScreen({ onSelectRole }: LandingScreenProps) {
+export function LandingScreen({ onSelectRole, onParentLogin }: LandingScreenProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-blue-50 p-6">
       <div className="text-center mb-12">
@@ -45,6 +46,9 @@ export function LandingScreen({ onSelectRole }: LandingScreenProps) {
           <span className="text-xl font-medium text-blue-900">我是小孩</span>
         </button>
       </div>
+      <button type="button" onClick={onParentLogin} className="mt-6 min-h-11 rounded-xl px-4 py-2 font-bold text-blue-700 underline-offset-4 hover:bg-blue-100 hover:underline">
+        家長已有帳號？直接登入
+      </button>
     </div>
   );
 }

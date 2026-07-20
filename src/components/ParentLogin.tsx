@@ -53,7 +53,7 @@ export function ParentLogin({ onBack, onGoSignup, onComplete }: ParentLoginProps
       <div className="flex-1 flex flex-col items-center justify-center max-w-sm w-full mx-auto pb-20">
         <div className="bg-blue-100 p-4 rounded-full text-blue-600 mb-6"><User size={40} /></div>
         <h2 className="text-2xl font-bold text-blue-900 mb-2">家長登入</h2>
-        <p className="text-blue-600 text-center mb-8">使用 Supabase 帳號登入</p>
+        <p className="text-blue-600 text-center mb-8">使用 Supabase 帳號登入；不需要 Email 驗證</p>
 
         <div className="w-full space-y-4">
           <input type="email" required autoComplete="email" placeholder="Email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} className="w-full p-4 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />

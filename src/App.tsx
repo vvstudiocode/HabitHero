@@ -20,9 +20,15 @@ function MainApp() {
   const [currentView, setCurrentView] = useState<'landing' | 'parentSetup' | 'parentLogin' | 'childLogin' | 'parentDashboard' | 'childDashboard'>('landing');
 
   useEffect(() => {
+    if (!loading && hasSession && error?.includes('尚未加入家庭')) {
+      clearProtectedState();
+      void signOut();
+      setCurrentView('landing');
+      return;
+    }
     if (!loading && hasSession && role) setCurrentView(role === 'parent' ? 'parentDashboard' : 'childDashboard');
     if (!loading && !hasSession) setCurrentView('landing');
-  }, [hasSession, loading, role]);
+  }, [clearProtectedState, error, hasSession, loading, role]);
 
   const handleSelectRole = (selectedRole: 'parent' | 'child') => {
     if (selectedRole === 'parent') {
@@ -57,7 +63,7 @@ function MainApp() {
 
   switch (currentView) {
     case 'landing':
-      return <LandingScreen onSelectRole={handleSelectRole} />;
+      return <LandingScreen onSelectRole={handleSelectRole} onParentLogin={() => setCurrentView('parentLogin')} />;
     case 'parentSetup':
       return <ParentSetup onBack={() => setCurrentView('landing')} onGoLogin={() => setCurrentView('parentLogin')} onComplete={() => setCurrentView('parentDashboard')} />;
     case 'parentLogin':
@@ -69,7 +75,7 @@ function MainApp() {
     case 'childDashboard':
       return <ChildDashboard onLogout={handleLogout} onSwitchChild={() => setCurrentView('childLogin')} />;
     default:
-      return <LandingScreen onSelectRole={handleSelectRole} />;
+      return <LandingScreen onSelectRole={handleSelectRole} onParentLogin={() => setCurrentView('parentLogin')} />;
   }
 }
 
