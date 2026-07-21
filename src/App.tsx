@@ -56,7 +56,7 @@ function MainApp() {
 
   if (initialLoading) {
     return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-blue-50">
+      <div className="hh-sprite-theme flex min-h-[100dvh] flex-col items-center justify-center bg-blue-50">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 animate-pulse text-3xl">
           ⭐
         </div>
@@ -66,9 +66,9 @@ function MainApp() {
     );
   }
 
-  if (loading) return <div className="flex min-h-[100dvh] items-center justify-center bg-blue-50 text-blue-700">正在更新資料…</div>;
+  if (loading) return <div className="hh-sprite-theme flex min-h-[100dvh] items-center justify-center bg-blue-50 text-blue-700">正在更新資料…</div>;
   if (error && hasSession && currentView === 'login') {
-    return <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900"><p role="alert">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white">重試</button></div>;
+    return <div className="hh-sprite-theme flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900"><p role="alert">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white">重試</button></div>;
   }
 
   switch (currentView) {
@@ -88,7 +88,9 @@ function MainApp() {
 export default function App() {
   return (
     <AppProvider>
-      <MainApp />
+      <div className="hh-sprite-theme min-h-[100dvh]">
+        <MainApp />
+      </div>
     </AppProvider>
   );
 }

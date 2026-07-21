@@ -4,6 +4,7 @@ import { cn } from '../lib/utils';
 import { signIn, signInChild, toAuthErrorMessage } from '../auth';
 import { useAppStore } from '../store';
 import { validateChildPassword, validateChildUsername, validateParentCredentials } from '../lib/auth-validation';
+import { SpriteLoginScene } from './SpriteLoginScene';
 
 interface AccountLoginProps {
   onGoSignup: () => void;
@@ -60,37 +61,49 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
 
 
   return (
-    <form onSubmit={handleLogin} className="flex min-h-[100dvh] flex-col bg-blue-50 p-6">
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center pb-12">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-            {mode === 'parent' ? <User size={36} /> : <Baby size={36} />}
-          </div>
-          <h1 className="text-3xl font-bold text-blue-900">HabitHero 習慣小英雄</h1>
-        </div>
+    <form onSubmit={handleLogin} className="hh-login-screen">
+      <SpriteLoginScene />
+      <div className="hh-login-sun" />
+      <div className="hh-login-vignette" />
+      <div className="hh-login-grain" />
 
-        <div className="mb-6 grid grid-cols-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-blue-100" role="tablist" aria-label="登入身份">
-          <button type="button" role="tab" aria-selected={mode === 'parent'} onClick={() => switchMode('parent')} className={cn('min-h-11 rounded-xl px-3 py-2 text-sm font-bold transition-colors', mode === 'parent' ? 'bg-blue-500 text-white' : 'text-blue-700 hover:bg-blue-50')}>家長登入</button>
-          <button type="button" role="tab" aria-selected={mode === 'child'} onClick={() => switchMode('child')} className={cn('min-h-11 rounded-xl px-3 py-2 text-sm font-bold transition-colors', mode === 'child' ? 'bg-yellow-500 text-white' : 'text-blue-700 hover:bg-blue-50')}>小孩登入</button>
-        </div>
+      <main className="hh-login-shell">
+        <section className="hh-login-copy" aria-label="HabitHero 登入視覺">
+          <h1>HabitHero</h1>
+          <p>讓孩子每天的小任務，像走進一座會發光的森林。</p>
+        </section>
 
-        <div className="space-y-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-blue-100">
-          <div>
-            <label htmlFor="login-account" className="mb-1 block px-1 text-sm font-bold text-blue-900">{mode === 'parent' ? '家長 Email' : '小孩帳號名稱'}</label>
-            <input id="login-account" type={mode === 'parent' ? 'email' : 'text'} required autoComplete="username" placeholder={mode === 'parent' ? 'parent@example.com' : '例如 leo123'} value={account} onChange={(event) => { setAccount(event.target.value); setError(''); }} className="w-full rounded-xl border border-blue-200 p-4 text-lg outline-none focus:ring-2 focus:ring-blue-400" />
+        <section className="hh-login-panel" aria-label="登入表單">
+          <div className="hh-login-panel-head">
+            <div className="hh-login-avatar" aria-hidden="true">
+              {mode === 'parent' ? <User size={32} /> : <Baby size={32} />}
+            </div>
+            <div>
+              <h2>回到你的冒險</h2>
+              <p>{mode === 'parent' ? '家長管理端登入' : '小孩任務森林登入'}</p>
+            </div>
           </div>
-          <div>
-            <label htmlFor="login-password" className="mb-1 block px-1 text-sm font-bold text-blue-900">密碼</label>
-            <input id="login-password" type="password" required minLength={6} autoComplete="current-password" placeholder="至少 6 碼" value={password} onChange={(event) => { setPassword(event.target.value); setError(''); }} className="w-full rounded-xl border border-blue-200 p-4 text-lg outline-none focus:ring-2 focus:ring-blue-400" />
+
+          <div className="hh-login-tabs" role="tablist" aria-label="登入身份">
+            <button type="button" role="tab" aria-selected={mode === 'parent'} onClick={() => switchMode('parent')} className={cn(mode === 'parent' && 'is-active')}>家長登入</button>
+            <button type="button" role="tab" aria-selected={mode === 'child'} onClick={() => switchMode('child')} className={cn(mode === 'child' && 'is-active')}>小孩登入</button>
           </div>
-          {(error || sessionError) && <p role="alert" className="text-sm leading-6 text-red-600">{error || sessionError}</p>}
-          <button type="submit" disabled={!account || !password || submitting} className={cn('w-full rounded-xl p-4 text-lg font-bold text-white transition-colors', account && password && !submitting ? (mode === 'parent' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-yellow-500 hover:bg-yellow-600') : 'cursor-not-allowed bg-blue-300')}>
-            {submitting ? '登入中…' : '登入'}
+
+          <label htmlFor="login-account">{mode === 'parent' ? '家長 Email' : '小孩帳號名稱'}</label>
+          <input id="login-account" type={mode === 'parent' ? 'email' : 'text'} required autoComplete="username" placeholder={mode === 'parent' ? 'parent@example.com' : '例如 leo123'} value={account} onChange={(event) => { setAccount(event.target.value); setError(''); }} />
+
+          <label htmlFor="login-password">通關密語</label>
+          <input id="login-password" type="password" required minLength={6} autoComplete="current-password" placeholder="至少 6 碼" value={password} onChange={(event) => { setPassword(event.target.value); setError(''); }} />
+
+          {(error || sessionError) && <p role="alert" className="hh-login-error">{error || sessionError}</p>}
+
+          <button type="submit" disabled={!account || !password || submitting} className="hh-primary-button">
+            {submitting ? '登入中…' : '登入任務森林'}
           </button>
-          {mode === 'parent' && <button type="button" onClick={onGoSignup} className="w-full rounded-xl p-3 font-bold text-blue-700 hover:bg-blue-50">沒有家長帳號？註冊</button>}
-          {mode === 'child' && <p className="text-center text-sm leading-6 text-blue-600">小孩帳號由家長在管理端建立，無法自行註冊。</p>}
-        </div>
-      </div>
+          {mode === 'parent' && <button type="button" onClick={onGoSignup} className="hh-secondary-button">沒有家長帳號？註冊</button>}
+          {mode === 'child' && <p className="hh-login-note">小孩帳號由家長在管理端建立，無法自行註冊。</p>}
+        </section>
+      </main>
     </form>
   );
 }
