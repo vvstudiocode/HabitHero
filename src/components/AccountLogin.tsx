@@ -60,8 +60,6 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
     }
   };
 
-
-
   return (
     <form onSubmit={handleLogin} className="hh-login-screen hh-login-screen--entry">
       <SpriteLoginScene />
@@ -72,7 +70,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
       <main className="hh-login-shell">
         <section className="hh-login-copy" aria-label="HabitHero 登入視覺">
           <h1>HabitHero</h1>
-          <p>讓孩子每天的小任務，像走進一座會發光的森林。</p>
+          <p>讓孩子每天的小任務，像走進一座會發光的玻璃森林。</p>
         </section>
 
         <section className={cn('hh-login-panel', revealed && 'is-revealed')} aria-label="登入表單">
