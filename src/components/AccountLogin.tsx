@@ -70,7 +70,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
       <main className="hh-login-shell">
         <section className="hh-login-copy" aria-label="HabitHero 登入視覺">
           <h1>HabitHero</h1>
-          <p>讓孩子每天的小任務，像走進一座會發光的玻璃森林。</p>
+          <p>把每天的小任務，變成孩子看得見、也想完成的成就旅程。</p>
         </section>
 
         <section className={cn('hh-login-panel', revealed && 'is-revealed')} aria-label="登入表單">

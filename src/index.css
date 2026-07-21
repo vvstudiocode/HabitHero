@@ -99,9 +99,83 @@ body {
     url("/images/login-sprite-forest.png");
   background-position: center;
   background-size: cover;
+  overflow: hidden;
   pointer-events: none;
   touch-action: manipulation;
   user-select: none;
+}
+
+.hh-login-canvas::before,
+.hh-login-canvas::after {
+  content: "";
+  position: absolute;
+  inset: -24%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.hh-login-canvas::before {
+  background-image:
+    radial-gradient(circle at 14% 22%, rgba(255, 220, 128, 0.72) 0 7px, transparent 34px),
+    radial-gradient(circle at 31% 10%, rgba(255, 244, 188, 0.74) 0 8px, transparent 38px),
+    radial-gradient(circle at 52% 20%, rgba(255, 231, 157, 0.56) 0 6px, transparent 30px),
+    radial-gradient(circle at 74% 26%, rgba(112, 244, 232, 0.56) 0 8px, transparent 38px),
+    radial-gradient(circle at 84% 62%, rgba(255, 202, 132, 0.52) 0 7px, transparent 34px),
+    radial-gradient(circle at 22% 78%, rgba(98, 240, 229, 0.42) 0 8px, transparent 36px),
+    radial-gradient(circle at 90% 38%, rgba(255, 230, 148, 0.48) 0 7px, transparent 34px);
+  filter: blur(0.7px);
+  opacity: 0.9;
+  animation: hh-login-bokeh-drift 15s ease-in-out infinite alternate;
+}
+
+.hh-login-canvas::after {
+  background-image:
+    linear-gradient(115deg, transparent 0 28%, rgba(255, 236, 162, 0.02) 34%, rgba(255, 246, 197, 0.34) 45%, rgba(121, 244, 234, 0.12) 52%, transparent 66% 100%);
+  filter: blur(10px);
+  opacity: 0.62;
+  transform: translate3d(-34%, -4%, 0) scale(1.08);
+  animation: hh-login-sun-sweep 16s ease-in-out infinite;
+}
+
+@keyframes hh-login-bokeh-drift {
+  from {
+    opacity: 0.58;
+    transform: translate3d(-5.5%, -1.8%, 0) scale(1);
+  }
+
+  to {
+    opacity: 0.96;
+    transform: translate3d(5.8%, 2.4%, 0) scale(1.04);
+  }
+}
+
+@keyframes hh-login-sun-sweep {
+  0% {
+    opacity: 0;
+    transform: translate3d(-42%, -5%, 0) scale(1.08);
+  }
+
+  28% {
+    opacity: 0.74;
+  }
+
+  62% {
+    opacity: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(34%, 4%, 0) scale(1.08);
+  }
+}
+
+@media (min-width: 700px) {
+  .hh-login-canvas {
+    background-image:
+      linear-gradient(90deg, rgba(255, 244, 190, 0.1), rgba(255, 255, 255, 0) 42%, rgba(255, 244, 190, 0.08)),
+      url("/images/login-sprite-forest-wide.png");
+  }
 }
 
 .hh-login-sun,
@@ -782,6 +856,12 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hh-login-canvas,
+  .hh-login-canvas::before,
+  .hh-login-canvas::after {
+    animation: none;
+  }
+
   .hh-primary-button,
   .hh-login-tabs button,
   .hh-secondary-button,
