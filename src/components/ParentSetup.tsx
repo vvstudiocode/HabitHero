@@ -1,7 +1,8 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { signUp, toAuthErrorMessage, useAuthSession } from '../auth';
+import { signIn, signUp, toAuthErrorMessage, useAuthSession } from '../auth';
+import { validateParentRegistrationCredentials } from '../lib/auth-validation';
 import { SpriteLoginScene } from './SpriteLoginScene';
 
 interface ParentSetupProps {
@@ -24,16 +25,27 @@ export function ParentSetup({ onBack, onGoLogin, onComplete }: ParentSetupProps)
   const handleNext = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    const normalizedEmail = email.trim();
+    const validation = validateParentRegistrationCredentials(normalizedEmail, password);
+    if ('message' in validation) {
+      setError(validation.message);
+      return;
+    }
     setSubmitting(true);
     try {
-      const { data, error: signUpError } = await signUp({ email: email.trim(), password });
+      const { data, error: signUpError } = await signUp({ email: normalizedEmail, password });
       if (signUpError) setError(toAuthErrorMessage(signUpError));
       else if (data.session) onComplete();
-      else setError('註冊成功，請按上方「已有帳號？登入」進入。');
+      else {
+        const signInResult = await signIn({ email: normalizedEmail, password });
+        if (signInResult.error) setError(toAuthErrorMessage(signInResult.error));
+        else onComplete();
+      }
     } catch (signUpError) {
       setError(toAuthErrorMessage(signUpError));
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   return (
@@ -65,7 +77,6 @@ export function ParentSetup({ onBack, onGoLogin, onComplete }: ParentSetupProps)
             </div>
             <div>
               <h2>建立家長帳號</h2>
-              <p>建立後立即登入，不需要 Email 驗證。</p>
             </div>
           </div>
 
@@ -73,7 +84,7 @@ export function ParentSetup({ onBack, onGoLogin, onComplete }: ParentSetupProps)
           <input id="setup-email" type="email" required autoComplete="email" placeholder="家長 Email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} />
 
           <label htmlFor="setup-password">通關密語</label>
-          <input id="setup-password" type="password" required minLength={6} autoComplete="new-password" placeholder="至少 6 碼" value={password} onChange={(e) => { setPassword(e.target.value); setError(''); }} />
+          <input id="setup-password" type="password" required minLength={8} autoComplete="new-password" placeholder="至少 8 碼，含大小寫英文" value={password} onChange={(e) => { setPassword(e.target.value); setError(''); }} />
 
           {(error || sessionError) && <p role="alert" className="hh-login-error">{error || sessionError}</p>}
 

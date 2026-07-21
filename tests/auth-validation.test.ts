@@ -4,19 +4,47 @@ import {
   validateChildPassword,
   validateChildUsername,
   childAccountEmail,
-  validateParentCredentials,
+  validateParentLoginCredentials,
+  validateParentRegistrationCredentials,
   validatePasswordConfirmation,
 } from '../src/lib/auth-validation';
 
 describe('auth validation', () => {
   it('accepts a valid parent registration', () => {
-    assert.deepEqual(validateParentCredentials('parent@example.com', 'Abcd12'), { ok: true });
+    assert.deepEqual(validateParentRegistrationCredentials('parent@example.com', 'Abcdef12'), { ok: true });
   });
 
-  it('rejects a malformed parent email and short password', () => {
-    assert.deepEqual(validateParentCredentials('not-an-email', '123'), {
+  it('rejects malformed parent registration email', () => {
+    assert.deepEqual(validateParentRegistrationCredentials('not-an-email', 'Abcdef12'), {
       ok: false,
-      message: '請輸入有效的 Email，密碼至少 6 碼。',
+      message: '請輸入有效的 Email。',
+    });
+  });
+
+  it('requires parent registration passwords to be at least eight characters with uppercase and lowercase letters', () => {
+    assert.deepEqual(validateParentRegistrationCredentials('parent@example.com', 'abcdef12'), {
+      ok: false,
+      message: '密碼需至少 8 碼，並包含大小寫英文字母。',
+    });
+    assert.deepEqual(validateParentRegistrationCredentials('parent@example.com', 'ABCDEF12'), {
+      ok: false,
+      message: '密碼需至少 8 碼，並包含大小寫英文字母。',
+    });
+    assert.deepEqual(validateParentRegistrationCredentials('parent@example.com', 'Abc12'), {
+      ok: false,
+      message: '密碼需至少 8 碼，並包含大小寫英文字母。',
+    });
+  });
+
+  it('keeps parent login validation limited to email format and non-empty password', () => {
+    assert.deepEqual(validateParentLoginCredentials('parent@example.com', 'legacy'), { ok: true });
+    assert.deepEqual(validateParentLoginCredentials('not-an-email', 'legacy'), {
+      ok: false,
+      message: '請輸入有效的 Email。',
+    });
+    assert.deepEqual(validateParentLoginCredentials('parent@example.com', ''), {
+      ok: false,
+      message: '請輸入密碼。',
     });
   });
 

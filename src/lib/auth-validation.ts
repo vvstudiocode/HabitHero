@@ -2,6 +2,8 @@ export type ValidationResult = { ok: true } | { ok: false; message: string };
 
 const childPasswordPattern = /^[A-Za-z0-9]{6,}$/;
 const childUsernamePattern = /^[a-z0-9][a-z0-9_]{2,31}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const parentRegistrationPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
 
 export function normalizeChildUsername(username: string): string {
   return username.trim().toLowerCase();
@@ -18,10 +20,24 @@ export function childAccountEmail(username: string): string {
   return `${normalizeChildUsername(username)}@children.habithero.local`;
 }
 
-export function validateParentCredentials(email: string, password: string): ValidationResult {
+export function validateParentLoginCredentials(email: string, password: string): ValidationResult {
   const normalizedEmail = email.trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || password.length < 6) {
-    return { ok: false, message: '請輸入有效的 Email，密碼至少 6 碼。' };
+  if (!emailPattern.test(normalizedEmail)) {
+    return { ok: false, message: '請輸入有效的 Email。' };
+  }
+  if (!password) {
+    return { ok: false, message: '請輸入密碼。' };
+  }
+  return { ok: true };
+}
+
+export function validateParentRegistrationCredentials(email: string, password: string): ValidationResult {
+  const normalizedEmail = email.trim();
+  if (!emailPattern.test(normalizedEmail)) {
+    return { ok: false, message: '請輸入有效的 Email。' };
+  }
+  if (!parentRegistrationPasswordPattern.test(password)) {
+    return { ok: false, message: '密碼需至少 8 碼，並包含大小寫英文字母。' };
   }
   return { ok: true };
 }

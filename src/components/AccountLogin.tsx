@@ -3,7 +3,7 @@ import { Baby, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { signIn, signInChild, toAuthErrorMessage } from '../auth';
 import { useAppStore } from '../store';
-import { validateChildPassword, validateChildUsername, validateParentCredentials } from '../lib/auth-validation';
+import { validateChildPassword, validateChildUsername, validateParentLoginCredentials } from '../lib/auth-validation';
 import { SpriteLoginScene } from './SpriteLoginScene';
 
 interface AccountLoginProps {
@@ -34,7 +34,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
     setError('');
     const normalizedAccount = account.trim();
     const validation = mode === 'parent'
-      ? validateParentCredentials(normalizedAccount, password)
+      ? validateParentLoginCredentials(normalizedAccount, password)
       : validateChildUsername(normalizedAccount);
     if ('message' in validation) {
       setError(validation.message);
