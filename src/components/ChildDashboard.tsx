@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { CheckCircle2, Gift, LayoutList, LogOut, Plus, Star, X, PlayCircle, Clock, History } from 'lucide-react';
+import { CheckCircle2, Gift, LogOut, Plus, Star, X, PlayCircle, Clock, History } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Reward } from '../types';
 
@@ -183,8 +183,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         <div className="relative z-10 flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-yellow-900">{activeChild.name}的任務</h1>
           <div className="flex gap-2">
-            <button onClick={onLogout} className="flex items-center gap-1 bg-white/40 hover:bg-white/60 px-3 py-2 rounded-xl text-yellow-900 transition-colors text-sm font-bold">
-              <LogOut size={16} /> 登出
+            <button onClick={onLogout} aria-label="登出" title="登出" className="flex min-h-11 min-w-11 items-center justify-center bg-white/40 hover:bg-white/60 p-2 rounded-xl text-yellow-900 transition-colors">
+              <LogOut size={20} />
             </button>
           </div>
         </div>
@@ -217,7 +217,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               activeTab === 'tasks' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
             )}
           >
-            <LayoutList size={18} />
             任務
           </button>
           <button
@@ -227,7 +226,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               activeTab === 'wishlist' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
             )}
           >
-            <Gift size={18} />
             許願
           </button>
           <button
@@ -237,7 +235,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               activeTab === 'history' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
             )}
           >
-            <History size={18} />
             兌換
           </button>
         </div>

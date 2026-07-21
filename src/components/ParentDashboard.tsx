@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
-import { CheckCircle2, Circle, Clock, Gift, LayoutList, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
+import { Circle, Clock, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 
@@ -145,7 +145,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       setNewTaskName('');
       setNewTaskPoints(5);
       setNewTaskDuration('');
-      setNewTaskIsDaily(true);
+      setNewTaskIsDaily(false);
       setNewTaskTargetChildIds(state.children.map(c => c.id));
     }
     setShowTaskForm(true);
@@ -223,7 +223,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
 
   const openAssignTemplate = (template: import('../types').TaskTemplate) => {
     setAssigningTemplate(template);
-    setNewTaskIsDaily(true);
+    setNewTaskIsDaily(false);
     setNewTaskTargetChildIds(state.children.map(c => c.id));
   };
 
@@ -359,10 +359,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={onSwitchToChild} className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-xl text-sm transition-colors whitespace-nowrap">
-              小孩視角
+            <button onClick={onSwitchToChild} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-xl transition-colors">
+              <Baby size={20} />
             </button>
-            <button onClick={() => setShowSettings(true)} className="bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
+            <button onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="flex min-h-11 min-w-11 items-center justify-center bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
               <Settings size={20} />
             </button>
           </div>
@@ -404,7 +404,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               activeTab === 'tasks' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
             )}
           >
-            <CheckCircle2 size={16} />
             任務
             {pendingTasks.length > 0 && <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />}
           </button>
@@ -415,8 +414,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               activeTab === 'templates' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
             )}
           >
-            <LayoutList size={16} />
-            任務模板
+            模板
           </button>
           <button
             onClick={() => setActiveTab('rewards')}
@@ -425,8 +423,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               activeTab === 'rewards' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
             )}
           >
-            <Gift size={16} />
-            獎勵商店
+            獎勵
             {pendingTickets.length > 0 && <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />}
           </button>
           <button
@@ -436,8 +433,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               activeTab === 'wishlist' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
             )}
           >
-            <Star size={16} />
-            許願池
+            許願
             {allWishlist.length > 0 && (
               <span className="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 origin-center leading-none">
                 {allWishlist.length}
@@ -534,7 +530,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
           <div className="space-y-6">
             <section>
               <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-bold text-gray-900">任務模板庫</h2>
+                <h2 className="text-lg font-bold text-gray-900">模板庫</h2>
                 <button onClick={() => openTemplateForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
                   <Plus size={16} /> 新增模板
                 </button>
@@ -573,7 +569,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                   </div>
                 ))}
                 {state.taskTemplates.length === 0 && (
-                  <div className="text-center py-8 text-gray-400 text-sm">目前沒有任務模板，點擊右上角新增。</div>
+                  <div className="text-center py-8 text-gray-400 text-sm">目前沒有模板，點擊右上角新增。</div>
                 )}
               </div>
             </section>
@@ -611,7 +607,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             {/* Rewards */}
             <section>
               <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-bold text-gray-900">獎勵商店</h2>
+                <h2 className="text-lg font-bold text-gray-900">獎勵</h2>
                 <button onClick={() => openRewardForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
                   <Plus size={16} /> 新增
                 </button>
@@ -652,10 +648,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
               <Star size={20} className="text-yellow-500" />
-              小孩許願池
+              小孩許願
             </h2>
             {allWishlist.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-2xl">許願池空空的</div>
+              <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-2xl">許願空空的</div>
             ) : (
               <div className="space-y-3">
                 {allWishlist.map(item => (
@@ -832,13 +828,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
-              <label className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-4 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                <input type="checkbox" checked={newTaskIsDaily} onChange={e => setNewTaskIsDaily(e.target.checked)} className="w-5 h-5 text-blue-500 rounded focus:ring-blue-400" />
-                <div>
-                  <span className="block text-sm font-bold text-gray-800">每日任務</span>
-                  <span className="block text-xs text-gray-500">每天自動重置為未完成狀態</span>
-                </div>
-              </label>
               <button onClick={() => void handleSaveTask()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
             </div>
           </div>
@@ -902,13 +891,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                   </div>
                 </div>
               )}
-              <label className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-4 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                <input type="checkbox" checked={newTaskIsDaily} onChange={e => setNewTaskIsDaily(e.target.checked)} className="w-5 h-5 text-blue-500 rounded focus:ring-blue-400" />
-                <div>
-                  <span className="block text-sm font-bold text-gray-800">設為每日任務</span>
-                  <span className="block text-xs text-gray-500">每天自動重置為未完成狀態</span>
-                </div>
-              </label>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
             </div>
           </div>

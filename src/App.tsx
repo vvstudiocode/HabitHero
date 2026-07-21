@@ -60,7 +60,7 @@ function MainApp() {
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 animate-pulse text-3xl">
           ⭐
         </div>
-        <p className="text-lg font-bold text-blue-900">小任務大願望</p>
+        <p className="text-lg font-bold text-blue-900">HabitHero 習慣小英雄</p>
         <p className="mt-2 text-sm text-blue-400">啟動中…</p>
       </div>
     );

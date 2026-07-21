@@ -50,4 +50,5 @@ The user has installed several global skills and MCP/CLI tools. Use them when th
 - For visual/frontend work, prefer `ui-ux-pro-max` as the general design skill and add `apple-design` only when the interaction or requested style calls for it.
 - For design-token extraction from an external site, use `extract-design-system` instead of hand-copying colors or typography.
 - For feature planning/specification work, consider Spec Kit, but ask before initializing project files.
+- Do not start a local preview/dev server unless the user explicitly asks for it.
 - Keep project changes scoped and explain any generated files before asking the user to confirm.

@@ -1,5 +1,5 @@
 import React, { FormEvent, useState } from 'react';
-import { Baby, KeyRound, User } from 'lucide-react';
+import { Baby, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { signIn, signInChild, toAuthErrorMessage } from '../auth';
 import { useAppStore } from '../store';
@@ -66,8 +66,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600">
             {mode === 'parent' ? <User size={36} /> : <Baby size={36} />}
           </div>
-          <h1 className="text-3xl font-bold text-blue-900">小任務大願望</h1>
-          <p className="mt-2 text-blue-600">登入後開始今天的小任務</p>
+          <h1 className="text-3xl font-bold text-blue-900">HabitHero 習慣小英雄</h1>
         </div>
 
         <div className="mb-6 grid grid-cols-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-blue-100" role="tablist" aria-label="登入身份">
