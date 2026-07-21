@@ -45,6 +45,17 @@ interface AppContextType {
   resetData: () => Promise<void>;
 }
 
+interface AppLoadingGateInput {
+  sessionLoading: boolean;
+  dataLoading: boolean;
+  hasSession: boolean;
+  dataReady: boolean;
+}
+
+export function shouldBlockAppForDataLoad({ sessionLoading, dataLoading, hasSession, dataReady }: AppLoadingGateInput) {
+  return sessionLoading || dataLoading || (hasSession && !dataReady);
+}
+
 const emptyState: AppState = {
   parentPin: null,
   children: [],
@@ -65,6 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(emptyState);
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [role, setRole] = useState<'parent' | 'child' | null>(null);
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataReady, setDataReady] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -79,13 +91,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (loadInFlight.current) return loadInFlight.current;
     setDataLoading(true);
     setDataReady(false);
+    setLoadedUserId(null);
     setDataError(null);
     loadInFlight.current = (async () => {
       try {
-    const loaded = await repository.load(session.user.id);
+        const loaded = await repository.load(session.user.id);
         setState(loaded.state);
         setFamilyId(loaded.familyId);
         setRole(loaded.role);
+        setLoadedUserId(session.user.id);
         setDataReady(true);
         setStale(false);
       } catch (error) {
@@ -106,6 +120,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState(emptyState);
       setFamilyId(null);
       setRole(null);
+      setLoadedUserId(null);
       setDataReady(false);
       setDataError(null);
       setStale(false);
@@ -178,6 +193,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(emptyState);
     setFamilyId(null);
     setRole(null);
+    setLoadedUserId(null);
+    setDataReady(false);
     setDataError(null);
     setStale(false);
   };
@@ -205,8 +222,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     resetData: async () => { setDataError('雲端資料不能由前端整批刪除。'); },
   };
 
+  const hasSession = Boolean(session);
+  const dataReadyForSession = hasSession && dataReady && loadedUserId === session.user.id;
+  const loading = shouldBlockAppForDataLoad({
+    sessionLoading,
+    dataLoading,
+    hasSession,
+    dataReady: dataReadyForSession,
+  });
+
   return <AppContext.Provider value={{
-    state, loading: sessionLoading || dataLoading, dataReady, mutationPending, stale, isOffline, error: sessionError || dataError,
+    state, loading, dataReady: dataReadyForSession, mutationPending, stale, isOffline, error: sessionError || dataError,
     retry, role, hasSession: Boolean(session), updateState, setParentPin,
     setParentActiveChild, setChildLoggedIn, clearProtectedState,
     startTaskTimer: (childId, taskId) => setState((previous) => ({
