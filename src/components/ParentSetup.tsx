@@ -2,7 +2,6 @@ import React, { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { signUp, toAuthErrorMessage, useAuthSession } from '../auth';
-import { SpriteLoginScene } from './SpriteLoginScene';
 
 interface ParentSetupProps {
   onBack: () => void;
@@ -38,7 +37,6 @@ export function ParentSetup({ onBack, onGoLogin, onComplete }: ParentSetupProps)
 
   return (
     <form onSubmit={handleNext} className="hh-login-screen">
-      <SpriteLoginScene />
       <div className="hh-login-sun" />
       <div className="hh-login-vignette" />
       <div className="hh-login-grain" />

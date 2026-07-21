@@ -548,9 +548,9 @@ export function SpriteLoginScene() {
       const isTabletPortrait = w < 860 && h > w;
       mobileLift = isPhone ? 1.58 : isTabletPortrait ? 0.74 : 0;
       mobileSceneX = isPhone ? -0.82 : isTabletPortrait ? -0.42 : 0;
-      island.position.y = -0.52 + mobileLift;
+      island.position.y = -0.18 + mobileLift;
       island.position.x = mobileSceneX;
-      controls.target.set(mobileSceneX * 0.34, 0.9 + mobileLift * 0.72, 0);
+      controls.target.set(mobileSceneX * 0.34, 1.08 + mobileLift * 0.72, 0);
       camera.aspect = w / h;
       camera.position.z = isPhone ? 11.25 : 9.2;
       camera.position.y = isPhone ? 3.55 : isTabletPortrait ? 2.8 : 2.2;

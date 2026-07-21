@@ -133,7 +133,7 @@ body {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(312px, 390px);
+  grid-template-columns: minmax(0, 1fr) minmax(288px, 350px);
   align-items: center;
   gap: clamp(20px, 4vw, 64px);
   min-height: 100dvh;
@@ -168,15 +168,14 @@ body {
 
 .hh-login-panel {
   width: 100%;
-  padding: 22px;
+  padding: 18px;
   border: 1px solid var(--hh-line);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
-    var(--hh-panel);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035)),
+    rgba(4, 35, 47, 0.5);
   color: var(--hh-ink);
   box-shadow: 0 28px 80px rgba(0, 18, 30, 0.42), inset 0 1px rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(24px) saturate(130%);
   pointer-events: auto;
 }
 
@@ -382,6 +381,71 @@ body {
   text-align: center;
   font-size: 14px;
   line-height: 1.55;
+}
+
+.hh-login-screen--entry .hh-login-shell {
+  display: block;
+}
+
+.hh-login-screen--entry .hh-login-copy {
+  max-width: min(560px, 88vw);
+  pointer-events: none;
+}
+
+.hh-login-screen--entry .hh-login-panel {
+  position: fixed;
+  right: auto;
+  bottom: max(42px, calc(env(safe-area-inset-bottom) + 42px));
+  left: 50%;
+  width: min(380px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: translateX(-50%);
+}
+
+.hh-login-screen--entry .hh-login-tabs {
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.hh-login-screen--entry .hh-login-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 54px;
+  border: 1px solid rgba(185, 246, 255, 0.28);
+  color: #eafffb;
+  background: rgba(3, 42, 56, 0.68);
+  box-shadow: 0 16px 34px rgba(0, 18, 30, 0.36), inset 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.hh-login-screen--entry .hh-login-tabs button.is-active,
+.hh-login-screen--entry .hh-login-tabs button:hover {
+  color: #07303e;
+  background: linear-gradient(135deg, #f2ff9b, #75f5df 48%, #34c4ff);
+}
+
+.hh-login-screen--entry .hh-login-fields {
+  margin-top: 14px;
+  animation: hh-login-fields-in 260ms ease-out both;
+}
+
+@keyframes hh-login-fields-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hh-sprite-theme .bg-blue-50,
@@ -606,9 +670,9 @@ body {
   }
 
   .hh-login-panel {
-    max-width: 460px;
+    max-width: 380px;
     margin-inline: auto;
-    padding: 16px;
+    padding: 15px;
   }
 
 }
@@ -630,11 +694,10 @@ body {
   }
 
   .hh-login-panel {
-    padding: 13px;
+    padding: 12px;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.045)),
-      rgba(4, 35, 47, 0.4);
-    backdrop-filter: blur(18px) saturate(128%);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+      rgba(4, 35, 47, 0.5);
   }
 
   .hh-login-panel-head {
