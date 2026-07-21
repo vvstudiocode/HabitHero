@@ -12,7 +12,7 @@ import { ParentDashboard } from './components/ParentDashboard';
 import { ChildDashboard } from './components/ChildDashboard';
 
 function MainApp() {
-  const { clearProtectedState, hasSession, loading, role, error, retry } = useAppStore();
+  const { clearProtectedState, hasSession, loading, dataReady, role, error, retry } = useAppStore();
   
   const [currentView, setCurrentView] = useState<'login' | 'parentSetup' | 'parentDashboard' | 'childDashboard'>('login');
   const [loginMode, setLoginMode] = useState<'parent' | 'child'>('parent');
@@ -27,7 +27,7 @@ function MainApp() {
       return;
     }
     const waitingForExplicitLogin = currentView === 'login' && loginMode === 'child' && !pendingView;
-    if (!loading && hasSession && role && !signingOut && !waitingForExplicitLogin) {
+    if (!loading && dataReady && hasSession && role && !signingOut && !waitingForExplicitLogin) {
       setCurrentView(role === 'parent' ? 'parentDashboard' : 'childDashboard');
       setPendingView(null);
     }
@@ -35,7 +35,7 @@ function MainApp() {
       setCurrentView('login');
     }
     if (!hasSession && signingOut) setSigningOut(false);
-  }, [clearProtectedState, currentView, error, hasSession, loading, loginMode, pendingView, role, signingOut]);
+  }, [clearProtectedState, currentView, dataReady, error, hasSession, loading, loginMode, pendingView, role, signingOut]);
 
   const handleSwitchToChild = () => {
     setLoginMode('child');

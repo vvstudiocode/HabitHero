@@ -8,6 +8,7 @@ import { subscribeToAppData } from './lib/realtime';
 interface AppContextType {
   state: AppState;
   loading: boolean;
+  dataReady: boolean;
   mutationPending: boolean;
   stale: boolean;
   isOffline: boolean;
@@ -65,6 +66,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [role, setRole] = useState<'parent' | 'child' | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
   const [mutationPending, setMutationPending] = useState(false);
   const [stale, setStale] = useState(false);
@@ -76,6 +78,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!session || !repository) return;
     if (loadInFlight.current) return loadInFlight.current;
     setDataLoading(true);
+    setDataReady(false);
     setDataError(null);
     loadInFlight.current = (async () => {
       try {
@@ -83,6 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setState(loaded.state);
         setFamilyId(loaded.familyId);
         setRole(loaded.role);
+        setDataReady(true);
         setStale(false);
       } catch (error) {
         setDataError(error instanceof Error ? error.message : '資料載入失敗，請稍後重試。');
@@ -102,6 +106,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState(emptyState);
       setFamilyId(null);
       setRole(null);
+      setDataReady(false);
       setDataError(null);
       setStale(false);
     }
@@ -201,7 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   return <AppContext.Provider value={{
-    state, loading: sessionLoading || dataLoading, mutationPending, stale, isOffline, error: sessionError || dataError,
+    state, loading: sessionLoading || dataLoading, dataReady, mutationPending, stale, isOffline, error: sessionError || dataError,
     retry, role, hasSession: Boolean(session), updateState, setParentPin,
     setParentActiveChild, setChildLoggedIn, clearProtectedState,
     startTaskTimer: (childId, taskId) => setState((previous) => ({
