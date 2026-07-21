@@ -314,7 +314,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
             {pendingTasks.length > 0 && (
               <div className="mt-8">
-                <h3 className="text-gray-500 font-bold mb-4 px-2">等待爸媽審核 ⏳</h3>
+              <h3 className="text-gray-500 font-bold mb-4 px-2">等待爸媽審核</h3>
                 <div className="space-y-3">
                   {pendingTasks.map(task => (
                     <div key={task.id} className="bg-gray-100 p-4 rounded-2xl border border-gray-200 flex items-center justify-between opacity-70">
