@@ -20,4 +20,24 @@ describe('app data loading gate', () => {
       dataReady: true,
     }), false);
   });
+
+  it('does not block during background refresh when data is already ready', () => {
+    // This is the key fix: realtime/reconnect refreshes should not
+    // replace the dashboard with a loading screen.
+    assert.equal(shouldBlockAppForDataLoad({
+      sessionLoading: false,
+      dataLoading: true,
+      hasSession: true,
+      dataReady: true,
+    }), false);
+  });
+
+  it('blocks during first load when dataLoading and dataReady are both false', () => {
+    assert.equal(shouldBlockAppForDataLoad({
+      sessionLoading: false,
+      dataLoading: true,
+      hasSession: true,
+      dataReady: false,
+    }), true);
+  });
 });

@@ -24,8 +24,16 @@ export function subscribeToAppData(client: SupabaseClient, options: RealtimeOpti
       : options.role === 'child' ? `child_profile_id=eq.${options.childProfileId}` : `family_id=eq.${options.familyId}`;
     channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, options.onChange);
   }
+  let hadError = false;
   channel.subscribe((status) => {
-    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'SUBSCRIBED') options.onReconnect();
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      hadError = true;
+      options.onReconnect();
+    } else if (status === 'SUBSCRIBED' && hadError) {
+      // Only treat SUBSCRIBED as a reconnection if we had a prior disconnect
+      hadError = false;
+      options.onReconnect();
+    }
   });
   return () => { void client.removeChannel(channel); };
 }

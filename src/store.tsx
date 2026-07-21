@@ -54,7 +54,13 @@ interface AppLoadingGateInput {
 }
 
 export function shouldBlockAppForDataLoad({ sessionLoading, dataLoading, hasSession, dataReady }: AppLoadingGateInput) {
-  return sessionLoading || dataLoading || (hasSession && !dataReady);
+  // Block UI only during initial load. Once data is ready, background
+  // refreshes (realtime, reconnect) should NOT replace the dashboard
+  // with a loading screen.
+  if (sessionLoading) return true;
+  if (hasSession && !dataReady) return true; // first load not finished
+  if (dataLoading && !dataReady) return true; // still loading first time
+  return false;
 }
 
 const emptyState: AppState = {
@@ -91,9 +97,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const retry = useCallback(async () => {
     if (!session || !repository) return;
     if (loadInFlight.current) return loadInFlight.current;
+    // Only reset dataReady on the very first load (no existing data).
+    // For subsequent refreshes (realtime, reconnect) keep the dashboard
+    // visible to avoid the loading-screen flash.
+    const isFirstLoad = !dataReady && !loadedUserId;
+    if (isFirstLoad) {
+      setDataReady(false);
+      setLoadedUserId(null);
+    }
     setDataLoading(true);
-    setDataReady(false);
-    setLoadedUserId(null);
     setDataError(null);
     loadInFlight.current = (async () => {
       try {
@@ -113,6 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     })();
     return loadInFlight.current;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repository, session]);
 
   useEffect(() => { void retry(); }, [retry]);
@@ -156,7 +169,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       childProfileId: state.childLoggedInId,
       userId: session.user.id,
       onChange: () => { setStale(true); void retry(); },
-      onReconnect: () => { setIsOffline(false); setStale(true); void retry(); },
+      // Only refresh on actual reconnection, not on initial SUBSCRIBED
+      onReconnect: () => { setIsOffline(false); setStale(true); },
     });
   }, [familyId, repository, retry, role, session, state.childLoggedInId]);
 
