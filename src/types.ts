@@ -41,6 +41,7 @@ export interface ChildProfileRow {
   id: Id;
   family_id: Id;
   profile_id: Id | null;
+  login_name: string | null;
   display_name: string;
   points_balance: Points;
   created_at: Timestamp;
@@ -265,6 +266,7 @@ export interface ChildViewModel {
   id: Id;
   familyId: Id;
   profileId: Id | null;
+  loginName: string | null;
   name: string;
   points: Points;
 }
@@ -344,6 +346,7 @@ export interface Child {
   id: Id;
   name: string;
   code: string;
+  loginName: string | null;
   points: Points;
   tasks: Task[];
   rewards: Reward[];

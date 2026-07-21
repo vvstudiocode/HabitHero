@@ -6,76 +6,61 @@
 import React, { useEffect, useState } from 'react';
 import { AppProvider, useAppStore } from './store';
 import { signOut } from './auth';
-import { LandingScreen } from './components/LandingScreen';
+import { AccountLogin } from './components/AccountLogin';
 import { ParentSetup } from './components/ParentSetup';
-import { ParentLogin } from './components/ParentLogin';
-import { ChildLogin } from './components/ChildLogin';
 import { ParentDashboard } from './components/ParentDashboard';
 import { ChildDashboard } from './components/ChildDashboard';
 
 function MainApp() {
   const { clearProtectedState, hasSession, loading, role, error, retry } = useAppStore();
   
-  // 'landing' | 'parentSetup' | 'parentLogin' | 'childLogin' | 'parentDashboard' | 'childDashboard'
-  const [currentView, setCurrentView] = useState<'landing' | 'parentSetup' | 'parentLogin' | 'childLogin' | 'parentDashboard' | 'childDashboard'>('landing');
+  const [currentView, setCurrentView] = useState<'login' | 'parentSetup' | 'parentDashboard' | 'childDashboard'>('login');
+  const [loginMode, setLoginMode] = useState<'parent' | 'child'>('parent');
 
   useEffect(() => {
     if (!loading && hasSession && error?.includes('尚未加入家庭')) {
       clearProtectedState();
       void signOut();
-      setCurrentView('landing');
+      setCurrentView('login');
       return;
     }
-    if (!loading && hasSession && role) setCurrentView(role === 'parent' ? 'parentDashboard' : 'childDashboard');
-    if (!loading && !hasSession) setCurrentView('landing');
-  }, [clearProtectedState, error, hasSession, loading, role]);
-
-  const handleSelectRole = (selectedRole: 'parent' | 'child') => {
-    if (selectedRole === 'parent') {
-      if (hasSession && role === 'parent') {
-        setCurrentView('parentDashboard');
-      } else {
-        setCurrentView('parentSetup');
-      }
-    } else {
-      if (hasSession && role === 'child') {
-        setCurrentView('childDashboard');
-      } else {
-        setCurrentView('childLogin');
-      }
+    if (!loading && hasSession && role && !(currentView === 'login' && loginMode === 'child')) {
+      setCurrentView(role === 'parent' ? 'parentDashboard' : 'childDashboard');
     }
-  };
+    if (!loading && !hasSession && !['parentSetup', 'login'].includes(currentView)) {
+      setCurrentView('login');
+    }
+  }, [clearProtectedState, currentView, error, hasSession, loading, loginMode, role]);
 
   const handleSwitchToChild = () => {
-    setCurrentView('childLogin');
+    setLoginMode('child');
+    setCurrentView('login');
+    void signOut();
   };
 
   const handleLogout = () => {
-    setCurrentView('landing');
+    setLoginMode('parent');
+    setCurrentView('login');
     clearProtectedState();
     void signOut();
   };
 
   if (loading) return <div className="flex min-h-[100dvh] items-center justify-center bg-blue-50 text-blue-700">正在載入家庭資料…</div>;
-  if (error && hasSession && currentView === 'landing') {
+  if (error && hasSession && currentView === 'login') {
     return <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900"><p role="alert">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white">重試</button></div>;
   }
 
   switch (currentView) {
-    case 'landing':
-      return <LandingScreen onSelectRole={handleSelectRole} onParentLogin={() => setCurrentView('parentLogin')} />;
+    case 'login':
+      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onComplete={(mode) => setCurrentView(mode === 'parent' ? 'parentDashboard' : 'childDashboard')} />;
     case 'parentSetup':
-      return <ParentSetup onBack={() => setCurrentView('landing')} onGoLogin={() => setCurrentView('parentLogin')} onComplete={() => setCurrentView('parentDashboard')} />;
-    case 'parentLogin':
-      return <ParentLogin onBack={() => setCurrentView('landing')} onGoSignup={() => setCurrentView('parentSetup')} onComplete={() => setCurrentView('parentDashboard')} />;
-    case 'childLogin':
-      return <ChildLogin onBack={() => setCurrentView('landing')} onComplete={() => setCurrentView('childDashboard')} />;
+      return <ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={() => setCurrentView('parentDashboard')} />;
     case 'parentDashboard':
       return <ParentDashboard onSwitchToChild={handleSwitchToChild} onLogout={handleLogout} />;
     case 'childDashboard':
-      return <ChildDashboard onLogout={handleLogout} onSwitchChild={() => setCurrentView('childLogin')} />;
+      return <ChildDashboard onLogout={handleLogout} onSwitchChild={handleSwitchToChild} />;
     default:
-      return <LandingScreen onSelectRole={handleSelectRole} onParentLogin={() => setCurrentView('parentLogin')} />;
+      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onComplete={(mode) => setCurrentView(mode === 'parent' ? 'parentDashboard' : 'childDashboard')} />;
   }
 }
 

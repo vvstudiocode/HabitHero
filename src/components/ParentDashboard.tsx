@@ -3,7 +3,7 @@ import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
 import { CheckCircle2, Circle, Clock, Gift, LayoutList, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
-import { validateChildPassword, validatePasswordConfirmation } from '../lib/auth-validation';
+import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 
 interface ParentDashboardProps {
   onSwitchToChild: () => void;
@@ -87,9 +87,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false);
   const [newChildName, setNewChildName] = useState('');
+  const [newChildUsername, setNewChildUsername] = useState('');
   const [newChildPassword, setNewChildPassword] = useState('');
   const [newChildPasswordConfirmation, setNewChildPasswordConfirmation] = useState('');
   const [newChildError, setNewChildError] = useState('');
+  const [accountSetupChildId, setAccountSetupChildId] = useState<string | null>(null);
+  const [accountSetupUsername, setAccountSetupUsername] = useState('');
+  const [accountSetupPassword, setAccountSetupPassword] = useState('');
+  const [accountSetupConfirmation, setAccountSetupConfirmation] = useState('');
+  const [accountSetupError, setAccountSetupError] = useState('');
   const [resetChildId, setResetChildId] = useState<string | null>(null);
   const [resetChildPassword, setResetChildPassword] = useState('');
   const [resetChildPasswordConfirmation, setResetChildPasswordConfirmation] = useState('');
@@ -291,6 +297,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       setNewChildError('請輸入小孩名字。');
       return;
     }
+    const usernameValidation = validateChildUsername(newChildUsername);
+    if ('message' in usernameValidation) {
+      setNewChildError(usernameValidation.message);
+      return;
+    }
     const passwordValidation = validateChildPassword(newChildPassword);
     if ('message' in passwordValidation) {
       setNewChildError(passwordValidation.message);
@@ -302,12 +313,34 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       return;
     }
     try {
-      await addChild(newChildName.trim(), newChildPassword);
+      await addChild(newChildName.trim(), newChildUsername.trim().toLowerCase(), newChildPassword);
       setNewChildName('');
+      setNewChildUsername('');
       setNewChildPassword('');
       setNewChildPasswordConfirmation('');
     } catch {
       // Provider error is already shown above the tabs; keep the form values.
+    }
+  };
+
+  const handleCreateExistingChildAccount = async () => {
+    const child = state.children.find((item) => item.id === accountSetupChildId);
+    if (!child) return;
+    setAccountSetupError('');
+    const usernameValidation = validateChildUsername(accountSetupUsername);
+    if ('message' in usernameValidation) { setAccountSetupError(usernameValidation.message); return; }
+    const passwordValidation = validateChildPassword(accountSetupPassword);
+    if ('message' in passwordValidation) { setAccountSetupError(passwordValidation.message); return; }
+    const confirmationValidation = validatePasswordConfirmation(accountSetupPassword, accountSetupConfirmation);
+    if ('message' in confirmationValidation) { setAccountSetupError(confirmationValidation.message); return; }
+    try {
+      await addChild(child.name, accountSetupUsername, accountSetupPassword, child.id);
+      setAccountSetupChildId(null);
+      setAccountSetupUsername('');
+      setAccountSetupPassword('');
+      setAccountSetupConfirmation('');
+    } catch (error) {
+      setAccountSetupError(error instanceof Error ? error.message : '建立小孩帳號失敗，請重試。');
     }
   };
 
@@ -669,7 +702,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               {/* Children List */}
               <section>
                   <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-                  <Users size={18} /> 小孩名單與登入密碼
+                  <Users size={18} /> 小孩帳號管理
                 </h4>
                 <div className="space-y-4">
                   {state.children.map(child => (
@@ -694,11 +727,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                       </div>
                       <div className="flex items-start gap-2 text-xs text-amber-700">
                         <KeyRound size={16} className="mt-0.5 shrink-0" />
-                        <span>小孩只需輸入家長設定的密碼；密碼不會顯示在這裡，忘記時請由家長重新設定。</span>
+                        <span>{child.loginName ? `登入帳號：${child.loginName}。密碼不會顯示在這裡，忘記時請由家長重新設定。` : '此小孩尚未建立登入帳號。'}</span>
                       </div>
-                      <button onClick={() => { setResetChildId(child.id); setResetChildError(''); }} className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50">
-                        重設小孩密碼
-                      </button>
+                      {child.loginName ? <button onClick={() => { setResetChildId(child.id); setResetChildError(''); }} className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50">重設小孩密碼</button> : <button onClick={() => { setAccountSetupChildId(child.id); setAccountSetupError(''); }} className="rounded-lg bg-blue-500 px-3 py-2 text-sm font-bold text-white hover:bg-blue-600">建立小孩帳號</button>}
                     </div>
                   ))}
                 </div>
@@ -718,11 +749,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                     className="w-full p-2.5 rounded-xl border border-blue-200 outline-none focus:ring-2 focus:ring-blue-400 min-w-0"
                   />
                 </div>
+                <input type="text" autoComplete="username" placeholder="小孩帳號名稱，例如 leo123" value={newChildUsername} onChange={e => { setNewChildUsername(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
                 <input type="password" autoComplete="new-password" placeholder="小孩密碼（至少 6 碼英數）" value={newChildPassword} onChange={e => { setNewChildPassword(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
                 <input type="password" autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => { setNewChildPasswordConfirmation(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
                 {newChildError && <p role="alert" className="mb-3 text-xs leading-5 text-red-600">{newChildError}</p>}
-                <p className="mb-3 text-xs leading-5 text-blue-800">密碼只用來辨識小孩，請每位小孩設定不同密碼；資料庫只保存雜湊值。</p>
-                <button onClick={() => void handleAddChild()} disabled={!newChildName.trim() || !newChildPassword || !newChildPasswordConfirmation || loading} className="w-full rounded-xl bg-blue-500 py-2 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50">
+                <p className="mb-3 text-xs leading-5 text-blue-800">帳號名稱需 3–32 碼英數或底線；小孩可在任何裝置用帳號與密碼登入。</p>
+                <button onClick={() => void handleAddChild()} disabled={!newChildName.trim() || !newChildUsername || !newChildPassword || !newChildPasswordConfirmation || loading} className="w-full rounded-xl bg-blue-500 py-2 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50">
                   建立小孩
                 </button>
               </section>
@@ -1014,6 +1046,25 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                     setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation('');
                   } catch { /* provider error is shown above the tabs */ }
                 })()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">儲存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {accountSetupChildId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-xl font-bold text-blue-900">建立小孩登入帳號</h3>
+            <p className="mb-4 text-sm text-gray-500">建立後小孩可在任何裝置使用帳號登入。</p>
+            <div className="space-y-3">
+              <input type="text" autoComplete="username" value={accountSetupUsername} onChange={e => { setAccountSetupUsername(e.target.value); setAccountSetupError(''); }} placeholder="帳號名稱，例如 leo123" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
+              <input type="password" autoComplete="new-password" value={accountSetupPassword} onChange={e => { setAccountSetupPassword(e.target.value); setAccountSetupError(''); }} placeholder="新密碼（至少 6 碼英數）" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
+              <input type="password" autoComplete="new-password" value={accountSetupConfirmation} onChange={e => { setAccountSetupConfirmation(e.target.value); setAccountSetupError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
+              {accountSetupError && <p role="alert" className="text-sm text-red-500">{accountSetupError}</p>}
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setAccountSetupChildId(null); setAccountSetupError(''); }} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
+                <button onClick={() => void handleCreateExistingChildAccount()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">建立</button>
               </div>
             </div>
           </div>

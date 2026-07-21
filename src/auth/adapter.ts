@@ -1,5 +1,6 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
+import { childAccountEmail } from '../lib/auth-validation';
 
 export interface AuthCredentials {
   email: string;
@@ -12,12 +13,12 @@ export async function signIn(credentials: AuthCredentials) {
   return getSupabaseClient().auth.signInWithPassword(credentials);
 }
 
-export async function signUp(credentials: AuthCredentials) {
-  return getSupabaseClient().auth.signUp(credentials);
+export async function signInChild(loginName: string, password: string) {
+  return signIn({ email: childAccountEmail(loginName), password });
 }
 
-export async function signInAnonymously() {
-  return getSupabaseClient().auth.signInAnonymously();
+export async function signUp(credentials: AuthCredentials) {
+  return getSupabaseClient().auth.signUp(credentials);
 }
 
 export async function signOut() {

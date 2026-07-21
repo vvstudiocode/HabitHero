@@ -47,6 +47,7 @@ export const childProfileRowToViewModel = (
   id: row.id,
   familyId: row.family_id,
   profileId: row.profile_id,
+  loginName: row.login_name,
   name: profile?.displayName ?? row.display_name,
   points: row.points_balance,
 });

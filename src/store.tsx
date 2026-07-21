@@ -17,7 +17,7 @@ interface AppContextType {
   hasSession: boolean;
   updateState: (newState: Partial<AppState>) => void;
   setParentPin: (pin: string) => void;
-  addChild: (name: string, password: string) => Promise<void>;
+  addChild: (name: string, loginName: string, password: string, childProfileId?: string) => Promise<void>;
   updateChildPassword: (childId: string, password: string) => Promise<void>;
   updateChildCode: (childId: string, code: string) => Promise<void>;
   updateChildName: (childId: string, name: string) => Promise<void>;
@@ -79,7 +79,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDataError(null);
     loadInFlight.current = (async () => {
       try {
-        const loaded = await repository.load(session.user.id, session.user.is_anonymous === true);
+    const loaded = await repository.load(session.user.id);
         setState(loaded.state);
         setFamilyId(loaded.familyId);
         setRole(loaded.role);
@@ -178,7 +178,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const actions = {
-    addChild: (name: string, password: string) => mutate((repo, id) => repo.insertChild(id, name, password)),
+    addChild: (name: string, loginName: string, password: string, childProfileId?: string) => mutate((repo, id) => repo.insertChild(id, name, loginName, password, childProfileId)),
     updateChildPassword: (childId: string, password: string) => mutate((repo, id) => repo.updateChildPassword(id, childId, password)),
     updateChildCode: async () => { setDataError('孩子登入代碼需由尚未提供的 invite/join token 流程建立。'); },
     updateChildName: (childId: string, name: string) => mutate((repo, id) => repo.updateChild(id, childId, name)),

@@ -56,12 +56,9 @@ function childFromRows(
   };
 }
 
-export async function loadAppData(client: SupabaseClient, userId: string, isAnonymous = false): Promise<LoadedAppData> {
+export async function loadAppData(client: SupabaseClient, userId: string): Promise<LoadedAppData> {
   const profileResult = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
   let profile = check(profileResult) as ProfileRow | null;
-  if (!profile && isAnonymous) {
-    throw new Error('孩子驗證尚未完成，請輸入小孩密碼。');
-  }
   if (!profile) {
     profile = check(await client.from('profiles').insert({ id: userId, display_name: userId.slice(0, 8) }).select().single()) as ProfileRow;
   }
@@ -70,7 +67,7 @@ export async function loadAppData(client: SupabaseClient, userId: string, isAnon
   // Every non-anonymous account is a parent account in the current flow. This
   // also repairs accounts created by an earlier build that have a profile but
   // no family membership, instead of sending a valid parent back to landing.
-  if (members.length === 0 && !isAnonymous) {
+  if (members.length === 0) {
     const familyId = check(await client.rpc('ensure_parent_family')) as string;
     members = [{ id: `${familyId}:parent`, family_id: familyId, profile_id: userId, role: 'parent', created_at: new Date().toISOString() }];
   }
@@ -129,8 +126,8 @@ export async function loadAppData(client: SupabaseClient, userId: string, isAnon
 }
 
 export interface DataRepository {
-  load(userId: string, isAnonymous?: boolean): Promise<LoadedAppData>;
-  insertChild(familyId: string, name: string, password: string): Promise<void>;
+  load(userId: string): Promise<LoadedAppData>;
+  insertChild(familyId: string, name: string, loginName: string, password: string, childProfileId?: string): Promise<void>;
   updateChildPassword(familyId: string, childId: string, password: string): Promise<void>;
   updateChild(familyId: string, childId: string, name: string): Promise<void>;
   deleteChild(familyId: string, childId: string): Promise<void>;
@@ -152,27 +149,33 @@ export interface DataRepository {
 
 export function createDataRepository(client: SupabaseClient): DataRepository {
   return {
-    load: (userId, isAnonymous) => loadAppData(client, userId, isAnonymous),
-    async insertChild(familyId, name, password) {
-      check(await client.rpc('create_child_profile', {
-        target_family_id: familyId,
-        child_name: name,
-        child_password: password,
-      }));
+    load: (userId) => loadAppData(client, userId),
+    async insertChild(familyId, name, loginName, password, childProfileId) {
+      const { data, error } = await client.functions.invoke('manage-child-account', {
+        body: { action: 'create', familyId, childProfileId, childName: name, loginName, password },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
     },
     async updateChildPassword(familyId, childId, password) {
-      check(await client.rpc('update_child_password', {
-        target_family_id: familyId,
-        target_child_profile_id: childId,
-        child_password: password,
-      }));
+      const { data, error } = await client.functions.invoke('manage-child-account', {
+        body: { action: 'reset-password', familyId, childProfileId: childId, password },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
     },
     async updateChild(familyId, childId, name) {
       const child = check(await client.from('child_profiles').select('profile_id').eq('family_id', familyId).eq('id', childId).single()) as { profile_id: string | null };
       check(await client.from('child_profiles').update({ display_name: name }).eq('family_id', familyId).eq('id', childId));
       if (child.profile_id) check(await client.from('profiles').update({ display_name: name }).eq('id', child.profile_id));
     },
-    async deleteChild(familyId, childId) { check(await client.from('child_profiles').delete().eq('family_id', familyId).eq('id', childId)); },
+    async deleteChild(familyId, childId) {
+      const { data, error } = await client.functions.invoke('manage-child-account', {
+        body: { action: 'delete', familyId, childProfileId: childId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+    },
     async insertTemplate(familyId, template) { check(await client.from('task_templates').insert({ family_id: familyId, name: template.name, points: template.points, icon: template.icon, duration_minutes: template.duration ?? null })); },
     async updateTemplate(id, updates) { check(await client.from('task_templates').update({ ...updates, duration_minutes: updates.duration ?? null }).eq('id', id)); },
     async deleteTemplate(id) { check(await client.from('task_templates').delete().eq('id', id)); },
