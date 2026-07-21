@@ -345,7 +345,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-gray-50 pb-20">
+    <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-gray-50 pb-20">
       {/* Header */}
       <header className="bg-blue-600 text-white p-6 rounded-b-[2rem] shadow-md">
         <div className="flex justify-between items-center mb-6">

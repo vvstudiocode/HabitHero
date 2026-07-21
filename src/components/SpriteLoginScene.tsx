@@ -17,6 +17,7 @@ export function SpriteLoginScene() {
     let reducedMotion = prefersReducedMotion.matches;
     let paused = reducedMotion;
     let mobileLift = 0;
+    let mobileSceneX = 0;
     let last = performance.now();
     const targetParallax = new THREE.Vector2();
     const parallax = new THREE.Vector2();
@@ -365,7 +366,6 @@ export function SpriteLoginScene() {
         })
       );
       group.add(shell);
-      group.add(new THREE.Mesh(new THREE.SphereGeometry(radius * 1.006, 48, 20), new THREE.MeshBasicMaterial({ color: 0xd9ffff, transparent: true, opacity: 0.24, wireframe: true })));
 
       if (softDisc) {
         const highlight = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDisc, color: 0xffffff, transparent: true, opacity: 0.84, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -463,7 +463,7 @@ export function SpriteLoginScene() {
     function updateCreature(t: number, dt: number) {
       const walk = Math.sin(t * 0.48) * 0.72;
       const bob = Math.sin(t * 2.7) * 0.035;
-      creature.position.x = 0.36 + walk * 0.2;
+      creature.position.x = 0.36 + mobileSceneX + walk * 0.2;
       creature.position.z = 0.08 + Math.cos(t * 0.48) * 0.12;
       creature.position.y = 0.1 + mobileLift + bob;
       creature.rotation.y = Math.sin(t * 0.48) * 0.12 + parallax.x * 0.08;
@@ -546,13 +546,15 @@ export function SpriteLoginScene() {
       const h = window.innerHeight;
       const isPhone = w < 700;
       const isTabletPortrait = w < 860 && h > w;
-      mobileLift = isPhone ? 1.22 : isTabletPortrait ? 0.58 : 0;
+      mobileLift = isPhone ? 1.58 : isTabletPortrait ? 0.74 : 0;
+      mobileSceneX = isPhone ? -0.82 : isTabletPortrait ? -0.42 : 0;
       island.position.y = -0.52 + mobileLift;
-      controls.target.set(0, 0.9 + mobileLift * 0.72, 0);
+      island.position.x = mobileSceneX;
+      controls.target.set(mobileSceneX * 0.34, 0.9 + mobileLift * 0.72, 0);
       camera.aspect = w / h;
-      camera.position.z = isPhone ? 10.4 : 9.2;
-      camera.position.y = isPhone ? 3.05 : isTabletPortrait ? 2.62 : 2.2;
-      camera.position.x = 0.1;
+      camera.position.z = isPhone ? 11.25 : 9.2;
+      camera.position.y = isPhone ? 3.55 : isTabletPortrait ? 2.8 : 2.2;
+      camera.position.x = isPhone ? -0.35 : 0.1;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     }

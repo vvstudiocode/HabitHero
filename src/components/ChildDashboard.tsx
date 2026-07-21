@@ -174,7 +174,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-blue-50 pb-24">
+    <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-blue-50 pb-24">
       {/* Header */}
       <header className="bg-yellow-400 p-6 rounded-b-[2rem] shadow-sm relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-300 rounded-full opacity-50"></div>

@@ -121,12 +121,12 @@ body {
 
 .hh-login-grain {
   inset: 0;
-  opacity: 0.12;
+  opacity: 0.09;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: radial-gradient(circle at center, transparent 0 32%, black 85%);
+    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.18) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 70% 64%, rgba(168, 248, 255, 0.12) 0 1px, transparent 2px);
+  background-size: 52px 52px, 76px 76px;
+  mask-image: radial-gradient(circle at center, transparent 0 42%, black 92%);
 }
 
 .hh-login-shell {
@@ -495,16 +495,107 @@ body {
   fill: var(--hh-leaf);
 }
 
+.hh-sprite-theme .hh-dashboard-screen {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 214, 0.34), transparent 30%),
+    radial-gradient(circle at 86% 18%, rgba(127, 232, 255, 0.24), transparent 34%),
+    linear-gradient(180deg, #dff9ff 0%, #eafff2 48%, #f8fff7 100%);
+  color: #10333a;
+}
+
+.hh-sprite-theme .hh-dashboard-screen.bg-blue-50,
+.hh-sprite-theme .hh-dashboard-screen.bg-gray-50 {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 214, 0.34), transparent 30%),
+    radial-gradient(circle at 86% 18%, rgba(127, 232, 255, 0.24), transparent 34%),
+    linear-gradient(180deg, #dff9ff 0%, #eafff2 48%, #f8fff7 100%);
+}
+
+.hh-sprite-theme .hh-dashboard-screen header {
+  background:
+    linear-gradient(135deg, rgba(255, 246, 125, 0.88), rgba(99, 226, 255, 0.64)),
+    rgba(255, 255, 255, 0.74);
+  color: #16383f;
+  box-shadow: 0 18px 44px rgba(38, 158, 178, 0.2);
+}
+
+.hh-sprite-theme .hh-dashboard-screen .bg-white,
+.hh-sprite-theme .hh-dashboard-screen .bg-gray-100,
+.hh-sprite-theme .hh-dashboard-screen .bg-blue-100,
+.hh-sprite-theme .hh-dashboard-screen .bg-yellow-50,
+.hh-sprite-theme .hh-dashboard-screen .bg-yellow-100,
+.hh-sprite-theme .hh-dashboard-screen .bg-green-50,
+.hh-sprite-theme .hh-dashboard-screen .bg-green-100,
+.hh-sprite-theme .hh-dashboard-screen .bg-purple-50,
+.hh-sprite-theme .hh-dashboard-screen .bg-purple-100 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.68)),
+    rgba(255, 255, 255, 0.72);
+  color: #16383f;
+  border-color: rgba(72, 170, 188, 0.2);
+  box-shadow: 0 16px 36px rgba(40, 149, 169, 0.14), inset 0 1px rgba(255, 255, 255, 0.8);
+}
+
+.hh-sprite-theme .hh-dashboard-screen .bg-white\/10,
+.hh-sprite-theme .hh-dashboard-screen .bg-white\/20,
+.hh-sprite-theme .hh-dashboard-screen .bg-white\/40,
+.hh-sprite-theme .hh-dashboard-screen .bg-gray-200,
+.hh-sprite-theme .hh-dashboard-screen .bg-blue-200,
+.hh-sprite-theme .hh-dashboard-screen .bg-yellow-200,
+.hh-sprite-theme .hh-dashboard-screen .bg-purple-200 {
+  background: rgba(255, 255, 255, 0.5);
+  color: #16383f;
+}
+
+.hh-sprite-theme .hh-dashboard-screen .text-blue-900,
+.hh-sprite-theme .hh-dashboard-screen .text-gray-900,
+.hh-sprite-theme .hh-dashboard-screen .text-gray-800,
+.hh-sprite-theme .hh-dashboard-screen .text-yellow-900,
+.hh-sprite-theme .hh-dashboard-screen .text-purple-900,
+.hh-sprite-theme .hh-dashboard-screen .text-green-700 {
+  color: #16383f;
+}
+
+.hh-sprite-theme .hh-dashboard-screen .text-blue-700,
+.hh-sprite-theme .hh-dashboard-screen .text-blue-600,
+.hh-sprite-theme .hh-dashboard-screen .text-blue-500,
+.hh-sprite-theme .hh-dashboard-screen .text-gray-700,
+.hh-sprite-theme .hh-dashboard-screen .text-gray-600,
+.hh-sprite-theme .hh-dashboard-screen .text-gray-500,
+.hh-sprite-theme .hh-dashboard-screen .text-yellow-700,
+.hh-sprite-theme .hh-dashboard-screen .text-yellow-600,
+.hh-sprite-theme .hh-dashboard-screen .text-yellow-500,
+.hh-sprite-theme .hh-dashboard-screen .text-purple-700,
+.hh-sprite-theme .hh-dashboard-screen .text-purple-600,
+.hh-sprite-theme .hh-dashboard-screen .text-green-600,
+.hh-sprite-theme .hh-dashboard-screen .text-amber-700 {
+  color: #37686f;
+}
+
+.hh-sprite-theme .hh-dashboard-screen .text-gray-400,
+.hh-sprite-theme .hh-dashboard-screen .text-gray-300,
+.hh-sprite-theme .hh-dashboard-screen .text-blue-400,
+.hh-sprite-theme .hh-dashboard-screen .text-blue-200,
+.hh-sprite-theme .hh-dashboard-screen .text-yellow-400,
+.hh-sprite-theme .hh-dashboard-screen .text-yellow-300,
+.hh-sprite-theme .hh-dashboard-screen .text-green-400,
+.hh-sprite-theme .hh-dashboard-screen .text-purple-500,
+.hh-sprite-theme .hh-dashboard-screen .text-orange-500 {
+  color: #5d8f96;
+}
+
 @media (max-width: 860px) {
   .hh-login-shell {
     grid-template-columns: 1fr;
     align-items: end;
-    padding: 18px;
+    align-content: space-between;
+    gap: 14px;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
   }
 
   .hh-login-copy {
     align-self: start;
-    margin-top: 46px;
+    margin-top: 26px;
     margin-bottom: 0;
   }
 
@@ -517,7 +608,7 @@ body {
   .hh-login-panel {
     max-width: 460px;
     margin-inline: auto;
-    padding: 18px;
+    padding: 16px;
   }
 
 }
@@ -528,11 +619,72 @@ body {
   }
 
   .hh-login-copy h1 {
-    font-size: clamp(38px, 14vw, 58px);
+    font-size: clamp(38px, 13vw, 52px);
+  }
+
+  .hh-login-copy p {
+    max-width: 18rem;
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .hh-login-panel {
+    padding: 13px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.045)),
+      rgba(4, 35, 47, 0.4);
+    backdrop-filter: blur(18px) saturate(128%);
+  }
+
+  .hh-login-panel-head {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .hh-login-avatar {
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .hh-login-panel-head h2 {
-    font-size: 23px;
+    font-size: 20px;
+  }
+
+  .hh-login-panel-head p,
+  .hh-login-panel label {
+    font-size: 12px;
+  }
+
+  .hh-login-tabs {
+    margin-bottom: 12px;
+  }
+
+  .hh-login-tabs button {
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  .hh-login-panel label {
+    margin: 9px 0 5px;
+  }
+
+  .hh-login-panel input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 15px;
+  }
+
+  .hh-primary-button {
+    min-height: 46px;
+    margin-top: 14px;
+    font-size: 15px;
+  }
+
+  .hh-secondary-button {
+    margin-top: 8px;
+    min-height: 40px;
+    font-size: 13px;
   }
 }
 
