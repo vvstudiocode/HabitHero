@@ -8,6 +8,7 @@ import { subscribeToAppData } from './lib/realtime';
 interface AppContextType {
   state: AppState;
   loading: boolean;
+  initialLoading: boolean;
   dataReady: boolean;
   mutationPending: boolean;
   stale: boolean;
@@ -83,6 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mutationPending, setMutationPending] = useState(false);
   const [stale, setStale] = useState(false);
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const loadInFlight = useRef<Promise<void> | null>(null);
   const mutationInFlight = useRef<Promise<void> | null>(null);
 
@@ -114,6 +116,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [repository, session]);
 
   useEffect(() => { void retry(); }, [retry]);
+
+  // Track first full load completion (session check + data load)
+  useEffect(() => {
+    if (initialLoadDone) return;
+    if (sessionLoading) return; // still checking session
+    if (!session) { setInitialLoadDone(true); return; } // no session → done
+    if (dataReady || dataError) { setInitialLoadDone(true); return; } // data settled
+  }, [initialLoadDone, sessionLoading, session, dataReady, dataError]);
 
   useEffect(() => {
     if (!session) {
@@ -230,9 +240,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     hasSession,
     dataReady: dataReadyForSession,
   });
+  const initialLoading = !initialLoadDone;
 
   return <AppContext.Provider value={{
-    state, loading, dataReady: dataReadyForSession, mutationPending, stale, isOffline, error: sessionError || dataError,
+    state, loading, initialLoading, dataReady: dataReadyForSession, mutationPending, stale, isOffline, error: sessionError || dataError,
     retry, role, hasSession: Boolean(session), updateState, setParentPin,
     setParentActiveChild, setChildLoggedIn, clearProtectedState,
     startTaskTimer: (childId, taskId) => setState((previous) => ({

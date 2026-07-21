@@ -1,7 +1,8 @@
 import React, { FormEvent, useState } from 'react';
 import { Baby, KeyRound, User } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { signIn, signInChild, toAuthErrorMessage, useAuthSession } from '../auth';
+import { signIn, signInChild, toAuthErrorMessage } from '../auth';
+import { useAppStore } from '../store';
 import { validateChildPassword, validateChildUsername, validateParentCredentials } from '../lib/auth-validation';
 
 interface AccountLoginProps {
@@ -11,7 +12,7 @@ interface AccountLoginProps {
 }
 
 export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }: AccountLoginProps) {
-  const { loading: sessionLoading, error: sessionError } = useAuthSession();
+  const { error: sessionError } = useAppStore();
   const [mode, setMode] = useState<'parent' | 'child'>(initialMode);
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
@@ -56,9 +57,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
     }
   };
 
-  if (sessionLoading) {
-    return <div className="flex min-h-[100dvh] items-center justify-center bg-blue-50 text-blue-700">正在恢復登入狀態…</div>;
-  }
+
 
   return (
     <form onSubmit={handleLogin} className="flex min-h-[100dvh] flex-col bg-blue-50 p-6">

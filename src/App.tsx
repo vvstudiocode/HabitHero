@@ -12,7 +12,7 @@ import { ParentDashboard } from './components/ParentDashboard';
 import { ChildDashboard } from './components/ChildDashboard';
 
 function MainApp() {
-  const { clearProtectedState, hasSession, loading, dataReady, role, error, retry } = useAppStore();
+  const { clearProtectedState, hasSession, loading, initialLoading, dataReady, role, error, retry } = useAppStore();
   
   const [currentView, setCurrentView] = useState<'login' | 'parentSetup' | 'parentDashboard' | 'childDashboard'>('login');
   const [loginMode, setLoginMode] = useState<'parent' | 'child'>('parent');
@@ -54,7 +54,19 @@ function MainApp() {
     void signOut();
   };
 
-  if (loading) return <div className="flex min-h-[100dvh] items-center justify-center bg-blue-50 text-blue-700">正在載入家庭資料…</div>;
+  if (initialLoading) {
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-blue-50">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 animate-pulse text-3xl">
+          ⭐
+        </div>
+        <p className="text-lg font-bold text-blue-900">小任務大願望</p>
+        <p className="mt-2 text-sm text-blue-400">啟動中…</p>
+      </div>
+    );
+  }
+
+  if (loading) return <div className="flex min-h-[100dvh] items-center justify-center bg-blue-50 text-blue-700">正在更新資料…</div>;
   if (error && hasSession && currentView === 'login') {
     return <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900"><p role="alert">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white">重試</button></div>;
   }
