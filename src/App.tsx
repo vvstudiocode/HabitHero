@@ -16,6 +16,8 @@ function MainApp() {
   
   const [currentView, setCurrentView] = useState<'login' | 'parentSetup' | 'parentDashboard' | 'childDashboard'>('login');
   const [loginMode, setLoginMode] = useState<'parent' | 'child'>('parent');
+  const [pendingView, setPendingView] = useState<'parentDashboard' | 'childDashboard' | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     if (!loading && hasSession && error?.includes('尚未加入家庭')) {
@@ -24,23 +26,30 @@ function MainApp() {
       setCurrentView('login');
       return;
     }
-    if (!loading && hasSession && role && !(currentView === 'login' && loginMode === 'child')) {
+    const waitingForExplicitLogin = currentView === 'login' && loginMode === 'child' && !pendingView;
+    if (!loading && hasSession && role && !signingOut && !waitingForExplicitLogin) {
       setCurrentView(role === 'parent' ? 'parentDashboard' : 'childDashboard');
+      setPendingView(null);
     }
     if (!loading && !hasSession && !['parentSetup', 'login'].includes(currentView)) {
       setCurrentView('login');
     }
-  }, [clearProtectedState, currentView, error, hasSession, loading, loginMode, role]);
+    if (!hasSession && signingOut) setSigningOut(false);
+  }, [clearProtectedState, currentView, error, hasSession, loading, loginMode, pendingView, role, signingOut]);
 
   const handleSwitchToChild = () => {
     setLoginMode('child');
     setCurrentView('login');
+    setPendingView(null);
+    setSigningOut(true);
     void signOut();
   };
 
   const handleLogout = () => {
     setLoginMode('parent');
     setCurrentView('login');
+    setPendingView(null);
+    setSigningOut(true);
     clearProtectedState();
     void signOut();
   };
@@ -52,15 +61,15 @@ function MainApp() {
 
   switch (currentView) {
     case 'login':
-      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onComplete={(mode) => setCurrentView(mode === 'parent' ? 'parentDashboard' : 'childDashboard')} />;
+      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onComplete={(mode) => { setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
     case 'parentSetup':
-      return <ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={() => setCurrentView('parentDashboard')} />;
+      return <ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={() => { setPendingView('parentDashboard'); setSigningOut(false); }} />;
     case 'parentDashboard':
       return <ParentDashboard onSwitchToChild={handleSwitchToChild} onLogout={handleLogout} />;
     case 'childDashboard':
       return <ChildDashboard onLogout={handleLogout} onSwitchChild={handleSwitchToChild} />;
     default:
-      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onComplete={(mode) => setCurrentView(mode === 'parent' ? 'parentDashboard' : 'childDashboard')} />;
+      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onComplete={(mode) => { setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
   }
 }
 
