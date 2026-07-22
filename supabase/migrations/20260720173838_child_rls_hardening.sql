@@ -88,3 +88,4 @@ create policy redemptions_update_parent on public.reward_redemptions for update 
 
 drop policy if exists ledger_select on public.point_ledger;
 create policy ledger_select on public.point_ledger for select to authenticated using (private.is_family_parent(family_id) or private.is_child_owner(family_id, child_profile_id));
+;

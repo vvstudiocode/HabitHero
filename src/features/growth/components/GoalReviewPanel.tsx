@@ -68,6 +68,7 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
             {reviewingTaskId === task.id ? (
               <ParentFeedbackForm
               task={task}
+              childName={task.childName}
               loading={loading}
               onCancel={() => setReviewingTaskId(null)}
               onSubmit={async (input) => {
@@ -118,16 +119,18 @@ function ProposalEditor({ task, loading, onCancel, onConfirm, onReturn }: {
           <input value={name} onChange={(event) => setName(event.target.value)} className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 outline-none focus:ring-2 focus:ring-blue-400" />
         </label>
         <div className="grid gap-3 sm:grid-cols-[1fr_132px]">
-          <div>
+          <label className="block">
             <span className="mb-2 block text-sm font-bold text-gray-700">分類</span>
-            <div className="grid grid-cols-2 gap-2">
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value as TaskCategory)}
+              className="min-h-12 w-full rounded-2xl border border-gray-200 bg-white p-3 text-base font-bold text-gray-800 outline-none focus:ring-2 focus:ring-blue-400"
+            >
               {TASK_CATEGORIES.map((item) => (
-                <button key={item.id} type="button" onClick={() => setCategory(item.id)} className={`min-h-11 rounded-2xl border p-2 text-left ${category === item.id ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100' : 'border-gray-100 bg-gray-50'}`}>
-                  <CategoryBadge category={item.id} compact />
-                </button>
+                <option key={item.id} value={item.id}>{item.label}</option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
           <label className="block">
             <span className="mb-2 block text-sm font-bold text-gray-700">點數</span>
             <input type="number" min="1" value={points} onChange={(event) => setPoints(Number(event.target.value))} className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 outline-none focus:ring-2 focus:ring-blue-400" />

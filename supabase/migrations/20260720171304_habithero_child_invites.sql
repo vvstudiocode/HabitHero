@@ -171,3 +171,4 @@ revoke all on function public.create_family_child_invite(uuid, uuid, integer) fr
 grant execute on function public.create_family_child_invite(uuid, uuid, integer) to authenticated;
 revoke all on function public.redeem_family_child_invite(text) from public, anon;
 grant execute on function public.redeem_family_child_invite(text) to authenticated;
+;

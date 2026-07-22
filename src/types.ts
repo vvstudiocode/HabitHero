@@ -77,6 +77,7 @@ export interface TaskRow {
   duration_minutes: number | null;
   is_daily: boolean;
   due_on: string | null;
+  due_time: string | null;
   category: TaskCategory;
   origin: TaskOrigin;
   original_name: string | null;
@@ -337,6 +338,7 @@ export interface TaskViewModel {
   isDaily: boolean;
   templateId: Id | null;
   dueOn: string | null;
+  dueTime: string | null;
   category: TaskCategory;
   origin: TaskOrigin;
   originalName: string | null;
@@ -406,6 +408,7 @@ export interface Task extends Omit<
   | 'timerIsRunning'
   | 'templateId'
   | 'dueOn'
+  | 'dueTime'
   | 'category'
   | 'origin'
   | 'originalName'
@@ -433,6 +436,7 @@ export interface Task extends Omit<
   timerIsRunning?: boolean;
   templateId?: Id | null;
   dueOn?: string | null;
+  dueTime?: string | null;
   category?: TaskCategory;
   origin?: TaskOrigin;
   originalName?: string | null;

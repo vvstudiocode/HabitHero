@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../constants';
 import type { GoalProposalInput, GrowthTaskTemplate, TaskCategory } from '../types';
-import { CategoryBadge } from './CategoryBadge';
 
 interface GoalProposalFormProps {
   templates?: GrowthTaskTemplate[];
@@ -14,14 +13,16 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
   const [name, setName] = useState('');
   const [points, setPoints] = useState(5);
   const [category, setCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
+  const [dueTime, setDueTime] = useState('');
 
   const submit = async () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
-    await onSubmit({ name: trimmed, points: Math.max(1, points), category });
+    if (!trimmed || !dueTime) return;
+    await onSubmit({ name: trimmed, points: Math.max(1, points), category, dueTime });
     setName('');
     setPoints(5);
     setCategory(DEFAULT_TASK_CATEGORY);
+    setDueTime('');
   };
 
   return (
@@ -41,6 +42,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
                 setName(template.name);
                 setPoints(template.points);
                 setCategory(template.category ?? DEFAULT_TASK_CATEGORY);
+                setDueTime('');
               }}
               className="min-h-11 shrink-0 rounded-full border border-yellow-200 bg-yellow-50 px-3 text-sm font-bold text-yellow-800 transition-colors hover:bg-yellow-100"
             >
@@ -60,22 +62,19 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             placeholder="例如：自己整理明天的書包"
           />
         </label>
-        <div className="grid gap-3 sm:grid-cols-[1fr_132px]">
-          <div>
+        <div className="grid gap-3 sm:grid-cols-[1fr_132px_132px]">
+          <label className="block">
             <span className="mb-2 block text-sm font-bold text-gray-700">目標分類</span>
-            <div className="grid grid-cols-2 gap-2">
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value as TaskCategory)}
+              className="min-h-12 w-full rounded-2xl border border-gray-200 bg-white p-3 text-base font-bold text-gray-800 outline-none focus:ring-2 focus:ring-yellow-400"
+            >
               {TASK_CATEGORIES.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setCategory(item.id)}
-                  className={`min-h-11 rounded-2xl border p-2 text-left transition-colors ${category === item.id ? 'border-yellow-400 bg-yellow-50 ring-2 ring-yellow-100' : 'border-gray-100 bg-gray-50'}`}
-                >
-                  <CategoryBadge category={item.id} compact />
-                </button>
+                <option key={item.id} value={item.id}>{item.label}</option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
           <label className="block">
             <span className="mb-2 block text-sm font-bold text-gray-700">預估點數</span>
             <input
@@ -86,14 +85,23 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
               className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </label>
+          <label className="block">
+            <span className="mb-2 block text-sm font-bold text-gray-700">做到時間</span>
+            <input
+              type="time"
+              value={dueTime}
+              onChange={(event) => setDueTime(event.target.value)}
+              className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
+            />
+          </label>
         </div>
         <button
           type="button"
           onClick={() => void submit()}
-          disabled={loading || !name.trim()}
+          disabled={loading || !name.trim() || !dueTime}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-yellow-400 px-4 font-black text-yellow-950 transition-colors hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Plus size={20} /> 送給爸媽確認
+          <Plus size={20} /> 建立並開始
         </button>
       </div>
     </section>

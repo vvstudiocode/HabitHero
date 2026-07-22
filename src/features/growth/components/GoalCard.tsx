@@ -19,6 +19,9 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
   const difficulty = task.difficulty ?? task.childDifficulty;
   const parentFeedback = task.parentFeedback ?? task.parentFeedbackText;
   const parentCorrection = task.parentCorrection ?? task.parentCorrectionText;
+  const isAwaitingParentConfirmation = task.origin === 'child_proposed' && task.status === 'todo' && !task.confirmedAt;
+  const displayStatus = isAwaitingParentConfirmation ? '可先開始，待家長確認點數' : getTaskStatusLabel(task.status);
+  const dueTime = task.dueTime ? task.dueTime.slice(0, 5) : null;
 
   return (
     <article className={cn('rounded-2xl border bg-white p-4 shadow-sm', task.status === 'revision_requested' ? 'border-orange-200 bg-orange-50/60' : 'border-gray-100')}>
@@ -28,7 +31,7 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
             {childName && <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">{childName}</span>}
             <CategoryBadge category={task.category} compact />
             <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600">
-              <Clock size={12} /> {getTaskStatusLabel(task.status)}
+              <Clock size={12} /> {displayStatus}
             </span>
           </div>
           <h3 className={cn('break-words font-black text-gray-900', compact ? 'text-base' : 'text-lg')}>{task.name}</h3>
@@ -38,6 +41,7 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
             </span>
             {task.origin === 'child_proposed' && <span className="text-amber-700">孩子主動提出</span>}
             {task.isDaily && <span className="text-emerald-700">每日</span>}
+            {dueTime && <span className="text-blue-600">{dueTime} 可開始</span>}
           </div>
         </div>
         {action && <div className="shrink-0">{action}</div>}

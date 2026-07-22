@@ -4,3 +4,4 @@
 -- to bind a child.
 
 grant execute on function public.authenticate_child(text) to anon;
+;

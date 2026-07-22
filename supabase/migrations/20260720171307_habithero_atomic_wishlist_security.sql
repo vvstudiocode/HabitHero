@@ -70,3 +70,4 @@ $$;
 
 revoke all on function public.approve_wishlist_item(uuid, uuid, uuid, integer) from public, anon;
 grant execute on function public.approve_wishlist_item(uuid, uuid, uuid, integer) to authenticated;
+;

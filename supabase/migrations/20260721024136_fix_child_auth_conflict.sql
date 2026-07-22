@@ -1,7 +1,3 @@
--- Avoid PL/pgSQL output-column names shadowing the child_profiles.family_id
--- column in RETURNING ... INTO. The shadowing caused valid child passwords
--- to fail with: column reference "family_id" is ambiguous.
-
 create or replace function public.authenticate_child(child_password text)
 returns table (family_id uuid, child_profile_id uuid)
 language plpgsql security definer
@@ -40,7 +36,8 @@ begin
 
   insert into public.family_members (family_id, profile_id, role)
   values (matched_child.family_id, current_user_id, 'child')
-  on conflict (family_id, profile_id) do update set role = 'child';
+  on conflict on constraint family_members_family_id_profile_id_key
+  do update set role = 'child';
 
   update public.child_profiles
      set profile_id = current_user_id
@@ -51,4 +48,4 @@ end;
 $$;
 
 revoke all on function public.authenticate_child(text) from public;
-grant execute on function public.authenticate_child(text) to anon, authenticated;
+grant execute on function public.authenticate_child(text) to anon, authenticated;;

@@ -25,6 +25,7 @@ describe('growth data contracts', () => {
       duration_minutes: 20,
       is_daily: false,
       due_on: '2026-07-22',
+      due_time: '17:30:00',
       category: 'learning',
       origin: 'child_proposed',
       original_name: 'Read',
@@ -62,6 +63,7 @@ describe('growth data contracts', () => {
       timerIsRunning: false,
       isDaily: false,
       dueOn: '2026-07-22',
+      dueTime: '17:30:00',
       category: 'learning',
       origin: 'child_proposed',
       originalName: 'Read',
@@ -197,6 +199,7 @@ describe('growth repository payloads', () => {
       category: 'creativity',
       duration: 15,
       dueOn: '2026-07-22',
+      dueTime: '18:00',
     });
     await repository.confirmChildGoal('task-1', {
       name: 'Practice piano for 15 minutes',
@@ -230,6 +233,7 @@ describe('growth repository payloads', () => {
           goal_category: 'creativity',
           goal_duration_minutes: 15,
           goal_due_on: '2026-07-22',
+          goal_due_time: '18:00',
         },
       },
       {

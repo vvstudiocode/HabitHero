@@ -4,18 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "node scripts/dev-port.mjs",
     "build": "vite build",
     "test": "tsx --test tests/*.test.ts",
     "security:check": "node scripts/security-check.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "supabase:start": "supabase start",
-    "supabase:stop": "supabase stop",
-    "supabase:status": "supabase status",
-    "supabase:reset": "supabase db reset",
-    "supabase:migrations": "supabase migration list --local"
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:status": "npx supabase status",
+    "supabase:reset": "npx supabase db reset",
+    "supabase:migrations": "npx supabase migration list --local"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

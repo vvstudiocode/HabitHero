@@ -73,6 +73,7 @@ export const taskRowToViewModel = (row: TaskRow): TaskViewModel => ({
   timerIsRunning: false,
   isDaily: row.is_daily,
   dueOn: row.due_on,
+  dueTime: row.due_time,
   category: row.category ?? defaultCategory,
   origin: row.origin ?? defaultOrigin,
   originalName: row.original_name ?? null,

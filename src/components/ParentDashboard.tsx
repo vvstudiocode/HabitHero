@@ -21,6 +21,7 @@ type GroupedTask = {
   name: string;
   points: number;
   duration?: number;
+  dueTime?: string | null;
   category?: TaskCategory;
   children: { childId: string; childName: string; taskId: string }[];
 };
@@ -48,21 +49,21 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     }) => Promise<void>;
   };
   const { state, loading, error, retry, stale, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = appStore;
-  const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'templates' | 'growth' | 'rewards' | 'wishlist'>('review');
+  const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist'>('review');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
   const observedLoading = useRef(false);
 
   const allTasks = state.children.flatMap(c => (c.tasks as GrowthTask[]).map(t => ({ ...t, childId: c.id, childName: c.name }))) as GrowthTaskWithChild[];
-  const proposedTasks = allTasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested');
+  const proposedTasks = allTasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested' || (t.origin === 'child_proposed' && t.status === 'todo' && !t.confirmedAt));
   const pendingTasks = allTasks.filter(t => t.status === 'pending');
   const todoTasks = allTasks.filter(t => t.status === 'todo');
   const completedTasks = allTasks.filter(t => t.status === 'completed');
   const growthSummaries = buildGrowthStats(state.children, state.ledger);
 
   const groupedTodoTasks = Object.values(todoTasks.reduce((acc, task) => {
-    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.category || DEFAULT_TASK_CATEGORY}-${task.isDaily ? 'daily' : 'once'}`;
+    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.dueTime || ''}-${task.category || DEFAULT_TASK_CATEGORY}-${task.isDaily ? 'daily' : 'once'}`;
     if (!acc[key]) {
-      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, category: task.category, isDaily: task.isDaily, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
+      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, dueTime: task.dueTime, category: task.category, isDaily: task.isDaily, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
     } else {
       acc[key].children.push({ childId: task.childId, childName: task.childName, taskId: task.id });
     }
@@ -92,6 +93,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskPoints, setNewTaskPoints] = useState(5);
   const [newTaskDuration, setNewTaskDuration] = useState<number | ''>(''); // in minutes
+  const [newTaskDueTime, setNewTaskDueTime] = useState('');
   const [newTaskIsDaily, setNewTaskIsDaily] = useState(true);
   const [newTaskCategory, setNewTaskCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
   const [newTaskTargetChildIds, setNewTaskTargetChildIds] = useState<string[]>([]);
@@ -162,6 +164,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       setNewTaskName(group.name);
       setNewTaskPoints(group.points);
       setNewTaskDuration(group.duration || '');
+      setNewTaskDueTime(group.dueTime?.slice(0, 5) ?? '');
       setNewTaskIsDaily(group.isDaily ?? false);
       setNewTaskCategory(group.category ?? DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(group.children.map(c => c.childId));
@@ -170,6 +173,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       setNewTaskName('');
       setNewTaskPoints(5);
       setNewTaskDuration('');
+      setNewTaskDueTime('');
       setNewTaskIsDaily(false);
       setNewTaskCategory(DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(state.children.map(c => c.id));
@@ -180,6 +184,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const handleSaveTask = async () => {
     if (!newTaskName || newTaskPoints < 1 || newTaskTargetChildIds.length === 0) return;
     const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
+    const dueTime = newTaskDueTime || null;
     observedLoading.current = false;
     setMutationKind('task');
 
@@ -192,9 +197,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       for (const childId of newTaskTargetChildIds) {
         const existingChild = editingTask.children.find(c => c.childId === childId);
         if (existingChild) {
-          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, isDaily: newTaskIsDaily, category: newTaskCategory } as never);
+          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory } as never);
         } else {
-          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
+          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
         }
       }
 
@@ -206,7 +211,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
         }
       }
     } else {
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
     }
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
@@ -214,7 +219,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const handleAssignTemplate = async () => {
     if (!assigningTemplate || newTaskTargetChildIds.length === 0) return;
     try {
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template' } as never);
+      const dueTime = newTaskDueTime || null;
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, dueTime, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template' } as never);
     } catch { /* provider error is rendered above the tabs; keep assignment open */ }
   };
 
@@ -252,6 +258,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const openAssignTemplate = (template: GrowthTaskTemplate) => {
     setAssigningTemplate(template);
     setNewTaskIsDaily(false);
+    setNewTaskDueTime('');
     setNewTaskTargetChildIds(state.children.map(c => c.id));
   };
 
@@ -264,7 +271,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       await appStore.confirmChildGoal(taskId, input);
       return;
     }
-    await updateTask(childId, taskId, { name: input.name, points: input.points, category: input.category } as never);
+    await updateTask(childId, taskId, { name: input.name, points: input.points, category: input.category, confirmedAt: new Date().toISOString() } as never);
     await updateTaskStatus(childId, taskId, 'todo');
   };
 
@@ -497,15 +504,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             任務
           </button>
           <button
-            onClick={() => setActiveTab('templates')}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
-              activeTab === 'templates' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
-            )}
-          >
-            模板
-          </button>
-          <button
             onClick={() => setActiveTab('growth')}
             className={cn(
               "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
@@ -583,6 +581,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                               <PlayCircle size={12}/> {group.duration}m
                             </span>
                           )}
+                          {group.dueTime && (
+                            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              <Clock size={12}/> {group.dueTime.slice(0, 5)} 可開始
+                            </span>
+                          )}
                         </div>
                         <div className="text-blue-500 text-sm font-bold">+{group.points} pt</div>
                       </div>
@@ -602,19 +605,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                 )}
               </div>
             </section>
-          </div>
-        )}
 
-        {activeTab === 'templates' && (
-          <div className="space-y-6">
             <section>
               <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-bold text-gray-900">模板庫</h2>
+                <h2 className="text-lg font-bold text-gray-900">常用模板</h2>
                 <button onClick={() => openTemplateForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
-                  <Plus size={16} /> 新增模板
+                  <Plus size={16} /> 新增
                 </button>
               </div>
-              <p className="text-gray-500 text-sm mb-4">將常用的任務儲存為模板，隨時快速派發給孩子。</p>
+              <p className="text-gray-500 text-sm mb-4">常做的任務先存成模板，需要時直接派發。</p>
               <div className="space-y-3">
                 {(state.taskTemplates as GrowthTaskTemplate[]).map(template => (
                   <div key={template.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group-item relative">
@@ -657,7 +656,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
         )}
 
         {activeTab === 'growth' && (
-          <GrowthSummaryPanel summaries={growthSummaries} title="家庭成長紀錄" />
+          <GrowthSummaryPanel summaries={growthSummaries} title="家庭成長紀錄" completedTasks={completedTasks} showChildFilter />
         )}
 
         {activeTab === 'rewards' && (
@@ -883,21 +882,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">固定分類</label>
-                <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={newTaskCategory}
+                  onChange={e => setNewTaskCategory(e.target.value as TaskCategory)}
+                  className="min-h-12 w-full rounded-xl border border-gray-200 bg-white p-3 font-bold text-gray-800 outline-none focus:ring-2 focus:ring-blue-400"
+                >
                   {TASK_CATEGORIES.map(category => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => setNewTaskCategory(category.id)}
-                      className={cn(
-                        "min-h-11 rounded-2xl border p-2 text-left transition-colors",
-                        newTaskCategory === category.id ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100" : "border-gray-100 bg-gray-50"
-                      )}
-                    >
-                      <CategoryBadge category={category.id} compact />
-                    </button>
+                    <option key={category.id} value={category.id}>{category.label}</option>
                   ))}
-                </div>
+                </select>
               </div>
               {state.children.length > 1 && (
                 <div>
@@ -930,6 +923,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">可開始時間 (選填)</label>
+                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
+              </div>
               <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
             </div>
           </div>
@@ -950,21 +948,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">固定分類</label>
-                <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={newTaskCategory}
+                  onChange={e => setNewTaskCategory(e.target.value as TaskCategory)}
+                  className="min-h-12 w-full rounded-xl border border-gray-200 bg-white p-3 font-bold text-gray-800 outline-none focus:ring-2 focus:ring-blue-400"
+                >
                   {TASK_CATEGORIES.map(category => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => setNewTaskCategory(category.id)}
-                      className={cn(
-                        "min-h-11 rounded-2xl border p-2 text-left transition-colors",
-                        newTaskCategory === category.id ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100" : "border-gray-100 bg-gray-50"
-                      )}
-                    >
-                      <CategoryBadge category={category.id} compact />
-                    </button>
+                    <option key={category.id} value={category.id}>{category.label}</option>
                   ))}
-                </div>
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1011,6 +1003,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                   </div>
                 </div>
               )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">可開始時間 (選填)</label>
+                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
+              </div>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
             </div>
           </div>

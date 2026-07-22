@@ -1,6 +1,6 @@
--- A child password remains protected while the previous anonymous session is
--- active, but a signed-out/expired anonymous session must not permanently
--- lock the child to an abandoned auth user.
+-- Avoid PL/pgSQL output-column names shadowing the child_profiles.family_id
+-- column in RETURNING ... INTO. The shadowing caused valid child passwords
+-- to fail with: column reference "family_id" is ambiguous.
 
 create or replace function public.authenticate_child(child_password text)
 returns table (family_id uuid, child_profile_id uuid)
@@ -30,23 +30,8 @@ begin
   if exists (select 1 from public.family_members m where m.profile_id = current_user_id and m.role <> 'child') then
     raise exception 'session is already used by another role' using errcode = '42501';
   end if;
-
   if matched_child.profile_id is not null and matched_child.profile_id <> current_user_id then
-    if exists (
-      select 1
-        from auth.sessions s
-       where s.user_id = matched_child.profile_id
-         and (s.not_after is null or s.not_after > timezone('utc', now()))
-    ) then
-      raise exception 'child is already bound; ask parent to reset the password' using errcode = '42501';
-    end if;
-
-    delete from public.family_members
-     where profile_id = matched_child.profile_id
-       and family_id = matched_child.family_id;
-    update public.child_profiles
-       set profile_id = null
-     where id = matched_child.id;
+    raise exception 'child is already bound; ask parent to reset the password' using errcode = '42501';
   end if;
 
   insert into public.profiles (id, display_name)
@@ -55,8 +40,7 @@ begin
 
   insert into public.family_members (family_id, profile_id, role)
   values (matched_child.family_id, current_user_id, 'child')
-  on conflict on constraint family_members_family_id_profile_id_key
-  do update set role = 'child';
+  on conflict (family_id, profile_id) do update set role = 'child';
 
   update public.child_profiles
      set profile_id = current_user_id
@@ -68,3 +52,4 @@ $$;
 
 revoke all on function public.authenticate_child(text) from public;
 grant execute on function public.authenticate_child(text) to anon, authenticated;
+;

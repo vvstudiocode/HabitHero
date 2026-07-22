@@ -176,3 +176,4 @@ create policy child_profiles_select on public.child_profiles for select to authe
 revoke all on table public.child_profiles from authenticated;
 grant select, insert, update, delete on table public.child_profiles to authenticated;
 
+;

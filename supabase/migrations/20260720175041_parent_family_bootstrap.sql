@@ -47,3 +47,4 @@ $$;
 
 revoke all on function public.ensure_parent_family() from public, anon;
 grant execute on function public.ensure_parent_family() to authenticated;
+;

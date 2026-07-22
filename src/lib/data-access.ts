@@ -30,6 +30,9 @@ const emptyState = (): AppState => ({
   lastResetDate: null,
 });
 
+const CHILD_COMPLETED_TASK_HISTORY_LIMIT = 30;
+const FAMILY_COMPLETED_TASK_HISTORY_LIMIT = 60;
+
 function check<T>(result: { data: T; error: { message: string } | null }): T {
   if (result.error) throw new Error(result.error.message);
   return result.data;
@@ -50,6 +53,7 @@ export interface ProposeChildGoalInput {
   category: TaskCategory;
   duration?: number | null;
   dueOn?: string | null;
+  dueTime?: string | null;
 }
 
 export interface ConfirmChildGoalInput {
@@ -92,6 +96,7 @@ export const buildProposeChildGoalPayload = (
   goal_category: goal.category,
   goal_duration_minutes: goal.duration ?? null,
   goal_due_on: goal.dueOn ?? null,
+  goal_due_time: goal.dueTime ?? null,
 });
 
 export const buildConfirmChildGoalPayload = (
@@ -181,29 +186,42 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     children = [ownChild];
     profiles = [profile];
     const childFilter = ownChild.id;
-    [tasks, rewards, wishlist, tickets, ledger] = await Promise.all([
-      client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at').then((result) => asRows<TaskRow>(check(result))),
+    const [activeTasks, completedHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
+      client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).neq('status', 'completed').order('created_at').then((result) => asRows<TaskRow>(check(result))),
+      client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).eq('status', 'completed').order('completed_at', { ascending: false }).limit(CHILD_COMPLETED_TASK_HISTORY_LIMIT).then((result) => asRows<TaskRow>(check(result))),
       client.from('rewards').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('sort_order').then((result) => asRows<RewardRow>(check(result))),
       client.from('wishlist_items').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at').then((result) => asRows<WishlistItemRow>(check(result))),
       client.from('reward_redemptions').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at', { ascending: false }).then((result) => asRows<RewardRedemptionRow>(check(result))),
       client.from('point_ledger').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at', { ascending: false }).then((result) => asRows<PointLedgerRow>(check(result))),
     ]);
+    tasks = [...activeTasks, ...completedHistory];
+    rewards = loadedRewards;
+    wishlist = loadedWishlist;
+    tickets = loadedTickets;
+    ledger = loadedLedger;
   } else {
     const allMembers = asRows<FamilyMemberRow>(check(await client.from('family_members').select('*').eq('family_id', familyId)));
     const profileIds = [...new Set(allMembers.map((member) => member.profile_id))];
     profiles = asRows<ProfileRow>(check(await client.from('profiles').select('*').in('id', profileIds)));
     children = asRows<ChildProfileRow>(check(await client.from('child_profiles').select('*').eq('family_id', familyId)));
-    [state.taskTemplates, tasks, rewards, wishlist, tickets, ledger] = await Promise.all([
+    const [loadedTemplates, activeTasks, completedHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
       client.from('task_templates').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<TaskTemplateRow>(check(result)).map((row): TaskTemplate => {
         const template = taskTemplateRowToViewModel(row);
         return { ...template, ...(template.duration == null ? { duration: undefined } : { duration: template.duration }) };
       })),
-      client.from('tasks').select('*').eq('family_id', familyId).order('created_at').then((result) => asRows<TaskRow>(check(result))),
+      client.from('tasks').select('*').eq('family_id', familyId).neq('status', 'completed').order('created_at').then((result) => asRows<TaskRow>(check(result))),
+      client.from('tasks').select('*').eq('family_id', familyId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(FAMILY_COMPLETED_TASK_HISTORY_LIMIT).then((result) => asRows<TaskRow>(check(result))),
       client.from('rewards').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<RewardRow>(check(result))),
       client.from('wishlist_items').select('*').eq('family_id', familyId).order('created_at').then((result) => asRows<WishlistItemRow>(check(result))),
       client.from('reward_redemptions').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).then((result) => asRows<RewardRedemptionRow>(check(result))),
       client.from('point_ledger').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).then((result) => asRows<PointLedgerRow>(check(result))),
     ]);
+    state.taskTemplates = loadedTemplates;
+    tasks = [...activeTasks, ...completedHistory];
+    rewards = loadedRewards;
+    wishlist = loadedWishlist;
+    tickets = loadedTickets;
+    ledger = loadedLedger;
   }
   const profileById = new Map(profiles.map((row) => [row.id, row]));
   state.children = children.flatMap((child) => {
@@ -306,6 +324,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         duration_minutes: task.duration ?? null,
         is_daily: task.isDaily ?? false,
         due_on: task.dueOn ?? null,
+        due_time: task.dueTime ?? null,
         category: task.category ?? 'life_habit',
         origin: task.origin ?? 'parent_assigned',
       }));
@@ -319,6 +338,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         duration_minutes: updates.duration,
         is_daily: updates.isDaily,
         due_on: updates.dueOn,
+        due_time: updates.dueTime,
         category: updates.category,
         origin: updates.origin,
         approved_points: updates.approvedPoints,

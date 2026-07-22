@@ -1,7 +1,3 @@
--- The output column family_id is also visible inside PL/pgSQL statements.
--- Referencing it in ON CONFLICT makes PostgreSQL report an ambiguous column.
--- Use the named unique constraint so child login can complete its binding.
-
 create or replace function public.authenticate_child(child_password text)
 returns table (family_id uuid, child_profile_id uuid)
 language plpgsql security definer
@@ -30,8 +26,23 @@ begin
   if exists (select 1 from public.family_members m where m.profile_id = current_user_id and m.role <> 'child') then
     raise exception 'session is already used by another role' using errcode = '42501';
   end if;
+
   if matched_child.profile_id is not null and matched_child.profile_id <> current_user_id then
-    raise exception 'child is already bound; ask parent to reset the password' using errcode = '42501';
+    if exists (
+      select 1
+        from auth.sessions s
+       where s.user_id = matched_child.profile_id
+         and (s.not_after is null or s.not_after > timezone('utc', now()))
+    ) then
+      raise exception 'child is already bound; ask parent to reset the password' using errcode = '42501';
+    end if;
+
+    delete from public.family_members
+     where profile_id = matched_child.profile_id
+       and family_id = matched_child.family_id;
+    update public.child_profiles
+       set profile_id = null
+     where id = matched_child.id;
   end if;
 
   insert into public.profiles (id, display_name)
@@ -52,4 +63,4 @@ end;
 $$;
 
 revoke all on function public.authenticate_child(text) from public;
-grant execute on function public.authenticate_child(text) to anon, authenticated;
+grant execute on function public.authenticate_child(text) to anon, authenticated;;

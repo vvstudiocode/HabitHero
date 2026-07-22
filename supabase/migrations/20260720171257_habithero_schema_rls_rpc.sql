@@ -446,3 +446,4 @@ revoke all on table public.point_ledger from authenticated;
 grant select on table public.point_ledger to authenticated;
 revoke all on table public.reward_redemptions from authenticated;
 grant select, update on table public.reward_redemptions to authenticated;
+;

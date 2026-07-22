@@ -8,3 +8,4 @@ alter function public.update_child_password(uuid, uuid, text)
   set search_path = extensions, pg_catalog, public;
 alter function public.authenticate_child(text)
   set search_path = extensions, pg_catalog, public;
+;

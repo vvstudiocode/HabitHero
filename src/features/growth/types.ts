@@ -44,9 +44,14 @@ export interface GoalProposalInput {
   name: string;
   points: number;
   category: TaskCategory;
+  dueTime: string;
 }
 
-export interface GoalConfirmationInput extends GoalProposalInput {}
+export interface GoalConfirmationInput {
+  name: string;
+  points: number;
+  category: TaskCategory;
+}
 
 export interface GoalReflectionInput {
   reflection: string;
@@ -59,6 +64,6 @@ export interface GoalReviewInput {
   approvedPoints: number;
   feedback: string;
   correction: string;
-  tone: FeedbackTone;
+  tone: FeedbackTone | null;
   revisionNote: string;
 }

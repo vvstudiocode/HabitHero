@@ -102,3 +102,4 @@ revoke all on function public.update_child_password(uuid, uuid, text) from publi
 grant execute on function public.update_child_password(uuid, uuid, text) to authenticated;
 revoke all on function public.authenticate_child(text) from public, anon;
 grant execute on function public.authenticate_child(text) to authenticated;
+;
