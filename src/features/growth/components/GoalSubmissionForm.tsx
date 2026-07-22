@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Send } from 'lucide-react';
 import { MOOD_CHOICES } from '../constants';
 import type { GoalReflectionInput, GrowthMood, GrowthTask } from '../types';
 
@@ -68,9 +67,9 @@ export function GoalSubmissionForm({ task, loading = false, onCancel, onSubmit }
             type="button"
             onClick={() => void submit()}
             disabled={loading || !reflection.trim()}
-            className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-green-500 px-4 font-black text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-h-12 items-center justify-center rounded-2xl bg-green-500 px-4 font-black text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Send size={18} /> 送出
+            送出
           </button>
         </div>
       </div>

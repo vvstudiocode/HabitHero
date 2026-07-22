@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
 import { CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
@@ -36,7 +36,7 @@ function isTaskExecutableNow(task: Pick<GrowthTask, 'dueTime'>) {
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
-  const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, stale, isOffline, mutationPending } = appStore;
+  const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<'goals' | 'growth' | 'wishlist' | 'history'>('goals');
   
@@ -56,15 +56,31 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   // Wishlist Form
   const [showWishlistForm, setShowWishlistForm] = useState(false);
   const [wishName, setWishName] = useState('');
+  const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
   
   // Toast Message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastLeaving, setToastLeaving] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [actionPending, setActionPending] = useState(false);
   
   const showToast = (msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setToastLeaving(false);
+    toastTimer.current = setTimeout(() => {
+      setToastLeaving(true);
+      toastTimer.current = setTimeout(() => {
+        setToastMessage(null);
+        setToastLeaving(false);
+        toastTimer.current = null;
+      }, 280);
+    }, 2720);
   };
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
 
   const proposedTasks = tasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested');
   const todoTasks = tasks
@@ -207,6 +223,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const handleRedeem = async (reward: Reward) => {
     if (!activeChild) return;
     if (childPoints >= reward.points) {
+      setRewardToConfirm(null);
       setActionPending(true);
       try {
         await redeemReward(activeChild.id, reward);
@@ -283,10 +300,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
       {/* Main Content */}
       <main className="flex-1 p-6 pb-28">
-        {(isOffline || stale || mutationPending) && (
+        {isOffline && (
           <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <span>{isOffline ? '目前離線，變更尚未同步。' : mutationPending ? '正在等待伺服器確認變更…' : '資料可能不是最新狀態。'}</span>
-            <button type="button" onClick={() => void retry()} disabled={loading || isOffline} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
+            <span>目前離線，變更尚未同步。</span>
+            <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
           </div>
         )}
         {/* Fixed Bottom Oval Capsule Tabs Bar */}
@@ -475,7 +492,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                       {reward.points} pt
                     </div>
                     <button
-                      onClick={() => void handleRedeem(reward)}
+                      onClick={() => setRewardToConfirm(reward)}
                       disabled={!canAfford || actionPending}
                       className={cn(
                         "w-full py-3 rounded-xl font-bold transition-all",
@@ -556,9 +573,29 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         </div>
       )}
 
+      {rewardToConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black text-gray-900">確認兌換獎勵</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-500">確定要用 {rewardToConfirm.points} pt 兌換「{rewardToConfirm.name}」嗎？</p>
+              </div>
+              <button type="button" onClick={() => setRewardToConfirm(null)} aria-label="關閉" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setRewardToConfirm(null)} className="min-h-12 rounded-2xl bg-gray-100 px-4 font-black text-gray-600">先不要</button>
+              <button type="button" onClick={() => void handleRedeem(rewardToConfirm)} disabled={actionPending} className="min-h-12 rounded-2xl bg-yellow-400 px-4 font-black text-yellow-950 disabled:cursor-wait disabled:opacity-60">確認兌換</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="hh-toast fixed top-4 left-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-[100] flex items-center gap-2 whitespace-nowrap">
+        <div className={cn('hh-toast fixed top-4 left-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-[100] flex items-center gap-2 whitespace-nowrap', toastLeaving && 'is-leaving')}>
           <Star size={16} className="text-yellow-400 fill-yellow-400" />
           <span className="font-bold">{toastMessage}</span>
         </div>

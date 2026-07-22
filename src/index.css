@@ -33,6 +33,15 @@
   animation: hh-toast-slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes hh-toast-fade-out {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, -8px); }
+}
+
+.hh-toast.is-leaving {
+  animation: hh-toast-fade-out 0.28s ease-in both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
