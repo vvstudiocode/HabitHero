@@ -9,11 +9,9 @@ interface CategoryBadgeProps {
 
 export function CategoryBadge({ category, compact = false, className }: CategoryBadgeProps) {
   const meta = getTaskCategoryMeta(category);
-  const Icon = meta.icon;
 
   return (
     <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold', meta.badgeClassName, className)}>
-      <Icon size={compact ? 12 : 14} aria-hidden="true" />
       {compact ? meta.shortLabel : meta.label}
     </span>
   );

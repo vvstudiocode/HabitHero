@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, MessageSquareText, RotateCcw, Sparkles, Star, X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { RotateCcw, X } from 'lucide-react';
 import type { ChildGrowthSummary } from '../growth-stats';
 import { TASK_CATEGORIES, getMoodLabel, getTaskCategoryMeta } from '../constants';
 import { CategoryBadge } from './CategoryBadge';
@@ -54,10 +53,10 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryTile icon={<Sparkles size={20} />} label="自主目標" value={totals.childProposedGoals} tone="text-amber-700 bg-amber-50 border-amber-100" />
-        <SummaryTile icon={<CheckCircle2 size={20} />} label="已完成" value={totals.completedGoals} tone="text-emerald-700 bg-emerald-50 border-emerald-100" />
-        <SummaryTile icon={<MessageSquareText size={20} />} label="家長回饋" value={totals.feedbackCount} tone="text-blue-700 bg-blue-50 border-blue-100" />
-        <SummaryTile icon={<Star size={20} />} label="成長點數" value={totals.earnedPoints} tone="text-yellow-700 bg-yellow-50 border-yellow-100" suffix="pt" />
+        <SummaryTile label="自主目標" value={totals.childProposedGoals} tone="text-amber-700 bg-amber-50 border-amber-100" />
+        <SummaryTile label="已完成" value={totals.completedGoals} tone="text-emerald-700 bg-emerald-50 border-emerald-100" />
+        <SummaryTile label="家長回饋" value={totals.feedbackCount} tone="text-blue-700 bg-blue-50 border-blue-100" />
+        <SummaryTile label="成長點數" value={totals.earnedPoints} tone="text-yellow-700 bg-yellow-50 border-yellow-100" suffix="pt" />
       </div>
 
       <div className="space-y-3">
@@ -205,10 +204,9 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
   );
 }
 
-function SummaryTile({ icon, label, value, suffix, tone }: { icon: ReactNode; label: string; value: number; suffix?: string; tone: string }) {
+function SummaryTile({ label, value, suffix, tone }: { label: string; value: number; suffix?: string; tone: string }) {
   return (
     <div className={`rounded-2xl border p-4 ${tone}`}>
-      <div className="mb-2">{icon}</div>
       <div className="text-2xl font-black">
         {value}
         {suffix && <span className="ml-1 text-sm">{suffix}</span>}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { CheckCircle2, Gift, LogOut, Plus, Star, X, PlayCircle, Clock, History, User } from 'lucide-react';
+import { CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Reward } from '../types';
 import { GoalCard } from '../features/growth/components/GoalCard';
@@ -408,7 +408,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                         isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
                       )}
                     >
-                      {isRunning ? <Clock size={28} /> : <PlayCircle size={28} />}
+                      {isRunning && <Clock size={24} />}
                       <span>{isExecutable ? (isRunning ? '暫停' : '開始') : '未到'}</span>
                       {hasTimer && <span className="text-xs opacity-90">{formatTime(timeLeft)}</span>}
                     </button>

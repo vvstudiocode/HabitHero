@@ -601,8 +601,21 @@ body {
 }
 
 .hh-login-screen--entry .hh-login-tabs button {
-  min-height: 48px;
+  min-height: 42px;
+  font-size: 14px;
   border-radius: 9999px;
+}
+
+.hh-login-screen--entry .hh-primary-button {
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.hh-login-screen--entry .hh-secondary-button {
+  min-height: 38px;
+  margin-top: 7px;
+  font-size: 13px;
 }
 
 .hh-login-screen--entry .hh-login-fields {
