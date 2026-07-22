@@ -148,13 +148,15 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
                 onClick={() => setSelectedTask(task)}
                 className="w-full rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50/40"
               >
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  {showChildFilter && <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">{task.childName}</span>}
-                  <CategoryBadge category={task.category} compact />
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{task.approvedPoints ?? task.points} pt</span>
+                {showChildFilter && <div className="mb-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">{task.childName}</span></div>}
+                <div className="whitespace-pre-wrap break-words font-black text-gray-900">{task.name}</div>
+                <div className="mt-1 flex items-center justify-between gap-2 text-xs font-bold text-gray-400">
+                  <span>{formatDate(task.completedAt ?? task.updatedAt ?? task.createdAt)}</span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <CategoryBadge category={task.category} compact />
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">{task.approvedPoints ?? task.points} pt</span>
+                  </span>
                 </div>
-                <div className="font-black text-gray-900">{task.name}</div>
-                <div className="mt-1 text-xs font-bold text-gray-400">{formatDate(task.completedAt ?? task.updatedAt ?? task.createdAt)}</div>
               </button>
             ))}
           </div>

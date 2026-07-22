@@ -596,7 +596,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                             <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0">{c.childName}</span>
                           ))}
                         </div>
-                        <h3 className="font-bold text-gray-900 break-words text-base leading-snug">{group.name}</h3>
+                <h3 className="whitespace-pre-wrap break-words font-bold text-gray-900 text-base leading-snug">{group.name}</h3>
                         <div className="flex items-center gap-1.5 flex-wrap text-xs">
                           <CategoryBadge category={group.category} compact />
                           {group.isDaily && (
@@ -648,7 +648,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                         <Star size={20} />
                       </div>
                       <div className="min-w-0 flex-1 space-y-1">
-                        <h3 className="font-bold text-gray-900 break-words text-base leading-snug">{template.name}</h3>
+                        <h3 className="whitespace-pre-wrap break-words font-bold text-gray-900 text-base leading-snug">{template.name}</h3>
                         <div className="flex items-center gap-1.5 flex-wrap text-xs">
                           <CategoryBadge category={template.category} compact />
                           {template.duration && (
@@ -734,7 +734,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                             <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold">{c.childName}</span>
                           ))}
                         </div>
-                        <div className="font-medium text-gray-900">{group.name}</div>
+                        <div className="whitespace-pre-wrap break-words font-medium text-gray-900">{group.name}</div>
                         <div className="text-blue-500 font-bold text-sm">{group.points} pt</div>
                       </div>
                     </div>
@@ -904,7 +904,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
-                <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：刷牙洗臉" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <textarea rows={2} value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：刷牙洗臉" className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 focus:ring-2 focus:ring-blue-400 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">固定分類</label>
@@ -970,7 +970,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
-                <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：洗碗" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <textarea rows={2} value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：洗碗" className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 focus:ring-2 focus:ring-blue-400 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">固定分類</label>
@@ -1050,7 +1050,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">獎勵名稱</label>
-                <input type="text" value={newRewardName} onChange={e => setNewRewardName(e.target.value)} placeholder="例如：看卡通 30 分鐘" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <textarea rows={2} value={newRewardName} onChange={e => setNewRewardName(e.target.value)} placeholder="例如：看卡通 30 分鐘" className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 focus:ring-2 focus:ring-blue-400 outline-none" />
               </div>
               {state.children.length > 1 && (
                 <div>

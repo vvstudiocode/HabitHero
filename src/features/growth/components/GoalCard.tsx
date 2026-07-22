@@ -35,7 +35,7 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
             </span>
           </div>
 
-          <h3 className={cn('break-words font-black text-gray-900 leading-snug', compact ? 'text-base' : 'text-lg')}>{task.name}</h3>
+          <h3 className={cn('whitespace-pre-wrap break-words font-black text-gray-900 leading-snug', compact ? 'text-base' : 'text-lg')}>{task.name}</h3>
 
           <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-bold text-gray-500">
             <span className="inline-flex items-center gap-1 text-yellow-600">

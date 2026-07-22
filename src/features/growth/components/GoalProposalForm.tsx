@@ -55,10 +55,11 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
       <div className="space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm font-bold text-gray-700">我今天想做到</span>
-          <input
+          <textarea
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
+            rows={2}
+            className="min-h-12 w-full resize-y rounded-2xl border border-gray-200 p-3 text-base leading-6 outline-none focus:ring-2 focus:ring-yellow-400"
             placeholder="例如：自己整理明天的書包"
           />
         </label>

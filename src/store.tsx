@@ -122,10 +122,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const activeMutationCount = useRef(0);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef(state);
+  const dataReadyRef = useRef(dataReady);
+  const loadedUserIdRef = useRef(loadedUserId);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    dataReadyRef.current = dataReady;
+    loadedUserIdRef.current = loadedUserId;
+  }, [dataReady, loadedUserId]);
 
   useEffect(() => () => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -137,8 +144,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Only reset dataReady on the very first load (no existing data).
     // For subsequent refreshes (realtime, reconnect) keep the dashboard
     // visible to avoid the loading-screen flash.
-    const isFirstLoad = !dataReady && !loadedUserId;
+    const isFirstLoad = !dataReadyRef.current || loadedUserIdRef.current !== session.user.id;
     if (isFirstLoad) {
+      dataReadyRef.current = false;
+      loadedUserIdRef.current = null;
       setDataReady(false);
       setLoadedUserId(null);
       setDataLoading(true);
@@ -152,6 +161,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         setFamilyId(loaded.familyId);
         setRole(loaded.role);
+        dataReadyRef.current = true;
+        loadedUserIdRef.current = session.user.id;
         setLoadedUserId(session.user.id);
         setDataReady(true);
         setStale(false);
