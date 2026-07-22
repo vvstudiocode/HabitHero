@@ -25,7 +25,7 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
 
   return (
     <article className={cn('rounded-2xl border bg-white p-4 shadow-sm', task.status === 'revision_requested' ? 'border-orange-200 bg-orange-50/60' : 'border-gray-100')}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             {childName && <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">{childName}</span>}
@@ -41,10 +41,10 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
             </span>
             {task.origin === 'child_proposed' && <span className="text-amber-700">孩子主動提出</span>}
             {task.isDaily && <span className="text-emerald-700">每日</span>}
-            {dueTime && <span className="text-blue-600">{dueTime} 可開始</span>}
+            {dueTime && <span className="inline-flex max-w-full items-center rounded-full bg-blue-50 px-2 py-1 text-blue-600">{dueTime} 開始</span>}
           </div>
         </div>
-        {action && <div className="shrink-0">{action}</div>}
+        {action && <div className="min-w-0 shrink-0">{action}</div>}
       </div>
 
       {(task.revisionNote || reflection || parentFeedback || parentCorrection) && (

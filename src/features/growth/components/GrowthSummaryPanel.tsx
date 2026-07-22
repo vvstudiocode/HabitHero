@@ -5,6 +5,7 @@ import type { ChildGrowthSummary } from '../growth-stats';
 import { TASK_CATEGORIES, getMoodLabel, getTaskCategoryMeta } from '../constants';
 import { CategoryBadge } from './CategoryBadge';
 import type { GrowthTaskWithChild, TaskCategory } from '../types';
+import { filterAndPaginateCompletedTasks } from '../growth-history';
 
 interface GrowthSummaryPanelProps {
   summaries: ChildGrowthSummary[];
@@ -13,12 +14,12 @@ interface GrowthSummaryPanelProps {
   showChildFilter?: boolean;
 }
 
-const HISTORY_PAGE_SIZE = 12;
-
 export function GrowthSummaryPanel({ summaries, title = '成長紀錄', completedTasks = [], showChildFilter = false }: GrowthSummaryPanelProps) {
   const [categoryFilter, setCategoryFilter] = useState<TaskCategory | 'all'>('all');
   const [childFilter, setChildFilter] = useState<string>('all');
-  const [visibleCount, setVisibleCount] = useState(HISTORY_PAGE_SIZE);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
   const [selectedTask, setSelectedTask] = useState<GrowthTaskWithChild | null>(null);
   const totals = summaries.reduce(
     (acc, item) => ({
@@ -33,17 +34,17 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
     { totalGoals: 0, childProposedGoals: 0, completedGoals: 0, pendingReviews: 0, feedbackCount: 0, correctionCount: 0, earnedPoints: 0 },
   );
   const childOptions = useMemo(() => summaries.map((summary) => ({ id: summary.childId, name: summary.childName })), [summaries]);
-  const filteredCompletedTasks = useMemo(() => {
-    return [...completedTasks]
-      .filter((task) => categoryFilter === 'all' || task.category === categoryFilter)
-      .filter((task) => !showChildFilter || childFilter === 'all' || task.childId === childFilter)
-      .sort((a, b) => {
-        const aTime = Date.parse(a.completedAt ?? a.updatedAt ?? a.createdAt ?? '');
-        const bTime = Date.parse(b.completedAt ?? b.updatedAt ?? b.createdAt ?? '');
-        return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
-      });
-  }, [categoryFilter, childFilter, completedTasks, showChildFilter]);
-  const visibleTasks = filteredCompletedTasks.slice(0, visibleCount);
+  const filteredCompletedTasks = useMemo(() => completedTasks
+    .filter((task) => !showChildFilter || childFilter === 'all' || task.childId === childFilter),
+  [childFilter, completedTasks, showChildFilter]);
+  const history = useMemo(() => filterAndPaginateCompletedTasks(filteredCompletedTasks, {
+    category: categoryFilter,
+    from: fromDate,
+    to: toDate,
+    page: historyPage,
+  }), [categoryFilter, filteredCompletedTasks, fromDate, historyPage, toDate]);
+  const visibleTasks = history.tasks;
+  const resetHistory = () => setHistoryPage(1);
 
   return (
     <section className="space-y-4">
@@ -105,7 +106,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
                 value={childFilter}
                 onChange={(event) => {
                   setChildFilter(event.target.value);
-                  setVisibleCount(HISTORY_PAGE_SIZE);
+                  resetHistory();
                 }}
                 className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400"
               >
@@ -117,13 +118,21 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
               value={categoryFilter}
               onChange={(event) => {
                 setCategoryFilter(event.target.value as TaskCategory | 'all');
-                setVisibleCount(HISTORY_PAGE_SIZE);
+                resetHistory();
               }}
               className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="all">全部分類</option>
               {TASK_CATEGORIES.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
-            </select>
+              </select>
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
+              <span className="whitespace-nowrap">從</span>
+              <input aria-label="完成日期起日" type="date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); resetHistory(); }} className="min-w-0 bg-transparent text-sm outline-none" />
+            </label>
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
+              <span className="whitespace-nowrap">到</span>
+              <input aria-label="完成日期迄日" type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); resetHistory(); }} className="min-w-0 bg-transparent text-sm outline-none" />
+            </label>
           </div>
         </div>
 
@@ -150,20 +159,18 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
           </div>
         )}
 
-        {filteredCompletedTasks.length > visibleTasks.length && (
-          <button
-            type="button"
-            onClick={() => setVisibleCount((count) => count + HISTORY_PAGE_SIZE)}
-            className="min-h-12 w-full rounded-2xl border border-gray-200 bg-white px-4 font-black text-gray-700"
-          >
-            顯示更多
-          </button>
+        {history.total > 0 && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white p-3">
+            <button type="button" disabled={history.page <= 1} onClick={() => setHistoryPage((page) => page - 1)} className="min-h-11 rounded-xl border border-gray-200 px-4 text-sm font-black text-gray-700 disabled:cursor-not-allowed disabled:opacity-40">上一頁</button>
+            <span className="text-sm font-black text-gray-500">第 {history.page} / {history.pageCount} 頁 · 共 {history.total} 筆</span>
+            <button type="button" disabled={history.page >= history.pageCount} onClick={() => setHistoryPage((page) => page + 1)} className="min-h-11 rounded-xl border border-gray-200 px-4 text-sm font-black text-gray-700 disabled:cursor-not-allowed disabled:opacity-40">下一頁</button>
+          </div>
         )}
       </div>
 
       {selectedTask && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-5 shadow-xl">
+          <div className="w-full max-w-lg animate-slide-up rounded-3xl bg-white p-5 shadow-xl">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <div className="mb-2 flex flex-wrap gap-2">

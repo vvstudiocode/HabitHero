@@ -586,7 +586,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                           )}
                           {group.dueTime && (
                             <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                              <Clock size={12}/> {group.dueTime.slice(0, 5)} 可開始
+                              <Clock size={12}/> {group.dueTime.slice(0, 5)} 開始
                             </span>
                           )}
                         </div>
@@ -1129,7 +1129,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
 
       {resetChildId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-xl font-bold text-blue-900">重設小孩密碼</h3>
             <p className="mb-4 text-sm text-gray-500">重設後請把新密碼告訴小孩；舊密碼會立即失效。</p>
             <div className="space-y-3">
@@ -1156,7 +1156,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
 
       {accountSetupChildId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-xl font-bold text-blue-900">建立小孩登入帳號</h3>
             <p className="mb-4 text-sm text-gray-500">建立後小孩可在任何裝置使用帳號登入。</p>
             <div className="space-y-3">

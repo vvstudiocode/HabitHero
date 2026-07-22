@@ -30,8 +30,10 @@ const emptyState = (): AppState => ({
   lastResetDate: null,
 });
 
-const CHILD_COMPLETED_TASK_HISTORY_LIMIT = 30;
-const FAMILY_COMPLETED_TASK_HISTORY_LIMIT = 60;
+// Keep enough history in the app state for the UI's 30-item pages.
+// This can later become a server-side cursor when history grows substantially.
+const CHILD_COMPLETED_TASK_HISTORY_LIMIT = 300;
+const FAMILY_COMPLETED_TASK_HISTORY_LIMIT = 300;
 
 function check<T>(result: { data: T; error: { message: string } | null }): T {
   if (result.error) throw new Error(result.error.message);

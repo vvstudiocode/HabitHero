@@ -391,7 +391,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                       onClick={() => toggleTimer(task)}
                       disabled={!isExecutable}
                       className={cn(
-                        "flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-2xl text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
+                        "flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
                         isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
                       )}
                     >
@@ -403,7 +403,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                     <button
                       onClick={() => void handleFinishTask(task.id)}
                       disabled={actionPending || !isExecutable}
-                      className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                      className="flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                     >
                       <CheckCircle2 size={28} />
                       <span>{isExecutable ? '完成' : '未到'}</span>
@@ -513,7 +513,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       {/* Overlays */}
       {submittingTask && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md animate-slide-up">
             <GoalSubmissionForm
               task={submittingTask}
               loading={actionPending}
@@ -526,7 +526,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
       {showWishlistForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-50">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+          <div className="bg-white w-full max-w-sm animate-slide-up rounded-3xl p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">我要許願</h3>
               <button onClick={() => setShowWishlistForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>

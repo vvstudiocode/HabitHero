@@ -62,7 +62,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             placeholder="例如：自己整理明天的書包"
           />
         </label>
-        <div className="grid gap-3 sm:grid-cols-[1fr_132px_132px]">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,132px)]">
           <label className="block">
             <span className="mb-2 block text-sm font-bold text-gray-700">目標分類</span>
             <select
@@ -86,7 +86,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             />
           </label>
           <label className="block">
-            <span className="mb-2 block text-sm font-bold text-gray-700">做到時間</span>
+              <span className="mb-2 block text-sm font-bold text-gray-700">開始時間</span>
             <input
               type="time"
               value={dueTime}
