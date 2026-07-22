@@ -13,6 +13,7 @@ import type {
   RewardRedemptionRow, TaskRow, TaskTemplateRow, WishlistItemRow, PointLedgerRow,
 } from '../types';
 import type { AppState, Child, FeedbackTone, Reward, Task, TaskCategory, TaskStatus, TaskTemplate } from '../types';
+import { validateRewardPoints } from './reward-validation';
 
 export interface LoadedAppData {
   state: AppState;
@@ -377,8 +378,18 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     async reviewTaskCompletion(taskId, review) {
       check(await client.rpc('review_task_completion', buildReviewTaskCompletionPayload(taskId, review)));
     },
-    async insertReward(familyId, childId, reward) { check(await client.from('rewards').insert({ family_id: familyId, child_profile_id: childId, name: reward.name, points: reward.points, icon: reward.icon })); },
-    async updateReward(id, updates) { check(await client.from('rewards').update({ name: updates.name, points: updates.points, icon: updates.icon }).eq('id', id)); },
+    async insertReward(familyId, childId, reward) {
+      const validation = validateRewardPoints(reward.points);
+      if (validation.ok === false) throw new Error(validation.message);
+      check(await client.from('rewards').insert({ family_id: familyId, child_profile_id: childId, name: reward.name, points: reward.points, icon: reward.icon }));
+    },
+    async updateReward(id, updates) {
+      if (updates.points !== undefined) {
+        const validation = validateRewardPoints(updates.points);
+        if (validation.ok === false) throw new Error(validation.message);
+      }
+      check(await client.from('rewards').update({ name: updates.name, points: updates.points, icon: updates.icon }).eq('id', id));
+    },
     async deleteReward(id) { check(await client.from('rewards').delete().eq('id', id)); },
     async insertWishlist(familyId, childId, name) { check(await client.from('wishlist_items').insert({ family_id: familyId, child_profile_id: childId, name })); },
     async approveWishlist(familyId, childId, wishlistId, points) {

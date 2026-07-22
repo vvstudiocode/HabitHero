@@ -9,6 +9,7 @@ import { GoalReviewPanel } from '../features/growth/components/GoalReviewPanel';
 import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryPanel';
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
 import { buildGrowthStats } from '../features/growth/growth-stats';
+import { validateRewardPoints } from '../lib/reward-validation';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
@@ -102,7 +103,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const [showRewardForm, setShowRewardForm] = useState(false);
   const [editingReward, setEditingReward] = useState<GroupedReward | null>(null);
   const [newRewardName, setNewRewardName] = useState('');
-  const [newRewardPoints, setNewRewardPoints] = useState(50);
+  const [newRewardPoints, setNewRewardPoints] = useState<number | ''>(50);
+  const [rewardFormError, setRewardFormError] = useState('');
   const [newRewardTargetChildIds, setNewRewardTargetChildIds] = useState<string[]>([]);
 
   // Templates
@@ -321,6 +323,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   };
 
   const openRewardForm = (group?: GroupedReward) => {
+    setRewardFormError('');
     if (group) {
       setEditingReward(group);
       setNewRewardName(group.name);
@@ -336,7 +339,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   };
 
   const handleSaveReward = async () => {
-    if (!newRewardName || newRewardTargetChildIds.length === 0) return;
+    if (!newRewardName.trim() || newRewardTargetChildIds.length === 0) return;
+    const rewardPoints = newRewardPoints;
+    const pointsValidation = typeof rewardPoints === 'number'
+      ? validateRewardPoints(rewardPoints)
+      : { ok: false as const, message: '獎勵點數必須是大於 0 的整數。' };
+    if (pointsValidation.ok === false) {
+      setRewardFormError(pointsValidation.message);
+      return;
+    }
+    setRewardFormError('');
     observedLoading.current = false;
     setMutationKind('reward');
     try {
@@ -344,15 +356,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
         const existingChildIds = editingReward.children.map(c => c.childId);
         await Promise.all(newRewardTargetChildIds.map(async childId => {
           const existingChild = editingReward.children.find(c => c.childId === childId);
-          if (existingChild) await updateReward(childId, existingChild.rewardId, { name: newRewardName, points: newRewardPoints });
-          else await addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' });
+          if (existingChild) await updateReward(childId, existingChild.rewardId, { name: newRewardName, points: rewardPoints });
+          else await addReward(childId, { name: newRewardName, points: rewardPoints, icon: 'Gift' });
         }));
         await Promise.all(existingChildIds.filter(childId => !newRewardTargetChildIds.includes(childId)).map(async childId => {
           const existingChild = editingReward.children.find(c => c.childId === childId);
           if (existingChild) await deleteReward(childId, existingChild.rewardId);
         }));
       } else {
-        await Promise.all(newRewardTargetChildIds.map(childId => addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' })));
+        await Promise.all(newRewardTargetChildIds.map(childId => addReward(childId, { name: newRewardName, points: rewardPoints, icon: 'Gift' })));
       }
       setShowRewardForm(false);
       setMutationKind(null);
@@ -564,28 +576,28 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               </div>
               <div className="space-y-3">
                 {groupedTodoTasks.map(group => (
-                  <div key={group.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group-item relative">
-                    <div className="flex items-center gap-3">
-                      <Circle size={20} className="text-gray-300" />
-                      <div>
-                        <div className="flex items-center gap-1 mb-1 flex-wrap">
+                  <div key={group.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <Circle size={20} className="text-gray-300 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-1 flex-wrap">
                           {group.children.map(c => (
-                            <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold">{c.childName}</span>
+                            <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0">{c.childName}</span>
                           ))}
                         </div>
-                        <div className="font-medium text-gray-700 flex items-center gap-2">
-                          {group.name}
+                        <h3 className="font-bold text-gray-900 break-words text-base leading-snug">{group.name}</h3>
+                        <div className="flex items-center gap-1.5 flex-wrap text-xs">
                           <CategoryBadge category={group.category} compact />
                           {group.isDaily && (
-                            <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold border border-green-100">每日</span>
+                            <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold border border-green-100 shrink-0">每日</span>
                           )}
                           {group.duration && (
-                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0">
                               <PlayCircle size={12}/> {group.duration}m
                             </span>
                           )}
                           {group.dueTime && (
-                            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0">
                               <Clock size={12}/> {group.dueTime.slice(0, 5)} 開始
                             </span>
                           )}
@@ -593,7 +605,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                         <div className="text-blue-500 text-sm font-bold">+{group.points} pt</div>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 shrink-0">
                       <button onClick={() => openTaskForm(group)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg">
                         <Edit2 size={18} />
                       </button>
@@ -619,17 +631,17 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               <p className="text-gray-500 text-sm mb-4">常做的任務先存成模板，需要時直接派發。</p>
               <div className="space-y-3">
                 {(state.taskTemplates as GrowthTaskTemplate[]).map(template => (
-                  <div key={template.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group-item relative">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
+                  <div key={template.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 shrink-0">
                         <Star size={20} />
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900 flex items-center gap-2">
-                          {template.name}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <h3 className="font-bold text-gray-900 break-words text-base leading-snug">{template.name}</h3>
+                        <div className="flex items-center gap-1.5 flex-wrap text-xs">
                           <CategoryBadge category={template.category} compact />
                           {template.duration && (
-                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0">
                               <PlayCircle size={12}/> {template.duration}m
                             </span>
                           )}
@@ -1052,7 +1064,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">所需點數</label>
-                <input type="number" min="1" value={newRewardPoints} onChange={e => setNewRewardPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <input type="number" min="1" step="1" value={newRewardPoints} onChange={e => {
+                  setNewRewardPoints(e.target.value === '' ? '' : Number(e.target.value));
+                  setRewardFormError('');
+                }} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                {rewardFormError && <p className="mt-1 text-sm font-medium text-red-600" role="alert">{rewardFormError}</p>}
               </div>
               <button onClick={() => void handleSaveReward()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingReward ? '儲存變更' : '上架獎勵'}</button>
             </div>
