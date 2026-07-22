@@ -459,8 +459,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={onSwitchToChild} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-xl transition-colors">
-              <Baby size={20} />
+            <button onClick={onSwitchToChild} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3.5 py-2 rounded-full transition-all text-xs font-bold backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
+              <Baby size={18} />
+              <span>切換小孩</span>
             </button>
             <button onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="flex min-h-11 min-w-11 items-center justify-center bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
               <Settings size={20} />
@@ -482,7 +483,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-6 pb-28">
         {(isOffline || stale || mutationPending) && (
           <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             <span>{isOffline ? '目前離線，尚未同步的變更不會被視為成功。' : mutationPending ? '正在等待伺服器確認變更…' : '資料可能不是最新狀態。'}</span>
@@ -495,65 +496,70 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
           </div>
         )}
-        {/* Tabs */}
-        <div className="flex bg-white rounded-2xl shadow-sm mb-6 p-1 overflow-x-auto">
+        {/* Fixed Bottom Oval Capsule Tabs Bar */}
+        <nav aria-label="家長選單分頁" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md bg-white/90 backdrop-blur-md rounded-full p-1.5 shadow-xl border border-gray-200/80 flex items-center justify-between gap-1">
           <button
+            type="button"
             onClick={() => setActiveTab('review')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
-              activeTab === 'review' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'review' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
             )}
           >
             審核
             {(proposedTasks.length + pendingTasks.length) > 0 && (
-              <span className="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 origin-center leading-none">
+              <span className="absolute top-1 right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 leading-none">
                 {proposedTasks.length + pendingTasks.length}
               </span>
             )}
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('tasks')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
-              activeTab === 'tasks' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'tasks' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
             )}
           >
             任務
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('growth')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
-              activeTab === 'growth' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'growth' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
             )}
           >
             成長
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('rewards')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
-              activeTab === 'rewards' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'rewards' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
             )}
           >
             獎勵
-            {pendingTickets.length > 0 && <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />}
+            {pendingTickets.length > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />}
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('wishlist')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 rounded-xl text-xs sm:text-sm font-medium transition-colors relative",
-              activeTab === 'wishlist' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'wishlist' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
             )}
           >
             許願
             {allWishlist.length > 0 && (
-              <span className="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 origin-center leading-none">
+              <span className="absolute top-1 right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 leading-none">
                 {allWishlist.length}
               </span>
             )}
           </button>
-        </div>
+        </nav>
 
         {activeTab === 'review' && (
           <GoalReviewPanel

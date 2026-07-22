@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { CheckCircle2, Gift, LogOut, Plus, Star, X, PlayCircle, Clock, History } from 'lucide-react';
+import { CheckCircle2, Gift, LogOut, Plus, Star, X, PlayCircle, Clock, History, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Reward } from '../types';
 import { GoalCard } from '../features/growth/components/GoalCard';
@@ -261,8 +261,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         <div className="relative z-10 flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-yellow-900">{activeChild.name}的任務</h1>
           <div className="flex gap-2">
-            <button onClick={onLogout} aria-label="登出" title="登出" className="flex min-h-11 min-w-11 items-center justify-center bg-white/40 hover:bg-white/60 p-2 rounded-xl text-yellow-900 transition-colors">
-              <LogOut size={20} />
+            <button onClick={onSwitchChild} aria-label="切換身份" title="切換身份" className="flex items-center gap-1.5 bg-white/50 hover:bg-white/70 text-yellow-950 px-3.5 py-2 rounded-full transition-all text-xs font-bold shadow-sm active:scale-95">
+              <User size={18} />
+              <span>切換家長</span>
+            </button>
+            <button onClick={onLogout} aria-label="登出" title="登出" className="flex min-h-9 min-w-9 items-center justify-center bg-white/40 hover:bg-white/60 p-2 rounded-full text-yellow-900 transition-colors">
+              <LogOut size={18} />
             </button>
           </div>
         </div>
@@ -279,53 +283,59 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-6 pb-28">
         {(isOffline || stale || mutationPending) && (
           <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             <span>{isOffline ? '目前離線，變更尚未同步。' : mutationPending ? '正在等待伺服器確認變更…' : '資料可能不是最新狀態。'}</span>
             <button type="button" onClick={() => void retry()} disabled={loading || isOffline} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
           </div>
         )}
-        {/* Tabs */}
-        <div className="flex bg-white rounded-2xl shadow-sm mb-6 p-1 overflow-x-auto">
+        {/* Fixed Bottom Oval Capsule Tabs Bar */}
+        <nav aria-label="選單分頁" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md bg-white/90 backdrop-blur-md rounded-full p-1.5 shadow-xl border border-yellow-100/80 flex items-center justify-between gap-1">
           <button
+            type="button"
             onClick={() => setActiveTab('goals')}
             className={cn(
-              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
-              activeTab === 'goals' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'goals' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
             )}
           >
             目標
-            {(proposedTasks.length + pendingTasks.length + revisionTasks.length) > 0 && <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-red-500" />}
+            {(proposedTasks.length + pendingTasks.length + revisionTasks.length) > 0 && (
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+            )}
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('growth')}
             className={cn(
-              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
-              activeTab === 'growth' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'growth' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
             )}
           >
             成長
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('wishlist')}
             className={cn(
-              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
-              activeTab === 'wishlist' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'wishlist' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
             )}
           >
             許願
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('history')}
             className={cn(
-              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
-              activeTab === 'history' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
+              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
+              activeTab === 'history' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
             )}
           >
             兌換
           </button>
-        </div>
+        </nav>
 
         {activeTab === 'goals' && (
           <div className="space-y-6">
