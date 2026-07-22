@@ -558,7 +558,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 left-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-[100] flex items-center gap-2 animate-slide-down whitespace-nowrap">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-[100] flex items-center gap-2 animate-slide-down whitespace-nowrap">
           <Star size={16} className="text-yellow-400 fill-yellow-400" />
           <span className="font-bold">{toastMessage}</span>
         </div>
