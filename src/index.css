@@ -375,6 +375,80 @@ body {
   box-shadow: 0 4px 14px rgba(28, 135, 137, 0.28), inset 0 1px rgba(255, 255, 255, 0.8);
 }
 
+.hh-bottom-nav {
+  --active-index: 0;
+  --item-count: 4;
+  position: fixed;
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+  left: 50%;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(var(--item-count), minmax(0, 1fr));
+  gap: 4px;
+  width: calc(100% - 2rem);
+  max-width: 448px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 36px rgba(18, 57, 59, 0.18), 0 4px 12px rgba(0, 0, 0, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateX(-50%);
+}
+
+.hh-bottom-nav::before {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: calc(6px + var(--active-index) * ((100% - 12px - (var(--item-count) - 1) * 4px) / var(--item-count)));
+  width: calc((100% - 12px - (var(--item-count) - 1) * 4px) / var(--item-count));
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #ffe486, #aaf08d 48%, #52d8df);
+  box-shadow: 0 4px 14px rgba(28, 135, 137, 0.22), inset 0 1px rgba(255, 255, 255, 0.8);
+  content: "";
+  pointer-events: none;
+  transition: left 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hh-bottom-nav-button {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 9999px;
+  padding: 8px 10px;
+  color: #526b69;
+  background: transparent;
+  font: 800 14px "Nunito", system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.hh-bottom-nav-button:hover {
+  color: #1a4d50;
+  background: rgba(255, 238, 169, 0.3);
+}
+
+.hh-bottom-nav-button:active {
+  transform: scale(0.96);
+}
+
+.hh-bottom-nav-button.is-active {
+  color: #0f3032;
+  font-weight: 900;
+}
+
+.hh-bottom-nav-button:focus-visible {
+  outline: 3px solid rgba(242, 255, 155, 0.78);
+  outline-offset: 2px;
+}
+
 .hh-login-panel label,
 .hh-sprite-theme label {
   display: block;
@@ -511,6 +585,10 @@ body {
   box-shadow: none;
   transform: translateX(-50%);
   backdrop-filter: none;
+}
+
+.hh-login-screen--entry .hh-login-panel.is-revealed {
+  bottom: max(96px, calc(env(safe-area-inset-bottom) + 96px));
 }
 
 .hh-login-screen--entry .hh-login-tabs button {
@@ -857,6 +935,8 @@ body {
 
   .hh-primary-button,
   .hh-login-tabs button,
+  .hh-bottom-nav::before,
+  .hh-bottom-nav-button,
   .hh-secondary-button,
   .hh-secondary-inline,
   .hh-icon-button {

@@ -291,13 +291,17 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           </div>
         )}
         {/* Fixed Bottom Oval Capsule Tabs Bar */}
-        <nav aria-label="選單分頁" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md bg-white/90 backdrop-blur-md rounded-full p-1.5 shadow-xl border border-yellow-100/80 flex items-center justify-between gap-1">
+        <nav
+          aria-label="選單分頁"
+          className="hh-bottom-nav hh-bottom-nav--child"
+          style={{ '--active-index': ['goals', 'growth', 'wishlist', 'history'].indexOf(activeTab), '--item-count': 4 } as React.CSSProperties}
+        >
           <button
             type="button"
             onClick={() => setActiveTab('goals')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'goals' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'goals' && "is-active"
             )}
           >
             目標
@@ -309,8 +313,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             type="button"
             onClick={() => setActiveTab('growth')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'growth' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'growth' && "is-active"
             )}
           >
             成長
@@ -319,8 +323,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             type="button"
             onClick={() => setActiveTab('wishlist')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'wishlist' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'wishlist' && "is-active"
             )}
           >
             許願
@@ -329,8 +333,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             type="button"
             onClick={() => setActiveTab('history')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-3 rounded-full text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'history' ? "bg-yellow-400 text-yellow-950 shadow-sm font-extrabold" : "text-gray-500 hover:bg-yellow-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'history' && "is-active"
             )}
           >
             兌換

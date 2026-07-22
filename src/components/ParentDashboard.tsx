@@ -497,13 +497,17 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
           </div>
         )}
         {/* Fixed Bottom Oval Capsule Tabs Bar */}
-        <nav aria-label="家長選單分頁" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md bg-white/90 backdrop-blur-md rounded-full p-1.5 shadow-xl border border-gray-200/80 flex items-center justify-between gap-1">
+        <nav
+          aria-label="家長選單分頁"
+          className="hh-bottom-nav hh-bottom-nav--parent"
+          style={{ '--active-index': ['review', 'tasks', 'growth', 'rewards', 'wishlist'].indexOf(activeTab), '--item-count': 5 } as React.CSSProperties}
+        >
           <button
             type="button"
             onClick={() => setActiveTab('review')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'review' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'review' && "is-active"
             )}
           >
             審核
@@ -517,8 +521,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             type="button"
             onClick={() => setActiveTab('tasks')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'tasks' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'tasks' && "is-active"
             )}
           >
             任務
@@ -527,8 +531,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             type="button"
             onClick={() => setActiveTab('growth')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'growth' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'growth' && "is-active"
             )}
           >
             成長
@@ -537,8 +541,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             type="button"
             onClick={() => setActiveTab('rewards')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'rewards' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'rewards' && "is-active"
             )}
           >
             獎勵
@@ -548,8 +552,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             type="button"
             onClick={() => setActiveTab('wishlist')}
             className={cn(
-              "flex-1 min-h-11 flex items-center justify-center gap-1 py-2 px-2 rounded-full text-xs sm:text-sm font-bold transition-all relative whitespace-nowrap active:scale-95",
-              activeTab === 'wishlist' ? "bg-blue-600 text-white shadow-sm font-extrabold" : "text-gray-600 hover:bg-blue-50/50"
+              "hh-bottom-nav-button",
+              activeTab === 'wishlist' && "is-active"
             )}
           >
             許願
