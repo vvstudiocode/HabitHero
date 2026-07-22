@@ -261,9 +261,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         <div className="relative z-10 flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-yellow-900">{activeChild.name}的任務</h1>
           <div className="flex gap-2">
-            <button onClick={onSwitchChild} aria-label="切換身份" title="切換身份" className="flex items-center gap-1.5 bg-white/50 hover:bg-white/70 text-yellow-950 px-3.5 py-2 rounded-full transition-all text-xs font-bold shadow-sm active:scale-95">
+            <button onClick={onSwitchChild} aria-label="切換到家長視角" title="切換到家長視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/50 hover:bg-white/70 text-yellow-950 p-2 rounded-full transition-all shadow-sm active:scale-95">
               <User size={18} />
-              <span>切換家長</span>
             </button>
             <button onClick={onLogout} aria-label="登出" title="登出" className="flex min-h-9 min-w-9 items-center justify-center bg-white/40 hover:bg-white/60 p-2 rounded-full text-yellow-900 transition-colors">
               <LogOut size={18} />

@@ -401,14 +401,15 @@ body {
   position: absolute;
   top: 6px;
   bottom: 6px;
-  left: calc(6px + var(--active-index) * ((100% - 12px - (var(--item-count) - 1) * 4px) / var(--item-count)));
+  left: 6px;
   width: calc((100% - 12px - (var(--item-count) - 1) * 4px) / var(--item-count));
   border-radius: 9999px;
   background: linear-gradient(135deg, #ffe486, #aaf08d 48%, #52d8df);
   box-shadow: 0 4px 14px rgba(28, 135, 137, 0.22), inset 0 1px rgba(255, 255, 255, 0.8);
   content: "";
   pointer-events: none;
-  transition: left 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateX(calc(var(--active-index) * (100% + 4px)));
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .hh-bottom-nav-button {
@@ -588,7 +589,15 @@ body {
 }
 
 .hh-login-screen--entry .hh-login-panel.is-revealed {
-  bottom: max(96px, calc(env(safe-area-inset-bottom) + 96px));
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+}
+
+.hh-login-screen--entry .hh-login-panel.is-revealed .hh-login-tabs {
+  position: static;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 12px;
+  transform: none;
 }
 
 .hh-login-screen--entry .hh-login-tabs button {

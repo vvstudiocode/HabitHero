@@ -459,9 +459,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={onSwitchToChild} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3.5 py-2 rounded-full transition-all text-xs font-bold backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
+            <button onClick={onSwitchToChild} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
               <Baby size={18} />
-              <span>切換小孩</span>
             </button>
             <button onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="flex min-h-11 min-w-11 items-center justify-center bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
               <Settings size={20} />
