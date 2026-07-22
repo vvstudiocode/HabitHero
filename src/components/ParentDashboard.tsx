@@ -213,6 +213,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     } else {
       for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
     }
+    setShowTaskForm(false);
+    setAssigningTemplate(null);
+    setMutationKind(null);
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
 
@@ -221,6 +224,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     try {
       const dueTime = newTaskDueTime || null;
       for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, dueTime, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template' } as never);
+      setAssigningTemplate(null);
     } catch { /* provider error is rendered above the tabs; keep assignment open */ }
   };
 
@@ -235,6 +239,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     } else {
       await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, category: newTaskCategory, suggestedEvidence: 'reflection' } as never);
     }
+    setShowTemplateForm(false);
+    setMutationKind(null);
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
 
@@ -333,27 +339,24 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     if (!newRewardName || newRewardTargetChildIds.length === 0) return;
     observedLoading.current = false;
     setMutationKind('reward');
-    if (editingReward) {
-      const existingChildIds = editingReward.children.map(c => c.childId);
-      
-      await Promise.all(newRewardTargetChildIds.map(async childId => {
-        const existingChild = editingReward.children.find(c => c.childId === childId);
-        if (existingChild) {
-          await updateReward(childId, existingChild.rewardId, { name: newRewardName, points: newRewardPoints });
-        } else {
-          await addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' });
-        }
-      }));
-
-      await Promise.all(existingChildIds.filter(childId => !newRewardTargetChildIds.includes(childId)).map(async childId => {
-        if (!newRewardTargetChildIds.includes(childId)) {
+    try {
+      if (editingReward) {
+        const existingChildIds = editingReward.children.map(c => c.childId);
+        await Promise.all(newRewardTargetChildIds.map(async childId => {
+          const existingChild = editingReward.children.find(c => c.childId === childId);
+          if (existingChild) await updateReward(childId, existingChild.rewardId, { name: newRewardName, points: newRewardPoints });
+          else await addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' });
+        }));
+        await Promise.all(existingChildIds.filter(childId => !newRewardTargetChildIds.includes(childId)).map(async childId => {
           const existingChild = editingReward.children.find(c => c.childId === childId);
           if (existingChild) await deleteReward(childId, existingChild.rewardId);
-        }
-      }));
-    } else {
-      await Promise.all(newRewardTargetChildIds.map(childId => addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' })));
-    }
+        }));
+      } else {
+        await Promise.all(newRewardTargetChildIds.map(childId => addReward(childId, { name: newRewardName, points: newRewardPoints, icon: 'Gift' })));
+      }
+      setShowRewardForm(false);
+      setMutationKind(null);
+    } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
 
   const handleDeleteRewardGroup = (group: GroupedReward) => {

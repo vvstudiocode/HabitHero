@@ -120,6 +120,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const loadInFlight = useRef<Promise<void> | null>(null);
   const activeMutationCount = useRef(0);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
 
   const retry = useCallback(async () => {
     if (!session || !repository) return;
@@ -201,7 +211,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, [familyId, repository, retry, role, session, state.childLoggedInId]);
 
-  const mutate = useCallback(async (operation: (repository: DataRepository, familyId: string) => Promise<void>) => {
+  const scheduleBackgroundRefresh = useCallback(() => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      void retry();
+    }, 800);
+  }, [retry]);
+
+  const mutate = useCallback(async (
+    operation: (repository: DataRepository, familyId: string) => Promise<void>,
+    optimisticUpdate?: (previous: AppState) => AppState,
+  ) => {
     if (!familyId || !repository) {
       setDataError('尚未載入家庭資料，請先登入後重試。');
       throw new Error('尚未載入家庭資料，請先登入後重試。');
@@ -216,11 +237,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDataError(null);
     activeMutationCount.current += 1;
     setMutationPending(true);
-    setDataLoading(true);
+    const previousState = stateRef.current;
+    if (optimisticUpdate) {
+      setState((current) => {
+        const next = optimisticUpdate(current);
+        stateRef.current = next;
+        return next;
+      });
+    }
     try {
       await operation(repository, familyId);
-      await retry();
+      // The local state already reflects the action. Reconcile quietly in the
+      // background so the dashboard never flashes a loading screen.
+      scheduleBackgroundRefresh();
     } catch (error) {
+      if (optimisticUpdate) {
+        setState((current) => {
+          stateRef.current = previousState;
+          return previousState;
+        });
+      }
       const message = error instanceof Error ? error.message : '資料更新失敗，請重試。';
       setDataError(message);
       setStale(true);
@@ -232,7 +268,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setMutationPending(false);
       }
     }
-  }, [familyId, repository, retry]);
+  }, [familyId, repository, scheduleBackgroundRefresh]);
+
+  const createLocalId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const patchChild = (previous: AppState, childId: string, update: (child: AppState['children'][number]) => AppState['children'][number]) => ({
+    ...previous,
+    children: previous.children.map((child) => child.id === childId ? update(child) : child),
+  });
+  const patchTask = (previous: AppState, taskId: string, update: (task: Task) => Task) => ({
+    ...previous,
+    children: previous.children.map((child) => ({ ...child, tasks: child.tasks.map((task) => task.id === taskId ? update(task) : task) })),
+  });
 
   const updateState = (updates: Partial<AppState>) => setState((previous) => ({ ...previous, ...updates }));
   const setParentPin = (parentPin: string) => updateState({ parentPin });
@@ -252,27 +298,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addChild: (name: string, loginName: string, password: string, childProfileId?: string) => mutate((repo, id) => repo.insertChild(id, name, loginName, password, childProfileId)),
     updateChildPassword: (childId: string, password: string) => mutate((repo, id) => repo.updateChildPassword(id, childId, password)),
     updateChildCode: async () => { setDataError('孩子登入代碼需由尚未提供的 invite/join token 流程建立。'); },
-    updateChildName: (childId: string, name: string) => mutate((repo, id) => repo.updateChild(id, childId, name)),
-    deleteChild: (childId: string) => mutate((repo, id) => repo.deleteChild(id, childId)),
-    addTaskTemplate: (template: Omit<TaskTemplate, 'id'>) => mutate((repo, id) => repo.insertTemplate(id, template)),
-    updateTaskTemplate: (id: string, updates: Partial<TaskTemplate>) => mutate((repo) => repo.updateTemplate(id, updates)),
-    deleteTaskTemplate: (id: string) => mutate((repo) => repo.deleteTemplate(id)),
-    addTask: (childId: string, task: Omit<Task, 'id' | 'status'>) => mutate((repo, id) => repo.insertTask(id, childId, task)),
-    updateTask: (_childId: string, taskId: string, updates: Partial<Task>) => mutate((repo) => repo.updateTask(taskId, updates)),
-    deleteTask: (_childId: string, taskId: string) => mutate((repo) => repo.deleteTask(taskId)),
-    updateTaskStatus: (_childId: string, taskId: string, status: TaskStatus) => mutate((repo) => repo.updateTaskStatus(taskId, status)),
-    proposeChildGoal: (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => mutate((repo, id) => repo.proposeChildGoal(id, childId, goal)),
-    confirmChildGoal: (taskId: string, confirmation: Parameters<AppContextType['confirmChildGoal']>[1]) => mutate((repo) => repo.confirmChildGoal(taskId, confirmation)),
-    returnChildGoal: (taskId: string, revisionNote: string) => mutate((repo) => repo.returnChildGoal(taskId, revisionNote)),
-    submitTaskReflection: (taskId: string, submission: Parameters<AppContextType['submitTaskReflection']>[1]) => mutate((repo) => repo.submitTaskReflection(taskId, submission)),
-    reviewTaskCompletion: (taskId: string, review: Parameters<AppContextType['reviewTaskCompletion']>[1]) => mutate((repo) => repo.reviewTaskCompletion(taskId, review)),
-    addReward: (childId: string, reward: Omit<Reward, 'id'>) => mutate((repo, id) => repo.insertReward(id, childId, reward)),
-    updateReward: (_childId: string, rewardId: string, updates: Partial<Reward>) => mutate((repo) => repo.updateReward(rewardId, updates)),
-    deleteReward: (_childId: string, rewardId: string) => mutate((repo) => repo.deleteReward(rewardId)),
-    addWishlist: (childId: string, name: string) => mutate((repo, id) => repo.insertWishlist(id, childId, name)),
-    approveWishlist: (childId: string, wishlistId: string, points: number) => mutate((repo, id) => repo.approveWishlist(id, childId, wishlistId, points)),
-    redeemReward: (_childId: string, reward: Reward) => mutate((repo) => repo.redeemReward(reward.id)),
-    fulfillTicket: (_childId: string, ticketId: string) => mutate((repo) => repo.fulfillTicket(ticketId)),
+    updateChildName: (childId: string, name: string) => mutate((repo, id) => repo.updateChild(id, childId, name), (previous) => patchChild(previous, childId, (child) => ({ ...child, name }))),
+    deleteChild: (childId: string) => mutate((repo, id) => repo.deleteChild(id, childId), (previous) => ({ ...previous, children: previous.children.filter((child) => child.id !== childId) })),
+    addTaskTemplate: (template: Omit<TaskTemplate, 'id'>) => {
+      const localId = createLocalId();
+      return mutate((repo, id) => repo.insertTemplate(id, template), (previous) => ({ ...previous, taskTemplates: [...previous.taskTemplates, { ...template, id: localId }] }));
+    },
+    updateTaskTemplate: (id: string, updates: Partial<TaskTemplate>) => mutate((repo) => repo.updateTemplate(id, updates), (previous) => ({ ...previous, taskTemplates: previous.taskTemplates.map((item) => item.id === id ? { ...item, ...updates } : item) })),
+    deleteTaskTemplate: (id: string) => mutate((repo) => repo.deleteTemplate(id), (previous) => ({ ...previous, taskTemplates: previous.taskTemplates.filter((item) => item.id !== id) })),
+    addTask: (childId: string, task: Omit<Task, 'id' | 'status'>) => {
+      const localId = createLocalId();
+      const now = new Date().toISOString();
+      return mutate((repo, id) => repo.insertTask(id, childId, task), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...task, id: localId, status: 'todo', createdAt: now, updatedAt: now, completedAt: null } as Task] })));
+    },
+    updateTask: (_childId: string, taskId: string, updates: Partial<Task>) => mutate((repo) => repo.updateTask(taskId, updates), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...updates }))),
+    deleteTask: (_childId: string, taskId: string) => mutate((repo) => repo.deleteTask(taskId), (previous) => ({ ...previous, children: previous.children.map((child) => ({ ...child, tasks: child.tasks.filter((task) => task.id !== taskId) })) })),
+    updateTaskStatus: (_childId: string, taskId: string, status: TaskStatus) => mutate((repo) => repo.updateTaskStatus(taskId, status), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status, completedAt: status === 'completed' ? new Date().toISOString() : task.completedAt }))),
+    proposeChildGoal: (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => {
+      const localId = createLocalId();
+      const now = new Date().toISOString();
+      return mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...goal, id: localId, icon: goal.icon, status: 'todo', origin: 'child_proposed', duration: goal.duration ?? undefined, dueOn: goal.dueOn ?? null, createdAt: now, updatedAt: now, completedAt: null, confirmedAt: null } as Task] })));
+    },
+    confirmChildGoal: (taskId: string, confirmation: Parameters<AppContextType['confirmChildGoal']>[1]) => mutate((repo) => repo.confirmChildGoal(taskId, confirmation), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...confirmation, confirmedAt: new Date().toISOString() }))),
+    returnChildGoal: (taskId: string, revisionNote: string) => mutate((repo) => repo.returnChildGoal(taskId, revisionNote), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status: 'proposal_revision_requested', revisionNote }))),
+    submitTaskReflection: (taskId: string, submission: Parameters<AppContextType['submitTaskReflection']>[1]) => mutate((repo) => repo.submitTaskReflection(taskId, submission), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...submission, status: 'pending', submittedAt: new Date().toISOString() }))),
+    reviewTaskCompletion: (taskId: string, review: Parameters<AppContextType['reviewTaskCompletion']>[1]) => mutate((repo) => repo.reviewTaskCompletion(taskId, review), (previous) => {
+      const reviewedAt = new Date().toISOString();
+      return {
+        ...previous,
+        children: previous.children.map((child) => ({
+          ...child,
+          tasks: child.tasks.map((task) => task.id !== taskId ? task : {
+            ...task,
+            status: review.approved ? 'completed' : 'revision_requested',
+            approvedPoints: review.approvedPoints,
+            parentFeedback: review.feedback ?? null,
+            parentCorrection: review.correction ?? null,
+            revisionNote: review.revisionNote ?? null,
+            reviewedAt,
+            completedAt: review.approved ? reviewedAt : task.completedAt,
+          }),
+          points: review.approved && child.tasks.some((task) => task.id === taskId && task.status !== 'completed')
+            ? child.points + review.approvedPoints
+            : child.points,
+        })),
+      };
+    }),
+    addReward: (childId: string, reward: Omit<Reward, 'id'>) => {
+      const localId = createLocalId();
+      return mutate((repo, id) => repo.insertReward(id, childId, reward), (previous) => patchChild(previous, childId, (child) => ({ ...child, rewards: [...child.rewards, { ...reward, id: localId }] })));
+    },
+    updateReward: (_childId: string, rewardId: string, updates: Partial<Reward>) => mutate((repo) => repo.updateReward(rewardId, updates), (previous) => ({ ...previous, children: previous.children.map((child) => ({ ...child, rewards: child.rewards.map((reward) => reward.id === rewardId ? { ...reward, ...updates } : reward) })) })),
+    deleteReward: (_childId: string, rewardId: string) => mutate((repo) => repo.deleteReward(rewardId), (previous) => ({ ...previous, children: previous.children.map((child) => ({ ...child, rewards: child.rewards.filter((reward) => reward.id !== rewardId) })) })),
+    addWishlist: (childId: string, name: string) => {
+      const localId = createLocalId();
+      return mutate((repo, id) => repo.insertWishlist(id, childId, name), (previous) => patchChild(previous, childId, (child) => ({ ...child, wishlist: [...child.wishlist, { id: localId, name }] })));
+    },
+    approveWishlist: (childId: string, wishlistId: string, points: number) => mutate((repo, id) => repo.approveWishlist(id, childId, wishlistId, points), (previous) => patchChild(previous, childId, (child) => ({ ...child, wishlist: child.wishlist.filter((item) => item.id !== wishlistId) }))),
+    redeemReward: (childId: string, reward: Reward) => {
+      const localId = createLocalId();
+      return mutate((repo) => repo.redeemReward(reward.id), (previous) => patchChild(previous, childId, (child) => ({ ...child, points: child.points - reward.points, tickets: [...child.tickets, { id: localId, rewardId: reward.id, rewardName: reward.name, rewardIcon: reward.icon, status: 'pending', createdAt: Date.now() }] })));
+    },
+    fulfillTicket: (_childId: string, ticketId: string) => mutate((repo) => repo.fulfillTicket(ticketId), (previous) => ({ ...previous, children: previous.children.map((child) => ({ ...child, tickets: child.tickets.map((ticket) => ticket.id === ticketId ? { ...ticket, status: 'fulfilled' } : ticket) })) })),
     resetData: async () => { setDataError('雲端資料不能由前端整批刪除。'); },
   };
 
