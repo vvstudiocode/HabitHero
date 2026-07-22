@@ -49,7 +49,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       revisionNote?: string | null;
     }) => Promise<void>;
   };
-  const { state, loading, error, retry, stale, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = appStore;
+  const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = appStore;
   const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist'>('review');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
   const observedLoading = useRef(false);
@@ -483,10 +483,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
 
       {/* Main Content */}
       <main className="flex-1 p-6 pb-28">
-        {(isOffline || stale || mutationPending) && (
+        {isOffline && (
           <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <span>{isOffline ? '目前離線，尚未同步的變更不會被視為成功。' : mutationPending ? '正在等待伺服器確認變更…' : '資料可能不是最新狀態。'}</span>
-            <button type="button" onClick={() => void retry()} disabled={loading || isOffline} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
+            <span>目前離線，尚未同步的變更不會被視為成功。</span>
+            <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
           </div>
         )}
         {error && (
