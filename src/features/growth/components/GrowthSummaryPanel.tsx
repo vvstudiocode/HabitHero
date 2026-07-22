@@ -126,13 +126,13 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
               {TASK_CATEGORIES.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
             </select>
             <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
-              <label className="flex h-11 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
-                <span className="shrink-0 text-xs text-gray-400">從</span>
-                <input aria-label="完成日期起日" type="date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); resetHistory(); }} className="w-full bg-transparent text-xs sm:text-sm outline-none font-bold text-gray-700" />
+              <label className="block w-full">
+                <span className="mb-1 ml-1 block text-xs font-bold text-gray-500">從</span>
+                <input aria-label="完成日期起日" type="date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); resetHistory(); }} className="h-11 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400" />
               </label>
-              <label className="flex h-11 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
-                <span className="shrink-0 text-xs text-gray-400">到</span>
-                <input aria-label="完成日期迄日" type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); resetHistory(); }} className="w-full bg-transparent text-xs sm:text-sm outline-none font-bold text-gray-700" />
+              <label className="block w-full">
+                <span className="mb-1 ml-1 block text-xs font-bold text-gray-500">到</span>
+                <input aria-label="完成日期迄日" type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); resetHistory(); }} className="h-11 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400" />
               </label>
             </div>
           </div>

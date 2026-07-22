@@ -141,8 +141,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (isFirstLoad) {
       setDataReady(false);
       setLoadedUserId(null);
+      setDataLoading(true);
     }
-    setDataLoading(true);
     setDataError(null);
     loadInFlight.current = (async () => {
       try {
