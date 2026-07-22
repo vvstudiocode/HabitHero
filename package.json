@@ -8,6 +8,7 @@
     "build": "vite build",
     "test": "tsx --test tests/*.test.ts",
     "security:check": "node scripts/security-check.mjs",
+    "verify": "npm run lint && npm test && npm run build && npm run security:check && git diff --check",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
