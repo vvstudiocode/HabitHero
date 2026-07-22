@@ -71,6 +71,7 @@ interface AppContextType {
   redeemReward: (childId: string, reward: Reward) => Promise<void>;
   fulfillTicket: (childId: string, ticketId: string) => Promise<void>;
   resetData: () => Promise<void>;
+  recordParentConsent: (consentVersion: string) => Promise<void>;
 }
 
 interface AppLoadingGateInput {
@@ -92,6 +93,7 @@ export function shouldBlockAppForDataLoad({ sessionLoading, dataLoading, hasSess
 
 const emptyState: AppState = {
   parentPin: null,
+  parentConsentVersion: null,
   children: [],
   parentActiveChildId: null,
   childLoggedInId: null,
@@ -312,6 +314,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const actions = {
+    recordParentConsent: (consentVersion: string) => mutate((repo, id) => repo.recordParentConsent(id, consentVersion), (previous) => ({ ...previous, parentConsentVersion: consentVersion })),
     addChild: (name: string, loginName: string, password: string, childProfileId?: string) => mutate((repo, id) => repo.insertChild(id, name, loginName, password, childProfileId)),
     updateChildPassword: (childId: string, password: string) => mutate((repo, id) => repo.updateChildPassword(id, childId, password)),
     updateChildCode: async () => { setDataError('孩子登入代碼需由尚未提供的 invite/join token 流程建立。'); },

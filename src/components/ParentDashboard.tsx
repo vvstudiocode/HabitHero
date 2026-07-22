@@ -7,6 +7,9 @@ import { validateChildPassword, validateChildUsername, validatePasswordConfirmat
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
 import { GoalReviewPanel } from '../features/growth/components/GoalReviewPanel';
 import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryPanel';
+import { ParentSettingsDocuments, type ParentSettingsDocument } from './ParentSettingsDocuments';
+import { deleteCurrentAccount } from '../auth';
+import { PARENT_CONSENT_VERSION } from '../lib/legal-content';
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
 import { buildGrowthStats } from '../features/growth/growth-stats';
 import { validateRewardPoints } from '../lib/reward-validation';
@@ -49,7 +52,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       revisionNote?: string | null;
     }) => Promise<void>;
   };
-  const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = appStore;
+  const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
   const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist'>('review');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
   const observedLoading = useRef(false);
@@ -114,6 +117,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
 
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsDocument, setSettingsDocument] = useState<ParentSettingsDocument | null>(null);
   const [newChildName, setNewChildName] = useState('');
   const [newChildUsername, setNewChildUsername] = useState('');
   const [newChildPassword, setNewChildPassword] = useState('');
@@ -883,7 +887,25 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               </section>
 
               {/* System */}
-              <section className="pt-4 border-t border-gray-100 pb-8">
+              <section className="space-y-3 border-t border-gray-100 pt-6">
+                <h4 className="text-md font-bold text-gray-800">帳號與家庭安全</h4>
+                <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+                  {([
+                    ['privacy', '隱私政策', '了解 HabitHero 如何處理家庭與兒童資料。'],
+                    ['support', '支援中心', '登入、同步、點數與資料刪除的協助。'],
+                    ['consent', '兒童與家長同意', '查看家長責任與記錄本版本同意。'],
+                    ['delete-account', '刪除帳號與資料', '永久刪除家庭資料與所有帳號。'],
+                  ] as const).map(([documentId, title, description]) => (
+                    <button key={documentId} type="button" onClick={() => setSettingsDocument(documentId)} className="hh-settings-document-row">
+                      <span><strong>{title}</strong><small>{description}</small></span>
+                      <span aria-hidden="true">›</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* System */}
+              <section className="pt-4 pb-8">
                 <button onClick={() => { setShowSettings(false); onLogout(); }} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold transition-colors">
                   <LogOut size={20} /> 登出家長端
                 </button>
@@ -891,6 +913,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             </div>
           </div>
         </div>
+      )}
+
+      {settingsDocument && (
+        <ParentSettingsDocuments
+          document={settingsDocument}
+          consentRecorded={state.parentConsentVersion !== null}
+          onClose={() => setSettingsDocument(null)}
+          onConsent={async () => { await recordParentConsent(PARENT_CONSENT_VERSION); }}
+          onDeleteAccount={async () => { await deleteCurrentAccount(); setSettingsDocument(null); setShowSettings(false); onLogout(); }}
+        />
       )}
 
       {/* Task Overlays */}

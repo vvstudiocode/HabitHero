@@ -23,6 +23,7 @@ export interface LoadedAppData {
 
 const emptyState = (): AppState => ({
   parentPin: null,
+  parentConsentVersion: null,
   children: [],
   parentActiveChildId: null,
   childLoggedInId: null,
@@ -175,6 +176,10 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
   const familyId = members[0].family_id;
   const role = members.find((member) => member.profile_id === userId)?.role ?? 'parent';
   const state = emptyState();
+  if (role === 'parent') {
+    const consent = check(await client.from('parent_consents').select('consent_version').eq('family_id', familyId).eq('parent_profile_id', userId).eq('consent_type', 'parental').maybeSingle()) as { consent_version: string } | null;
+    state.parentConsentVersion = consent?.consent_version ?? null;
+  }
   let children: ChildProfileRow[] = [];
   let profiles: ProfileRow[] = [];
   let tasks: TaskRow[] = [];
@@ -263,6 +268,7 @@ export interface DataRepository {
   approveWishlist(familyId: string, childId: string, wishlistId: string, points: number): Promise<void>;
   redeemReward(rewardId: string): Promise<void>;
   fulfillTicket(ticketId: string): Promise<void>;
+  recordParentConsent(familyId: string, consentVersion: string): Promise<void>;
 }
 
 export function createDataRepository(client: SupabaseClient): DataRepository {
@@ -402,5 +408,8 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     },
     async redeemReward(rewardId) { check(await client.rpc('redeem_reward', { target_reward_id: rewardId })); },
     async fulfillTicket(ticketId) { check(await client.from('reward_redemptions').update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() }).eq('id', ticketId)); },
+    async recordParentConsent(familyId, consentVersion) {
+      check(await client.rpc('record_parent_consent', { target_family_id: familyId, consent_version: consentVersion }));
+    },
   };
 }

@@ -25,6 +25,13 @@ export async function signOut() {
   return getSupabaseClient().auth.signOut();
 }
 
+export async function deleteCurrentAccount() {
+  const { data, error } = await getSupabaseClient().functions.invoke('manage-account', { body: { action: 'delete' } });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  return getSupabaseClient().auth.signOut();
+}
+
 export async function getSession() {
   return getSupabaseClient().auth.getSession();
 }

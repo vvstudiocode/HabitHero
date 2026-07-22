@@ -478,6 +478,7 @@ export interface Child {
 
 export interface AppState {
   parentPin: string | null;
+  parentConsentVersion: string | null;
   children: Child[];
   parentActiveChildId: Id | null;
   childLoggedInId: Id | null;

@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "node scripts/dev-port.mjs",
     "build": "vite build",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
     "test": "tsx --test tests/*.test.ts",
     "security:check": "node scripts/security-check.mjs",
     "verify": "npm run lint && npm test && npm run build && npm run security:check && git diff --check",
@@ -19,6 +22,10 @@
     "supabase:migrations": "npx supabase migration list --local"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
     "@google/genai": "^2.4.0",
     "@supabase/supabase-js": "^2.110.7",
     "@tailwindcss/vite": "^4.1.14",
