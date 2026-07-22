@@ -100,7 +100,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
             <h3 className="text-lg font-black text-gray-900">完成任務</h3>
             <p className="mt-1 text-sm text-gray-500">預設只載入近期紀錄，點卡片查看細節。</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {showChildFilter && (
               <select
                 value={childFilter}
@@ -108,7 +108,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
                   setChildFilter(event.target.value);
                   resetHistory();
                 }}
-                className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400"
+                className="h-11 flex-1 sm:flex-none rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400"
               >
                 <option value="all">全部孩子</option>
                 {childOptions.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}
@@ -120,19 +120,21 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
                 setCategoryFilter(event.target.value as TaskCategory | 'all');
                 resetHistory();
               }}
-              className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400"
+              className="h-11 flex-1 sm:flex-none rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="all">全部分類</option>
               {TASK_CATEGORIES.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
-              </select>
-            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
-              <span className="whitespace-nowrap">從</span>
-              <input aria-label="完成日期起日" type="date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); resetHistory(); }} className="min-w-0 bg-transparent text-sm outline-none" />
-            </label>
-            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
-              <span className="whitespace-nowrap">到</span>
-              <input aria-label="完成日期迄日" type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); resetHistory(); }} className="min-w-0 bg-transparent text-sm outline-none" />
-            </label>
+            </select>
+            <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+              <label className="flex h-11 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
+                <span className="shrink-0 text-xs text-gray-400">從</span>
+                <input aria-label="完成日期起日" type="date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); resetHistory(); }} className="w-full bg-transparent text-xs sm:text-sm outline-none font-bold text-gray-700" />
+              </label>
+              <label className="flex h-11 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-600">
+                <span className="shrink-0 text-xs text-gray-400">到</span>
+                <input aria-label="完成日期迄日" type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); resetHistory(); }} className="w-full bg-transparent text-xs sm:text-sm outline-none font-bold text-gray-700" />
+              </label>
+            </div>
           </div>
         </div>
 
