@@ -147,7 +147,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadInFlight.current = (async () => {
       try {
         const loaded = await repository.load(session.user.id);
-        setState(loaded.state);
+        if (JSON.stringify(stateRef.current) !== JSON.stringify(loaded.state)) {
+          setState(loaded.state);
+        }
         setFamilyId(loaded.familyId);
         setRole(loaded.role);
         setLoadedUserId(session.user.id);
@@ -205,7 +207,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       role,
       childProfileId: state.childLoggedInId,
       userId: session.user.id,
-      onChange: () => { setStale(true); void retry(); },
+      onChange: () => {
+        if (activeMutationCount.current > 0) return;
+        setStale(true);
+        void retry();
+      },
       // Only refresh on actual reconnection, not on initial SUBSCRIBED
       onReconnect: () => { setIsOffline(false); setStale(true); },
     });
