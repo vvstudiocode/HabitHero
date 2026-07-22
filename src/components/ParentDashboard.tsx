@@ -4,6 +4,12 @@ import { cn } from '../lib/utils';
 import { Circle, Clock, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
+import { CategoryBadge } from '../features/growth/components/CategoryBadge';
+import { GoalReviewPanel } from '../features/growth/components/GoalReviewPanel';
+import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryPanel';
+import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
+import { buildGrowthStats } from '../features/growth/growth-stats';
+import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
   onSwitchToChild: () => void;
@@ -15,6 +21,7 @@ type GroupedTask = {
   name: string;
   points: number;
   duration?: number;
+  category?: TaskCategory;
   children: { childId: string; childName: string; taskId: string }[];
 };
 
@@ -26,20 +33,36 @@ type GroupedReward = {
 };
 
 export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardProps) {
-  const { state, loading, error, retry, stale, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'tasks' | 'templates' | 'rewards' | 'wishlist'>('tasks');
+  const appStore = useAppStore() as ReturnType<typeof useAppStore> & {
+    confirmGoal?: (childId: string, taskId: string, input: GoalConfirmationInput) => Promise<void>;
+    confirmChildGoal?: (taskId: string, input: GoalConfirmationInput) => Promise<void>;
+    returnGoal?: (childId: string, taskId: string, revisionNote: string) => Promise<void>;
+    returnChildGoal?: (taskId: string, revisionNote: string) => Promise<void>;
+    reviewTaskCompletion?: (taskId: string, input: {
+      approved: boolean;
+      approvedPoints: number;
+      feedback?: string | null;
+      correction?: string | null;
+      tone?: string | null;
+      revisionNote?: string | null;
+    }) => Promise<void>;
+  };
+  const { state, loading, error, retry, stale, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate } = appStore;
+  const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'templates' | 'growth' | 'rewards' | 'wishlist'>('review');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
   const observedLoading = useRef(false);
 
-  const allTasks = state.children.flatMap(c => c.tasks.map(t => ({ ...t, childId: c.id, childName: c.name })));
+  const allTasks = state.children.flatMap(c => (c.tasks as GrowthTask[]).map(t => ({ ...t, childId: c.id, childName: c.name }))) as GrowthTaskWithChild[];
+  const proposedTasks = allTasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested');
   const pendingTasks = allTasks.filter(t => t.status === 'pending');
   const todoTasks = allTasks.filter(t => t.status === 'todo');
   const completedTasks = allTasks.filter(t => t.status === 'completed');
+  const growthSummaries = buildGrowthStats(state.children, state.ledger);
 
   const groupedTodoTasks = Object.values(todoTasks.reduce((acc, task) => {
-    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.isDaily ? 'daily' : 'once'}`;
+    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.category || DEFAULT_TASK_CATEGORY}-${task.isDaily ? 'daily' : 'once'}`;
     if (!acc[key]) {
-      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, isDaily: task.isDaily, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
+      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, category: task.category, isDaily: task.isDaily, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
     } else {
       acc[key].children.push({ childId: task.childId, childName: task.childName, taskId: task.id });
     }
@@ -70,6 +93,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const [newTaskPoints, setNewTaskPoints] = useState(5);
   const [newTaskDuration, setNewTaskDuration] = useState<number | ''>(''); // in minutes
   const [newTaskIsDaily, setNewTaskIsDaily] = useState(true);
+  const [newTaskCategory, setNewTaskCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
   const [newTaskTargetChildIds, setNewTaskTargetChildIds] = useState<string[]>([]);
 
   // Reward form
@@ -81,8 +105,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
 
   // Templates
   const [showTemplateForm, setShowTemplateForm] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<import('../types').TaskTemplate | null>(null);
-  const [assigningTemplate, setAssigningTemplate] = useState<import('../types').TaskTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<GrowthTaskTemplate | null>(null);
+  const [assigningTemplate, setAssigningTemplate] = useState<GrowthTaskTemplate | null>(null);
 
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false);
@@ -139,6 +163,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       setNewTaskPoints(group.points);
       setNewTaskDuration(group.duration || '');
       setNewTaskIsDaily(group.isDaily ?? false);
+      setNewTaskCategory(group.category ?? DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(group.children.map(c => c.childId));
     } else {
       setEditingTask(null);
@@ -146,13 +171,14 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       setNewTaskPoints(5);
       setNewTaskDuration('');
       setNewTaskIsDaily(false);
+      setNewTaskCategory(DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(state.children.map(c => c.id));
     }
     setShowTaskForm(true);
   };
 
   const handleSaveTask = async () => {
-    if (!newTaskName || newTaskTargetChildIds.length === 0) return;
+    if (!newTaskName || newTaskPoints < 1 || newTaskTargetChildIds.length === 0) return;
     const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
     observedLoading.current = false;
     setMutationKind('task');
@@ -166,9 +192,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       for (const childId of newTaskTargetChildIds) {
         const existingChild = editingTask.children.find(c => c.childId === childId);
         if (existingChild) {
-          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, isDaily: newTaskIsDaily });
+          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, isDaily: newTaskIsDaily, category: newTaskCategory } as never);
         } else {
-          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily });
+          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
         }
       }
 
@@ -180,7 +206,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
         }
       }
     } else {
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily });
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
     }
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
@@ -188,43 +214,93 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const handleAssignTemplate = async () => {
     if (!assigningTemplate || newTaskTargetChildIds.length === 0) return;
     try {
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, isDaily: newTaskIsDaily });
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template' } as never);
     } catch { /* provider error is rendered above the tabs; keep assignment open */ }
   };
 
   const handleSaveTemplate = async () => {
-    if (!newTaskName) return;
+    if (!newTaskName || newTaskPoints < 1) return;
     const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
     observedLoading.current = false;
     setMutationKind('template');
     try {
     if (editingTemplate) {
-      await updateTaskTemplate(editingTemplate.id, { name: newTaskName, points: newTaskPoints, duration });
+      await updateTaskTemplate(editingTemplate.id, { name: newTaskName, points: newTaskPoints, duration, category: newTaskCategory } as never);
     } else {
-      await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration });
+      await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, category: newTaskCategory, suggestedEvidence: 'reflection' } as never);
     }
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
 
-  const openTemplateForm = (template?: import('../types').TaskTemplate) => {
+  const openTemplateForm = (template?: GrowthTaskTemplate) => {
     if (template) {
       setEditingTemplate(template);
       setNewTaskName(template.name);
       setNewTaskPoints(template.points);
       setNewTaskDuration(template.duration || '');
+      setNewTaskCategory(template.category ?? DEFAULT_TASK_CATEGORY);
     } else {
       setEditingTemplate(null);
       setNewTaskName('');
       setNewTaskPoints(5);
       setNewTaskDuration('');
+      setNewTaskCategory(DEFAULT_TASK_CATEGORY);
     }
     setShowTemplateForm(true);
   };
 
-  const openAssignTemplate = (template: import('../types').TaskTemplate) => {
+  const openAssignTemplate = (template: GrowthTaskTemplate) => {
     setAssigningTemplate(template);
     setNewTaskIsDaily(false);
     setNewTaskTargetChildIds(state.children.map(c => c.id));
+  };
+
+  const handleConfirmGoal = async (childId: string, taskId: string, input: GoalConfirmationInput) => {
+    if (appStore.confirmGoal) {
+      await appStore.confirmGoal(childId, taskId, input);
+      return;
+    }
+    if (appStore.confirmChildGoal) {
+      await appStore.confirmChildGoal(taskId, input);
+      return;
+    }
+    await updateTask(childId, taskId, { name: input.name, points: input.points, category: input.category } as never);
+    await updateTaskStatus(childId, taskId, 'todo');
+  };
+
+  const handleReturnGoal = async (childId: string, taskId: string, revisionNote: string) => {
+    if (appStore.returnGoal) {
+      await appStore.returnGoal(childId, taskId, revisionNote);
+      return;
+    }
+    if (appStore.returnChildGoal) {
+      await appStore.returnChildGoal(taskId, revisionNote);
+      return;
+    }
+    await updateTask(childId, taskId, { revisionNote } as never);
+    await updateTaskStatus(childId, taskId, 'revision_requested' as unknown as TaskStatus);
+  };
+
+  const handleReviewCompletion = async (childId: string, taskId: string, input: GoalReviewInput) => {
+    if (appStore.reviewTaskCompletion) {
+      await appStore.reviewTaskCompletion(taskId, {
+        approved: input.approved,
+        approvedPoints: input.approvedPoints,
+        feedback: input.feedback || null,
+        correction: input.correction || null,
+        tone: input.tone,
+        revisionNote: input.revisionNote || null,
+      });
+      return;
+    }
+    await updateTask(childId, taskId, {
+      approvedPoints: input.approvedPoints,
+      parentFeedback: input.feedback,
+      parentCorrection: input.correction,
+      feedbackTone: input.tone,
+      revisionNote: input.revisionNote,
+    } as never);
+    await updateTaskStatus(childId, taskId, input.approved ? 'completed' : 'revision_requested' as unknown as TaskStatus);
   };
 
   const handleDeleteTaskGroup = (group: GroupedTask) => {
@@ -376,7 +452,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
           </div>
           <div className="bg-white/10 rounded-2xl p-4">
             <div className="text-blue-200 text-sm mb-1">待審核項目</div>
-            <div className="text-3xl font-bold">{pendingTasks.length + pendingTickets.length}</div>
+            <div className="text-3xl font-bold">{proposedTasks.length + pendingTasks.length + pendingTickets.length}</div>
           </div>
         </div>
       </header>
@@ -398,6 +474,20 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
         {/* Tabs */}
         <div className="flex bg-white rounded-2xl shadow-sm mb-6 p-1 overflow-x-auto">
           <button
+            onClick={() => setActiveTab('review')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
+              activeTab === 'review' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+            )}
+          >
+            審核
+            {(proposedTasks.length + pendingTasks.length) > 0 && (
+              <span className="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 origin-center leading-none">
+                {proposedTasks.length + pendingTasks.length}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab('tasks')}
             className={cn(
               "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
@@ -405,7 +495,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             )}
           >
             任務
-            {pendingTasks.length > 0 && <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />}
           </button>
           <button
             onClick={() => setActiveTab('templates')}
@@ -415,6 +504,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
             )}
           >
             模板
+          </button>
+          <button
+            onClick={() => setActiveTab('growth')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap",
+              activeTab === 'growth' ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50"
+            )}
+          >
+            成長
           </button>
           <button
             onClick={() => setActiveTab('rewards')}
@@ -442,39 +540,19 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
           </button>
         </div>
 
+        {activeTab === 'review' && (
+          <GoalReviewPanel
+            proposedTasks={proposedTasks}
+            pendingTasks={pendingTasks}
+            loading={loading || mutationPending}
+            onConfirmGoal={handleConfirmGoal}
+            onReturnGoal={handleReturnGoal}
+            onReviewCompletion={handleReviewCompletion}
+          />
+        )}
+
         {activeTab === 'tasks' && (
           <div className="space-y-6">
-            {/* Pending Tasks */}
-            {pendingTasks.length > 0 && (
-              <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Clock size={20} className="text-orange-500" />
-                  待審核 ({pendingTasks.length})
-                </h2>
-                <div className="space-y-3">
-                  {pendingTasks.map(task => (
-                    <div key={task.id} className="bg-white p-4 rounded-2xl shadow-sm border border-orange-100 flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-bold">{task.childName}</span>
-                        </div>
-                        <div className="font-medium text-gray-900">{task.name}</div>
-                        <div className="text-orange-500 text-sm font-bold">+{task.points} pt</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => void updateTaskStatus(task.childId, task.id, 'todo')} disabled={loading} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg disabled:cursor-wait disabled:opacity-50">
-                          <X size={20} />
-                        </button>
-                        <button onClick={() => void updateTaskStatus(task.childId, task.id, 'completed')} disabled={loading} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:cursor-wait disabled:opacity-50">
-                          過關
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {/* Todo Tasks */}
             <section>
               <div className="flex justify-between items-center mb-3">
@@ -496,6 +574,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                         </div>
                         <div className="font-medium text-gray-700 flex items-center gap-2">
                           {group.name}
+                          <CategoryBadge category={group.category} compact />
                           {group.isDaily && (
                             <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold border border-green-100">每日</span>
                           )}
@@ -537,7 +616,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               </div>
               <p className="text-gray-500 text-sm mb-4">將常用的任務儲存為模板，隨時快速派發給孩子。</p>
               <div className="space-y-3">
-                {state.taskTemplates.map(template => (
+                {(state.taskTemplates as GrowthTaskTemplate[]).map(template => (
                   <div key={template.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group-item relative">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
@@ -546,6 +625,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                       <div>
                         <div className="font-medium text-gray-900 flex items-center gap-2">
                           {template.name}
+                          <CategoryBadge category={template.category} compact />
                           {template.duration && (
                             <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                               <PlayCircle size={12}/> {template.duration}m
@@ -574,6 +654,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               </div>
             </section>
           </div>
+        )}
+
+        {activeTab === 'growth' && (
+          <GrowthSummaryPanel summaries={growthSummaries} title="家庭成長紀錄" />
         )}
 
         {activeTab === 'rewards' && (
@@ -797,6 +881,24 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                 <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
                 <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：刷牙洗臉" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">固定分類</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {TASK_CATEGORIES.map(category => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setNewTaskCategory(category.id)}
+                      className={cn(
+                        "min-h-11 rounded-2xl border p-2 text-left transition-colors",
+                        newTaskCategory === category.id ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100" : "border-gray-100 bg-gray-50"
+                      )}
+                    >
+                      <CategoryBadge category={category.id} compact />
+                    </button>
+                  ))}
+                </div>
+              </div>
               {state.children.length > 1 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">指定小孩</label>
@@ -821,14 +923,14 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">獲得點數</label>
-                  <input type="number" min="0" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                  <input type="number" min="1" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">限時 (分鐘, 選填)</label>
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
-              <button onClick={() => void handleSaveTask()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
+              <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
             </div>
           </div>
         </div>
@@ -846,17 +948,35 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
                 <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
                 <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：洗碗" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">固定分類</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {TASK_CATEGORIES.map(category => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setNewTaskCategory(category.id)}
+                      className={cn(
+                        "min-h-11 rounded-2xl border p-2 text-left transition-colors",
+                        newTaskCategory === category.id ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100" : "border-gray-100 bg-gray-50"
+                      )}
+                    >
+                      <CategoryBadge category={category.id} compact />
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">預設點數</label>
-                  <input type="number" min="0" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                  <input type="number" min="1" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">限時 (分鐘, 選填)</label>
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
-              <button onClick={() => void handleSaveTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : '儲存模板'}</button>
+              <button onClick={() => void handleSaveTemplate()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : '儲存模板'}</button>
             </div>
           </div>
         </div>

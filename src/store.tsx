@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
-import { AppState, Task, Reward, TaskStatus, TaskTemplate } from './types';
+import { AppState, FeedbackTone, Task, Reward, TaskCategory, TaskStatus, TaskTemplate } from './types';
 import { useAuthSession } from './auth';
 import { createDataRepository, DataRepository } from './lib/data-access';
 import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
@@ -34,6 +34,33 @@ interface AppContextType {
   updateTask: (childId: string, taskId: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (childId: string, taskId: string) => Promise<void>;
   updateTaskStatus: (childId: string, taskId: string, status: TaskStatus) => Promise<void>;
+  proposeChildGoal: (childId: string, goal: {
+    name: string;
+    points: number;
+    icon: string;
+    category: TaskCategory;
+    duration?: number | null;
+    dueOn?: string | null;
+  }) => Promise<void>;
+  confirmChildGoal: (taskId: string, confirmation: {
+    name: string;
+    points: number;
+    category: TaskCategory;
+  }) => Promise<void>;
+  returnChildGoal: (taskId: string, revisionNote: string) => Promise<void>;
+  submitTaskReflection: (taskId: string, submission: {
+    reflection: string;
+    mood?: string | null;
+    difficulty?: number | null;
+  }) => Promise<void>;
+  reviewTaskCompletion: (taskId: string, review: {
+    approved: boolean;
+    approvedPoints: number;
+    feedback?: string | null;
+    correction?: string | null;
+    tone?: FeedbackTone | null;
+    revisionNote?: string | null;
+  }) => Promise<void>;
   startTaskTimer: (childId: string, taskId: string) => void;
   pauseTaskTimer: (childId: string, taskId: string) => void;
   addReward: (childId: string, reward: Omit<Reward, 'id'>) => Promise<void>;
@@ -92,7 +119,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const loadInFlight = useRef<Promise<void> | null>(null);
-  const mutationInFlight = useRef<Promise<void> | null>(null);
+  const activeMutationCount = useRef(0);
 
   const retry = useCallback(async () => {
     if (!session || !repository) return;
@@ -175,7 +202,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [familyId, repository, retry, role, session, state.childLoggedInId]);
 
   const mutate = useCallback(async (operation: (repository: DataRepository, familyId: string) => Promise<void>) => {
-    if (mutationInFlight.current) return mutationInFlight.current;
     if (!familyId || !repository) {
       setDataError('尚未載入家庭資料，請先登入後重試。');
       throw new Error('尚未載入家庭資料，請先登入後重試。');
@@ -188,25 +214,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error(message);
     }
     setDataError(null);
+    activeMutationCount.current += 1;
     setMutationPending(true);
     setDataLoading(true);
-    const request = (async () => {
-      try {
-        await operation(repository, familyId);
-        await retry();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : '資料更新失敗，請重試。';
-        setDataError(message);
-        setStale(true);
-        throw new Error(message);
-      } finally {
+    try {
+      await operation(repository, familyId);
+      await retry();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '資料更新失敗，請重試。';
+      setDataError(message);
+      setStale(true);
+      throw new Error(message);
+    } finally {
+      activeMutationCount.current = Math.max(0, activeMutationCount.current - 1);
+      if (activeMutationCount.current === 0) {
         setDataLoading(false);
         setMutationPending(false);
-        mutationInFlight.current = null;
       }
-    })();
-    mutationInFlight.current = request;
-    return request;
+    }
   }, [familyId, repository, retry]);
 
   const updateState = (updates: Partial<AppState>) => setState((previous) => ({ ...previous, ...updates }));
@@ -236,6 +261,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateTask: (_childId: string, taskId: string, updates: Partial<Task>) => mutate((repo) => repo.updateTask(taskId, updates)),
     deleteTask: (_childId: string, taskId: string) => mutate((repo) => repo.deleteTask(taskId)),
     updateTaskStatus: (_childId: string, taskId: string, status: TaskStatus) => mutate((repo) => repo.updateTaskStatus(taskId, status)),
+    proposeChildGoal: (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => mutate((repo, id) => repo.proposeChildGoal(id, childId, goal)),
+    confirmChildGoal: (taskId: string, confirmation: Parameters<AppContextType['confirmChildGoal']>[1]) => mutate((repo) => repo.confirmChildGoal(taskId, confirmation)),
+    returnChildGoal: (taskId: string, revisionNote: string) => mutate((repo) => repo.returnChildGoal(taskId, revisionNote)),
+    submitTaskReflection: (taskId: string, submission: Parameters<AppContextType['submitTaskReflection']>[1]) => mutate((repo) => repo.submitTaskReflection(taskId, submission)),
+    reviewTaskCompletion: (taskId: string, review: Parameters<AppContextType['reviewTaskCompletion']>[1]) => mutate((repo) => repo.reviewTaskCompletion(taskId, review)),
     addReward: (childId: string, reward: Omit<Reward, 'id'>) => mutate((repo, id) => repo.insertReward(id, childId, reward)),
     updateReward: (_childId: string, rewardId: string, updates: Partial<Reward>) => mutate((repo) => repo.updateReward(rewardId, updates)),
     deleteReward: (_childId: string, rewardId: string) => mutate((repo) => repo.deleteReward(rewardId)),

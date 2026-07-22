@@ -4,6 +4,19 @@ import { useAuthSession } from '../auth';
 import { CheckCircle2, Gift, LogOut, Plus, Star, X, PlayCircle, Clock, History } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Reward } from '../types';
+import { GoalCard } from '../features/growth/components/GoalCard';
+import { GoalProposalForm } from '../features/growth/components/GoalProposalForm';
+import { GoalSubmissionForm } from '../features/growth/components/GoalSubmissionForm';
+import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryPanel';
+import { goalCopy } from '../features/growth/goal-copy';
+import { getChildGrowthSummary } from '../features/growth/growth-stats';
+import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
+
+interface GrowthChildActions {
+  proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
+  proposeChildGoal?: (childId: string, input: GoalProposalInput & { icon: string }) => Promise<void>;
+  submitTaskReflection?: (taskId: string, input: { reflection: string; mood?: string | null; difficulty?: number | null }) => Promise<void>;
+}
 
 interface ChildDashboardProps {
   onLogout: () => void;
@@ -11,9 +24,10 @@ interface ChildDashboardProps {
 }
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
-  const { state, updateTaskStatus, redeemReward, addWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, stale, isOffline, mutationPending } = useAppStore();
+  const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
+  const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, stale, isOffline, mutationPending } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
-  const [activeTab, setActiveTab] = useState<'tasks' | 'wishlist' | 'history'>('tasks');
+  const [activeTab, setActiveTab] = useState<'goals' | 'growth' | 'wishlist' | 'history'>('goals');
   
   // Multi-child support
   // The provider derives this id from the authenticated user's DB membership/profile.
@@ -22,10 +36,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     ? state.children.find(c => c.id === state.childLoggedInId)
     : undefined;
 
-  const tasks = activeChild?.tasks || [];
+  const tasks = (activeChild?.tasks || []) as GrowthTask[];
   const rewards = activeChild?.rewards || [];
   const tickets = activeChild?.tickets || [];
   const childPoints = activeChild?.points || 0;
+  const taskTemplates = state.taskTemplates as GrowthTaskTemplate[];
 
   // Wishlist Form
   const [showWishlistForm, setShowWishlistForm] = useState(false);
@@ -40,9 +55,13 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const proposedTasks = tasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested');
   const todoTasks = tasks.filter(t => t.status === 'todo');
   const pendingTasks = tasks.filter(t => t.status === 'pending');
+  const revisionTasks = tasks.filter(t => t.status === 'revision_requested');
   const completedTasks = tasks.filter(t => t.status === 'completed');
+  const growthSummary = activeChild ? getChildGrowthSummary({ ...activeChild, tasks } as typeof activeChild, state.ledger) : null;
+  const [submittingTask, setSubmittingTask] = useState<GrowthTask | null>(null);
 
   const [now, setNow] = useState(Date.now());
   const [beepedTaskId, setBeepedTaskId] = useState<string | null>(null);
@@ -103,10 +122,47 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const handleFinishTask = async (taskId: string) => {
     if (!activeChild) return;
+    const task = tasks.find((item) => item.id === taskId);
+    if (task) setSubmittingTask(task);
+  };
+
+  const handleProposeGoal = async (input: GoalProposalInput) => {
+    if (!activeChild) return;
     setActionPending(true);
     try {
-      await updateTaskStatus(activeChild.id, taskId, 'pending');
-      showToast('已送出，等待爸媽審核。');
+      if (appStore.proposeGoal) {
+        await appStore.proposeGoal(activeChild.id, input);
+      } else if (appStore.proposeChildGoal) {
+        await appStore.proposeChildGoal(activeChild.id, { ...input, icon: 'Star' });
+      } else {
+        await addTask(activeChild.id, { name: input.name, points: input.points, icon: 'Star', category: input.category, origin: 'child_proposed' } as never);
+      }
+      showToast('目標已送出，等待爸媽確認。');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleSubmitReflection = async (taskId: string, input: GoalReflectionInput) => {
+    if (!activeChild) return;
+    setActionPending(true);
+    try {
+      if (appStore.submitTaskReflection) {
+        await appStore.submitTaskReflection(taskId, {
+          reflection: input.reflection,
+          mood: input.mood,
+          difficulty: input.difficulty,
+        });
+      } else {
+        await updateTask(activeChild.id, taskId, {
+          reflection: input.reflection,
+          mood: input.mood,
+          difficulty: input.difficulty,
+        } as never);
+        await updateTaskStatus(activeChild.id, taskId, 'pending');
+      }
+      setSubmittingTask(null);
+      showToast('心得已送出，等待爸媽審核。');
     } finally {
       setActionPending(false);
     }
@@ -209,20 +265,30 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           </div>
         )}
         {/* Tabs */}
-        <div className="flex bg-white rounded-2xl shadow-sm mb-6 p-1">
+        <div className="flex bg-white rounded-2xl shadow-sm mb-6 p-1 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('tasks')}
+            onClick={() => setActiveTab('goals')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative",
-              activeTab === 'tasks' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
+              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
+              activeTab === 'goals' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
             )}
           >
-            任務
+            目標
+            {(proposedTasks.length + pendingTasks.length + revisionTasks.length) > 0 && <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-red-500" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('growth')}
+            className={cn(
+              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
+              activeTab === 'growth' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
+            )}
+          >
+            成長
           </button>
           <button
             onClick={() => setActiveTab('wishlist')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative",
+              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
               activeTab === 'wishlist' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
             )}
           >
@@ -231,7 +297,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           <button
             onClick={() => setActiveTab('history')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative",
+              "min-h-11 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-colors relative whitespace-nowrap",
               activeTab === 'history' ? "bg-yellow-100 text-yellow-700" : "text-gray-400 hover:bg-gray-50"
             )}
           >
@@ -239,8 +305,42 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           </button>
         </div>
 
-        {activeTab === 'tasks' && (
-          <div className="space-y-4">
+        {activeTab === 'goals' && (
+          <div className="space-y-6">
+            <GoalProposalForm templates={taskTemplates} loading={actionPending || loading} onSubmit={handleProposeGoal} />
+
+            {proposedTasks.length > 0 && (
+              <section className="space-y-3">
+                <h3 className="px-2 font-black text-gray-600">{goalCopy.child.proposedTitle}</h3>
+                {proposedTasks.map(task => <GoalCard key={task.id} task={task} />)}
+              </section>
+            )}
+
+            {revisionTasks.length > 0 && (
+              <section className="space-y-3">
+                <h3 className="px-2 font-black text-orange-700">{goalCopy.child.revisionTitle}</h3>
+                {revisionTasks.map(task => (
+                  <GoalCard
+                    key={task.id}
+                    task={task}
+                    action={(
+                      <button
+                        onClick={() => setSubmittingTask(task)}
+                        className="flex min-h-12 min-w-16 items-center justify-center rounded-2xl bg-orange-500 px-3 text-sm font-black text-white shadow-md"
+                      >
+                        補充
+                      </button>
+                    )}
+                  />
+                ))}
+              </section>
+            )}
+
+            <section className="space-y-3">
+              <div className="px-2">
+                <h3 className="font-black text-gray-700">{goalCopy.child.title}</h3>
+                <p className="text-sm text-gray-500">{goalCopy.child.subtitle}</p>
+              </div>
             {todoTasks.map(task => {
               const hasTimer = task.duration !== undefined;
               const isRunning = task.timerIsRunning;
@@ -260,47 +360,32 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               const isFinished = hasTimer && timeLeft === 0 && (isRunning || (task.timerRemainingMs === 0));
 
               return (
-                <div key={task.id} className={cn("bg-white p-5 rounded-3xl shadow-sm border flex items-center justify-between group transition-all", isRunning ? "border-yellow-400 ring-2 ring-yellow-100" : "border-blue-100")}>
-                  <div className="flex-1 mr-4">
-                    <div className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-                      {task.name}
-                      {task.isDaily && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">每日</span>}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-bold">
-                        <Star size={14} className="fill-yellow-500 text-yellow-500" /> +{task.points}
-                      </div>
-                      
-                      {hasTimer && !isFinished && (
-                        <div className={cn("inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold", isRunning ? "bg-yellow-100 text-yellow-700 animate-pulse" : "bg-blue-50 text-blue-600")}>
-                          <Clock size={14} /> {formatTime(timeLeft)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {hasTimer && !isFinished ? (
+                <GoalCard
+                  key={task.id}
+                  task={task}
+                  action={hasTimer && !isFinished ? (
                     <button
                       onClick={() => toggleTimer(task)}
                       className={cn(
-                        "w-20 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-md transition-colors",
-                        isRunning ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
+                        "flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-2xl text-sm font-black text-white shadow-md transition-colors",
+                        isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
                       )}
                     >
-                      {isRunning ? <Clock size={32} /> : <PlayCircle size={32} />}
-                      <span className="text-sm font-bold">{isRunning ? '暫停' : '開始做'}</span>
+                      {isRunning ? <Clock size={28} /> : <PlayCircle size={28} />}
+                      <span>{isRunning ? '暫停' : '開始'}</span>
+                      {hasTimer && <span className="text-xs opacity-90">{formatTime(timeLeft)}</span>}
                     </button>
                   ) : (
                     <button
                       onClick={() => void handleFinishTask(task.id)}
                       disabled={actionPending}
-                      className="bg-green-500 hover:bg-green-600 text-white w-20 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-md transition-colors active:scale-95"
+                      className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-wait disabled:opacity-60"
                     >
-                      <CheckCircle2 size={32} />
-                      <span className="text-sm font-bold">做好了</span>
+                      <CheckCircle2 size={28} />
+                      <span>完成</span>
                     </button>
                   )}
-                </div>
+                />
               );
             })}
 
@@ -311,24 +396,30 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 <p className="text-green-600">今天的任務都做完囉～</p>
               </div>
             )}
+            </section>
 
             {pendingTasks.length > 0 && (
-              <div className="mt-8">
-              <h3 className="text-gray-500 font-bold mb-4 px-2">等待爸媽審核</h3>
+              <section className="space-y-3">
+              <h3 className="text-gray-500 font-bold px-2">{goalCopy.child.pendingTitle}</h3>
                 <div className="space-y-3">
                   {pendingTasks.map(task => (
-                    <div key={task.id} className="bg-gray-100 p-4 rounded-2xl border border-gray-200 flex items-center justify-between opacity-70">
-                      <div className="flex items-center gap-2">
-                        <div className="text-lg font-bold text-gray-500 line-through decoration-gray-400 decoration-2">{task.name}</div>
-                        {task.isDaily && <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-bold">每日</span>}
-                      </div>
-                      <div className="text-gray-400 text-sm font-bold">審核中...</div>
-                    </div>
+                    <GoalCard key={task.id} task={task} />
                   ))}
                 </div>
-              </div>
+              </section>
+            )}
+
+            {completedTasks.length > 0 && (
+              <section className="space-y-3">
+                <h3 className="px-2 font-black text-gray-500">{goalCopy.child.completedTitle}</h3>
+                {completedTasks.slice(0, 5).map(task => <GoalCard key={task.id} task={task} compact />)}
+              </section>
             )}
           </div>
+        )}
+
+        {activeTab === 'growth' && growthSummary && (
+          <GrowthSummaryPanel summaries={[growthSummary]} title="我的成長紀錄" />
         )}
 
         {activeTab === 'wishlist' && (
@@ -402,6 +493,19 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       </main>
 
       {/* Overlays */}
+      {submittingTask && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="w-full max-w-md">
+            <GoalSubmissionForm
+              task={submittingTask}
+              loading={actionPending}
+              onCancel={() => setSubmittingTask(null)}
+              onSubmit={(input) => handleSubmitReflection(submittingTask.id, input)}
+            />
+          </div>
+        </div>
+      )}
+
       {showWishlistForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-50">
           <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">

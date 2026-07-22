@@ -6,12 +6,13 @@ import {
   redemptionRowToViewModel,
   pointLedgerRowToViewModel,
   taskRowToViewModel,
+  taskTemplateRowToViewModel,
 } from './data-contracts';
 import type {
   ChildProfileRow, FamilyMemberRow, ProfileRow, RewardRow,
   RewardRedemptionRow, TaskRow, TaskTemplateRow, WishlistItemRow, PointLedgerRow,
 } from '../types';
-import type { AppState, Child, Reward, Task, TaskStatus, TaskTemplate } from '../types';
+import type { AppState, Child, FeedbackTone, Reward, Task, TaskCategory, TaskStatus, TaskTemplate } from '../types';
 
 export interface LoadedAppData {
   state: AppState;
@@ -37,6 +38,94 @@ function check<T>(result: { data: T; error: { message: string } | null }): T {
 function asRows<T>(data: unknown): T[] {
   return (data ?? []) as T[];
 }
+
+function removeUndefined<T extends Record<string, unknown>>(payload: T): Partial<T> {
+  return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)) as Partial<T>;
+}
+
+export interface ProposeChildGoalInput {
+  name: string;
+  points: number;
+  icon: string;
+  category: TaskCategory;
+  duration?: number | null;
+  dueOn?: string | null;
+}
+
+export interface ConfirmChildGoalInput {
+  name: string;
+  points: number;
+  category: TaskCategory;
+}
+
+export interface SubmitTaskReflectionInput {
+  reflection: string;
+  mood?: string | null;
+  difficulty?: number | null;
+}
+
+export interface ReviewTaskCompletionInput {
+  approved: boolean;
+  approvedPoints: number;
+  feedback?: string | null;
+  correction?: string | null;
+  tone?: FeedbackTone | null;
+  revisionNote?: string | null;
+}
+
+function normalizeFeedbackTone(tone?: FeedbackTone | null): FeedbackTone | null {
+  if (tone === 'celebration' || tone === 'celebrating') return 'celebratory';
+  if (tone === 'correction') return 'corrective';
+  return tone ?? null;
+}
+
+export const buildProposeChildGoalPayload = (
+  familyId: string,
+  childId: string,
+  goal: ProposeChildGoalInput,
+) => ({
+  target_family_id: familyId,
+  target_child_profile_id: childId,
+  goal_name: goal.name,
+  goal_points: goal.points,
+  goal_icon: goal.icon,
+  goal_category: goal.category,
+  goal_duration_minutes: goal.duration ?? null,
+  goal_due_on: goal.dueOn ?? null,
+});
+
+export const buildConfirmChildGoalPayload = (
+  taskId: string,
+  confirmation: ConfirmChildGoalInput,
+) => ({
+  target_task_id: taskId,
+  confirmed_name: confirmation.name,
+  confirmed_points: confirmation.points,
+  confirmed_category: confirmation.category,
+});
+
+export const buildSubmitTaskReflectionPayload = (
+  taskId: string,
+  submission: SubmitTaskReflectionInput,
+) => ({
+  target_task_id: taskId,
+  reflection: submission.reflection,
+  mood: submission.mood ?? null,
+  difficulty: submission.difficulty ?? null,
+});
+
+export const buildReviewTaskCompletionPayload = (
+  taskId: string,
+  review: ReviewTaskCompletionInput,
+) => ({
+  target_task_id: taskId,
+  approved: review.approved,
+  approved_points: review.approvedPoints,
+  feedback: review.feedback ?? null,
+  correction: review.correction ?? null,
+  tone: normalizeFeedbackTone(review.tone),
+  revision_note: review.revisionNote ?? null,
+});
 
 function childFromRows(
   child: ChildProfileRow,
@@ -105,7 +194,10 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     profiles = asRows<ProfileRow>(check(await client.from('profiles').select('*').in('id', profileIds)));
     children = asRows<ChildProfileRow>(check(await client.from('child_profiles').select('*').eq('family_id', familyId)));
     [state.taskTemplates, tasks, rewards, wishlist, tickets, ledger] = await Promise.all([
-      client.from('task_templates').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<TaskTemplateRow>(check(result)).map((row): TaskTemplate => ({ id: row.id, name: row.name, points: row.points, icon: row.icon, ...(row.duration_minutes == null ? {} : { duration: row.duration_minutes }) }))),
+      client.from('task_templates').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<TaskTemplateRow>(check(result)).map((row): TaskTemplate => {
+        const template = taskTemplateRowToViewModel(row);
+        return { ...template, ...(template.duration == null ? { duration: undefined } : { duration: template.duration }) };
+      })),
       client.from('tasks').select('*').eq('family_id', familyId).order('created_at').then((result) => asRows<TaskRow>(check(result))),
       client.from('rewards').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<RewardRow>(check(result))),
       client.from('wishlist_items').select('*').eq('family_id', familyId).order('created_at').then((result) => asRows<WishlistItemRow>(check(result))),
@@ -138,6 +230,11 @@ export interface DataRepository {
   updateTask(id: string, updates: Partial<Task>): Promise<void>;
   deleteTask(id: string): Promise<void>;
   updateTaskStatus(id: string, status: TaskStatus): Promise<void>;
+  proposeChildGoal(familyId: string, childId: string, goal: ProposeChildGoalInput): Promise<void>;
+  confirmChildGoal(taskId: string, confirmation: ConfirmChildGoalInput): Promise<void>;
+  returnChildGoal(taskId: string, revisionNote: string): Promise<void>;
+  submitTaskReflection(taskId: string, submission: SubmitTaskReflectionInput): Promise<void>;
+  reviewTaskCompletion(taskId: string, review: ReviewTaskCompletionInput): Promise<void>;
   insertReward(familyId: string, childId: string, reward: Omit<Reward, 'id'>): Promise<void>;
   updateReward(id: string, updates: Partial<Reward>): Promise<void>;
   deleteReward(id: string): Promise<void>;
@@ -176,15 +273,87 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
     },
-    async insertTemplate(familyId, template) { check(await client.from('task_templates').insert({ family_id: familyId, name: template.name, points: template.points, icon: template.icon, duration_minutes: template.duration ?? null })); },
-    async updateTemplate(id, updates) { check(await client.from('task_templates').update({ ...updates, duration_minutes: updates.duration ?? null }).eq('id', id)); },
+    async insertTemplate(familyId, template) {
+      check(await client.from('task_templates').insert({
+        family_id: familyId,
+        name: template.name,
+        points: template.points,
+        icon: template.icon,
+        duration_minutes: template.duration ?? null,
+        category: template.category ?? 'life_habit',
+        suggested_evidence: template.suggestedEvidence ?? 'reflection',
+      }));
+    },
+    async updateTemplate(id, updates) {
+      check(await client.from('task_templates').update(removeUndefined({
+        name: updates.name,
+        points: updates.points,
+        icon: updates.icon,
+        duration_minutes: updates.duration,
+        category: updates.category,
+        suggested_evidence: updates.suggestedEvidence,
+      })).eq('id', id));
+    },
     async deleteTemplate(id) { check(await client.from('task_templates').delete().eq('id', id)); },
-    async insertTask(familyId, childId, task) { check(await client.from('tasks').insert({ family_id: familyId, child_profile_id: childId, name: task.name, points: task.points, icon: task.icon, duration_minutes: task.duration ?? null, is_daily: task.isDaily ?? false })); },
-    async updateTask(id, updates) { check(await client.from('tasks').update({ name: updates.name, points: updates.points, icon: updates.icon, duration_minutes: updates.duration ?? null, is_daily: updates.isDaily }).eq('id', id)); },
+    async insertTask(familyId, childId, task) {
+      check(await client.from('tasks').insert({
+        family_id: familyId,
+        child_profile_id: childId,
+        template_id: task.templateId ?? null,
+        name: task.name,
+        points: task.points,
+        icon: task.icon,
+        duration_minutes: task.duration ?? null,
+        is_daily: task.isDaily ?? false,
+        due_on: task.dueOn ?? null,
+        category: task.category ?? 'life_habit',
+        origin: task.origin ?? 'parent_assigned',
+      }));
+    },
+    async updateTask(id, updates) {
+      check(await client.from('tasks').update(removeUndefined({
+        name: updates.name,
+        points: updates.points,
+        status: updates.status,
+        icon: updates.icon,
+        duration_minutes: updates.duration,
+        is_daily: updates.isDaily,
+        due_on: updates.dueOn,
+        category: updates.category,
+        origin: updates.origin,
+        approved_points: updates.approvedPoints,
+        child_reflection_text: updates.reflection,
+        child_mood: updates.mood,
+        child_difficulty: updates.difficulty,
+        parent_feedback_text: updates.parentFeedback,
+        parent_correction_text: updates.parentCorrection,
+        feedback_tone: updates.feedbackTone,
+        revision_note: updates.revisionNote,
+      })).eq('id', id));
+    },
     async deleteTask(id) { check(await client.from('tasks').delete().eq('id', id)); },
     async updateTaskStatus(id, status) {
       if (status === 'completed') check(await client.rpc('approve_task_completion', { target_task_id: id }));
-      else check(await client.from('tasks').update({ status, completed_at: status === 'pending' ? new Date().toISOString() : null }).eq('id', id));
+      else if (status === 'pending') throw new Error('請使用 submitTaskReflection 提交完成心得。');
+      else check(await client.from('tasks').update({ status, completed_at: null }).eq('id', id));
+    },
+    async proposeChildGoal(familyId, childId, goal) {
+      check(await client.rpc('propose_child_goal', buildProposeChildGoalPayload(familyId, childId, goal)));
+    },
+    async confirmChildGoal(taskId, confirmation) {
+      check(await client.rpc('confirm_child_goal', buildConfirmChildGoalPayload(taskId, confirmation)));
+    },
+    async returnChildGoal(taskId, revisionNote) {
+      check(await client.rpc('return_child_goal', {
+        target_task_id: taskId,
+        target_revision_note: revisionNote,
+      }));
+    },
+    async submitTaskReflection(taskId, submission) {
+      check(await client.rpc('submit_task_reflection', buildSubmitTaskReflectionPayload(taskId, submission)));
+    },
+    async reviewTaskCompletion(taskId, review) {
+      check(await client.rpc('review_task_completion', buildReviewTaskCompletionPayload(taskId, review)));
     },
     async insertReward(familyId, childId, reward) { check(await client.from('rewards').insert({ family_id: familyId, child_profile_id: childId, name: reward.name, points: reward.points, icon: reward.icon })); },
     async updateReward(id, updates) { check(await client.from('rewards').update({ name: updates.name, points: updates.points, icon: updates.icon }).eq('id', id)); },

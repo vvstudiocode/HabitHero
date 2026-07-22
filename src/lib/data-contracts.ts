@@ -11,13 +11,19 @@ import {
   RewardRedemptionViewModel,
   PointLedgerRow,
   PointLedgerViewModel,
+  TaskTemplateRow,
+  TaskTemplateViewModel,
   TaskRow,
+  TaskCategory,
+  TaskOrigin,
   TaskViewModel,
   Timestamp,
   UnixMilliseconds,
 } from '../types';
 
 const toUnixMilliseconds = (timestamp: Timestamp): UnixMilliseconds => Date.parse(timestamp);
+const defaultCategory: TaskCategory = 'life_habit';
+const defaultOrigin: TaskOrigin = 'parent_assigned';
 
 export const profileRowToViewModel = (row: ProfileRow): ProfileViewModel => ({
   id: row.id,
@@ -56,6 +62,7 @@ export const taskRowToViewModel = (row: TaskRow): TaskViewModel => ({
   id: row.id,
   familyId: row.family_id,
   childProfileId: row.child_profile_id,
+  templateId: row.template_id,
   name: row.name,
   points: row.points,
   status: row.status,
@@ -65,6 +72,39 @@ export const taskRowToViewModel = (row: TaskRow): TaskViewModel => ({
   timerRemainingMs: null,
   timerIsRunning: false,
   isDaily: row.is_daily,
+  dueOn: row.due_on,
+  category: row.category ?? defaultCategory,
+  origin: row.origin ?? defaultOrigin,
+  originalName: row.original_name ?? null,
+  originalPoints: row.original_points ?? null,
+  confirmedAt: row.confirmed_at ?? null,
+  confirmedBy: row.confirmed_by ?? null,
+  submittedAt: row.submitted_at ?? null,
+  reviewedAt: row.reviewed_at ?? null,
+  reviewedBy: row.reviewed_by ?? null,
+  approvedPoints: row.approved_points ?? null,
+  reflection: row.child_reflection_text ?? null,
+  mood: row.child_mood ?? null,
+  difficulty: row.child_difficulty ?? null,
+  parentFeedback: row.parent_feedback_text ?? null,
+  parentCorrection: row.parent_correction_text ?? null,
+  feedbackTone: row.feedback_tone ?? null,
+  revisionNote: row.revision_note ?? null,
+  completedAt: row.completed_at,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+export const taskTemplateRowToViewModel = (
+  row: TaskTemplateRow,
+): TaskTemplateViewModel => ({
+  id: row.id,
+  name: row.name,
+  points: row.points,
+  duration: row.duration_minutes,
+  icon: row.icon,
+  category: row.category ?? defaultCategory,
+  suggestedEvidence: row.suggested_evidence ?? 'reflection',
 });
 
 export const redemptionRowToViewModel = (

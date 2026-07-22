@@ -8,7 +8,10 @@ export type SortOrder = number;
 
 export type Role = 'parent' | 'child' | null;
 export type MemberRole = 'parent' | 'child';
-export type TaskStatus = 'todo' | 'pending' | 'completed';
+export type TaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed';
+export type TaskCategory = 'life_habit' | 'learning' | 'health' | 'relationship' | 'family_contribution' | 'creativity';
+export type TaskOrigin = 'child_proposed' | 'parent_suggested' | 'parent_assigned' | 'system_template';
+export type FeedbackTone = 'encouraging' | 'coaching' | 'corrective' | 'correction' | 'celebrating' | 'celebration' | 'celebratory';
 export type RedemptionStatus = 'pending' | 'fulfilled' | 'cancelled';
 export type PointLedgerEntryType = 'task_approved' | 'reward_redemption' | 'manual_adjustment';
 
@@ -56,6 +59,8 @@ export interface TaskTemplateRow {
   duration_minutes: number | null;
   icon: string;
   sort_order: SortOrder;
+  category: TaskCategory;
+  suggested_evidence: string;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -72,6 +77,23 @@ export interface TaskRow {
   duration_minutes: number | null;
   is_daily: boolean;
   due_on: string | null;
+  category: TaskCategory;
+  origin: TaskOrigin;
+  original_name: string | null;
+  original_points: Points | null;
+  confirmed_at: Timestamp | null;
+  confirmed_by: Id | null;
+  submitted_at: Timestamp | null;
+  reviewed_at: Timestamp | null;
+  reviewed_by: Id | null;
+  approved_points: Points | null;
+  child_reflection_text: string | null;
+  child_mood: string | null;
+  child_difficulty: number | null;
+  parent_feedback_text: string | null;
+  parent_correction_text: string | null;
+  feedback_tone: FeedbackTone | null;
+  revision_note: string | null;
   completed_at: Timestamp | null;
   created_at: Timestamp;
   updated_at: Timestamp;
@@ -166,6 +188,8 @@ export interface TaskTemplateCreateInput {
   duration_minutes?: number | null;
   icon: string;
   sort_order?: SortOrder;
+  category?: TaskCategory;
+  suggested_evidence?: string;
 }
 export interface TaskTemplateUpdateInput {
   name?: string;
@@ -173,6 +197,8 @@ export interface TaskTemplateUpdateInput {
   duration_minutes?: number | null;
   icon?: string;
   sort_order?: SortOrder;
+  category?: TaskCategory;
+  suggested_evidence?: string;
 }
 
 export interface TaskCreateInput {
@@ -185,6 +211,11 @@ export interface TaskCreateInput {
   duration_minutes?: number | null;
   is_daily?: boolean;
   due_on?: string | null;
+  category?: TaskCategory;
+  origin?: TaskOrigin;
+  reflection?: string | null;
+  mood?: string | null;
+  difficulty?: number | null;
 }
 export interface TaskUpdateInput {
   name?: string;
@@ -194,6 +225,16 @@ export interface TaskUpdateInput {
   duration_minutes?: number | null;
   is_daily?: boolean;
   due_on?: string | null;
+  category?: TaskCategory;
+  origin?: TaskOrigin;
+  approved_points?: Points | null;
+  child_reflection_text?: string | null;
+  child_mood?: string | null;
+  child_difficulty?: number | null;
+  parent_feedback_text?: string | null;
+  parent_correction_text?: string | null;
+  feedback_tone?: FeedbackTone | null;
+  revision_note?: string | null;
   completed_at?: Timestamp | null;
 }
 
@@ -277,6 +318,8 @@ export interface TaskTemplateViewModel {
   points: Points;
   duration: number | null;
   icon: string;
+  category: TaskCategory;
+  suggestedEvidence: string;
 }
 
 export interface TaskViewModel {
@@ -292,6 +335,28 @@ export interface TaskViewModel {
   timerRemainingMs: UnixMilliseconds | null;
   timerIsRunning: boolean;
   isDaily: boolean;
+  templateId: Id | null;
+  dueOn: string | null;
+  category: TaskCategory;
+  origin: TaskOrigin;
+  originalName: string | null;
+  originalPoints: Points | null;
+  confirmedAt: Timestamp | null;
+  confirmedBy: Id | null;
+  submittedAt: Timestamp | null;
+  reviewedAt: Timestamp | null;
+  reviewedBy: Id | null;
+  approvedPoints: Points | null;
+  reflection: string | null;
+  mood: string | null;
+  difficulty: number | null;
+  parentFeedback: string | null;
+  parentCorrection: string | null;
+  feedbackTone: FeedbackTone | null;
+  revisionNote: string | null;
+  completedAt: Timestamp | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 export interface RewardViewModel {
@@ -326,15 +391,68 @@ export interface PointLedgerViewModel {
 }
 
 // Legacy localStorage view types. Keep these aliases until the storage adapter is replaced.
-export type TaskTemplate = Omit<TaskTemplateViewModel, 'duration'> & { duration?: number };
+export interface TaskTemplate extends Omit<TaskTemplateViewModel, 'duration' | 'category' | 'suggestedEvidence'> {
+  duration?: number;
+  category?: TaskCategory;
+  suggestedEvidence?: string;
+}
 export interface Task extends Omit<
   TaskViewModel,
-  'familyId' | 'childProfileId' | 'duration' | 'timerEndTime' | 'timerRemainingMs' | 'timerIsRunning'
+  | 'familyId'
+  | 'childProfileId'
+  | 'duration'
+  | 'timerEndTime'
+  | 'timerRemainingMs'
+  | 'timerIsRunning'
+  | 'templateId'
+  | 'dueOn'
+  | 'category'
+  | 'origin'
+  | 'originalName'
+  | 'originalPoints'
+  | 'confirmedAt'
+  | 'confirmedBy'
+  | 'submittedAt'
+  | 'reviewedAt'
+  | 'reviewedBy'
+  | 'approvedPoints'
+  | 'reflection'
+  | 'mood'
+  | 'difficulty'
+  | 'parentFeedback'
+  | 'parentCorrection'
+  | 'feedbackTone'
+  | 'revisionNote'
+  | 'completedAt'
+  | 'createdAt'
+  | 'updatedAt'
 > {
   duration?: number;
   timerEndTime?: UnixMilliseconds | null;
   timerRemainingMs?: UnixMilliseconds | null;
   timerIsRunning?: boolean;
+  templateId?: Id | null;
+  dueOn?: string | null;
+  category?: TaskCategory;
+  origin?: TaskOrigin;
+  originalName?: string | null;
+  originalPoints?: Points | null;
+  confirmedAt?: Timestamp | null;
+  confirmedBy?: Id | null;
+  submittedAt?: Timestamp | null;
+  reviewedAt?: Timestamp | null;
+  reviewedBy?: Id | null;
+  approvedPoints?: Points | null;
+  reflection?: string | null;
+  mood?: string | null;
+  difficulty?: number | null;
+  parentFeedback?: string | null;
+  parentCorrection?: string | null;
+  feedbackTone?: FeedbackTone | string | null;
+  revisionNote?: string | null;
+  completedAt?: Timestamp | null;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 export type Reward = RewardViewModel;
 export type WishlistItem = WishlistItemViewModel;
