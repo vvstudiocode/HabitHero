@@ -389,7 +389,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     }
   };
   
-  const handleAddChild = async () => {
+  const handleAddChild = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setNewChildError('');
     if (!newChildName.trim()) {
       setNewChildError('請輸入小孩名字。');
@@ -421,7 +422,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     }
   };
 
-  const handleCreateExistingChildAccount = async () => {
+  const handleCreateExistingChildAccount = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const child = state.children.find((item) => item.id === accountSetupChildId);
     if (!child) return;
     setAccountSetupError('');
