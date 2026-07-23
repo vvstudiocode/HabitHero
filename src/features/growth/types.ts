@@ -45,6 +45,7 @@ export interface GoalProposalInput {
   points: number;
   category: TaskCategory;
   dueTime: string;
+  duration?: number;
 }
 
 export interface GoalConfirmationInput {

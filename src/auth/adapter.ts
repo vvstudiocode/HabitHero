@@ -17,6 +17,32 @@ export async function signInChild(loginName: string, password: string) {
   return signIn({ email: childAccountEmail(loginName), password });
 }
 
+export async function verifyCurrentParentPassword(password: string) {
+  const client = getSupabaseClient();
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError || !sessionData.session?.user.email) {
+    throw new Error('目前登入狀態已失效，請重新登入。');
+  }
+  const { data, error } = await signIn({ email: sessionData.session.user.email, password });
+  if (error || !data.session) throw new Error(error?.message ?? '家長密碼錯誤。');
+  return data.session;
+}
+
+export async function updateCurrentParentPassword(password: string) {
+  const { error } = await getSupabaseClient().auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
+export async function switchChildToParent(password: string) {
+  const { data, error } = await getSupabaseClient().functions.invoke('switch-to-parent', { body: { password } });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  if (!data?.session) throw new Error('家長模式授權失敗，請稍後再試。');
+  const { data: sessionData, error: sessionError } = await getSupabaseClient().auth.setSession(data.session);
+  if (sessionError || !sessionData.session) throw new Error(sessionError?.message ?? '家長模式授權失敗，請稍後再試。');
+  return sessionData.session;
+}
+
 export async function signUp(credentials: AuthCredentials) {
   return getSupabaseClient().auth.signUp(credentials);
 }

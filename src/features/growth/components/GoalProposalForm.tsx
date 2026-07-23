@@ -14,15 +14,17 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
   const [points, setPoints] = useState(5);
   const [category, setCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
   const [dueTime, setDueTime] = useState('');
+  const [duration, setDuration] = useState<number | ''>('');
 
   const submit = async () => {
     const trimmed = name.trim();
     if (!trimmed || !dueTime) return;
-    await onSubmit({ name: trimmed, points: Math.max(1, points), category, dueTime });
+    await onSubmit({ name: trimmed, points: Math.max(1, points), category, dueTime, duration: duration || undefined });
     setName('');
     setPoints(5);
     setCategory(DEFAULT_TASK_CATEGORY);
     setDueTime('');
+    setDuration('');
   };
 
   return (
@@ -43,6 +45,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
                 setPoints(template.points);
                 setCategory(template.category ?? DEFAULT_TASK_CATEGORY);
                 setDueTime('');
+                setDuration(template.duration || '');
               }}
               className="min-h-11 shrink-0 rounded-full border border-yellow-200 bg-yellow-50 px-3 text-sm font-bold text-yellow-800 transition-colors hover:bg-yellow-100"
             >
@@ -63,7 +66,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             placeholder="例如：自己整理明天的書包"
           />
         </label>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,132px)]">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,132px)_minmax(0,132px)]">
           <label className="block">
             <span className="mb-2 block text-sm font-bold text-gray-700">目標分類</span>
             <select
@@ -87,11 +90,22 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             />
           </label>
           <label className="block">
-              <span className="mb-2 block text-sm font-bold text-gray-700">開始時間</span>
+              <span className="mb-2 block text-sm font-bold text-gray-700">什麼時候開始？</span>
             <input
               type="time"
               value={dueTime}
               onChange={(event) => setDueTime(event.target.value)}
+              className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-sm font-bold text-gray-700">想做多久？</span>
+            <input
+              type="number"
+              min="1"
+              value={duration}
+              onChange={(event) => setDuration(event.target.value ? Number(event.target.value) : '')}
+              placeholder="分鐘"
               className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </label>

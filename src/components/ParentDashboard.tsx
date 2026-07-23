@@ -10,7 +10,8 @@ import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryP
 import { ParentSettingsDocuments, type ParentSettingsDocument } from './ParentSettingsDocuments';
 import { ParentConsentModal } from './ParentConsentModal';
 import { ParentPrivacyPolicyPage } from './ParentPrivacyPolicyPage';
-import { deleteCurrentAccount } from '../auth';
+import { FamilyChildPicker } from './FamilyChildPicker';
+import { deleteCurrentAccount, updateCurrentParentPassword, verifyCurrentParentPassword } from '../auth';
 import { isCurrentParentConsent, PARENT_CONSENT_VERSION } from '../lib/legal-content';
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
 import { buildGrowthStats } from '../features/growth/growth-stats';
@@ -18,7 +19,7 @@ import { validateRewardPoints } from '../lib/reward-validation';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
-  onSwitchToChild: () => void;
+  onSwitchToChild: (childId?: string) => void;
   onLogout: () => void;
   signupConsentAccepted?: boolean;
 }
@@ -55,7 +56,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       revisionNote?: string | null;
     }) => Promise<void>;
   };
-  const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, setParentPin, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
+  const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
   const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist'>('review');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
   const observedLoading = useRef(false);
@@ -133,6 +134,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false);
+  const [showChildPicker, setShowChildPicker] = useState(false);
   const [settingsDocument, setSettingsDocument] = useState<ParentSettingsDocument | null>(null);
   const [newChildName, setNewChildName] = useState('');
   const [newChildUsername, setNewChildUsername] = useState('');
@@ -491,7 +493,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={onSwitchToChild} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
+            <button onClick={() => state.children.length > 1 ? setShowChildPicker(true) : onSwitchToChild()} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
               <Baby size={18} />
             </button>
             <button onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="flex min-h-11 min-w-11 items-center justify-center bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
@@ -625,7 +627,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-1 flex-wrap">
                           {group.children.map(c => (
-                            <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0">{c.childName}</span>
+                            <span key={c.childId} className="bg-blue-100 text-blue-700 text-base px-2.5 py-1 rounded-lg font-black shrink-0">{c.childName}</span>
                           ))}
                         </div>
                 <h3 className="whitespace-pre-wrap break-words font-bold text-gray-900 text-base leading-snug">{group.name}</h3>
@@ -644,8 +646,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                               <Clock size={12}/> {group.dueTime.slice(0, 5)} 開始
                             </span>
                           )}
+                          <span className="ml-auto text-blue-500 text-sm font-black whitespace-nowrap">+{group.points} pt</span>
                         </div>
-                        <div className="text-blue-500 text-sm font-bold">+{group.points} pt</div>
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
@@ -903,12 +905,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                    <div className="flex gap-2">
                      <input type="text" value={newParentPin} onChange={e => setNewParentPin(e.target.value)} placeholder="輸入新密碼" className="w-full p-2.5 rounded-xl border border-gray-300 outline-none min-w-0"/>
                      <button onClick={() => {
-                       if (oldParentPin !== state.parentPin) { alert("舊密碼錯誤"); return; }
-                       if (newParentPin.length < 4) { alert("新密碼至少4碼"); return; }
-                       setParentPin(newParentPin);
-                       alert("密碼更新成功");
-                       setOldParentPin('');
-                       setNewParentPin('');
+                       void (async () => {
+                         try {
+                           await verifyCurrentParentPassword(oldParentPin);
+                           if (newParentPin.length < 8) { alert("新密碼至少 8 碼"); return; }
+                           await updateCurrentParentPassword(newParentPin);
+                           alert("密碼更新成功");
+                           setOldParentPin('');
+                           setNewParentPin('');
+                         } catch { alert("舊密碼錯誤或密碼更新失敗"); }
+                       })();
                      }} className="shrink-0 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl font-bold transition-colors text-gray-700">更新</button>
                    </div>
                  </div>
@@ -1023,12 +1029,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <input type="number" min="1" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">限時 (分鐘, 選填)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">想做多久？</label>
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">可開始時間 (選填)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">什麼時候開始？</label>
                 <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
@@ -1068,7 +1074,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <input type="number" min="1" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">限時 (分鐘, 選填)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">想做多久？</label>
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
@@ -1108,7 +1114,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">可開始時間 (選填)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">什麼時候開始？</label>
                 <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
@@ -1218,14 +1224,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 setDeleteChildPinError('');
               }} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
               <button onClick={() => {
-                if (deleteChildPin === state.parentPin) {
-                  deleteChild(childToDelete);
-                  setChildToDelete(null);
-                  setDeleteChildPin('');
-                  setDeleteChildPinError('');
-                } else {
-                  setDeleteChildPinError('密碼錯誤');
-                }
+                void (async () => {
+                  try {
+                    await verifyCurrentParentPassword(deleteChildPin);
+                    await deleteChild(childToDelete);
+                    setChildToDelete(null);
+                    setDeleteChildPin('');
+                    setDeleteChildPinError('');
+                  } catch { setDeleteChildPinError('密碼錯誤'); }
+                })();
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確認刪除</button>
             </div>
           </div>
@@ -1276,6 +1283,14 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             </div>
           </div>
         </div>
+      )}
+
+      {showChildPicker && (
+        <FamilyChildPicker
+          children={state.children}
+          onSelect={(childId) => { setShowChildPicker(false); onSwitchToChild(childId); }}
+          onParentMode={() => setShowChildPicker(false)}
+        />
       )}
     </div>
   );

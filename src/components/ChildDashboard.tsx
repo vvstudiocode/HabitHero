@@ -173,7 +173,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       } else if (appStore.proposeChildGoal) {
         await appStore.proposeChildGoal(activeChild.id, { ...input, icon: 'Star' });
       } else {
-        await addTask(activeChild.id, { name: input.name, points: input.points, icon: 'Star', category: input.category, dueTime: input.dueTime, origin: 'child_proposed' } as never);
+        await addTask(activeChild.id, { name: input.name, points: input.points, icon: 'Star', category: input.category, dueTime: input.dueTime, duration: input.duration, origin: 'child_proposed' } as never);
       }
       showToast('目標已建立，可以先開始做。');
     } finally {
@@ -244,7 +244,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     return <div className="flex min-h-[100dvh] items-center justify-center bg-blue-50 p-6 text-center text-blue-700">正在載入我的任務…</div>;
   }
 
-  if (!hasSession || !session || role !== 'child') {
+  if (!hasSession || !session || (role !== 'child' && role !== 'parent')) {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900">
         <p role="alert">登入狀態已失效或此帳號不是孩子成員，無法顯示孩子資料。</p>
