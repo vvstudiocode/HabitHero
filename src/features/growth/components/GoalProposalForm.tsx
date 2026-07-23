@@ -74,7 +74,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
               type="time"
               value={dueTime}
               onChange={(event) => setDueTime(event.target.value)}
-              className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
+              className="hh-time-input min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </label>
           <label className="block">

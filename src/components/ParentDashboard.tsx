@@ -1010,7 +1010,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
                         <input 
                           type="checkbox" 
-                          className="w-4 h-4 text-blue-500 rounded focus:ring-blue-400"
+                          className="hh-child-checkbox rounded focus:ring-blue-400"
                           checked={newTaskTargetChildIds.includes(c.id)}
                           onChange={e => {
                             if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
@@ -1035,7 +1035,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">什麼時候開始？</label>
-                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
@@ -1100,7 +1100,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
                         <input 
                           type="checkbox" 
-                          className="w-4 h-4 text-blue-500 rounded focus:ring-blue-400"
+                          className="hh-child-checkbox rounded focus:ring-blue-400"
                           checked={newTaskTargetChildIds.includes(c.id)}
                           onChange={e => {
                             if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
@@ -1115,7 +1115,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">什麼時候開始？</label>
-                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
@@ -1144,7 +1144,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
                         <input 
                           type="checkbox" 
-                          className="w-4 h-4 text-blue-500 rounded focus:ring-blue-400"
+                          className="hh-child-checkbox rounded focus:ring-blue-400"
                           checked={newRewardTargetChildIds.includes(c.id)}
                           onChange={e => {
                             if (e.target.checked) setNewRewardTargetChildIds(p => [...p, c.id]);

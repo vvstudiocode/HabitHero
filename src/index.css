@@ -69,6 +69,48 @@
   scroll-padding-bottom: 160px;
 }
 
+/* Keep native controls inside rounded cards on small phone widths. */
+.hh-time-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  appearance: auto;
+}
+
+/* Use the same bright blue interaction color as the parent experience. */
+.hh-child-checkbox {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: #3b82f6;
+}
+
+.hh-child-checkbox:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.28);
+  outline-offset: 2px;
+}
+
+.hh-switch-modal-shell {
+  z-index: 200 !important;
+}
+
+.hh-switch-modal-panel {
+  animation: hh-switch-modal-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes hh-switch-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-height: 620px) {
   .hh-modal-shell {
     align-items: flex-start;
