@@ -40,11 +40,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<'goals' | 'growth' | 'wishlist' | 'history'>('goals');
   
-  // Multi-child support
-  // The provider derives this id from the authenticated user's DB membership/profile.
-  // Never fall back to another child or accept a child id from the client.
-  const activeChild = state.childLoggedInId
-    ? state.children.find(c => c.id === state.childLoggedInId)
+  // A direct child session uses its own child id. In parent child-mode, the
+  // parent session operates on the explicitly selected family child.
+  const activeChildId = role === 'parent' ? state.parentActiveChildId : state.childLoggedInId;
+  const activeChild = activeChildId
+    ? state.children.find(c => c.id === activeChildId)
     : undefined;
 
   const tasks = (activeChild?.tasks || []) as GrowthTask[];
@@ -86,6 +86,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const todoTasks = tasks
     .filter(t => t.status === 'todo')
     .sort((a, b) => (a.dueTime ?? '99:99').localeCompare(b.dueTime ?? '99:99'));
+  const childGoalTasks = todoTasks.filter(task => task.origin === 'child_proposed');
+  const parentGoalTasks = todoTasks.filter(task => task.origin !== 'child_proposed');
   const pendingTasks = tasks.filter(t => t.status === 'pending');
   const revisionTasks = tasks.filter(t => t.status === 'revision_requested');
   const completedTasks = tasks.filter(t => t.status === 'completed');
@@ -393,7 +395,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 <h3 className="font-black text-gray-700">{goalCopy.child.title}</h3>
                 <p className="text-sm text-gray-500">{goalCopy.child.subtitle}</p>
               </div>
-            {todoTasks.map(task => {
+            {childGoalTasks.map(task => {
               const hasTimer = typeof task.duration === 'number';
               const isRunning = task.timerIsRunning;
               const isExecutable = isTaskExecutableNow(task);
@@ -443,13 +445,69 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               );
             })}
 
-            {todoTasks.length === 0 && (
+            {childGoalTasks.length === 0 && (
               <div className="bg-green-50 p-8 rounded-3xl text-center border border-green-100">
                 <CheckCircle2 size={64} className="mx-auto text-green-400 mb-4" />
-                <h2 className="text-2xl font-bold text-green-700 mb-2">太棒了！</h2>
-                <p className="text-green-600">今天的任務都做完囉～</p>
+                <h2 className="text-xl font-bold text-green-700 mb-2">{goalCopy.child.emptyChildTitle}</h2>
+                <p className="text-green-600">{goalCopy.child.emptyChildBody}</p>
               </div>
             )}
+            </section>
+
+            <section className="space-y-3">
+              <div className="px-2">
+                <h3 className="font-black text-teal-800">{goalCopy.child.parentTitle}</h3>
+                <p className="text-sm text-gray-500">{goalCopy.child.parentSubtitle}</p>
+              </div>
+              {parentGoalTasks.map(task => {
+                const hasTimer = typeof task.duration === 'number';
+                const isRunning = task.timerIsRunning;
+                const isExecutable = isTaskExecutableNow(task);
+
+                let timeLeft = hasTimer ? task.duration! * 60 : 0;
+                if (isRunning && task.timerEndTime) {
+                  timeLeft = Math.max(0, Math.ceil((task.timerEndTime - now) / 1000));
+                } else if (!isRunning && task.timerRemainingMs !== undefined && task.timerRemainingMs !== null) {
+                  timeLeft = Math.max(0, Math.ceil(task.timerRemainingMs / 1000));
+                }
+
+                const isFinished = hasTimer && timeLeft === 0 && (isRunning || task.timerRemainingMs === 0);
+
+                return (
+                  <GoalCard
+                    key={task.id}
+                    task={task}
+                    action={hasTimer && !isFinished ? (
+                      <button
+                        onClick={() => toggleTimer(task)}
+                        disabled={!isExecutable}
+                        className={cn(
+                          "flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
+                          isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
+                        )}
+                      >
+                        {isRunning && <Clock size={24} />}
+                        <span>{isExecutable ? (isRunning ? '暫停' : '開始') : '未到'}</span>
+                        <span className="text-xs opacity-90">{formatTime(timeLeft)}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => void handleFinishTask(task.id)}
+                        disabled={actionPending || !isExecutable}
+                        className="flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                      >
+                        <CheckCircle2 size={28} />
+                        <span>{isExecutable ? '完成' : '未到'}</span>
+                      </button>
+                    )}
+                  />
+                );
+              })}
+              {parentGoalTasks.length === 0 && (
+                <div className="rounded-3xl border border-teal-100 bg-teal-50 p-6 text-center">
+                  <p className="font-bold text-teal-800">{goalCopy.child.emptyParentTitle}</p>
+                </div>
+              )}
             </section>
 
             {pendingTasks.length > 0 && (

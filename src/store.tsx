@@ -4,6 +4,7 @@ import { useAuthSession } from './auth';
 import { createDataRepository, DataRepository } from './lib/data-access';
 import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
 import { subscribeToAppData } from './lib/realtime';
+import { resolveActiveChildId } from './lib/family-switch';
 
 interface AppContextType {
   state: AppState;
@@ -158,6 +159,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadInFlight.current = (async () => {
       try {
         const loaded = await repository.load(session.user.id);
+        if (loaded.role === 'parent') {
+          loaded.state.parentActiveChildId = resolveActiveChildId(stateRef.current.parentActiveChildId, loaded.state.children);
+        }
         if (JSON.stringify(stateRef.current) !== JSON.stringify(loaded.state)) {
           setState(loaded.state);
         }

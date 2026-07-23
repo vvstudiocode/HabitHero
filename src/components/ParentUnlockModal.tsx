@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LockKeyhole, X } from 'lucide-react';
 
 interface ParentUnlockModalProps {
@@ -20,10 +21,10 @@ export function ParentUnlockModal({
 }: ParentUnlockModalProps) {
   const [password, setPassword] = useState('');
 
-  return (
+  return createPortal(
     <div className="hh-modal-shell hh-switch-modal-shell fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-xs p-5" role="dialog" aria-modal="true" aria-labelledby="parent-unlock-title">
       <form
-        className="hh-modal-panel hh-switch-modal-panel w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl animate-slide-up"
+        className="hh-modal-panel hh-switch-modal-panel hh-parent-unlock-panel w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up"
         onSubmit={(event) => {
           event.preventDefault();
           if (password) void onUnlock(password);
@@ -31,7 +32,7 @@ export function ParentUnlockModal({
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-600"><LockKeyhole size={22} /></div>
+            <div className="hh-parent-unlock-icon mb-2 flex h-11 w-11 items-center justify-center rounded-2xl"><LockKeyhole size={22} /></div>
             <h2 id="parent-unlock-title" className="text-xl font-black text-gray-900">{title}</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">{description}</p>
           </div>
@@ -45,14 +46,15 @@ export function ParentUnlockModal({
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-blue-400"
+            className="hh-parent-unlock-input min-h-12 w-full rounded-2xl p-3 text-base outline-none"
           />
         </label>
         {error && <p className="mt-2 text-sm font-bold text-red-600" role="alert">{error}</p>}
-        <button type="submit" disabled={!password || loading} className="mt-5 min-h-12 w-full rounded-2xl bg-blue-500 px-4 font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
+        <button type="submit" disabled={!password || loading} className="hh-parent-unlock-submit mt-5 min-h-12 w-full rounded-2xl px-4 font-black disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? '驗證中…' : '解鎖'}
         </button>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

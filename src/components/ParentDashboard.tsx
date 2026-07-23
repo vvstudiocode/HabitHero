@@ -1043,7 +1043,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
-              <div className="min-w-0 w-full overflow-hidden">
+              <div className="min-w-0 w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
                 <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
@@ -1133,7 +1133,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   </div>
                 </div>
               )}
-              <div className="min-w-0 w-full overflow-hidden">
+              <div className="min-w-0 w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
                 <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>

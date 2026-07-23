@@ -13,6 +13,7 @@ import { ChildDashboard } from './components/ChildDashboard';
 import { ParentUnlockModal } from './components/ParentUnlockModal';
 import { FamilyChildPicker } from './components/FamilyChildPicker';
 import { PARENT_IDLE_LOCK_MS } from './lib/view-access';
+import { canOpenFamilyPicker, resolveActiveChildId } from './lib/family-switch';
 
 function MainApp() {
   const { state, clearProtectedState, hasSession, loading, initialLoading, dataReady, role, error, retry, setChildLoggedIn, setParentActiveChild } = useAppStore();
@@ -27,6 +28,7 @@ function MainApp() {
   const [unlockLoading, setUnlockLoading] = useState(false);
   const [parentUnlockedAt, setParentUnlockedAt] = useState<number | null>(null);
   const [showFamilyPicker, setShowFamilyPicker] = useState(false);
+  const [familyPickerRequested, setFamilyPickerRequested] = useState(false);
   const [childPreview, setChildPreview] = useState(false);
 
   useEffect(() => {
@@ -67,8 +69,15 @@ function MainApp() {
     };
   }, [currentView, parentUnlockedAt, role]);
 
+  useEffect(() => {
+    if (!familyPickerRequested) return;
+    if (!canOpenFamilyPicker({ role, dataReady, childCount: state.children.length })) return;
+    setFamilyPickerRequested(false);
+    setShowFamilyPicker(true);
+  }, [dataReady, familyPickerRequested, role, state.children.length]);
+
   const handleSwitchToChild = (childId?: string) => {
-    const targetChildId = childId ?? state.parentActiveChildId ?? state.children[0]?.id;
+    const targetChildId = resolveActiveChildId(childId ?? state.parentActiveChildId, state.children);
     if (!targetChildId) return;
     setChildLoggedIn(targetChildId);
     setParentActiveChild(targetChildId);
@@ -90,7 +99,8 @@ function MainApp() {
         await switchChildToParent(password);
         setChildPreview(false);
         setParentUnlockedAt(Date.now());
-        setShowFamilyPicker(true);
+        setShowFamilyPicker(false);
+        setFamilyPickerRequested(true);
       } else {
         await verifyCurrentParentPassword(password);
         setChildPreview(false);
@@ -108,6 +118,7 @@ function MainApp() {
   const handleLogout = () => {
     setUnlockPurpose(null);
     setShowFamilyPicker(false);
+    setFamilyPickerRequested(false);
     setChildPreview(false);
     setParentUnlockedAt(null);
     setLoginMode('parent');

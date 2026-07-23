@@ -30,3 +30,12 @@ test('parent review items are removed immediately after a successful action', ()
   assert.match(source, /setResolvedProposalIds/);
   assert.match(source, /setResolvedCompletionIds/);
 });
+
+test('child goals are separated into self-created and parent-given sections', () => {
+  const source = read('../src/components/ChildDashboard.tsx');
+
+  assert.match(source, /const childGoalTasks = todoTasks\.filter\(task => task\.origin === 'child_proposed'\)/);
+  assert.match(source, /const parentGoalTasks = todoTasks\.filter\(task => task\.origin !== 'child_proposed'\)/);
+  assert.match(source, /goalCopy\.child\.parentTitle/);
+  assert.match(source, /parentGoalTasks\.map/);
+});

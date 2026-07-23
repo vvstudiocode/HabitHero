@@ -68,7 +68,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
               className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </label>
-          <label className="block min-w-0 w-full overflow-hidden">
+          <label className="block min-w-0 w-full">
             <span className="mb-2 block text-sm font-bold text-gray-700 truncate">什麼時候開始？</span>
             <input
               type="time"
