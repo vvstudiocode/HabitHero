@@ -1006,20 +1006,30 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">指定小孩</label>
                   <div className="flex flex-wrap gap-2">
-                    {state.children.map(c => (
-                      <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                        <input 
-                          type="checkbox" 
-                          className="hh-child-checkbox rounded focus:ring-blue-400"
-                          checked={newTaskTargetChildIds.includes(c.id)}
-                          onChange={e => {
-                            if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
-                            else setNewTaskTargetChildIds(p => p.filter(id => id !== c.id));
-                          }}
-                        />
-                        <span className="text-sm font-medium text-gray-700">{c.name}</span>
-                      </label>
-                    ))}
+                    {state.children.map(c => {
+                      const isSelected = newTaskTargetChildIds.includes(c.id);
+                      return (
+                        <label
+                          key={c.id}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors border ${
+                            isSelected
+                              ? 'bg-teal-50/90 border-teal-500/60 text-teal-900 font-bold shadow-xs'
+                              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="hh-child-checkbox rounded focus:ring-teal-400"
+                            checked={isSelected}
+                            onChange={e => {
+                              if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
+                              else setNewTaskTargetChildIds(p => p.filter(id => id !== c.id));
+                            }}
+                          />
+                          <span className="text-sm font-medium">{c.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1033,9 +1043,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">什麼時候開始？</label>
-                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+              <div className="min-w-0 w-full overflow-hidden">
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
+                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
@@ -1096,26 +1106,36 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">選擇小孩</label>
                   <div className="flex flex-wrap gap-2">
-                    {state.children.map(c => (
-                      <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                        <input 
-                          type="checkbox" 
-                          className="hh-child-checkbox rounded focus:ring-blue-400"
-                          checked={newTaskTargetChildIds.includes(c.id)}
-                          onChange={e => {
-                            if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
-                            else setNewTaskTargetChildIds(p => p.filter(id => id !== c.id));
-                          }}
-                        />
-                        <span className="text-sm font-medium text-gray-700">{c.name}</span>
-                      </label>
-                    ))}
+                    {state.children.map(c => {
+                      const isSelected = newTaskTargetChildIds.includes(c.id);
+                      return (
+                        <label
+                          key={c.id}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors border ${
+                            isSelected
+                              ? 'bg-teal-50/90 border-teal-500/60 text-teal-900 font-bold shadow-xs'
+                              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="hh-child-checkbox rounded focus:ring-teal-400"
+                            checked={isSelected}
+                            onChange={e => {
+                              if (e.target.checked) setNewTaskTargetChildIds(p => [...p, c.id]);
+                              else setNewTaskTargetChildIds(p => p.filter(id => id !== c.id));
+                            }}
+                          />
+                          <span className="text-sm font-medium">{c.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">什麼時候開始？</label>
-                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
+              <div className="min-w-0 w-full overflow-hidden">
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
+                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
@@ -1140,20 +1160,30 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">指定小孩</label>
                   <div className="flex flex-wrap gap-2">
-                    {state.children.map(c => (
-                      <label key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                        <input 
-                          type="checkbox" 
-                          className="hh-child-checkbox rounded focus:ring-blue-400"
-                          checked={newRewardTargetChildIds.includes(c.id)}
-                          onChange={e => {
-                            if (e.target.checked) setNewRewardTargetChildIds(p => [...p, c.id]);
-                            else setNewRewardTargetChildIds(p => p.filter(id => id !== c.id));
-                          }}
-                        />
-                        <span className="text-sm font-medium text-gray-700">{c.name}</span>
-                      </label>
-                    ))}
+                    {state.children.map(c => {
+                      const isSelected = newRewardTargetChildIds.includes(c.id);
+                      return (
+                        <label
+                          key={c.id}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors border ${
+                            isSelected
+                              ? 'bg-teal-50/90 border-teal-500/60 text-teal-900 font-bold shadow-xs'
+                              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="hh-child-checkbox rounded focus:ring-teal-400"
+                            checked={isSelected}
+                            onChange={e => {
+                              if (e.target.checked) setNewRewardTargetChildIds(p => [...p, c.id]);
+                              else setNewRewardTargetChildIds(p => p.filter(id => id !== c.id));
+                            }}
+                          />
+                          <span className="text-sm font-medium">{c.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}

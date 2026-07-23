@@ -175,6 +175,13 @@ function MainApp() {
               onUnlock={handleUnlock}
             />
           )}
+          {showFamilyPicker && (
+            <FamilyChildPicker
+              children={state.children}
+              onSelect={handleSelectFamilyChild}
+              onParentMode={handleStayInParentMode}
+            />
+          )}
         </>
       );
     default:

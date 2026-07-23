@@ -69,30 +69,70 @@
   scroll-padding-bottom: 160px;
 }
 
-/* Keep native controls inside rounded cards on small phone widths. */
+/* Keep native controls inside rounded cards on small phone widths with full vertical alignment. */
 .hh-time-input {
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 12px;
   box-sizing: border-box;
   appearance: auto;
+  font-size: 16px;
+  font-weight: 700;
+  color: #12393b;
+  line-height: 48px;
 }
 
-/* Use the same bright blue interaction color as the parent experience. */
+.hh-time-input::-webkit-date-and-time-value {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  color: #12393b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hh-time-input::-webkit-datetime-edit {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0;
+  max-width: 100%;
+}
+
+.hh-time-input::-webkit-datetime-edit-fields-wrapper {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0;
+}
+
+.hh-time-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+/* Use app primary teal theme color for child selection checkboxes. */
 .hh-child-checkbox {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
-  accent-color: #3b82f6;
+  accent-color: #16aeb7;
+  cursor: pointer;
 }
 
 .hh-child-checkbox:focus-visible {
-  outline: 3px solid rgba(59, 130, 246, 0.28);
+  outline: 3px solid rgba(22, 174, 183, 0.35);
   outline-offset: 2px;
 }
 
 .hh-switch-modal-shell {
-  z-index: 200 !important;
+  z-index: 300 !important;
 }
 
 .hh-switch-modal-panel {

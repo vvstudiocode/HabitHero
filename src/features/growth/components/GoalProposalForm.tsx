@@ -46,7 +46,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
           />
         </label>
         <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,132px)_minmax(0,132px)]">
-          <label className="block">
+          <label className="block min-w-0 w-full">
             <span className="mb-2 block text-sm font-bold text-gray-700">目標分類</span>
             <select
               value={category}
@@ -58,7 +58,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
               ))}
             </select>
           </label>
-          <label className="block">
+          <label className="block min-w-0 w-full">
             <span className="mb-2 block text-sm font-bold text-gray-700">預估點數</span>
             <input
               type="number"
@@ -68,16 +68,16 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
               className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </label>
-          <label className="block">
-              <span className="mb-2 block text-sm font-bold text-gray-700">什麼時候開始？</span>
+          <label className="block min-w-0 w-full overflow-hidden">
+            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">什麼時候開始？</span>
             <input
               type="time"
               value={dueTime}
               onChange={(event) => setDueTime(event.target.value)}
-              className="hh-time-input min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
+              className="hh-time-input min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-3 py-2 sm:p-3 text-sm sm:text-base outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </label>
-          <label className="block">
+          <label className="block min-w-0 w-full">
             <span className="mb-2 block text-sm font-bold text-gray-700">想做多久？</span>
             <input
               type="number"
