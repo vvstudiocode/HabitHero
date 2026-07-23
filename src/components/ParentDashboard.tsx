@@ -980,7 +980,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       {/* Task Overlays */}
       {showTaskForm && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingTask ? '編輯任務' : '新增任務'}</h3>
               <button onClick={() => setShowTaskForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
@@ -1046,7 +1046,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {showTemplateForm && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingTemplate ? '編輯模板' : '新增模板'}</h3>
               <button onClick={() => setShowTemplateForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
@@ -1086,7 +1086,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {assigningTemplate && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">派發任務：{assigningTemplate.name}</h3>
               <button onClick={() => setAssigningTemplate(null)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
@@ -1126,7 +1126,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {showRewardForm && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
+          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingReward ? '編輯獎勵' : '新增獎勵'}</h3>
               <button onClick={() => setShowRewardForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>

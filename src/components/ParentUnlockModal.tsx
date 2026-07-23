@@ -21,9 +21,9 @@ export function ParentUnlockModal({
   const [password, setPassword] = useState('');
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-5" role="dialog" aria-modal="true" aria-labelledby="parent-unlock-title">
+    <div className="hh-modal-shell fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-5" role="dialog" aria-modal="true" aria-labelledby="parent-unlock-title">
       <form
-        className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
+        className="hh-modal-panel w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
         onSubmit={(event) => {
           event.preventDefault();
           if (password) void onUnlock(password);

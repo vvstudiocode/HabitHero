@@ -18,15 +18,19 @@ interface GoalReviewPanelProps {
 export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, onConfirmGoal, onReturnGoal, onReviewCompletion }: GoalReviewPanelProps) {
   const [editingProposalId, setEditingProposalId] = useState<string | null>(null);
   const [reviewingTaskId, setReviewingTaskId] = useState<string | null>(null);
+  const [resolvedProposalIds, setResolvedProposalIds] = useState<Set<string>>(() => new Set());
+  const [resolvedCompletionIds, setResolvedCompletionIds] = useState<Set<string>>(() => new Set());
+  const visibleProposedTasks = proposedTasks.filter((task) => !resolvedProposalIds.has(task.id));
+  const visiblePendingTasks = pendingTasks.filter((task) => !resolvedCompletionIds.has(task.id));
 
   return (
     <div className="space-y-6">
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-black text-gray-900">待確認目標 ({proposedTasks.length})</h2>
+          <h2 className="text-lg font-black text-gray-900">待確認目標 ({visibleProposedTasks.length})</h2>
           <p className="mt-1 text-sm text-gray-500">可以校準名稱、分類與點數，也可以退回請孩子寫清楚。</p>
         </div>
-        {proposedTasks.map((task) => (
+        {visibleProposedTasks.map((task) => (
           <Fragment key={task.id}>
             {editingProposalId === task.id ? (
               <ProposalEditor
@@ -35,10 +39,12 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
               onCancel={() => setEditingProposalId(null)}
               onConfirm={async (input) => {
                 await onConfirmGoal(task.childId, task.id, input);
+                setResolvedProposalIds((ids) => new Set(ids).add(task.id));
                 setEditingProposalId(null);
               }}
               onReturn={async (note) => {
                 await onReturnGoal(task.childId, task.id, note);
+                setResolvedProposalIds((ids) => new Set(ids).add(task.id));
                 setEditingProposalId(null);
               }}
             />
@@ -55,15 +61,15 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
           )}
           </Fragment>
         ))}
-        {proposedTasks.length === 0 && <EmptyState text="沒有等待確認的新目標。" />}
+        {visibleProposedTasks.length === 0 && <EmptyState text="沒有等待確認的新目標。" />}
       </section>
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-black text-gray-900">待審核完成 ({pendingTasks.length})</h2>
+          <h2 className="text-lg font-black text-gray-900">待審核完成 ({visiblePendingTasks.length})</h2>
           <p className="mt-1 text-sm text-gray-500">看孩子心得後，留下鼓勵、批改或請他補充。</p>
         </div>
-        {pendingTasks.map((task) => (
+        {visiblePendingTasks.map((task) => (
           <Fragment key={task.id}>
             {reviewingTaskId === task.id ? (
               <ParentFeedbackForm
@@ -73,6 +79,7 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
               onCancel={() => setReviewingTaskId(null)}
               onSubmit={async (input) => {
                 await onReviewCompletion(task.childId, task.id, input);
+                setResolvedCompletionIds((ids) => new Set(ids).add(task.id));
                 setReviewingTaskId(null);
               }}
             />
@@ -89,7 +96,7 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
           )}
           </Fragment>
         ))}
-        {pendingTasks.length === 0 && <EmptyState text="沒有等待審核的完成心得。" />}
+        {visiblePendingTasks.length === 0 && <EmptyState text="沒有等待審核的完成心得。" />}
       </section>
     </div>
   );

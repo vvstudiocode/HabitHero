@@ -543,7 +543,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       {/* Overlays */}
       {submittingTask && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-md animate-slide-up">
+          <div className="hh-form-modal-panel w-full max-w-md animate-slide-up">
             <GoalSubmissionForm
               task={submittingTask}
               loading={actionPending}
@@ -556,7 +556,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
       {showWishlistForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-50">
-          <div className="bg-white w-full max-w-sm animate-slide-up rounded-3xl p-6 shadow-xl">
+          <div className="hh-form-modal-panel bg-white w-full max-w-sm animate-slide-up rounded-3xl p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">我要許願</h3>
               <button onClick={() => setShowWishlistForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>

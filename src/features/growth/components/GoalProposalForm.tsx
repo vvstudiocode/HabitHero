@@ -34,27 +34,6 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
         <p className="mt-1 text-sm leading-6 text-gray-500">目標名稱可以自由寫，分類用來幫你看到自己的成長方向。</p>
       </div>
 
-      {templates.length > 0 && (
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-          {templates.slice(0, 8).map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              onClick={() => {
-                setName(template.name);
-                setPoints(template.points);
-                setCategory(template.category ?? DEFAULT_TASK_CATEGORY);
-                setDueTime('');
-                setDuration(template.duration || '');
-              }}
-              className="min-h-11 shrink-0 rounded-full border border-yellow-200 bg-yellow-50 px-3 text-sm font-bold text-yellow-800 transition-colors hover:bg-yellow-100"
-            >
-              {template.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm font-bold text-gray-700">我今天想做到</span>
