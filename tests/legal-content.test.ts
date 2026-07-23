@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PARENT_CONSENT_VERSION, PRIVACY_POLICY_VERSION, parentalConsentChecklist, privacyPolicySections, supportTopics } from '../src/lib/legal-content';
+import { isCurrentParentConsent, PARENT_CONSENT_VERSION, PRIVACY_POLICY_VERSION, parentalConsentChecklist, privacyPolicySections, supportTopics } from '../src/lib/legal-content';
 
 test('legal content has versioned privacy, support, and parental consent sections', () => {
   assert.match(PRIVACY_POLICY_VERSION, /^\d{4}-\d{2}-\d{2}$/);
@@ -9,4 +9,6 @@ test('legal content has versioned privacy, support, and parental consent section
   assert.ok(supportTopics.length >= 3);
   assert.ok(parentalConsentChecklist.length >= 3);
   assert.ok(privacyPolicySections.every((section) => section.title && section.paragraphs.length > 0));
+  assert.equal(isCurrentParentConsent(PARENT_CONSENT_VERSION), true);
+  assert.equal(isCurrentParentConsent('older-version'), false);
 });

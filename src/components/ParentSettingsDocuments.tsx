@@ -10,6 +10,7 @@ interface ParentSettingsDocumentsProps {
   onClose: () => void;
   onConsent: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
+  required?: boolean;
 }
 
 const documentMeta: Record<ParentSettingsDocument, { title: string; eyebrow: string }> = {
@@ -19,7 +20,7 @@ const documentMeta: Record<ParentSettingsDocument, { title: string; eyebrow: str
   'delete-account': { title: '刪除帳號與資料', eyebrow: 'HabitHero · Data deletion' },
 };
 
-export function ParentSettingsDocuments({ document, consentRecorded, onClose, onConsent, onDeleteAccount }: ParentSettingsDocumentsProps) {
+export function ParentSettingsDocuments({ document, consentRecorded, onClose, onConsent, onDeleteAccount, required = false }: ParentSettingsDocumentsProps) {
   const [isSavingConsent, setIsSavingConsent] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
@@ -27,7 +28,7 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isDeleting) onClose();
+      if (event.key === 'Escape' && !required && !isDeleting) onClose();
     };
     const previousOverflow = window.document.body.style.overflow;
     window.document.body.style.overflow = 'hidden';
@@ -64,12 +65,12 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
   };
 
   return (
-    <div className="hh-document-shell" role="dialog" aria-modal="true" aria-labelledby="parent-document-title">
+    <div className={`hh-document-shell${required ? ' is-required' : ''}`} role="dialog" aria-modal="true" aria-labelledby="parent-document-title">
       <header className="hh-document-header">
-        <button type="button" onClick={onClose} className="hh-document-back" aria-label="返回設定" disabled={isDeleting}>
+        {required ? <span className="hh-document-required-label">開始前確認</span> : <button type="button" onClick={onClose} className="hh-document-back" aria-label="返回設定" disabled={isDeleting}>
           <ArrowLeft size={22} aria-hidden="true" />
           <span>設定</span>
-        </button>
+        </button>}
         <span className="hh-document-eyebrow">{meta.eyebrow}</span>
         <div className="hh-document-header-spacer" aria-hidden="true" />
       </header>
@@ -97,7 +98,7 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
                 {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
               </section>
             ))}
-            <a className="hh-document-link" href="mailto:support@habithero.app">
+            <a className="hh-document-link" href="mailto:vvstudiocode@gmail.com">
               聯絡支援 Email <ExternalLink size={16} aria-hidden="true" />
             </a>
           </article>
@@ -114,15 +115,15 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
             ))}
             <section>
               <h2>聯絡支援</h2>
-              <p>請寄信至 support@habithero.app，並附上家長帳號 Email、發生時間與不含敏感資料的錯誤描述。請不要寄送密碼或孩子的完整個人資料。</p>
-              <a className="hh-document-link" href="mailto:support@habithero.app?subject=HabitHero%20支援請求">寄送支援請求 <ExternalLink size={16} aria-hidden="true" /></a>
+              <p>請寄信至 vvstudiocode@gmail.com，並附上家長帳號 Email、發生時間與不含敏感資料的錯誤描述。請不要寄送密碼或孩子的完整個人資料。</p>
+              <a className="hh-document-link" href="mailto:vvstudiocode@gmail.com?subject=HabitHero%20支援請求">寄送支援請求 <ExternalLink size={16} aria-hidden="true" /></a>
             </section>
           </article>
         )}
 
         {document === 'consent' && (
           <article className="hh-document-article">
-            <p className="hh-document-lead">HabitHero 由家長建立家庭與孩子帳號。家長必須先了解資料用途，再讓孩子使用任務、心得與獎勵功能。</p>
+            <p className="hh-document-lead">{required ? '建立或管理孩子資料前，請先由家長完成以下確認。完成後才能使用家庭任務、心得與獎勵功能。' : 'HabitHero 由家長建立家庭與孩子帳號。家長必須先了解資料用途，再讓孩子使用任務、心得與獎勵功能。'}</p>
             <section>
               <h2>家長確認事項</h2>
               <ul className="hh-document-checklist">

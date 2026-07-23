@@ -8,8 +8,10 @@ import { CategoryBadge } from '../features/growth/components/CategoryBadge';
 import { GoalReviewPanel } from '../features/growth/components/GoalReviewPanel';
 import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryPanel';
 import { ParentSettingsDocuments, type ParentSettingsDocument } from './ParentSettingsDocuments';
+import { ParentConsentModal } from './ParentConsentModal';
+import { ParentPrivacyPolicyPage } from './ParentPrivacyPolicyPage';
 import { deleteCurrentAccount } from '../auth';
-import { PARENT_CONSENT_VERSION } from '../lib/legal-content';
+import { isCurrentParentConsent, PARENT_CONSENT_VERSION } from '../lib/legal-content';
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
 import { buildGrowthStats } from '../features/growth/growth-stats';
 import { validateRewardPoints } from '../lib/reward-validation';
@@ -18,6 +20,7 @@ import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemp
 interface ParentDashboardProps {
   onSwitchToChild: () => void;
   onLogout: () => void;
+  signupConsentAccepted?: boolean;
 }
 
 type GroupedTask = {
@@ -37,7 +40,7 @@ type GroupedReward = {
   children: { childId: string; childName: string; rewardId: string }[];
 };
 
-export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardProps) {
+export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccepted = false }: ParentDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & {
     confirmGoal?: (childId: string, taskId: string, input: GoalConfirmationInput) => Promise<void>;
     confirmChildGoal?: (taskId: string, input: GoalConfirmationInput) => Promise<void>;
@@ -56,6 +59,19 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
   const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist'>('review');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
   const observedLoading = useRef(false);
+  const consentAutoRecordAttempted = useRef(false);
+  const allowPendingChildAction = useRef(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [pendingChildAction, setPendingChildAction] = useState<'new' | 'existing' | null>(null);
+
+  useEffect(() => {
+    if (!signupConsentAccepted || isCurrentParentConsent(state.parentConsentVersion) || consentAutoRecordAttempted.current) return;
+    consentAutoRecordAttempted.current = true;
+    void recordParentConsent(PARENT_CONSENT_VERSION).catch(() => {
+      // The required consent document remains visible so the parent can retry.
+    });
+  }, [recordParentConsent, signupConsentAccepted, state.parentConsentVersion]);
 
   const allTasks = state.children.flatMap(c => (c.tasks as GrowthTask[]).map(t => ({ ...t, childId: c.id, childName: c.name }))) as GrowthTaskWithChild[];
   const proposedTasks = allTasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested' || (t.origin === 'child_proposed' && t.status === 'todo' && !t.confirmedAt));
@@ -415,6 +431,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       setNewChildError(confirmationValidation.message);
       return;
     }
+    if (!isCurrentParentConsent(state.parentConsentVersion) && !allowPendingChildAction.current) {
+      setPendingChildAction('new');
+      setShowConsentModal(true);
+      return;
+    }
+    allowPendingChildAction.current = false;
     try {
       await addChild(newChildName.trim(), newChildUsername.trim().toLowerCase(), newChildPassword);
       setNewChildName('');
@@ -437,6 +459,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
     if ('message' in passwordValidation) { setAccountSetupError(passwordValidation.message); return; }
     const confirmationValidation = validatePasswordConfirmation(accountSetupPassword, accountSetupConfirmation);
     if ('message' in confirmationValidation) { setAccountSetupError(confirmationValidation.message); return; }
+    if (!isCurrentParentConsent(state.parentConsentVersion) && !allowPendingChildAction.current) {
+      setPendingChildAction('existing');
+      setShowConsentModal(true);
+      return;
+    }
+    allowPendingChildAction.current = false;
     try {
       await addChild(child.name, accountSetupUsername, accountSetupPassword, child.id);
       setAccountSetupChildId(null);
@@ -801,7 +829,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/40 flex justify-end z-50">
-          <div className="bg-white w-full sm:max-w-sm h-full p-6 shadow-xl overflow-y-auto animate-slide-left">
+          <div className="hh-settings-drawer bg-white w-full sm:max-w-sm h-full p-6 shadow-xl overflow-y-auto animate-slide-left">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold flex items-center gap-2"><Settings size={24} className="text-gray-500" /> 設定</h3>
               <button onClick={() => setShowSettings(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X size={24} /></button>
@@ -918,12 +946,30 @@ export function ParentDashboard({ onSwitchToChild, onLogout }: ParentDashboardPr
       {settingsDocument && (
         <ParentSettingsDocuments
           document={settingsDocument}
-          consentRecorded={state.parentConsentVersion !== null}
+          consentRecorded={isCurrentParentConsent(state.parentConsentVersion)}
           onClose={() => setSettingsDocument(null)}
           onConsent={async () => { await recordParentConsent(PARENT_CONSENT_VERSION); }}
           onDeleteAccount={async () => { await deleteCurrentAccount(); setSettingsDocument(null); setShowSettings(false); onLogout(); }}
         />
       )}
+
+      {showConsentModal && (
+        <ParentConsentModal
+          onClose={() => { setShowConsentModal(false); setPendingChildAction(null); }}
+          onOpenPrivacyPolicy={() => setShowPrivacyPolicy(true)}
+          onAgree={async () => {
+            await recordParentConsent(PARENT_CONSENT_VERSION);
+            const action = pendingChildAction;
+            setShowConsentModal(false);
+            setPendingChildAction(null);
+            allowPendingChildAction.current = true;
+            if (action === 'new') void handleAddChild();
+            if (action === 'existing') void handleCreateExistingChildAccount();
+          }}
+        />
+      )}
+
+      {showPrivacyPolicy && <ParentPrivacyPolicyPage onClose={() => setShowPrivacyPolicy(false)} />}
 
       {/* Task Overlays */}
       {showTaskForm && (

@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
 
 const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
-const supabaseUrl = viteEnv?.VITE_SUPABASE_URL;
+const supabaseUrl = resolveSupabaseUrl(viteEnv?.VITE_SUPABASE_URL);
 const supabasePublishableKey = viteEnv?.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabaseConfigError = getConfigError(supabaseUrl, supabasePublishableKey);
@@ -45,4 +46,22 @@ function getConfigError(url: string | undefined, key: string | undefined): strin
   }
 
   return null;
+}
+
+function resolveSupabaseUrl(url: string | undefined): string | undefined {
+  if (!url || Capacitor.getPlatform() !== 'android') return url;
+
+  try {
+    const parsedUrl = new URL(url);
+    // Android's emulator maps 10.0.2.2 to the host machine. Keep browser and
+    // iOS simulator development URLs unchanged, and leave remote URLs alone.
+    if (parsedUrl.hostname === '127.0.0.1' || parsedUrl.hostname === 'localhost') {
+      parsedUrl.hostname = '10.0.2.2';
+      return parsedUrl.toString().replace(/\/$/, '');
+    }
+  } catch {
+    // getConfigError() below provides the user-facing validation message.
+  }
+
+  return url;
 }

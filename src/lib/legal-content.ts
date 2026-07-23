@@ -1,6 +1,10 @@
 export const PRIVACY_POLICY_VERSION = '2026-07-23';
 export const PARENT_CONSENT_VERSION = '2026-07-23';
 
+export function isCurrentParentConsent(version: string | null | undefined): boolean {
+  return version === PARENT_CONSENT_VERSION;
+}
+
 export const privacyPolicySections = [
   {
     title: '我們收集哪些資料',

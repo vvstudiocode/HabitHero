@@ -17,6 +17,7 @@ function MainApp() {
   const [currentView, setCurrentView] = useState<'login' | 'parentSetup' | 'parentDashboard' | 'childDashboard'>('login');
   const [loginMode, setLoginMode] = useState<'parent' | 'child'>('parent');
   const [pendingView, setPendingView] = useState<'parentDashboard' | 'childDashboard' | null>(null);
+  const [signupConsentAccepted, setSignupConsentAccepted] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
@@ -41,6 +42,7 @@ function MainApp() {
     setLoginMode('child');
     setCurrentView('login');
     setPendingView(null);
+    setSignupConsentAccepted(false);
     setSigningOut(true);
     void signOut();
   };
@@ -49,6 +51,7 @@ function MainApp() {
     setLoginMode('parent');
     setCurrentView('login');
     setPendingView(null);
+    setSignupConsentAccepted(false);
     setSigningOut(true);
     clearProtectedState();
     void signOut();
@@ -75,9 +78,9 @@ function MainApp() {
     case 'login':
       return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onComplete={(mode) => { setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
     case 'parentSetup':
-      return <ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={() => { setPendingView('parentDashboard'); setSigningOut(false); }} />;
+      return <ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={(consentAccepted) => { setSignupConsentAccepted(Boolean(consentAccepted)); setPendingView('parentDashboard'); setSigningOut(false); }} />;
     case 'parentDashboard':
-      return <ParentDashboard onSwitchToChild={handleSwitchToChild} onLogout={handleLogout} />;
+      return <ParentDashboard onSwitchToChild={handleSwitchToChild} onLogout={handleLogout} signupConsentAccepted={signupConsentAccepted} />;
     case 'childDashboard':
       return <ChildDashboard onLogout={handleLogout} onSwitchChild={handleSwitchToChild} />;
     default:
