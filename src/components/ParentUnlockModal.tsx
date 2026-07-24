@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LockKeyhole, X } from 'lucide-react';
+import { dismissWithAnimation } from '../lib/utils';
 
 interface ParentUnlockModalProps {
   title?: string;
@@ -36,7 +37,7 @@ export function ParentUnlockModal({
             <h2 id="parent-unlock-title" className="text-xl font-black text-gray-900">{title}</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">{description}</p>
           </div>
-          {onCancel && <button type="button" onClick={onCancel} className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-gray-100 text-gray-500" aria-label="關閉"><X size={20} /></button>}
+          {onCancel && <button type="button" onClick={() => dismissWithAnimation(onCancel, '.hh-switch-modal-panel')} className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-gray-100 text-gray-500" aria-label="關閉"><X size={20} /></button>}
         </div>
         <label className="block">
           <span className="mb-2 block text-sm font-bold text-gray-700">家長密碼</span>

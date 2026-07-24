@@ -40,6 +40,21 @@
   }
 }
 
+@keyframes hh-slide-up-exit {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes hh-slide-left-exit {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes hh-modal-exit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(24px) scale(0.97); }
+}
+
 @keyframes hh-modal-enter {
   from {
     opacity: 0;
@@ -69,6 +84,25 @@
   scroll-padding-bottom: 160px;
 }
 
+.hh-form-modal-panel.hh-modal-exit,
+.hh-consent-modal-panel.hh-modal-exit,
+.hh-parent-confirm-panel.hh-modal-exit,
+.hh-reward-confirm-panel.hh-modal-exit {
+  animation: hh-slide-up-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+.hh-modal-panel.hh-modal-exit {
+  animation: hh-modal-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+.hh-settings-drawer.hh-modal-exit,
+.hh-document-shell.hh-modal-exit {
+  animation: hh-slide-left-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
 /* Keep native controls inside rounded cards on small phone widths with full vertical alignment. */
 .hh-time-input {
   width: 100%;
@@ -78,6 +112,8 @@
   min-height: 48px;
   padding: 0 12px;
   box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
   appearance: auto;
   font-size: 16px;
   font-weight: 700;

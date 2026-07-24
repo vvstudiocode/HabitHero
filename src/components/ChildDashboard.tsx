@@ -3,6 +3,7 @@ import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
 import { CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { dismissWithAnimation } from '../lib/utils';
 import { Reward } from '../types';
 import { GoalCard } from '../features/growth/components/GoalCard';
 import { GoalProposalForm } from '../features/growth/components/GoalProposalForm';
@@ -201,7 +202,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         } as never);
         await updateTaskStatus(activeChild.id, taskId, 'pending');
       }
-      setSubmittingTask(null);
+      dismissWithAnimation(() => setSubmittingTask(null));
       showToast('心得已送出，等待爸媽審核。');
     } finally {
       setActionPending(false);
@@ -213,7 +214,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       setActionPending(true);
       try {
         await addWishlist(activeChild.id, wishName.trim());
-        setShowWishlistForm(false);
+        dismissWithAnimation(() => setShowWishlistForm(false));
         setWishName('');
         showToast('願望已送出。');
       } finally {
@@ -225,7 +226,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const handleRedeem = async (reward: Reward) => {
     if (!activeChild) return;
     if (childPoints >= reward.points) {
-      setRewardToConfirm(null);
+      dismissWithAnimation(() => setRewardToConfirm(null), '.hh-reward-confirm-panel');
       setActionPending(true);
       try {
         await redeemReward(activeChild.id, reward);
@@ -605,7 +606,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             <GoalSubmissionForm
               task={submittingTask}
               loading={actionPending}
-              onCancel={() => setSubmittingTask(null)}
+              onCancel={() => dismissWithAnimation(() => setSubmittingTask(null))}
               onSubmit={(input) => handleSubmitReflection(submittingTask.id, input)}
             />
           </div>
@@ -617,7 +618,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           <div className="hh-form-modal-panel bg-white w-full max-w-sm animate-slide-up rounded-3xl p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">我要許願</h3>
-              <button onClick={() => setShowWishlistForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => dismissWithAnimation(() => setShowWishlistForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
             <input
               type="text"
@@ -633,18 +634,18 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
       {rewardToConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
+          <div className="hh-reward-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xl font-black text-gray-900">確認兌換獎勵</h3>
                 <p className="mt-2 text-sm leading-6 text-gray-500">確定要用 {rewardToConfirm.points} pt 兌換「{rewardToConfirm.name}」嗎？</p>
               </div>
-              <button type="button" onClick={() => setRewardToConfirm(null)} aria-label="關閉" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+              <button type="button" onClick={() => dismissWithAnimation(() => setRewardToConfirm(null), '.hh-reward-confirm-panel')} aria-label="關閉" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
                 <X size={18} />
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setRewardToConfirm(null)} className="min-h-12 rounded-2xl bg-gray-100 px-4 font-black text-gray-600">先不要</button>
+              <button type="button" onClick={() => dismissWithAnimation(() => setRewardToConfirm(null), '.hh-reward-confirm-panel')} className="min-h-12 rounded-2xl bg-gray-100 px-4 font-black text-gray-600">先不要</button>
               <button type="button" onClick={() => void handleRedeem(rewardToConfirm)} disabled={actionPending} className="min-h-12 rounded-2xl bg-yellow-400 px-4 font-black text-yellow-950 disabled:cursor-wait disabled:opacity-60">確認兌換</button>
             </div>
           </div>

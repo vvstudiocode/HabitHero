@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle2, ExternalLink, HelpCircle, ShieldCheck, Trash2 } from 'lucide-react';
 import { PARENT_CONSENT_VERSION, PRIVACY_POLICY_VERSION, parentalConsentChecklist, privacyPolicySections, supportTopics } from '../lib/legal-content';
+import { dismissWithAnimation } from '../lib/utils';
 
 export type ParentSettingsDocument = 'privacy' | 'support' | 'consent' | 'delete-account';
 
@@ -67,7 +68,7 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
   return (
     <div className={`hh-document-shell${required ? ' is-required' : ''}`} role="dialog" aria-modal="true" aria-labelledby="parent-document-title">
       <header className="hh-document-header">
-        {required ? <span className="hh-document-required-label">開始前確認</span> : <button type="button" onClick={onClose} className="hh-document-back" aria-label="返回設定" disabled={isDeleting}>
+        {required ? <span className="hh-document-required-label">開始前確認</span> : <button type="button" onClick={() => dismissWithAnimation(onClose, '.hh-document-shell')} className="hh-document-back" aria-label="返回設定" disabled={isDeleting}>
           <ArrowLeft size={22} aria-hidden="true" />
           <span>設定</span>
         </button>}

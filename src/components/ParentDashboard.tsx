@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
+import { dismissWithAnimation } from '../lib/utils';
 import { Circle, Clock, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
@@ -175,9 +176,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       return;
     }
     if (!observedLoading.current) return;
-    if (mutationKind === 'task') setShowTaskForm(false);
-    if (mutationKind === 'template') setShowTemplateForm(false);
-    if (mutationKind === 'reward') setShowRewardForm(false);
+    if (mutationKind === 'task') dismissWithAnimation(() => setShowTaskForm(false));
+    if (mutationKind === 'template') dismissWithAnimation(() => setShowTemplateForm(false));
+    if (mutationKind === 'reward') dismissWithAnimation(() => setShowRewardForm(false));
     observedLoading.current = false;
     setMutationKind(null);
   }, [error, loading, mutationKind]);
@@ -237,8 +238,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     } else {
       for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
     }
-    setShowTaskForm(false);
-    setAssigningTemplate(null);
+    dismissWithAnimation(() => setShowTaskForm(false));
+    dismissWithAnimation(() => setAssigningTemplate(null));
     setMutationKind(null);
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
@@ -248,7 +249,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     try {
       const dueTime = newTaskDueTime || null;
       for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, dueTime, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template' } as never);
-      setAssigningTemplate(null);
+      dismissWithAnimation(() => setAssigningTemplate(null));
     } catch { /* provider error is rendered above the tabs; keep assignment open */ }
   };
 
@@ -263,7 +264,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     } else {
       await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, category: newTaskCategory, suggestedEvidence: 'reflection' } as never);
     }
-    setShowTemplateForm(false);
+    dismissWithAnimation(() => setShowTemplateForm(false));
     setMutationKind(null);
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
@@ -388,7 +389,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       } else {
         await Promise.all(newRewardTargetChildIds.map(childId => addReward(childId, { name: newRewardName, points: rewardPoints, icon: 'Gift' })));
       }
-      setShowRewardForm(false);
+      dismissWithAnimation(() => setShowRewardForm(false));
       setMutationKind(null);
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
@@ -834,7 +835,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
           <div className="hh-settings-drawer bg-white w-full sm:max-w-sm h-full p-6 shadow-xl overflow-y-auto animate-slide-left">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold flex items-center gap-2"><Settings size={24} className="text-gray-500" /> 設定</h3>
-              <button onClick={() => setShowSettings(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X size={24} /></button>
+              <button onClick={() => dismissWithAnimation(() => setShowSettings(false), '.hh-settings-drawer')} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X size={24} /></button>
             </div>
             
             <div className="space-y-8">
@@ -940,7 +941,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
               {/* System */}
               <section className="pt-4 pb-8">
-                <button onClick={() => { setShowSettings(false); onLogout(); }} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold transition-colors">
+                <button onClick={() => dismissWithAnimation(() => { setShowSettings(false); onLogout(); }, '.hh-settings-drawer')} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold transition-colors">
                   <LogOut size={20} /> 登出家長端
                 </button>
               </section>
@@ -983,7 +984,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingTask ? '編輯任務' : '新增任務'}</h3>
-              <button onClick={() => setShowTaskForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => dismissWithAnimation(() => setShowTaskForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1059,7 +1060,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingTemplate ? '編輯模板' : '新增模板'}</h3>
-              <button onClick={() => setShowTemplateForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => dismissWithAnimation(() => setShowTemplateForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1099,7 +1100,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">派發任務：{assigningTemplate.name}</h3>
-              <button onClick={() => setAssigningTemplate(null)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => dismissWithAnimation(() => setAssigningTemplate(null))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               {state.children.length > 1 && (
@@ -1149,7 +1150,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingReward ? '編輯獎勵' : '新增獎勵'}</h3>
-              <button onClick={() => setShowRewardForm(false)} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => dismissWithAnimation(() => setShowRewardForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1204,14 +1205,14 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       {/* Delete Confirm Modals */}
       {taskToDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+          <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
             <h3 className="text-xl font-bold mb-2">刪除任務</h3>
             <p className="text-gray-500 mb-6">確定要刪除「{taskToDelete.name}」嗎？這個動作無法復原。</p>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setTaskToDelete(null)} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
+              <button onClick={() => dismissWithAnimation(() => setTaskToDelete(null), '.hh-parent-confirm-panel')} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
               <button onClick={() => {
                 handleDeleteTaskGroup(taskToDelete);
-                setTaskToDelete(null);
+                dismissWithAnimation(() => setTaskToDelete(null), '.hh-parent-confirm-panel');
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確定刪除</button>
             </div>
           </div>
@@ -1220,14 +1221,14 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {rewardToDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+          <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
             <h3 className="text-xl font-bold mb-2">刪除獎勵</h3>
             <p className="text-gray-500 mb-6">確定要刪除「{rewardToDelete.name}」嗎？這個動作無法復原。</p>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setRewardToDelete(null)} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
+              <button onClick={() => dismissWithAnimation(() => setRewardToDelete(null), '.hh-parent-confirm-panel')} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
               <button onClick={() => {
                 handleDeleteRewardGroup(rewardToDelete);
-                setRewardToDelete(null);
+                dismissWithAnimation(() => setRewardToDelete(null), '.hh-parent-confirm-panel');
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確定刪除</button>
             </div>
           </div>
@@ -1236,7 +1237,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {childToDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+          <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
             <h3 className="text-xl font-bold mb-2 text-red-600">刪除小孩帳號</h3>
             <p className="text-gray-500 mb-4">這將會清除該小孩的所有任務與點數紀錄，並且無法復原。請輸入家長密碼以確認。</p>
             <input
@@ -1249,16 +1250,18 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             {deleteChildPinError && <p className="text-red-500 text-sm mb-4">{deleteChildPinError}</p>}
             <div className="flex gap-3 mt-6">
               <button onClick={() => {
-                setChildToDelete(null);
-                setDeleteChildPin('');
-                setDeleteChildPinError('');
+                dismissWithAnimation(() => {
+                  setChildToDelete(null);
+                  setDeleteChildPin('');
+                  setDeleteChildPinError('');
+                }, '.hh-parent-confirm-panel');
               }} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
               <button onClick={() => {
                 void (async () => {
                   try {
                     await verifyCurrentParentPassword(deleteChildPin);
                     await deleteChild(childToDelete);
-                    setChildToDelete(null);
+                    dismissWithAnimation(() => setChildToDelete(null), '.hh-parent-confirm-panel');
                     setDeleteChildPin('');
                     setDeleteChildPinError('');
                   } catch { setDeleteChildPinError('密碼錯誤'); }
@@ -1271,7 +1274,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {resetChildId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
+          <div className="hh-parent-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-xl font-bold text-blue-900">重設小孩密碼</h3>
             <p className="mb-4 text-sm text-gray-500">重設後請把新密碼告訴小孩；舊密碼會立即失效。</p>
             <div className="space-y-3">
@@ -1279,7 +1282,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               <input type="password" autoComplete="new-password" value={resetChildPasswordConfirmation} onChange={e => { setResetChildPasswordConfirmation(e.target.value); setResetChildError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
               {resetChildError && <p role="alert" className="text-sm text-red-500">{resetChildError}</p>}
               <div className="flex gap-3 pt-2">
-                <button onClick={() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); setResetChildError(''); }} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
+                <button onClick={() => dismissWithAnimation(() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); setResetChildError(''); }, '.hh-parent-confirm-panel')} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
                 <button onClick={() => void (async () => {
                   const valid = validateChildPassword(resetChildPassword);
                   if ('message' in valid) { setResetChildError(valid.message); return; }
@@ -1287,7 +1290,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   if ('message' in confirmed) { setResetChildError(confirmed.message); return; }
                   try {
                     await updateChildPassword(resetChildId, resetChildPassword);
-                    setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation('');
+                    dismissWithAnimation(() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); }, '.hh-parent-confirm-panel');
                   } catch { /* provider error is shown above the tabs */ }
                 })()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">儲存</button>
               </div>
@@ -1298,7 +1301,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {accountSetupChildId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
+          <div className="hh-parent-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-xl font-bold text-blue-900">建立小孩登入帳號</h3>
             <p className="mb-4 text-sm text-gray-500">建立後小孩可在任何裝置使用帳號登入。</p>
             <div className="space-y-3">
@@ -1307,7 +1310,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               <input type="password" autoComplete="new-password" value={accountSetupConfirmation} onChange={e => { setAccountSetupConfirmation(e.target.value); setAccountSetupError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
               {accountSetupError && <p role="alert" className="text-sm text-red-500">{accountSetupError}</p>}
               <div className="flex gap-3 pt-2">
-                <button onClick={() => { setAccountSetupChildId(null); setAccountSetupError(''); }} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
+                <button onClick={() => dismissWithAnimation(() => { setAccountSetupChildId(null); setAccountSetupError(''); }, '.hh-parent-confirm-panel')} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
                 <button onClick={() => void handleCreateExistingChildAccount()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">建立</button>
               </div>
             </div>

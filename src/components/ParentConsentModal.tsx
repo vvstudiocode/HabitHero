@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, ShieldCheck, X } from 'lucide-react';
 import { PARENT_CONSENT_VERSION, parentalConsentChecklist, privacyPolicySections } from '../lib/legal-content';
+import { dismissWithAnimation } from '../lib/utils';
 
 interface ParentConsentModalProps {
   onClose: () => void;
@@ -48,7 +49,7 @@ export function ParentConsentModal({ onClose, onAgree, onOpenPrivacyPolicy, canC
               <h2 id="parent-consent-modal-title">兒童與家長同意</h2>
             </div>
           </div>
-          {canClose && <button type="button" onClick={onClose} className="hh-consent-modal-close" aria-label="關閉同意說明"><X size={22} /></button>}
+          {canClose && <button type="button" onClick={() => dismissWithAnimation(onClose, '.hh-consent-modal-panel')} className="hh-consent-modal-close" aria-label="關閉同意說明"><X size={22} /></button>}
         </header>
 
         <div className="hh-consent-modal-content">

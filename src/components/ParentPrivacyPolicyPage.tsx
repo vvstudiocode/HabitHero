@@ -1,5 +1,6 @@
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { PRIVACY_POLICY_VERSION, privacyPolicySections } from '../lib/legal-content';
+import { dismissWithAnimation } from '../lib/utils';
 
 interface ParentPrivacyPolicyPageProps {
   onClose: () => void;
@@ -9,7 +10,7 @@ export function ParentPrivacyPolicyPage({ onClose }: ParentPrivacyPolicyPageProp
   return (
     <div className="hh-document-shell is-consent-policy" role="dialog" aria-modal="true" aria-labelledby="parent-privacy-policy-title">
       <header className="hh-document-header">
-        <button type="button" onClick={onClose} className="hh-document-back" aria-label="返回同意視窗">
+        <button type="button" onClick={() => dismissWithAnimation(onClose, '.hh-document-shell')} className="hh-document-back" aria-label="返回同意視窗">
           <ArrowLeft size={22} aria-hidden="true" />
           <span>返回同意視窗</span>
         </button>
