@@ -105,16 +105,19 @@
 
 /* Keep native controls inside rounded cards on small phone widths with full vertical alignment. */
 .hh-time-input {
+  display: block;
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  overflow: hidden;
   height: 48px;
   min-height: 48px;
   padding: 0 12px;
   box-sizing: border-box;
   inline-size: 100%;
   min-inline-size: 0;
-  appearance: auto;
+  appearance: none;
+  -webkit-appearance: none;
   font-size: 16px;
   font-weight: 700;
   color: #12393b;
@@ -122,6 +125,9 @@
 }
 
 .hh-time-input::-webkit-date-and-time-value {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   min-height: 48px;
   display: flex;
   align-items: center;
@@ -138,7 +144,10 @@
   align-items: center;
   height: 100%;
   padding: 0;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .hh-time-input::-webkit-datetime-edit-fields-wrapper {
@@ -146,6 +155,9 @@
   align-items: center;
   height: 100%;
   padding: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .hh-time-input::-webkit-calendar-picker-indicator {
