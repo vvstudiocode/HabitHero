@@ -15,6 +15,27 @@ test('family switching dialogs use an enter animation and remain keyboard-safe',
   assert.match(styles, /max-height: calc\(100dvh - 32px\)/);
 });
 
+test('dashboard tab changes reset the page scroll position', () => {
+  const parentDashboard = read('../src/components/ParentDashboard.tsx');
+  const childDashboard = read('../src/components/ChildDashboard.tsx');
+
+  assert.match(parentDashboard, /useEffect\(\(\) => \{[\s\S]*window\.scrollTo\(0, 0\)[\s\S]*\}, \[activeTab\]\)/);
+  assert.match(childDashboard, /useEffect\(\(\) => \{[\s\S]*window\.scrollTo\(0, 0\)[\s\S]*\}, \[activeTab\]\)/);
+});
+
+test('login and child password fields provide show-password controls', () => {
+  const login = read('../src/components/AccountLogin.tsx');
+  const dashboard = read('../src/components/ParentDashboard.tsx');
+
+  assert.match(login, /Eye|EyeOff/);
+  assert.match(login, /type=\{showPassword \? 'text' : 'password'\}/);
+  assert.match(login, /aria-label=\{showPassword \? '隱藏密碼' : '顯示密碼'\}/);
+  assert.match(dashboard, /Eye|EyeOff/);
+  assert.match(dashboard, /type=\{showNewChildPassword \? 'text' : 'password'\}/);
+  assert.match(dashboard, /type=\{showResetChildPassword \? 'text' : 'password'\}/);
+  assert.match(dashboard, /type=\{showAccountSetupPassword \? 'text' : 'password'\}/);
+});
+
 test('today goal form no longer renders template shortcut buttons', () => {
   const source = read('../src/features/growth/components/GoalProposalForm.tsx');
 
@@ -38,6 +59,16 @@ test('child goals are separated into self-created and parent-given sections', ()
   assert.match(source, /const parentGoalTasks = todoTasks\.filter\(task => task\.origin !== 'child_proposed'\)/);
   assert.match(source, /goalCopy\.child\.parentTitle/);
   assert.match(source, /parentGoalTasks\.map/);
+});
+
+test('all task start-time inputs use Taiwan locale and minute precision', () => {
+  const parentDashboard = read('../src/components/ParentDashboard.tsx');
+  const goalForm = read('../src/features/growth/components/GoalProposalForm.tsx');
+
+  assert.equal((parentDashboard.match(/lang="zh-TW" type="time" step="60"/g) ?? []).length, 2);
+  assert.match(goalForm, /lang="zh-TW"\s+type="time"\s+step="60"/);
+  assert.match(parentDashboard, /台灣時間，24 小時制/);
+  assert.match(goalForm, /台灣時間，24 小時制/);
 });
 
 test('child account creation shows a pending state and prevents duplicate submissions', () => {

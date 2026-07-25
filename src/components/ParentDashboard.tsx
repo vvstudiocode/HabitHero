@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
-import { Circle, Clock, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
+import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -61,6 +61,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
   const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist'>('review');
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeTab]);
+
   const observedLoading = useRef(false);
   const consentAutoRecordAttempted = useRef(false);
   const allowPendingChildAction = useRef(false);
@@ -147,17 +152,23 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [newChildUsername, setNewChildUsername] = useState('');
   const [newChildPassword, setNewChildPassword] = useState('');
   const [newChildPasswordConfirmation, setNewChildPasswordConfirmation] = useState('');
+  const [showNewChildPassword, setShowNewChildPassword] = useState(false);
+  const [showNewChildPasswordConfirmation, setShowNewChildPasswordConfirmation] = useState(false);
   const [newChildError, setNewChildError] = useState('');
   const [accountSetupChildId, setAccountSetupChildId] = useState<string | null>(null);
   const [accountSetupUsername, setAccountSetupUsername] = useState('');
   const [accountSetupPassword, setAccountSetupPassword] = useState('');
   const [accountSetupConfirmation, setAccountSetupConfirmation] = useState('');
+  const [showAccountSetupPassword, setShowAccountSetupPassword] = useState(false);
+  const [showAccountSetupConfirmation, setShowAccountSetupConfirmation] = useState(false);
   const [accountSetupError, setAccountSetupError] = useState('');
   const [childAccountSubmitting, setChildAccountSubmitting] = useState(false);
   const childAccountSubmissionInFlight = useRef(false);
   const [resetChildId, setResetChildId] = useState<string | null>(null);
   const [resetChildPassword, setResetChildPassword] = useState('');
   const [resetChildPasswordConfirmation, setResetChildPasswordConfirmation] = useState('');
+  const [showResetChildPassword, setShowResetChildPassword] = useState(false);
+  const [showResetChildPasswordConfirmation, setShowResetChildPasswordConfirmation] = useState(false);
   const [resetChildError, setResetChildError] = useState('');
   const [newParentPin, setNewParentPin] = useState('');
   const [oldParentPin, setOldParentPin] = useState('');
@@ -965,8 +976,18 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   />
                 </div>
                 <input type="text" autoComplete="username" placeholder="小孩帳號名稱，例如 leo123" value={newChildUsername} onChange={e => { setNewChildUsername(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
-                <input type="password" autoComplete="new-password" placeholder="小孩密碼（至少 6 碼英數）" value={newChildPassword} onChange={e => { setNewChildPassword(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
-                <input type="password" autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => { setNewChildPasswordConfirmation(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
+                <div className="relative mb-2">
+                  <input type={showNewChildPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="小孩密碼（至少 6 碼英數）" value={newChildPassword} onChange={e => { setNewChildPassword(e.target.value); setNewChildError(''); }} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
+                  <button type="button" onClick={() => setShowNewChildPassword((visible) => !visible)} aria-label={showNewChildPassword ? '隱藏小孩密碼' : '顯示小孩密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">
+                    {showNewChildPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <div className="relative mb-2">
+                  <input type={showNewChildPasswordConfirmation ? 'text' : 'password'} autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => { setNewChildPasswordConfirmation(e.target.value); setNewChildError(''); }} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
+                  <button type="button" onClick={() => setShowNewChildPasswordConfirmation((visible) => !visible)} aria-label={showNewChildPasswordConfirmation ? '隱藏確認密碼' : '顯示確認密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">
+                    {showNewChildPasswordConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 {newChildError && <p role="alert" className="mb-3 text-xs leading-5 text-red-600">{newChildError}</p>}
                 <p className="mb-3 text-xs leading-5 text-blue-800">帳號名稱需 3–32 碼英數或底線；小孩可在任何裝置用帳號與密碼登入。</p>
                 <button data-tour="create-child" onClick={() => void handleAddChild()} disabled={!newChildName.trim() || !newChildUsername || !newChildPassword || !newChildPasswordConfirmation || loading || childAccountSubmitting} aria-busy={childAccountSubmitting} className="w-full rounded-xl bg-blue-500 py-2 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50">
@@ -1125,8 +1146,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </div>
               </div>
               <div className="min-w-0 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
-                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？（台灣時間，24 小時制）</label>
+                <input lang="zh-TW" type="time" step="60" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
@@ -1215,8 +1236,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </div>
               )}
               <div className="min-w-0 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
-                <input type="time" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？（台灣時間，24 小時制）</label>
+                <input lang="zh-TW" type="time" step="60" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
@@ -1358,8 +1379,18 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             <h3 className="mb-2 text-xl font-bold text-blue-900">重設小孩密碼</h3>
             <p className="mb-4 text-sm text-gray-500">重設後請把新密碼告訴小孩；舊密碼會立即失效。</p>
             <div className="space-y-3">
-              <input type="password" autoComplete="new-password" value={resetChildPassword} onChange={e => { setResetChildPassword(e.target.value); setResetChildError(''); }} placeholder="新密碼（至少 6 碼英數）" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
-              <input type="password" autoComplete="new-password" value={resetChildPasswordConfirmation} onChange={e => { setResetChildPasswordConfirmation(e.target.value); setResetChildError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
+              <div className="relative">
+                <input type={showResetChildPassword ? 'text' : 'password'} autoComplete="new-password" value={resetChildPassword} onChange={e => { setResetChildPassword(e.target.value); setResetChildError(''); }} placeholder="新密碼（至少 6 碼英數）" className="w-full rounded-xl border border-gray-200 p-4 pr-12 outline-none focus:ring-2 focus:ring-blue-400" />
+                <button type="button" onClick={() => setShowResetChildPassword((visible) => !visible)} aria-label={showResetChildPassword ? '隱藏小孩密碼' : '顯示小孩密碼'} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-gray-700">
+                  {showResetChildPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              <div className="relative">
+                <input type={showResetChildPasswordConfirmation ? 'text' : 'password'} autoComplete="new-password" value={resetChildPasswordConfirmation} onChange={e => { setResetChildPasswordConfirmation(e.target.value); setResetChildError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 pr-12 outline-none focus:ring-2 focus:ring-blue-400" />
+                <button type="button" onClick={() => setShowResetChildPasswordConfirmation((visible) => !visible)} aria-label={showResetChildPasswordConfirmation ? '隱藏確認密碼' : '顯示確認密碼'} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-gray-700">
+                  {showResetChildPasswordConfirmation ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               {resetChildError && <p role="alert" className="text-sm text-red-500">{resetChildError}</p>}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => dismissWithAnimation(() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); setResetChildError(''); }, '.hh-parent-confirm-panel')} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
@@ -1386,8 +1417,18 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             <p className="mb-4 text-sm text-gray-500">建立後小孩可在任何裝置使用帳號登入。</p>
             <div className="space-y-3">
               <input type="text" autoComplete="username" value={accountSetupUsername} onChange={e => { setAccountSetupUsername(e.target.value); setAccountSetupError(''); }} placeholder="帳號名稱，例如 leo123" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
-              <input type="password" autoComplete="new-password" value={accountSetupPassword} onChange={e => { setAccountSetupPassword(e.target.value); setAccountSetupError(''); }} placeholder="新密碼（至少 6 碼英數）" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
-              <input type="password" autoComplete="new-password" value={accountSetupConfirmation} onChange={e => { setAccountSetupConfirmation(e.target.value); setAccountSetupError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 outline-none focus:ring-2 focus:ring-blue-400" />
+              <div className="relative">
+                <input type={showAccountSetupPassword ? 'text' : 'password'} autoComplete="new-password" value={accountSetupPassword} onChange={e => { setAccountSetupPassword(e.target.value); setAccountSetupError(''); }} placeholder="新密碼（至少 6 碼英數）" className="w-full rounded-xl border border-gray-200 p-4 pr-12 outline-none focus:ring-2 focus:ring-blue-400" />
+                <button type="button" onClick={() => setShowAccountSetupPassword((visible) => !visible)} aria-label={showAccountSetupPassword ? '隱藏小孩密碼' : '顯示小孩密碼'} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-gray-700">
+                  {showAccountSetupPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              <div className="relative">
+                <input type={showAccountSetupConfirmation ? 'text' : 'password'} autoComplete="new-password" value={accountSetupConfirmation} onChange={e => { setAccountSetupConfirmation(e.target.value); setAccountSetupError(''); }} placeholder="再次輸入新密碼" className="w-full rounded-xl border border-gray-200 p-4 pr-12 outline-none focus:ring-2 focus:ring-blue-400" />
+                <button type="button" onClick={() => setShowAccountSetupConfirmation((visible) => !visible)} aria-label={showAccountSetupConfirmation ? '隱藏確認密碼' : '顯示確認密碼'} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-gray-700">
+                  {showAccountSetupConfirmation ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               {accountSetupError && <p role="alert" className="text-sm text-red-500">{accountSetupError}</p>}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => dismissWithAnimation(() => { setAccountSetupChildId(null); setAccountSetupError(''); }, '.hh-parent-confirm-panel')} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>

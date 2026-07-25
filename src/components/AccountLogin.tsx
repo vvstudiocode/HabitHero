@@ -1,5 +1,5 @@
 import React, { FormEvent, useState } from 'react';
-import { Baby, User } from 'lucide-react';
+import { Baby, Eye, EyeOff, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { signIn, signInChild, toAuthErrorMessage } from '../auth';
 import { useAppStore } from '../store';
@@ -18,6 +18,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
   const [revealed, setRevealed] = useState(false);
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,6 +27,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
     setRevealed(true);
     setAccount('');
     setPassword('');
+    setShowPassword(false);
     setError('');
   };
 
@@ -97,7 +99,17 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
               <input id="login-account" type={mode === 'parent' ? 'email' : 'text'} required autoComplete="username" placeholder={mode === 'parent' ? 'parent@example.com' : '例如 leo123'} value={account} onChange={(event) => { setAccount(event.target.value); setError(''); }} />
 
               <label htmlFor="login-password">通關密語</label>
-              <input id="login-password" type="password" required minLength={6} autoComplete="current-password" placeholder="至少 6 碼" value={password} onChange={(event) => { setPassword(event.target.value); setError(''); }} />
+              <div className="relative">
+                <input id="login-password" type={showPassword ? 'text' : 'password'} required minLength={6} autoComplete="current-password" placeholder="至少 6 碼" value={password} onChange={(event) => { setPassword(event.target.value); setError(''); }} className="pr-12" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}
+                  className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
 
               {(error || sessionError) && <p role="alert" className="hh-login-error">{error || sessionError}</p>}
 

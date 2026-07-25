@@ -69,9 +69,11 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             />
           </label>
           <label className="block min-w-0 w-full">
-            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">什麼時候開始？</span>
+            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">什麼時候開始？（台灣時間，24 小時制）</span>
             <input
+              lang="zh-TW"
               type="time"
+              step="60"
               value={dueTime}
               onChange={(event) => setDueTime(event.target.value)}
               className="hh-time-input min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"

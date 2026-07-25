@@ -12,6 +12,7 @@ import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryP
 import { goalCopy } from '../features/growth/goal-copy';
 import { getChildGrowthSummary } from '../features/growth/growth-stats';
 import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
+import { isTaskExecutableAt } from '../lib/task-time';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -28,18 +29,15 @@ function formatTaskTime(dueTime?: string | null) {
   return dueTime ? dueTime.slice(0, 5) : '全天';
 }
 
-function isTaskExecutableNow(task: Pick<GrowthTask, 'dueTime'>) {
-  if (!task.dueTime) return true;
-  const now = new Date();
-  const current = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  return current >= task.dueTime.slice(0, 5);
-}
-
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
   const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<'goals' | 'growth' | 'wishlist' | 'history'>('goals');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeTab]);
   
   // A direct child session uses its own child id. In parent child-mode, the
   // parent session operates on the explicitly selected family child.
@@ -143,7 +141,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     if (task.timerIsRunning) {
       pauseTaskTimer(activeChild.id, task.id);
     } else {
-      if (!isTaskExecutableNow(task)) {
+      if (!isTaskExecutableAt(task.dueTime)) {
         showToast(`還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
         return;
       }
@@ -160,7 +158,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const handleFinishTask = async (taskId: string) => {
     if (!activeChild) return;
     const task = tasks.find((item) => item.id === taskId);
-    if (task && !isTaskExecutableNow(task)) {
+    if (task && !isTaskExecutableAt(task.dueTime)) {
       showToast(`還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
       return;
     }
@@ -399,7 +397,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             {childGoalTasks.map(task => {
               const hasTimer = typeof task.duration === 'number';
               const isRunning = task.timerIsRunning;
-              const isExecutable = isTaskExecutableNow(task);
+              const isExecutable = isTaskExecutableAt(task.dueTime);
               
               let timeLeft = hasTimer ? task.duration! * 60 : 0;
               
@@ -463,7 +461,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               {parentGoalTasks.map(task => {
                 const hasTimer = typeof task.duration === 'number';
                 const isRunning = task.timerIsRunning;
-                const isExecutable = isTaskExecutableNow(task);
+                const isExecutable = isTaskExecutableAt(task.dueTime);
 
                 let timeLeft = hasTimer ? task.duration! * 60 : 0;
                 if (isRunning && task.timerEndTime) {
