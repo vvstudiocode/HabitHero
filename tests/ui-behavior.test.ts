@@ -82,7 +82,9 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(guide, /hh-first-use-guide-fade-in/);
   assert.match(guide, /guide-backdrop-\$\{stepIndex\}-\$\{positionReady/);
   assert.match(guide, /guide-copy-\$\{stepIndex\}-\$\{positionReady/);
+  assert.doesNotMatch(guide, /<svg[^>]*hh-first-use-guide-fade-in/);
   assert.match(read('../src/index.css'), /hh-first-use-guide-fade-in/);
+  assert.match(read('../src/index.css'), /animation: hh-first-use-guide-fade-in 240ms/);
   assert.match(read('../src/index.css'), /prefers-reduced-motion/);
   assert.doesNotMatch(guide, /transition-\[top,left\]/);
   assert.doesNotMatch(guide, /transition-all duration-200/);
@@ -92,7 +94,9 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(dashboard, /data-tour="rewards-tab"\s*type="button"\s*onClick=\{\(\) => setActiveTab\('rewards'\)\}/);
   assert.match(dashboard, /openTaskForm\(undefined, true\)/);
   assert.match(guide, /step\.target === 'task-name'/);
-  assert.match(guide, /settleDelay = step\.target === 'task-name' \|\| step\.target === 'add-child' \? 360/);
+  assert.match(guide, /settleDelay = step\.target === 'task-name' \|\| step\.target === 'new-child-name' \? 240/);
+  assert.match(guide, /target: 'new-child-name'/);
+  assert.match(guide, /step\.target === 'new-child-name'/);
   assert.match(dashboard, /FirstUseGuide/);
   assert.match(dashboard, /重新觀看新手指引/);
   assert.doesNotMatch(dashboard, /Sparkles size=\{18\}[^\n]*重新觀看新手指引/);

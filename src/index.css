@@ -41,12 +41,17 @@
 }
 
 @keyframes hh-first-use-guide-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .hh-first-use-guide-fade-in {
-  animation: hh-first-use-guide-fade-in 220ms ease-out both;
+  animation: hh-first-use-guide-fade-in 240ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -56,18 +61,39 @@
 }
 
 @keyframes hh-slide-up-exit {
-  from { transform: translateY(0); opacity: 1; }
-  to { transform: translateY(100%); opacity: 0; }
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
 }
 
 @keyframes hh-slide-left-exit {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 @keyframes hh-modal-exit {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(24px) scale(0.97); }
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
 }
 
 @keyframes hh-modal-enter {

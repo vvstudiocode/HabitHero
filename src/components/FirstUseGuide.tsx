@@ -20,7 +20,7 @@ const guideSteps: GuideStep[] = [
     icon: Settings,
   },
   {
-    target: 'add-child',
+    target: 'new-child-name',
     eyebrow: '第 2 步／建立家庭成員',
     title: '新增小孩',
     description: '在這個區塊輸入孩子名字、登入帳號與密碼。任務一定要指定給小孩，所以這是開始使用前最重要的一步。',
@@ -130,7 +130,7 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
   useLayoutEffect(() => {
     setPositionReady(false);
     setActiveTarget(step.target);
-    const shouldCenterTarget = step.target === 'add-child' && window.innerWidth <= 640;
+    const shouldCenterTarget = step.target === 'new-child-name' && window.innerWidth <= 640;
     const shouldCenterTaskField = step.target === 'task-name';
     const positionTarget = (behavior: ScrollBehavior) => {
       const target = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`)
@@ -141,7 +141,7 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
     positionTarget('auto');
     // Bottom-sheet forms and the mobile settings drawer animate/scroll into
     // place. Reveal the guide only after their final position is measurable.
-    const settleDelay = step.target === 'task-name' || step.target === 'add-child' ? 360 : 0;
+    const settleDelay = step.target === 'task-name' || step.target === 'new-child-name' ? 240 : 0;
     const settleTimer = settleDelay > 0
       ? window.setTimeout(() => {
         positionTarget('auto');
@@ -208,7 +208,7 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
 
   return (
     <div className="fixed inset-0 z-[80]" role="presentation">
-          <svg key={`guide-backdrop-${stepIndex}-${positionReady ? 'ready' : 'waiting'}`} className="hh-first-use-guide-fade-in pointer-events-none fixed inset-0 h-full w-full" aria-hidden="true">
+          <svg key={`guide-backdrop-${stepIndex}-${positionReady ? 'ready' : 'waiting'}`} className="pointer-events-none fixed inset-0 h-full w-full" aria-hidden="true">
         <defs>
           <mask id="first-use-guide-mask">
             <rect width="100%" height="100%" fill="white" />
