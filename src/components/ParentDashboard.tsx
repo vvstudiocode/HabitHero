@@ -3,7 +3,7 @@ import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
-import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
+import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -19,6 +19,7 @@ import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/const
 import { buildGrowthStats } from '../features/growth/growth-stats';
 import { validateRewardPoints } from '../lib/reward-validation';
 import { FirstUseGuide, hasCompletedFirstUseGuide } from './FirstUseGuide';
+import { DashboardCharacterHero } from './DashboardCharacterHero';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
@@ -173,6 +174,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [resetChildError, setResetChildError] = useState('');
   const [newParentPin, setNewParentPin] = useState('');
   const [oldParentPin, setOldParentPin] = useState('');
+  const [showParentPasswordForm, setShowParentPasswordForm] = useState(false);
 
   // Wishlist Pricing
   const [wishlistPricing, setWishlistPricing] = useState<Record<string, number>>({});
@@ -559,40 +561,27 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
   return (
     <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-gray-50 pb-20">
-      {/* Header */}
-      <header className="bg-blue-600 text-white p-6 rounded-b-[2rem] shadow-md">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-full">
-              <User size={28} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">家長管理端</h1>
-              <p className="text-blue-200 text-sm mt-1">{state.children.length} 位小孩</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button data-tour="child-view" onClick={() => state.children.length > 1 ? setShowChildPicker(true) : onSwitchToChild()} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
+      <DashboardCharacterHero
+        eyebrow={`家庭冒險 · ${state.children.length} 位小孩`}
+        title="家長"
+        subtitle=""
+        firstStatLabel="家庭總點數"
+        firstStatValue={totalPoints}
+        firstStatSuffix="pt"
+        secondStatLabel="待審核項目"
+        secondStatValue={proposedTasks.length + pendingTasks.length + pendingTickets.length}
+        secondStatSuffix="待審核"
+        actions={(
+          <>
+            <button data-tour="settings" onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="hh-character-icon-button">
+              <Settings size={19} />
+            </button>
+            <button data-tour="child-view" onClick={() => state.children.length > 1 ? setShowChildPicker(true) : onSwitchToChild()} aria-label="切換到小孩視角" title="切換到小孩視角" className="hh-character-icon-button">
               <Baby size={18} />
             </button>
-            <button data-tour="settings" onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="flex min-h-11 min-w-11 items-center justify-center bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
-              <Settings size={20} />
-            </button>
-          </div>
-        </div>
-        
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white/10 rounded-2xl p-4">
-            <div className="text-blue-200 text-sm mb-1">家庭總點數</div>
-            <div className="text-3xl font-bold">{totalPoints} <span className="text-sm font-normal">pt</span></div>
-          </div>
-          <div className="bg-white/10 rounded-2xl p-4">
-            <div className="text-blue-200 text-sm mb-1">待審核項目</div>
-            <div className="text-3xl font-bold">{proposedTasks.length + pendingTasks.length + pendingTickets.length}</div>
-          </div>
-        </div>
-      </header>
+          </>
+        )}
+      />
 
       {/* Main Content */}
       <main className="flex-1 p-6 pb-28">
@@ -760,7 +749,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <Plus size={16} /> 新增
                 </button>
               </div>
-              <p className="text-gray-500 text-sm mb-4">常做的任務先存成模板，需要時直接派發。</p>
               <div className="space-y-3">
                 {(state.taskTemplates as GrowthTaskTemplate[]).map(template => (
                   <div key={template.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between gap-3">
@@ -996,32 +984,44 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </button>
               </section>
 
-              <section className="bg-gray-50 p-4 rounded-2xl border border-gray-200 mt-4">
-                 <h4 className="text-md font-bold text-gray-800 mb-3">修改家長密碼</h4>
-                 <div className="flex flex-col gap-2">
-                   <input type="text" value={oldParentPin} onChange={e => setOldParentPin(e.target.value)} placeholder="輸入舊密碼" className="w-full p-2.5 rounded-xl border border-gray-300 outline-none min-w-0"/>
-                   <div className="flex gap-2">
-                     <input type="text" value={newParentPin} onChange={e => setNewParentPin(e.target.value)} placeholder="輸入新密碼" className="w-full p-2.5 rounded-xl border border-gray-300 outline-none min-w-0"/>
-                     <button onClick={() => {
-                       void (async () => {
-                         try {
-                           await verifyCurrentParentPassword(oldParentPin);
-                           if (newParentPin.length < 8) { alert("新密碼至少 8 碼"); return; }
-                           await updateCurrentParentPassword(newParentPin);
-                           alert("密碼更新成功");
-                           setOldParentPin('');
-                           setNewParentPin('');
-                         } catch { alert("舊密碼錯誤或密碼更新失敗"); }
-                       })();
-                     }} className="shrink-0 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl font-bold transition-colors text-gray-700">更新</button>
-                   </div>
-                 </div>
-              </section>
-
               {/* System */}
               <section className="space-y-3 border-t border-gray-100 pt-6">
                 <h4 className="text-md font-bold text-gray-800">帳號與家庭安全</h4>
                 <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setShowParentPasswordForm((expanded) => !expanded)}
+                    aria-expanded={showParentPasswordForm}
+                    className="hh-settings-document-row"
+                  >
+                    <span><strong>修改家長密碼</strong><small>更新管理家庭資料的家長登入密碼。</small></span>
+                    <span aria-hidden="true">{showParentPasswordForm ? '⌃' : '›'}</span>
+                  </button>
+                  {showParentPasswordForm && (
+                    <div className="border-t border-gray-100 bg-gray-50 p-4">
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="old-parent-password" className="sr-only">舊家長密碼</label>
+                        <input id="old-parent-password" type="password" autoComplete="current-password" value={oldParentPin} onChange={e => setOldParentPin(e.target.value)} placeholder="輸入舊密碼" className="w-full rounded-xl border border-gray-300 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
+                        <div className="flex gap-2">
+                          <label htmlFor="new-parent-password" className="sr-only">新家長密碼</label>
+                          <input id="new-parent-password" type="password" autoComplete="new-password" value={newParentPin} onChange={e => setNewParentPin(e.target.value)} placeholder="輸入新密碼" className="w-full rounded-xl border border-gray-300 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
+                          <button type="button" onClick={() => {
+                            void (async () => {
+                              try {
+                                await verifyCurrentParentPassword(oldParentPin);
+                                if (newParentPin.length < 8) { alert("新密碼至少 8 碼"); return; }
+                                await updateCurrentParentPassword(newParentPin);
+                                alert("密碼更新成功");
+                                setOldParentPin('');
+                                setNewParentPin('');
+                                setShowParentPasswordForm(false);
+                              } catch { alert("舊密碼錯誤或密碼更新失敗"); }
+                            })();
+                          }} className="min-h-11 shrink-0 rounded-xl bg-gray-200 px-4 py-2 font-bold text-gray-700 transition-colors hover:bg-gray-300">更新</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {([
                     ['privacy', '隱私政策', '了解 HabitHero 如何處理家庭與兒童資料。'],
                     ['support', '支援中心', '登入、同步、點數與資料刪除的協助。'],

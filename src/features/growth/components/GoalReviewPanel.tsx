@@ -28,7 +28,6 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-black text-gray-900">待確認目標 ({visibleProposedTasks.length})</h2>
-          <p className="mt-1 text-sm text-gray-500">可以校準名稱、分類與點數，也可以退回請孩子寫清楚。</p>
         </div>
         {visibleProposedTasks.map((task) => (
           <Fragment key={task.id}>
@@ -67,7 +66,6 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-black text-gray-900">待審核完成 ({visiblePendingTasks.length})</h2>
-          <p className="mt-1 text-sm text-gray-500">看孩子心得後，留下鼓勵、批改或請他補充。</p>
         </div>
         {visiblePendingTasks.map((task) => (
           <Fragment key={task.id}>

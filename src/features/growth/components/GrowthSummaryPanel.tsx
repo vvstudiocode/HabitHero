@@ -49,7 +49,6 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
     <section className="space-y-4">
       <div>
         <h2 className="text-xl font-black text-gray-900">{title}</h2>
-        <p className="mt-1 text-sm leading-6 text-gray-500">固定分類會保留統計口徑，孩子仍可自由寫自己的目標。</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -97,7 +96,6 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="text-lg font-black text-gray-900">完成任務</h3>
-            <p className="mt-1 text-sm text-gray-500">預設只載入近期紀錄，點卡片查看細節。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {showChildFilter && (

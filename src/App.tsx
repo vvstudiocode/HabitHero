@@ -156,9 +156,6 @@ function MainApp() {
   if (initialLoading) {
     return renderLoginBackgroundScreen(
       <div className="flex flex-col items-center text-center">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/75 text-blue-600 shadow-lg animate-pulse text-3xl">
-          ⭐
-        </div>
         <p className="text-lg font-bold text-white drop-shadow-lg">HabitHero 習慣小英雄</p>
         <p className="mt-2 text-sm font-bold text-white/85 drop-shadow-lg">啟動中…</p>
       </div>

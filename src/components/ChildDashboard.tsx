@@ -13,6 +13,7 @@ import { goalCopy } from '../features/growth/goal-copy';
 import { getChildGrowthSummary } from '../features/growth/growth-stats';
 import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
 import { isTaskExecutableAt } from '../lib/task-time';
+import { DashboardCharacterHero } from './DashboardCharacterHero';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -54,6 +55,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   // Wishlist Form
   const [showWishlistForm, setShowWishlistForm] = useState(false);
+  const [showGoalForm, setShowGoalForm] = useState(false);
   const [wishName, setWishName] = useState('');
   const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
   
@@ -182,6 +184,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }
   };
 
+  const handleSubmitGoalProposal = async (input: GoalProposalInput) => {
+    await handleProposeGoal(input);
+    dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet');
+  };
+
   const handleSubmitReflection = async (taskId: string, input: GoalReflectionInput) => {
     if (!activeChild) return;
     setActionPending(true);
@@ -271,33 +278,27 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   return (
     <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-blue-50 pb-24">
-      {/* Header */}
-      <header className="bg-yellow-400 p-6 rounded-b-[2rem] shadow-sm relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-300 rounded-full opacity-50"></div>
-        <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-yellow-300 rounded-full opacity-50"></div>
-        
-        <div className="relative z-10 flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-yellow-900">{activeChild.name}的任務</h1>
-          <div className="flex gap-2">
-            <button onClick={onSwitchChild} aria-label="切換到家長視角" title="切換到家長視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/50 hover:bg-white/70 text-yellow-950 p-2 rounded-full transition-all shadow-sm active:scale-95">
+      <DashboardCharacterHero
+        eyebrow=""
+        title={`早安，${activeChild.name}！`}
+        subtitle=""
+        firstStatLabel="我的點數"
+        firstStatValue={childPoints}
+        firstStatSuffix="pt"
+        secondStatLabel="今日完成"
+        secondStatValue={completedTasks.length}
+        secondStatSuffix={` / ${tasks.length} 任務`}
+        actions={(
+          <>
+            <button onClick={onSwitchChild} aria-label="切換到家長視角" title="切換到家長視角" className="hh-character-icon-button">
               <User size={18} />
             </button>
-            <button onClick={onLogout} aria-label="登出" title="登出" className="flex min-h-9 min-w-9 items-center justify-center bg-white/40 hover:bg-white/60 p-2 rounded-full text-yellow-900 transition-colors">
+            <button onClick={onLogout} aria-label="登出" title="登出" className="hh-character-icon-button">
               <LogOut size={18} />
             </button>
-          </div>
-        </div>
-        
-        <div className="relative z-10 bg-white rounded-2xl p-4 shadow-sm border border-yellow-100 flex items-center justify-between">
-          <div>
-            <div className="text-gray-500 text-sm font-medium mb-1">我的點數</div>
-            <div className="text-4xl font-black text-yellow-500 flex items-baseline gap-1">
-              {childPoints} <span className="text-base font-bold text-yellow-400">pt</span>
-            </div>
-          </div>
-          <Star size={48} className="text-yellow-300 fill-yellow-300" />
-        </div>
-      </header>
+          </>
+        )}
+      />
 
       {/* Main Content */}
       <main className="flex-1 p-6 pb-28">
@@ -360,8 +361,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
         {activeTab === 'goals' && (
           <div className="space-y-6">
-            <GoalProposalForm templates={taskTemplates} loading={actionPending || loading} onSubmit={handleProposeGoal} />
-
             {proposedTasks.length > 0 && (
               <section className="space-y-3">
                 <h3 className="px-2 font-black text-gray-600">{goalCopy.child.proposedTitle}</h3>
@@ -390,9 +389,14 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             )}
 
             <section className="space-y-3">
-              <div className="px-2">
+              <div className="flex items-end justify-between gap-3 px-2">
+                <div>
                 <h3 className="font-black text-gray-700">{goalCopy.child.title}</h3>
                 <p className="text-sm text-gray-500">{goalCopy.child.subtitle}</p>
+                </div>
+                <button type="button" className="hh-goal-proposal-inline" onClick={() => setShowGoalForm(true)} aria-label="新增今日目標">
+                  <Plus size={18} /> 新增
+                </button>
               </div>
             {childGoalTasks.map(task => {
               const hasTimer = typeof task.duration === 'number';
@@ -598,6 +602,18 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       </main>
 
       {/* Overlays */}
+      {showGoalForm && (
+        <div className="hh-goal-proposal-overlay" role="dialog" aria-modal="true" aria-label="新增今日目標">
+          <button type="button" className="hh-goal-proposal-backdrop" aria-label="關閉新增目標" onClick={() => dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} />
+          <div className="hh-goal-proposal-sheet">
+            <div className="hh-goal-proposal-sheet-bar">
+              <strong>新增今日目標</strong>
+              <button type="button" onClick={() => dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} aria-label="關閉" className="hh-character-icon-button"><X size={18} /></button>
+            </div>
+            <GoalProposalForm templates={taskTemplates} loading={actionPending || loading} onSubmit={handleSubmitGoalProposal} />
+          </div>
+        </div>
+      )}
       {submittingTask && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
           <div className="hh-form-modal-panel w-full max-w-md animate-slide-up">
