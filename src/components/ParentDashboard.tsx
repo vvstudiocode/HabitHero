@@ -17,6 +17,7 @@ import { isCurrentParentConsent, PARENT_CONSENT_VERSION } from '../lib/legal-con
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
 import { buildGrowthStats } from '../features/growth/growth-stats';
 import { validateRewardPoints } from '../lib/reward-validation';
+import { FirstUseGuide, hasCompletedFirstUseGuide } from './FirstUseGuide';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
@@ -74,6 +75,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       // The required consent document remains visible so the parent can retry.
     });
   }, [recordParentConsent, signupConsentAccepted, state.parentConsentVersion]);
+
+  useEffect(() => {
+    if (signupConsentAccepted || !hasCompletedFirstUseGuide()) setShowFirstUseGuide(true);
+  }, [signupConsentAccepted]);
 
   const allTasks = state.children.flatMap(c => (c.tasks as GrowthTask[]).map(t => ({ ...t, childId: c.id, childName: c.name }))) as GrowthTaskWithChild[];
   const proposedTasks = allTasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested' || (t.origin === 'child_proposed' && t.status === 'todo' && !t.confirmedAt));
@@ -135,6 +140,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false);
+  const [showFirstUseGuide, setShowFirstUseGuide] = useState(false);
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [settingsDocument, setSettingsDocument] = useState<ParentSettingsDocument | null>(null);
   const [newChildName, setNewChildName] = useState('');
@@ -147,6 +153,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [accountSetupPassword, setAccountSetupPassword] = useState('');
   const [accountSetupConfirmation, setAccountSetupConfirmation] = useState('');
   const [accountSetupError, setAccountSetupError] = useState('');
+  const [childAccountSubmitting, setChildAccountSubmitting] = useState(false);
+  const childAccountSubmissionInFlight = useRef(false);
   const [resetChildId, setResetChildId] = useState<string | null>(null);
   const [resetChildPassword, setResetChildPassword] = useState('');
   const [resetChildPasswordConfirmation, setResetChildPasswordConfirmation] = useState('');
@@ -183,7 +191,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     setMutationKind(null);
   }, [error, loading, mutationKind]);
 
-  const openTaskForm = (group?: GroupedTask & { isDaily?: boolean }) => {
+  const openTaskForm = (group?: GroupedTask & { isDaily?: boolean }, allowWithoutChild = false) => {
+    if (state.children.length === 0 && !allowWithoutChild) return;
     if (group) {
       setEditingTask(group);
       setNewTaskName(group.name);
@@ -207,6 +216,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
 
   const handleSaveTask = async () => {
+    if (state.children.length === 0) return;
     if (!newTaskName || newTaskPoints < 1 || newTaskTargetChildIds.length === 0) return;
     const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
     const dueTime = newTaskDueTime || null;
@@ -245,6 +255,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
 
   const handleAssignTemplate = async () => {
+    if (state.children.length === 0) return;
     if (!assigningTemplate || newTaskTargetChildIds.length === 0) return;
     try {
       const dueTime = newTaskDueTime || null;
@@ -287,10 +298,53 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
 
   const openAssignTemplate = (template: GrowthTaskTemplate) => {
+    if (state.children.length === 0) return;
     setAssigningTemplate(template);
     setNewTaskIsDaily(false);
     setNewTaskDueTime('');
     setNewTaskTargetChildIds(state.children.map(c => c.id));
+  };
+
+  const handleGuideStepChange = (nextStep: number) => {
+    if (nextStep <= 0) {
+      setShowSettings(false);
+      setShowTaskForm(false);
+      setActiveTab('review');
+      return;
+    }
+    if (nextStep <= 2) {
+      setShowSettings(true);
+      setShowTaskForm(false);
+      return;
+    }
+    if (nextStep === 3) {
+      setShowSettings(false);
+      setShowTaskForm(false);
+      return;
+    }
+    if (nextStep === 4) {
+      setShowSettings(false);
+      setShowTaskForm(false);
+      setActiveTab('tasks');
+      return;
+    }
+    if (nextStep === 5) {
+      setActiveTab('tasks');
+      setShowTaskForm(false);
+      return;
+    }
+    if (nextStep === 6) {
+      setActiveTab('tasks');
+      openTaskForm(undefined, true);
+      return;
+    }
+    if (nextStep === 7) {
+      setShowTaskForm(false);
+      setActiveTab('review');
+      return;
+    }
+    setShowTaskForm(false);
+    setActiveTab('rewards');
   };
 
   const handleConfirmGoal = async (childId: string, taskId: string, input: GoalConfirmationInput) => {
@@ -414,6 +468,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   
   const handleAddChild = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (childAccountSubmissionInFlight.current) return;
     setNewChildError('');
     if (!newChildName.trim()) {
       setNewChildError('請輸入小孩名字。');
@@ -440,19 +495,25 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       return;
     }
     allowPendingChildAction.current = false;
+    childAccountSubmissionInFlight.current = true;
+    setChildAccountSubmitting(true);
     try {
       await addChild(newChildName.trim(), newChildUsername.trim().toLowerCase(), newChildPassword);
       setNewChildName('');
       setNewChildUsername('');
       setNewChildPassword('');
       setNewChildPasswordConfirmation('');
-    } catch {
-      // Provider error is already shown above the tabs; keep the form values.
+    } catch (error) {
+      setNewChildError(error instanceof Error ? error.message : '建立小孩失敗，請重試。');
+    } finally {
+      childAccountSubmissionInFlight.current = false;
+      setChildAccountSubmitting(false);
     }
   };
 
   const handleCreateExistingChildAccount = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (childAccountSubmissionInFlight.current) return;
     const child = state.children.find((item) => item.id === accountSetupChildId);
     if (!child) return;
     setAccountSetupError('');
@@ -468,6 +529,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       return;
     }
     allowPendingChildAction.current = false;
+    childAccountSubmissionInFlight.current = true;
+    setChildAccountSubmitting(true);
     try {
       await addChild(child.name, accountSetupUsername, accountSetupPassword, child.id);
       setAccountSetupChildId(null);
@@ -476,6 +539,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setAccountSetupConfirmation('');
     } catch (error) {
       setAccountSetupError(error instanceof Error ? error.message : '建立小孩帳號失敗，請重試。');
+    } finally {
+      childAccountSubmissionInFlight.current = false;
+      setChildAccountSubmitting(false);
     }
   };
 
@@ -494,10 +560,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => state.children.length > 1 ? setShowChildPicker(true) : onSwitchToChild()} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
+            <button data-tour="child-view" onClick={() => state.children.length > 1 ? setShowChildPicker(true) : onSwitchToChild()} aria-label="切換到小孩視角" title="切換到小孩視角" className="flex min-h-11 min-w-11 items-center justify-center bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all backdrop-blur-sm border border-white/30 shadow-sm active:scale-95">
               <Baby size={18} />
             </button>
-            <button onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="flex min-h-11 min-w-11 items-center justify-center bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
+            <button data-tour="settings" onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="flex min-h-11 min-w-11 items-center justify-center bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition-colors">
               <Settings size={20} />
             </button>
           </div>
@@ -537,6 +603,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
           style={{ '--active-index': ['review', 'tasks', 'growth', 'rewards', 'wishlist'].indexOf(activeTab), '--item-count': 5 } as React.CSSProperties}
         >
           <button
+            data-tour="review-tab"
             type="button"
             onClick={() => setActiveTab('review')}
             className={cn(
@@ -552,6 +619,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             )}
           </button>
           <button
+            data-tour="tasks-tab"
             type="button"
             onClick={() => setActiveTab('tasks')}
             className={cn(
@@ -572,6 +640,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             成長
           </button>
           <button
+            data-tour="rewards-tab"
             type="button"
             onClick={() => setActiveTab('rewards')}
             className={cn(
@@ -616,13 +685,18 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             <section>
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-bold text-gray-900">今日任務清單</h2>
-                <button onClick={() => openTaskForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
+                <button data-tour="task-add" onClick={() => openTaskForm()} disabled={state.children.length === 0} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg disabled:cursor-not-allowed disabled:opacity-50">
                   <Plus size={16} /> 新增
                 </button>
               </div>
+              {state.children.length === 0 && (
+                <p role="alert" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-5 text-amber-800">
+                  目前尚未建立小孩，請先到設定新增小孩，才能建立任務。
+                </p>
+              )}
               <div className="space-y-3">
-                {groupedTodoTasks.map(group => (
-                  <div key={group.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between gap-3">
+                {groupedTodoTasks.map((group, index) => (
+                  <div key={group.id} data-tour={index === 0 ? 'task-card' : undefined} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
                       <Circle size={20} className="text-gray-300 shrink-0 mt-0.5" />
                       <div className="min-w-0 flex-1 space-y-1">
@@ -696,7 +770,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       </div>
                     </div>
                     <div className="flex gap-1 items-center">
-                      <button onClick={() => openAssignTemplate(template)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold transition-colors">
+                      <button onClick={() => openAssignTemplate(template)} disabled={state.children.length === 0} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50">
                         派發
                       </button>
                       <button onClick={() => openTemplateForm(template)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg">
@@ -848,8 +922,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   {state.children.map(child => (
                     <div key={child.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
                       <div className="flex items-center justify-between">
-                        <input
-                          type="text"
+                    <input
+                    type="text"
                           value={childNameDrafts[child.id] ?? child.name}
                           onChange={(e) => setChildNameDrafts((drafts) => ({ ...drafts, [child.id]: e.target.value }))}
                           onBlur={(e) => {
@@ -876,12 +950,13 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               </section>
 
               {/* Add Child */}
-              <section className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+              <section data-tour="add-child" className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
                 <h4 className="text-md font-bold text-blue-900 mb-3 flex items-center gap-2">
                   <Plus size={18} /> 新增小孩
                 </h4>
                 <div className="mb-2">
                   <input
+                    data-tour="new-child-name"
                     type="text"
                     placeholder="名字"
                     value={newChildName}
@@ -894,8 +969,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 <input type="password" autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => { setNewChildPasswordConfirmation(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
                 {newChildError && <p role="alert" className="mb-3 text-xs leading-5 text-red-600">{newChildError}</p>}
                 <p className="mb-3 text-xs leading-5 text-blue-800">帳號名稱需 3–32 碼英數或底線；小孩可在任何裝置用帳號與密碼登入。</p>
-                <button onClick={() => void handleAddChild()} disabled={!newChildName.trim() || !newChildUsername || !newChildPassword || !newChildPasswordConfirmation || loading} className="w-full rounded-xl bg-blue-500 py-2 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50">
-                  建立小孩
+                <button data-tour="create-child" onClick={() => void handleAddChild()} disabled={!newChildName.trim() || !newChildUsername || !newChildPassword || !newChildPasswordConfirmation || loading || childAccountSubmitting} aria-busy={childAccountSubmitting} className="w-full rounded-xl bg-blue-500 py-2 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50">
+                  {childAccountSubmitting ? '建立中…' : '建立小孩'}
                 </button>
               </section>
 
@@ -941,6 +1016,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
               {/* System */}
               <section className="pt-4 pb-8">
+                <button type="button" onClick={() => { setShowSettings(false); setShowFirstUseGuide(true); }} className="mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-3 font-bold text-blue-700 transition-colors hover:bg-blue-100">
+                  重新觀看新手指引
+                </button>
                 <button onClick={() => dismissWithAnimation(() => { setShowSettings(false); onLogout(); }, '.hh-settings-drawer')} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold transition-colors">
                   <LogOut size={20} /> 登出家長端
                 </button>
@@ -978,6 +1056,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {showPrivacyPolicy && <ParentPrivacyPolicyPage onClose={() => setShowPrivacyPolicy(false)} />}
 
+      {showFirstUseGuide && <FirstUseGuide onClose={() => setShowFirstUseGuide(false)} onStepChange={handleGuideStepChange} />}
+
       {/* Task Overlays */}
       {showTaskForm && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
@@ -989,7 +1069,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
-                <textarea rows={2} value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：刷牙洗臉" className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 focus:ring-2 focus:ring-blue-400 outline-none" />
+                <textarea data-tour="task-name" rows={2} value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="例如：刷牙洗臉" className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 focus:ring-2 focus:ring-blue-400 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">固定分類</label>
@@ -1311,7 +1391,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               {accountSetupError && <p role="alert" className="text-sm text-red-500">{accountSetupError}</p>}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => dismissWithAnimation(() => { setAccountSetupChildId(null); setAccountSetupError(''); }, '.hh-parent-confirm-panel')} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
-                <button onClick={() => void handleCreateExistingChildAccount()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">建立</button>
+                <button onClick={() => void handleCreateExistingChildAccount()} disabled={childAccountSubmitting} aria-busy={childAccountSubmitting} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white disabled:cursor-wait disabled:opacity-50">{childAccountSubmitting ? '建立中…' : '建立'}</button>
               </div>
             </div>
           </div>
