@@ -998,6 +998,24 @@ body {
   overflow: hidden;
 }
 
+.hh-login-screen--loading {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+}
+
+.hh-login-screen--loading .hh-login-canvas,
+.hh-login-screen--loading .hh-login-sun,
+.hh-login-screen--loading .hh-login-vignette,
+.hh-login-screen--loading .hh-login-grain {
+  z-index: 0;
+}
+
+.hh-loading-content {
+  position: relative;
+  z-index: 2;
+}
+
 .hh-login-canvas {
   position: fixed;
   inset: 0;

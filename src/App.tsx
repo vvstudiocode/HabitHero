@@ -12,6 +12,7 @@ import { ParentDashboard } from './components/ParentDashboard';
 import { ChildDashboard } from './components/ChildDashboard';
 import { ParentUnlockModal } from './components/ParentUnlockModal';
 import { FamilyChildPicker } from './components/FamilyChildPicker';
+import { SpriteLoginScene } from './components/SpriteLoginScene';
 import { PARENT_IDLE_LOCK_MS } from './lib/view-access';
 import { canOpenFamilyPicker, resolveActiveChildId } from './lib/family-switch';
 
@@ -142,21 +143,31 @@ function MainApp() {
     setParentUnlockedAt(Date.now());
   };
 
+  const renderLoginBackgroundScreen = (content: React.ReactNode) => (
+    <div className="hh-login-screen hh-login-screen--loading">
+      <SpriteLoginScene />
+      <div className="hh-login-sun" />
+      <div className="hh-login-vignette" />
+      <div className="hh-login-grain" />
+      <main className="hh-loading-content">{content}</main>
+    </div>
+  );
+
   if (initialLoading) {
-    return (
-      <div className="hh-sprite-theme flex min-h-[100dvh] flex-col items-center justify-center bg-blue-50">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 animate-pulse text-3xl">
+    return renderLoginBackgroundScreen(
+      <div className="flex flex-col items-center text-center">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/75 text-blue-600 shadow-lg animate-pulse text-3xl">
           ⭐
         </div>
-        <p className="text-lg font-bold text-blue-900">HabitHero 習慣小英雄</p>
-        <p className="mt-2 text-sm text-blue-400">啟動中…</p>
+        <p className="text-lg font-bold text-white drop-shadow-lg">HabitHero 習慣小英雄</p>
+        <p className="mt-2 text-sm font-bold text-white/85 drop-shadow-lg">啟動中…</p>
       </div>
     );
   }
 
-  if (loading) return <div className="hh-sprite-theme flex min-h-[100dvh] items-center justify-center bg-blue-50 text-blue-700">正在更新資料…</div>;
+  if (loading) return renderLoginBackgroundScreen(<p className="font-bold text-white drop-shadow-lg">正在更新資料…</p>);
   if (error && hasSession && currentView === 'login') {
-    return <div className="hh-sprite-theme flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900"><p role="alert">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white">重試</button></div>;
+    return renderLoginBackgroundScreen(<div className="flex flex-col items-center gap-4 p-6 text-center"><p role="alert" className="font-bold text-white drop-shadow-lg">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white shadow-lg">重試</button></div>);
   }
 
   switch (currentView) {
