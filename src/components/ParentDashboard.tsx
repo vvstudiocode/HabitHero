@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
+import { TaipeiTimeInput } from './TaipeiTimeInput';
 import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby, User } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
@@ -1146,8 +1147,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </div>
               </div>
               <div className="min-w-0 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？（台灣時間，24 小時制）</label>
-                <input lang="zh-TW" type="time" step="60" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
+                <TaipeiTimeInput value={newTaskDueTime} onChange={setNewTaskDueTime} />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
@@ -1236,8 +1237,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </div>
               )}
               <div className="min-w-0 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？（台灣時間，24 小時制）</label>
-                <input lang="zh-TW" type="time" step="60" value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} className="hh-time-input w-full max-w-full px-3 py-2.5 sm:p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-400 outline-none text-sm sm:text-base" />
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
+                <TaipeiTimeInput value={newTaskDueTime} onChange={setNewTaskDueTime} />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
               </div>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>

@@ -61,14 +61,16 @@ test('child goals are separated into self-created and parent-given sections', ()
   assert.match(source, /parentGoalTasks\.map/);
 });
 
-test('all task start-time inputs use Taiwan locale and minute precision', () => {
+test('all task start-time inputs use numeric hour and minute selectors', () => {
   const parentDashboard = read('../src/components/ParentDashboard.tsx');
   const goalForm = read('../src/features/growth/components/GoalProposalForm.tsx');
+  const timeInput = read('../src/components/TaipeiTimeInput.tsx');
 
-  assert.equal((parentDashboard.match(/lang="zh-TW" type="time" step="60"/g) ?? []).length, 2);
-  assert.match(goalForm, /lang="zh-TW"\s+type="time"\s+step="60"/);
-  assert.match(parentDashboard, /台灣時間，24 小時制/);
-  assert.match(goalForm, /台灣時間，24 小時制/);
+  assert.equal((parentDashboard.match(/<TaipeiTimeInput/g) ?? []).length, 2);
+  assert.match(goalForm, /<TaipeiTimeInput/);
+  assert.match(timeInput, /length: 24/);
+  assert.match(timeInput, /length: 60/);
+  assert.doesNotMatch(parentDashboard + goalForm + timeInput, /type="time"|上午|下午|AM|PM/);
 });
 
 test('child account creation shows a pending state and prevents duplicate submissions', () => {
