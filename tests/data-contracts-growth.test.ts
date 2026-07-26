@@ -26,6 +26,7 @@ describe('growth data contracts', () => {
       is_daily: false,
       due_on: '2026-07-22',
       due_time: '17:30:00',
+      end_time: '19:00:00',
       category: 'learning',
       origin: 'child_proposed',
       original_name: 'Read',
@@ -64,6 +65,7 @@ describe('growth data contracts', () => {
       isDaily: false,
       dueOn: '2026-07-22',
       dueTime: '17:30:00',
+      endTime: '19:00:00',
       category: 'learning',
       origin: 'child_proposed',
       originalName: 'Read',
@@ -98,6 +100,8 @@ describe('growth data contracts', () => {
       sort_order: 1,
       category: 'life_habit',
       suggested_evidence: 'reflection',
+      due_time: '18:00:00',
+      end_time: '20:00:00',
       created_at: now,
       updated_at: now,
     };
@@ -110,6 +114,8 @@ describe('growth data contracts', () => {
       icon: 'Backpack',
       category: 'life_habit',
       suggestedEvidence: 'reflection',
+      dueTime: '18:00:00',
+      endTime: '20:00:00',
     });
   });
 });
@@ -200,6 +206,7 @@ describe('growth repository payloads', () => {
       duration: 15,
       dueOn: '2026-07-22',
       dueTime: '18:00',
+      endTime: '20:00',
     });
     await repository.confirmChildGoal('task-1', {
       name: 'Practice piano for 15 minutes',
@@ -234,6 +241,7 @@ describe('growth repository payloads', () => {
           goal_duration_minutes: 15,
           goal_due_on: '2026-07-22',
           goal_due_time: '18:00',
+          goal_end_time: '20:00',
         },
       },
       {

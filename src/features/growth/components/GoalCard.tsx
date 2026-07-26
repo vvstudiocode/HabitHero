@@ -22,6 +22,7 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
   const isAwaitingParentConfirmation = task.origin === 'child_proposed' && task.status === 'todo' && !task.confirmedAt;
   const displayStatus = isAwaitingParentConfirmation ? '可先開始，待家長確認點數' : getTaskStatusLabel(task.status);
   const dueTime = task.dueTime ? task.dueTime.slice(0, 5) : null;
+  const endTime = task.endTime ? task.endTime.slice(0, 5) : null;
 
   return (
     <article className={cn('rounded-2xl border bg-white p-4 shadow-sm', task.status === 'revision_requested' ? 'border-orange-200 bg-orange-50/60' : 'border-gray-100')}>
@@ -43,7 +44,7 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
             </span>
             {task.origin === 'child_proposed' && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-700">孩子主動提出</span>}
             {task.isDaily && <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-emerald-700">每日</span>}
-            {dueTime && <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-blue-600">{dueTime} 開始</span>}
+            {(dueTime || endTime) && <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-blue-600">{dueTime ?? '隨時'}{endTime ? `–${endTime}` : ' 起'}</span>}
           </div>
         </div>
 

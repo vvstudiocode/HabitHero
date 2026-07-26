@@ -15,16 +15,18 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
   const [points, setPoints] = useState(5);
   const [category, setCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
   const [dueTime, setDueTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
 
   const submit = async () => {
     const trimmed = name.trim();
-    if (!trimmed || !dueTime) return;
-    await onSubmit({ name: trimmed, points: Math.max(1, points), category, dueTime, duration: duration || undefined });
+    if (!trimmed || !dueTime || !endTime || endTime <= dueTime) return;
+    await onSubmit({ name: trimmed, points: Math.max(1, points), category, dueTime, endTime, duration: duration || undefined });
     setName('');
     setPoints(5);
     setCategory(DEFAULT_TASK_CATEGORY);
     setDueTime('');
+    setEndTime('');
     setDuration('');
   };
 
@@ -70,8 +72,12 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             />
           </label>
           <label className="block min-w-0 w-full">
-            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">什麼時候開始？</span>
+            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">開始時間</span>
             <TaipeiTimeInput value={dueTime} onChange={setDueTime} className="focus:ring-yellow-400" />
+          </label>
+          <label className="block min-w-0 w-full">
+            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">結束時間</span>
+            <TaipeiTimeInput value={endTime} onChange={setEndTime} className="focus:ring-yellow-400" />
           </label>
           <label className="block min-w-0 w-full">
             <span className="mb-2 block text-sm font-bold text-gray-700">想做多久？</span>
@@ -88,7 +94,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
         <button
           type="button"
           onClick={() => void submit()}
-          disabled={loading || !name.trim() || !dueTime}
+          disabled={loading || !name.trim() || !dueTime || !endTime || endTime <= dueTime}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-yellow-400 px-4 font-black text-yellow-950 transition-colors hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus size={20} /> 建立並開始

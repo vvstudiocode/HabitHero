@@ -12,7 +12,7 @@ import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryP
 import { goalCopy } from '../features/growth/goal-copy';
 import { getChildGrowthSummary } from '../features/growth/growth-stats';
 import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
-import { isTaskExecutableAt } from '../lib/task-time';
+import { getTaskExecutionState, isTaskExecutableAt } from '../lib/task-time';
 import { DashboardCharacterHero } from './DashboardCharacterHero';
 
 interface GrowthChildActions {
@@ -28,6 +28,11 @@ interface ChildDashboardProps {
 
 function formatTaskTime(dueTime?: string | null) {
   return dueTime ? dueTime.slice(0, 5) : '全天';
+}
+
+function formatTaskWindow(task: { dueTime?: string | null; endTime?: string | null }) {
+  const start = task.dueTime?.slice(0, 5) ?? '隨時';
+  return task.endTime ? `${start}–${task.endTime.slice(0, 5)}` : `${start}起`;
 }
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
@@ -143,8 +148,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     if (task.timerIsRunning) {
       pauseTaskTimer(activeChild.id, task.id);
     } else {
-      if (!isTaskExecutableAt(task.dueTime)) {
-        showToast(`還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
+      const executionState = getTaskExecutionState(task.dueTime, task.endTime);
+      if (executionState !== 'available') {
+        showToast(executionState === 'expired' ? `這次任務已截止，下次時間：${formatTaskWindow(task)}。` : `還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
         return;
       }
       // Check if any other task is RUNNING
@@ -160,8 +166,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const handleFinishTask = async (taskId: string) => {
     if (!activeChild) return;
     const task = tasks.find((item) => item.id === taskId);
-    if (task && !isTaskExecutableAt(task.dueTime)) {
-      showToast(`還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
+    if (task && !isTaskExecutableAt(task.dueTime, task.endTime)) {
+      const executionState = getTaskExecutionState(task.dueTime, task.endTime);
+      showToast(executionState === 'expired' ? `這次任務已截止，下次時間：${formatTaskWindow(task)}。` : `還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
       return;
     }
     if (task) setSubmittingTask(task);
@@ -176,7 +183,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       } else if (appStore.proposeChildGoal) {
         await appStore.proposeChildGoal(activeChild.id, { ...input, icon: 'Star' });
       } else {
-        await addTask(activeChild.id, { name: input.name, points: input.points, icon: 'Star', category: input.category, dueTime: input.dueTime, duration: input.duration, origin: 'child_proposed' } as never);
+        await addTask(activeChild.id, { name: input.name, points: input.points, icon: 'Star', category: input.category, dueTime: input.dueTime, endTime: input.endTime, duration: input.duration, origin: 'child_proposed' } as never);
       }
       showToast('目標已建立，可以先開始做。');
     } finally {
@@ -401,7 +408,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             {childGoalTasks.map(task => {
               const hasTimer = typeof task.duration === 'number';
               const isRunning = task.timerIsRunning;
-              const isExecutable = isTaskExecutableAt(task.dueTime);
+              const executionState = getTaskExecutionState(task.dueTime, task.endTime);
+              const isExecutable = executionState === 'available';
               
               let timeLeft = hasTimer ? task.duration! * 60 : 0;
               
@@ -431,7 +439,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                       )}
                     >
                       {isRunning && <Clock size={24} />}
-                      <span>{isExecutable ? (isRunning ? '暫停' : '開始') : '未到'}</span>
+                      <span>{isExecutable ? (isRunning ? '暫停' : '開始') : executionState === 'expired' ? '已截止' : '未到'}</span>
                       {hasTimer && <span className="text-xs opacity-90">{formatTime(timeLeft)}</span>}
                     </button>
                   ) : (
@@ -441,7 +449,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                       className="flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                     >
                       <CheckCircle2 size={28} />
-                      <span>{isExecutable ? '完成' : '未到'}</span>
+                      <span>{isExecutable ? '完成' : executionState === 'expired' ? '已截止' : '未到'}</span>
                     </button>
                   )}
                 />
@@ -465,7 +473,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               {parentGoalTasks.map(task => {
                 const hasTimer = typeof task.duration === 'number';
                 const isRunning = task.timerIsRunning;
-                const isExecutable = isTaskExecutableAt(task.dueTime);
+                const executionState = getTaskExecutionState(task.dueTime, task.endTime);
+                const isExecutable = executionState === 'available';
 
                 let timeLeft = hasTimer ? task.duration! * 60 : 0;
                 if (isRunning && task.timerEndTime) {
@@ -490,7 +499,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                         )}
                       >
                         {isRunning && <Clock size={24} />}
-                        <span>{isExecutable ? (isRunning ? '暫停' : '開始') : '未到'}</span>
+                        <span>{isExecutable ? (isRunning ? '暫停' : '開始') : executionState === 'expired' ? '已截止' : '未到'}</span>
                         <span className="text-xs opacity-90">{formatTime(timeLeft)}</span>
                       </button>
                     ) : (
@@ -500,7 +509,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                         className="flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                       >
                         <CheckCircle2 size={28} />
-                        <span>{isExecutable ? '完成' : '未到'}</span>
+                        <span>{isExecutable ? '完成' : executionState === 'expired' ? '已截止' : '未到'}</span>
                       </button>
                     )}
                   />

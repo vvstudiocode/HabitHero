@@ -42,6 +42,8 @@ interface AppContextType {
     category: TaskCategory;
     duration?: number | null;
     dueOn?: string | null;
+    dueTime?: string | null;
+    endTime?: string | null;
   }) => Promise<void>;
   confirmChildGoal: (taskId: string, confirmation: {
     name: string;

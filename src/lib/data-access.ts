@@ -58,6 +58,7 @@ export interface ProposeChildGoalInput {
   duration?: number | null;
   dueOn?: string | null;
   dueTime?: string | null;
+  endTime?: string | null;
 }
 
 export interface ConfirmChildGoalInput {
@@ -101,6 +102,7 @@ export const buildProposeChildGoalPayload = (
   goal_duration_minutes: goal.duration ?? null,
   goal_due_on: goal.dueOn ?? null,
   goal_due_time: goal.dueTime ?? null,
+  goal_end_time: goal.endTime ?? null,
 });
 
 export const buildConfirmChildGoalPayload = (
@@ -309,6 +311,8 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         duration_minutes: template.duration ?? null,
         category: template.category ?? 'life_habit',
         suggested_evidence: template.suggestedEvidence ?? 'reflection',
+        due_time: template.dueTime ?? null,
+        end_time: template.endTime ?? null,
       }));
     },
     async updateTemplate(id, updates) {
@@ -319,6 +323,8 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         duration_minutes: updates.duration,
         category: updates.category,
         suggested_evidence: updates.suggestedEvidence,
+        due_time: updates.dueTime,
+        end_time: updates.endTime,
       })).eq('id', id));
     },
     async deleteTemplate(id) { check(await client.from('task_templates').delete().eq('id', id)); },
@@ -334,6 +340,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         is_daily: task.isDaily ?? false,
         due_on: task.dueOn ?? null,
         due_time: task.dueTime ?? null,
+        end_time: task.endTime ?? null,
         category: task.category ?? 'life_habit',
         origin: task.origin ?? 'parent_assigned',
       }));
@@ -348,6 +355,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         is_daily: updates.isDaily,
         due_on: updates.dueOn,
         due_time: updates.dueTime,
+        end_time: updates.endTime,
         category: updates.category,
         origin: updates.origin,
         approved_points: updates.approvedPoints,

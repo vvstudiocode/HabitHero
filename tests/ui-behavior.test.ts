@@ -66,7 +66,7 @@ test('all task start-time inputs use numeric hour and minute selectors', () => {
   const goalForm = read('../src/features/growth/components/GoalProposalForm.tsx');
   const timeInput = read('../src/components/TaipeiTimeInput.tsx');
 
-  assert.equal((parentDashboard.match(/<TaipeiTimeInput/g) ?? []).length, 2);
+  assert.equal((parentDashboard.match(/<TaipeiTimeInput/g) ?? []).length, 6);
   assert.match(goalForm, /<TaipeiTimeInput/);
   assert.match(timeInput, /length: 24/);
   assert.match(timeInput, /length: 60/);

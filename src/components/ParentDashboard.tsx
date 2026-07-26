@@ -34,6 +34,7 @@ type GroupedTask = {
   points: number;
   duration?: number;
   dueTime?: string | null;
+  endTime?: string | null;
   category?: TaskCategory;
   children: { childId: string; childName: string; taskId: string }[];
 };
@@ -95,9 +96,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const growthSummaries = buildGrowthStats(state.children, state.ledger);
 
   const groupedTodoTasks = Object.values(todoTasks.reduce((acc, task) => {
-    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.dueTime || ''}-${task.category || DEFAULT_TASK_CATEGORY}-${task.isDaily ? 'daily' : 'once'}`;
+    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.dueTime || ''}-${task.endTime || ''}-${task.category || DEFAULT_TASK_CATEGORY}-${task.isDaily ? 'daily' : 'once'}`;
     if (!acc[key]) {
-      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, dueTime: task.dueTime, category: task.category, isDaily: task.isDaily, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
+      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, dueTime: task.dueTime, endTime: task.endTime, category: task.category, isDaily: task.isDaily, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
     } else {
       acc[key].children.push({ childId: task.childId, childName: task.childName, taskId: task.id });
     }
@@ -128,6 +129,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [newTaskPoints, setNewTaskPoints] = useState(5);
   const [newTaskDuration, setNewTaskDuration] = useState<number | ''>(''); // in minutes
   const [newTaskDueTime, setNewTaskDueTime] = useState('');
+  const [newTaskEndTime, setNewTaskEndTime] = useState('');
   const [newTaskIsDaily, setNewTaskIsDaily] = useState(true);
   const [newTaskCategory, setNewTaskCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
   const [newTaskTargetChildIds, setNewTaskTargetChildIds] = useState<string[]>([]);
@@ -213,6 +215,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewTaskPoints(group.points);
       setNewTaskDuration(group.duration || '');
       setNewTaskDueTime(group.dueTime?.slice(0, 5) ?? '');
+      setNewTaskEndTime(group.endTime?.slice(0, 5) ?? '');
       setNewTaskIsDaily(group.isDaily ?? false);
       setNewTaskCategory(group.category ?? DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(group.children.map(c => c.childId));
@@ -222,6 +225,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewTaskPoints(5);
       setNewTaskDuration('');
       setNewTaskDueTime('');
+      setNewTaskEndTime('');
       setNewTaskIsDaily(false);
       setNewTaskCategory(DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(state.children.map(c => c.id));
@@ -234,6 +238,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     if (!newTaskName || newTaskPoints < 1 || newTaskTargetChildIds.length === 0) return;
     const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
     const dueTime = newTaskDueTime || null;
+    const endTime = newTaskEndTime || null;
+    if (dueTime && endTime && endTime <= dueTime) return;
     observedLoading.current = false;
     setMutationKind('task');
 
@@ -246,9 +252,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       for (const childId of newTaskTargetChildIds) {
         const existingChild = editingTask.children.find(c => c.childId === childId);
         if (existingChild) {
-          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory } as never);
+          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory } as never);
         } else {
-          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
+          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
         }
       }
 
@@ -260,7 +266,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         }
       }
     } else {
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
     }
     dismissWithAnimation(() => setShowTaskForm(false));
     dismissWithAnimation(() => setAssigningTemplate(null));
@@ -273,7 +279,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     if (!assigningTemplate || newTaskTargetChildIds.length === 0) return;
     try {
       const dueTime = newTaskDueTime || null;
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, dueTime, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template' } as never);
+      const endTime = newTaskEndTime || null;
+      if (dueTime && endTime && endTime <= dueTime) return;
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, dueTime, endTime, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template' } as never);
       dismissWithAnimation(() => setAssigningTemplate(null));
     } catch { /* provider error is rendered above the tabs; keep assignment open */ }
   };
@@ -281,13 +289,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const handleSaveTemplate = async () => {
     if (!newTaskName || newTaskPoints < 1) return;
     const duration = newTaskDuration ? Number(newTaskDuration) : undefined;
+    const dueTime = newTaskDueTime || null;
+    const endTime = newTaskEndTime || null;
+    if (dueTime && endTime && endTime <= dueTime) return;
     observedLoading.current = false;
     setMutationKind('template');
     try {
     if (editingTemplate) {
-      await updateTaskTemplate(editingTemplate.id, { name: newTaskName, points: newTaskPoints, duration, category: newTaskCategory } as never);
+      await updateTaskTemplate(editingTemplate.id, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, category: newTaskCategory } as never);
     } else {
-      await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, category: newTaskCategory, suggestedEvidence: 'reflection' } as never);
+      await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, category: newTaskCategory, suggestedEvidence: 'reflection' } as never);
     }
     dismissWithAnimation(() => setShowTemplateForm(false));
     setMutationKind(null);
@@ -300,12 +311,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewTaskName(template.name);
       setNewTaskPoints(template.points);
       setNewTaskDuration(template.duration || '');
+      setNewTaskDueTime(template.dueTime?.slice(0, 5) ?? '');
+      setNewTaskEndTime(template.endTime?.slice(0, 5) ?? '');
       setNewTaskCategory(template.category ?? DEFAULT_TASK_CATEGORY);
     } else {
       setEditingTemplate(null);
       setNewTaskName('');
       setNewTaskPoints(5);
       setNewTaskDuration('');
+      setNewTaskDueTime('');
+      setNewTaskEndTime('');
       setNewTaskCategory(DEFAULT_TASK_CATEGORY);
     }
     setShowTemplateForm(true);
@@ -315,7 +330,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     if (state.children.length === 0) return;
     setAssigningTemplate(template);
     setNewTaskIsDaily(false);
-    setNewTaskDueTime('');
+    setNewTaskDueTime(template.dueTime?.slice(0, 5) ?? '');
+    setNewTaskEndTime(template.endTime?.slice(0, 5) ?? '');
     setNewTaskTargetChildIds(state.children.map(c => c.id));
   };
 
@@ -719,7 +735,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                           )}
                           {group.dueTime && (
                             <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0">
-                              <Clock size={12}/> {group.dueTime.slice(0, 5)} 開始
+                              <Clock size={12}/> {group.dueTime.slice(0, 5)}{group.endTime ? `–${group.endTime.slice(0, 5)}` : ' 起'}
                             </span>
                           )}
                           <span className="ml-auto text-blue-500 text-sm font-black whitespace-nowrap">+{group.points} pt</span>
@@ -1147,9 +1163,14 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </div>
               </div>
               <div className="min-w-0 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">開始時間</label>
                 <TaipeiTimeInput value={newTaskDueTime} onChange={setNewTaskDueTime} />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
+              </div>
+              <div className="min-w-0 w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">結束時間</label>
+                <TaipeiTimeInput value={newTaskEndTime} onChange={setNewTaskEndTime} />
+                <p className="mt-1 text-xs font-medium text-gray-400">超過後本次任務會截止，下一次時間再開放。</p>
               </div>
               <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
             </div>
@@ -1190,6 +1211,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <label className="block text-sm font-medium text-gray-700 mb-1">想做多久？</label>
                   <input type="number" min="1" value={newTaskDuration} onChange={e => setNewTaskDuration(e.target.value ? Number(e.target.value) : '')} placeholder="無" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
+              </div>
+              <div className="min-w-0 w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">開始時間</label>
+                <TaipeiTimeInput value={newTaskDueTime} onChange={setNewTaskDueTime} />
+              </div>
+              <div className="min-w-0 w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">結束時間</label>
+                <TaipeiTimeInput value={newTaskEndTime} onChange={setNewTaskEndTime} />
+                <p className="mt-1 text-xs font-medium text-gray-400">派發後會套用這段執行時間。</p>
               </div>
               <button onClick={() => void handleSaveTemplate()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : '儲存模板'}</button>
             </div>
@@ -1237,9 +1267,14 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 </div>
               )}
               <div className="min-w-0 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">什麼時候開始？</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">開始時間</label>
                 <TaipeiTimeInput value={newTaskDueTime} onChange={setNewTaskDueTime} />
                 <p className="mt-1 text-xs font-medium text-gray-400">不設定就是全天都可以執行。</p>
+              </div>
+              <div className="min-w-0 w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1 truncate">結束時間</label>
+                <TaipeiTimeInput value={newTaskEndTime} onChange={setNewTaskEndTime} />
+                <p className="mt-1 text-xs font-medium text-gray-400">超過後本次任務會截止，下一次時間再開放。</p>
               </div>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
             </div>

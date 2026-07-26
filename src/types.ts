@@ -61,6 +61,8 @@ export interface TaskTemplateRow {
   sort_order: SortOrder;
   category: TaskCategory;
   suggested_evidence: string;
+  due_time: string | null;
+  end_time: string | null;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -78,6 +80,7 @@ export interface TaskRow {
   is_daily: boolean;
   due_on: string | null;
   due_time: string | null;
+  end_time: string | null;
   category: TaskCategory;
   origin: TaskOrigin;
   original_name: string | null;
@@ -191,6 +194,8 @@ export interface TaskTemplateCreateInput {
   sort_order?: SortOrder;
   category?: TaskCategory;
   suggested_evidence?: string;
+  due_time?: string | null;
+  end_time?: string | null;
 }
 export interface TaskTemplateUpdateInput {
   name?: string;
@@ -200,6 +205,8 @@ export interface TaskTemplateUpdateInput {
   sort_order?: SortOrder;
   category?: TaskCategory;
   suggested_evidence?: string;
+  due_time?: string | null;
+  end_time?: string | null;
 }
 
 export interface TaskCreateInput {
@@ -212,6 +219,8 @@ export interface TaskCreateInput {
   duration_minutes?: number | null;
   is_daily?: boolean;
   due_on?: string | null;
+  due_time?: string | null;
+  end_time?: string | null;
   category?: TaskCategory;
   origin?: TaskOrigin;
   reflection?: string | null;
@@ -321,6 +330,8 @@ export interface TaskTemplateViewModel {
   icon: string;
   category: TaskCategory;
   suggestedEvidence: string;
+  dueTime: string | null;
+  endTime: string | null;
 }
 
 export interface TaskViewModel {
@@ -339,6 +350,7 @@ export interface TaskViewModel {
   templateId: Id | null;
   dueOn: string | null;
   dueTime: string | null;
+  endTime: string | null;
   category: TaskCategory;
   origin: TaskOrigin;
   originalName: string | null;
@@ -393,10 +405,12 @@ export interface PointLedgerViewModel {
 }
 
 // Legacy localStorage view types. Keep these aliases until the storage adapter is replaced.
-export interface TaskTemplate extends Omit<TaskTemplateViewModel, 'duration' | 'category' | 'suggestedEvidence'> {
+export interface TaskTemplate extends Omit<TaskTemplateViewModel, 'duration' | 'category' | 'suggestedEvidence' | 'dueTime' | 'endTime'> {
   duration?: number;
   category?: TaskCategory;
   suggestedEvidence?: string;
+  dueTime?: string | null;
+  endTime?: string | null;
 }
 export interface Task extends Omit<
   TaskViewModel,
@@ -409,6 +423,7 @@ export interface Task extends Omit<
   | 'templateId'
   | 'dueOn'
   | 'dueTime'
+  | 'endTime'
   | 'category'
   | 'origin'
   | 'originalName'
@@ -437,6 +452,7 @@ export interface Task extends Omit<
   templateId?: Id | null;
   dueOn?: string | null;
   dueTime?: string | null;
+  endTime?: string | null;
   category?: TaskCategory;
   origin?: TaskOrigin;
   originalName?: string | null;

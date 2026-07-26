@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>HabitHero｜角色儀表板試做</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800;900&display=swap');
+
+      :root {
+        --ink: #183d55;
+        --muted: #68818e;
+        --cream: #fffaf0;
+        --surface: rgba(255, 255, 255, 0.94);
+        --aqua: #58c9c1;
+        --aqua-deep: #1b9e9e;
+        --orange: #ff9f39;
+        --orange-deep: #e9791f;
+        --yellow: #ffd86a;
+        --line: #e9eee8;
+        --shadow: 0 16px 40px rgba(43, 88, 103, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      html { background: #dceaf0; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--ink);
+        background: #dceaf0;
+        font-family: Nunito, system-ui, sans-serif;
+      }
+      button { font: inherit; border: 0; cursor: pointer; }
+      button:focus-visible { outline: 3px solid #236ff1; outline-offset: 3px; }
+
+      .app-shell {
+        position: relative;
+        min-height: 100svh;
+        overflow-x: hidden;
+        background: #ffffff;
+      }
+      .app-shell::before,
+      .app-shell::after {
+        position: absolute;
+        z-index: 0;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        content: '';
+        display: none;
+        filter: blur(3px);
+      }
+      .app-shell::before { top: 110px; left: -120px; background: #b8eee8; }
+      .app-shell::after { top: 180px; right: -130px; background: #fff0b0; }
+
+      .dashboard {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 620px);
+        min-height: 100svh;
+        margin: 0 auto;
+        padding-bottom: calc(92px + env(safe-area-inset-bottom));
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 72px;
+        padding: max(18px, env(safe-area-inset-top)) 22px 12px;
+      }
+      .brand {
+        font-family: Fredoka, sans-serif;
+        font-size: 24px;
+        letter-spacing: -.04em;
+      }
+      .brand span { color: var(--orange-deep); }
+      .top-actions { display: flex; gap: 8px; }
+      .icon-button {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        color: var(--ink);
+        background: rgba(255, 255, 255, .58);
+        border: 1px solid rgba(255, 255, 255, .7);
+        border-radius: 50%;
+        transition: transform .2s ease, background .2s ease;
+      }
+      .icon-button:hover { background: #fff; transform: translateY(-2px); }
+
+      .character-hero {
+        position: relative;
+        height: 294px;
+        margin: 0 16px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #c6f0eb 0%, #b3e8e1 66%, #8ad9d1 100%);
+        border: 2px solid rgba(255, 255, 255, .75);
+        border-radius: 34px;
+        box-shadow: var(--shadow);
+      }
+      .character-copy {
+        position: absolute;
+        z-index: 3;
+        top: 23px;
+        left: 24px;
+        max-width: 205px;
+      }
+      .eyebrow {
+        margin: 0 0 5px;
+        color: var(--aqua-deep);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+      .character-copy h1 {
+        margin: 0;
+        font-family: Fredoka, sans-serif;
+        font-size: clamp(27px, 7vw, 38px);
+        line-height: 1.05;
+        letter-spacing: -.05em;
+      }
+      .character-copy p { margin: 9px 0 0; color: #356873; font-size: 14px; font-weight: 700; }
+      .scene-pill {
+        position: absolute;
+        z-index: 3;
+        right: 18px;
+        bottom: 19px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 12px;
+        color: #21676d;
+        background: rgba(255, 255, 255, .8);
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        backdrop-filter: blur(8px);
+      }
+      .scene-pill .dot { width: 8px; height: 8px; background: #55bd66; border-radius: 50%; }
+      .cloud { position: absolute; z-index: 1; background: rgba(255,255,255,.56); border-radius: 999px; }
+      .cloud.one { top: 72px; right: 28px; width: 82px; height: 22px; }
+      .cloud.one::before { position: absolute; top: -17px; left: 16px; width: 38px; height: 38px; background: inherit; border-radius: 50%; content: ''; }
+      .cloud.two { top: 128px; left: -20px; width: 110px; height: 25px; opacity: .72; }
+      .sun { position: absolute; top: 35px; right: 82px; width: 43px; height: 43px; background: #ffe286; border-radius: 50%; box-shadow: 0 0 0 10px rgba(255, 226, 134, .2); }
+      .hill { position: absolute; right: -7%; bottom: -67px; left: -7%; height: 143px; background: #72cec2; border-radius: 50% 50% 0 0; }
+      .hill.back { bottom: -87px; background: #99ddd4; opacity: .78; }
+      #character-canvas { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; touch-action: pan-y; }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: -23px 28px 0;
+        position: relative;
+        z-index: 4;
+      }
+      .stat-card {
+        min-height: 78px;
+        padding: 14px 17px;
+        background: var(--surface);
+        border: 1px solid rgba(255, 255, 255, .88);
+        border-radius: 21px;
+        box-shadow: 0 12px 26px rgba(40, 103, 111, .12);
+      }
+      .stat-card small { display: block; color: var(--muted); font-size: 12px; font-weight: 900; }
+      .stat-card strong { display: inline-block; margin-top: 4px; color: var(--orange-deep); font-family: Fredoka, sans-serif; font-size: 26px; }
+      .stat-card strong span { color: var(--muted); font-family: Nunito, sans-serif; font-size: 13px; }
+
+      .content { padding: 24px 20px 0; }
+      .section-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 12px; }
+      .section-heading h2 { margin: 0; font-family: Fredoka, sans-serif; font-size: 25px; letter-spacing: -.04em; }
+      .section-heading p { margin: 0 0 2px; color: var(--muted); font-size: 13px; font-weight: 800; }
+      .filter-button { min-height: 44px; padding: 9px 13px; color: #2d7676; background: #d8f4ee; border-radius: 14px; font-size: 12px; font-weight: 900; }
+
+      .task-list { display: grid; gap: 10px; }
+      .task-card {
+        display: grid;
+        grid-template-columns: 46px 1fr auto;
+        align-items: center;
+        gap: 11px;
+        min-height: 76px;
+        padding: 11px 12px 11px 14px;
+        background: rgba(255, 255, 255, .96);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: 0 8px 20px rgba(47, 82, 84, .07);
+        transition: transform .2s ease, box-shadow .2s ease;
+      }
+      .task-card:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(47, 82, 84, .12); }
+      .task-icon { display: grid; width: 46px; height: 46px; place-items: center; color: #bd7023; background: #fff0cf; border-radius: 15px; }
+      .task-copy strong { display: block; font-size: 16px; }
+      .task-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 700; }
+      .task-reward { margin-right: 3px; color: var(--orange-deep); font-size: 13px; font-weight: 900; white-space: nowrap; }
+      .task-action { display: grid; min-width: 70px; min-height: 44px; place-items: center; color: #fff; background: var(--orange); border-radius: 14px; font-size: 13px; font-weight: 900; transition: background .2s ease, transform .15s ease; }
+      .task-action:hover { background: var(--orange-deep); }
+      .task-action:active { transform: scale(.96); }
+      .task-action.done { color: #237a65; background: #d9f4dc; }
+
+      .bottom-nav {
+        position: fixed;
+        z-index: 10;
+        right: max(14px, calc((100vw - 620px) / 2 + 14px));
+        bottom: max(14px, env(safe-area-inset-bottom));
+        left: max(14px, calc((100vw - 620px) / 2 + 14px));
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        width: min(calc(100% - 28px), 592px);
+        margin: 0 auto;
+        padding: 7px;
+        background: rgba(255, 255, 255, .9);
+        border: 1px solid rgba(255, 255, 255, .88);
+        border-radius: 22px;
+        box-shadow: 0 14px 34px rgba(43, 88, 103, .17);
+        backdrop-filter: blur(16px);
+      }
+      .nav-item { display: grid; min-height: 52px; place-items: center; gap: 2px; color: #96a9a9; background: transparent; border-radius: 16px; font-size: 11px; font-weight: 900; transition: color .2s ease, background .2s ease; }
+      .nav-item svg { width: 19px; height: 19px; }
+      .nav-item.active { color: var(--orange-deep); background: #fff0d6; }
+
+      .toast { position: fixed; z-index: 20; top: 20px; left: 50%; padding: 11px 16px; color: #fff; background: #173e55; border-radius: 999px; font-size: 13px; font-weight: 800; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transform: translate(-50%, -8px); transition: opacity .2s ease, transform .2s ease; }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      @media (min-width: 760px) {
+        .dashboard { padding-top: 12px; }
+        .topbar { padding-top: 18px; }
+        .character-hero { height: 330px; }
+        .content { padding-right: 28px; padding-left: 28px; }
+      }
+      @media (max-width: 390px) {
+        .character-hero { height: 270px; margin-right: 12px; margin-left: 12px; border-radius: 28px; }
+        .character-copy { top: 18px; left: 18px; }
+        .character-copy h1 { font-size: 28px; }
+        .stats-row { margin-right: 20px; margin-left: 20px; }
+        .content { padding-right: 14px; padding-left: 14px; }
+        .task-card { grid-template-columns: 42px 1fr auto; gap: 8px; padding-left: 10px; }
+        .task-icon { width: 42px; height: 42px; }
+        .task-reward { display: none; }
+        .task-action { min-width: 63px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+      }
+    </style>
+    <script type="importmap">
+      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/"}}
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="dashboard" aria-label="HabitHero 角色儀表板試做">
+        <header class="topbar">
+          <div class="brand">Habit<span>Hero</span></div>
+          <div class="top-actions">
+            <button class="icon-button" type="button" aria-label="查看通知" data-toast="今天有 2 個小提醒">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+            </button>
+            <button class="icon-button" type="button" aria-label="開啟個人資料" data-toast="角色設定尚未開放">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 20c.7-3.3 3-5 7-5s6.3 1.7 7 5"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <section class="character-hero" aria-labelledby="hero-title">
+          <div class="character-copy">
+            <p class="eyebrow">今日冒險 · 第 11 天</p>
+            <h1 id="hero-title">早安，小明！</h1>
+            <p>和你的夥伴一起完成今天的小目標吧。</p>
+          </div>
+          <div class="sun" aria-hidden="true"></div>
+          <div class="cloud one" aria-hidden="true"></div>
+          <div class="cloud two" aria-hidden="true"></div>
+          <div class="hill back" aria-hidden="true"></div>
+          <div class="hill" aria-hidden="true"></div>
+          <canvas id="character-canvas" aria-label="正在呼吸和眨眼的 3D 陪伴角色"></canvas>
+          <div class="scene-pill"><span class="dot" aria-hidden="true"></span>陪伴中</div>
+        </section>
+
+        <section class="stats-row" aria-label="今日統計">
+          <article class="stat-card"><small>我的點數</small><strong id="points">120 <span>pt</span></strong></article>
+          <article class="stat-card"><small>今日完成</small><strong><span id="completed">1</span><span> / 4 個任務</span></strong></article>
+        </section>
+
+        <section class="content" aria-labelledby="tasks-title">
+          <div class="section-heading">
+            <div><h2 id="tasks-title">今日任務</h2><p>完成小事，也是在照顧自己</p></div>
+            <button class="filter-button" type="button" data-toast="目前顯示全部任務">全部任務</button>
+          </div>
+          <div class="task-list">
+            <article class="task-card">
+              <div class="task-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16v8H4zM6 11V8h12v3M9 8V5h6v3M3 19h18"/></svg></div>
+              <div class="task-copy"><strong>整理床鋪</strong><span>生活習慣 · 約 5 分鐘</span></div><span class="task-reward">+10 pt</span>
+              <button class="task-action" type="button" data-task="整理床鋪">開始</button>
+            </article>
+            <article class="task-card">
+              <div class="task-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></div>
+              <div class="task-copy"><strong>閱讀 20 分鐘</strong><span>學習成長 · 需要專心</span></div><span class="task-reward">+15 pt</span>
+              <button class="task-action" type="button" data-task="閱讀 20 分鐘">開始</button>
+            </article>
+            <article class="task-card">
+              <div class="task-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16M6 11l1.5 8h9L18 11M9 7c0-2 1.4-3 3-3s3 1 3 3M8 14h8"/></svg></div>
+              <div class="task-copy"><strong>喝一杯水</strong><span>身體照顧 · 隨時可以完成</span></div><span class="task-reward">+5 pt</span>
+              <button class="task-action done" type="button" data-task="喝一杯水" data-done="true">完成</button>
+            </article>
+            <article class="task-card">
+              <div class="task-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M5 12h14M5 17h9"/><path d="m17 16 2 2 3-4"/></svg></div>
+              <div class="task-copy"><strong>整理書桌</strong><span>生活習慣 · 約 10 分鐘</span></div><span class="task-reward">+10 pt</span>
+              <button class="task-action" type="button" data-task="整理書桌">開始</button>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="主要導覽">
+        <button class="nav-item active" type="button" data-nav="任務"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h3"/></svg><span>任務</span></button>
+        <button class="nav-item" type="button" data-nav="獎勵"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12v13H6zM4 8h16v4H4zM12 8v13M8 4c0-1.1.9-2 2-2 1.7 0 2 3 2 3s.3-3 2-3c1.1 0 2 .9 2 2 0 2-4 4-4 4S8 6 8 4z"/></svg><span>獎勵</span></button>
+        <button class="nav-item" type="button" data-nav="成長"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M12 13c-4-1-6-3.2-6-6 3.8-.2 6 1.5 6 5M12 17c4-1 6-3.2 6-6-3.8-.2-6 1.5-6 5"/><path d="M5 21h14"/></svg><span>成長</span></button>
+        <button class="nav-item" type="button" data-nav="角色"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 20c.7-3.3 3-5 7-5s6.3 1.7 7 5"/></svg><span>角色</span></button>
+      </nav>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <script type="module">
+      import * as THREE from 'three';
+
+      const canvas = document.querySelector('#character-canvas');
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-3.6, 3.6, 2.5, -2.5, 0.1, 100);
+      camera.position.set(0, 0.25, 10);
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.shadowMap.enabled = true;
+
+      const ambient = new THREE.HemisphereLight(0xffffff, 0x75bbb4, 2.4);
+      scene.add(ambient);
+      const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
+      keyLight.position.set(-3, 5, 6);
+      keyLight.castShadow = true;
+      scene.add(keyLight);
+
+      const character = new THREE.Group();
+      character.position.set(.78, -.56, 0);
+      character.scale.setScalar(1.22);
+      scene.add(character);
+
+      const mat = (color, roughness = .72) => new THREE.MeshStandardMaterial({ color, roughness, metalness: 0 });
+      const cream = mat(0xfff9e8);
+      const orange = mat(0xf18b26);
+      const dark = mat(0x183d55);
+      const pink = mat(0xff9bb5);
+      const leaf = mat(0x4aaf83);
+
+      const body = new THREE.Mesh(new THREE.SphereGeometry(1.05, 32, 22), cream);
+      body.scale.set(.84, 1.08, .68);
+      body.position.y = .42;
+      body.castShadow = true;
+      character.add(body);
+
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(.62, 28, 18), mat(0xfffdf4));
+      belly.scale.set(.9, 1.1, .18);
+      belly.position.set(0, .17, .61);
+      character.add(belly);
+
+      const wing = (side) => {
+        const group = new THREE.Group();
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(.42, 24, 16), orange);
+        mesh.scale.set(.75, 1.35, .35);
+        mesh.position.set(side * .76, .17, .05);
+        mesh.rotation.z = side * -.45;
+        mesh.castShadow = true;
+        group.add(mesh);
+        return group;
+      };
+      const leftWing = wing(-1); const rightWing = wing(1);
+      character.add(leftWing, rightWing);
+
+      const eye = (x) => {
+        const e = new THREE.Mesh(new THREE.SphereGeometry(.085, 20, 12), dark);
+        e.scale.z = .35;
+        e.position.set(x, .72, .62);
+        return e;
+      };
+      const leftEye = eye(-.28); const rightEye = eye(.28);
+      character.add(leftEye, rightEye);
+
+      const cheek = (x) => {
+        const c = new THREE.Mesh(new THREE.SphereGeometry(.13, 20, 12), pink);
+        c.scale.z = .18;
+        c.position.set(x, .48, .63);
+        return c;
+      };
+      character.add(cheek(-.47), cheek(.47));
+
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(.14, .3, 3), orange);
+      beak.rotation.x = Math.PI / 2;
+      beak.position.set(0, .59, .68);
+      character.add(beak);
+
+      const hat = new THREE.Group();
+      const hatTop = new THREE.Mesh(new THREE.SphereGeometry(.46, 24, 16), pink);
+      hatTop.scale.set(1.1, .5, .7); hatTop.position.y = 1.24;
+      const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(.52, .52, .09, 32), pink);
+      hatBrim.position.y = 1.09;
+      hat.add(hatTop, hatBrim);
+      character.add(hat);
+
+      const sprout = new THREE.Group();
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .32, 10), leaf);
+      stem.position.y = 1.55;
+      const leafMesh = new THREE.Mesh(new THREE.SphereGeometry(.14, 16, 12), leaf);
+      leafMesh.scale.set(1.4, .55, .35); leafMesh.position.set(.1, 1.69, 0);
+      sprout.add(stem, leafMesh); character.add(sprout);
+
+      const foot = (x) => {
+        const f = new THREE.Mesh(new THREE.SphereGeometry(.2, 20, 12), orange);
+        f.scale.set(1.45, .48, .9); f.position.set(x, -.75, .12); return f;
+      };
+      character.add(foot(-.37), foot(.37));
+
+      const groundShadow = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color: 0x459b95, transparent: true, opacity: .22 }));
+      groundShadow.scale.set(1.2, .34, 1); groundShadow.rotation.x = -Math.PI / 2; groundShadow.position.set(.78, -.9, .1); scene.add(groundShadow);
+
+      let pointerX = 0;
+      const resize = () => {
+        const rect = canvas.getBoundingClientRect();
+        const aspect = Math.max(rect.width / Math.max(rect.height, 1), 1);
+        camera.left = -3.6 * aspect / 1.9; camera.right = 3.6 * aspect / 1.9;
+        camera.top = 2.5; camera.bottom = -2.5;
+        camera.updateProjectionMatrix(); renderer.setSize(rect.width, rect.height, false);
+      };
+      new ResizeObserver(resize).observe(canvas); resize();
+      canvas.addEventListener('pointermove', (event) => { const rect = canvas.getBoundingClientRect(); pointerX = (event.clientX - rect.left) / rect.width - .5; });
+      canvas.addEventListener('pointerleave', () => { pointerX = 0; });
+      canvas.addEventListener('click', () => showToast('小夥伴說：今天也一起加油！'));
+
+      const clock = new THREE.Clock();
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const animate = () => {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+        const slow = reduced ? 0 : t;
+        character.position.x = .78 + pointerX * .18;
+        character.position.y = -.56 + Math.sin(slow * 2.1) * .035;
+        character.rotation.z = Math.sin(slow * 1.6) * .025;
+        leftWing.rotation.z = -.08 + Math.sin(slow * 1.8) * .05;
+        rightWing.rotation.z = .08 - Math.sin(slow * 1.8) * .05;
+        const blink = reduced ? 1 : (Math.sin(t * .75) > .985 ? .18 : 1);
+        leftEye.scale.y = blink; rightEye.scale.y = blink;
+        hat.rotation.z = Math.sin(slow * 1.6) * .025;
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      const toast = document.querySelector('#toast');
+      let toastTimer;
+      function showToast(message) { clearTimeout(toastTimer); toast.textContent = message; toast.classList.add('show'); toastTimer = setTimeout(() => toast.classList.remove('show'), 2200); }
+      document.querySelectorAll('[data-toast]').forEach((button) => button.addEventListener('click', () => showToast(button.dataset.toast)));
+      document.querySelectorAll('[data-nav]').forEach((button) => button.addEventListener('click', () => { document.querySelectorAll('.nav-item').forEach((item) => item.classList.remove('active')); button.classList.add('active'); showToast(`${button.dataset.nav}頁面試做中`); }));
+      document.querySelectorAll('[data-task]').forEach((button) => button.addEventListener('click', () => {
+        if (button.dataset.done === 'true') { showToast(`${button.dataset.task}已經完成囉！`); return; }
+        button.dataset.done = 'true'; button.classList.add('done'); button.textContent = '完成';
+        document.querySelector('#completed').textContent = String(Number(document.querySelector('#completed').textContent) + 1);
+        document.querySelector('#points').innerHTML = `${Number(document.querySelector('#points').textContent.split(' ')[0]) + 10} <span>pt</span>`;
+        showToast(`${button.dataset.task}完成！小夥伴很替你開心`);
+      }));
+    </script>
+  </body>
+</html>

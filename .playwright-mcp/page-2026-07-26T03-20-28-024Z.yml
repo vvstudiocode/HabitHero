@@ -1,0 +1,16 @@
+- main [ref=f6e2]:
+  - generic [ref=f6e4]:
+    - generic [ref=f6e5]: ✦
+    - generic [ref=f6e6]:
+      - strong [ref=f6e7]: HabitHero
+      - generic [ref=f6e8]: 玩偶互動原型
+  - region [ref=f6e9]:
+    - generic [ref=f6e10]: PARENT CONTROL PREVIEW
+    - heading "和你的習慣小英雄互動" [level=1] [ref=f6e11]
+    - paragraph [ref=f6e12]: 點擊玩偶，先看看家長入口的五個功能按鈕。這是獨立視覺原型，尚未連接正式功能。
+  - generic "可互動的 3D 彩虹星光玩偶" [ref=f6e14] [cursor=pointer]:
+    - generic: 點擊玩偶開啟家長功能
+    - generic: 正在載入玩偶…
+    - generic:
+      - strong: Starlight Rainbow
+      - generic: 正在探索房間 · 點擊我互動
