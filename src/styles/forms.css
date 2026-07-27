@@ -1,0 +1,194 @@
+/* Keep native controls inside rounded cards on small phone widths with full vertical alignment. */
+.hh-time-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: #12393b;
+  line-height: 48px;
+}
+
+.hh-time-input::-webkit-date-and-time-value {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  color: #12393b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hh-time-input::-webkit-datetime-edit {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hh-time-input::-webkit-datetime-edit-fields-wrapper {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.hh-time-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+/* Use app primary teal theme color for child selection checkboxes. */
+.hh-child-checkbox {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: #16aeb7;
+  cursor: pointer;
+}
+
+.hh-child-checkbox:focus-visible {
+  outline: 3px solid rgba(22, 174, 183, 0.35);
+  outline-offset: 2px;
+}
+
+.hh-switch-modal-shell {
+  /* The app shell styles direct children as relative; keep switch dialogs viewport-fixed. */
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 300 !important;
+}
+
+.hh-switch-modal-panel {
+  animation: hh-switch-modal-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hh-switch-modal-shell {
+  background: rgba(18, 57, 59, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hh-family-picker-panel {
+  border: 1px solid rgba(46, 152, 150, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 250, 0.98), rgba(255, 250, 222, 0.96)),
+    #fffff6;
+  color: var(--hh-ink);
+  box-shadow: 0 24px 60px rgba(18, 57, 59, 0.28), inset 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.hh-family-picker-icon {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6 58%, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(104, 145, 161, 0.2), inset 0 1px rgba(255, 255, 255, 0.78);
+}
+
+.hh-family-picker-child-option,
+.hh-family-picker-parent-option {
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.76);
+}
+
+.hh-family-picker-child-option {
+  border-color: rgba(255, 196, 93, 0.34);
+  background: rgba(255, 238, 169, 0.52);
+  color: #57451c;
+}
+
+.hh-family-picker-child-option:hover,
+.hh-family-picker-child-option:focus-visible {
+  background: rgba(255, 228, 134, 0.78);
+}
+
+.hh-family-picker-parent-option {
+  border-color: rgba(46, 152, 150, 0.24);
+  background: rgba(170, 240, 141, 0.34);
+  color: var(--hh-ink);
+}
+
+.hh-family-picker-parent-option:hover,
+.hh-family-picker-parent-option:focus-visible {
+  background: rgba(130, 226, 195, 0.58);
+}
+
+.hh-family-picker-child-option:focus-visible,
+.hh-family-picker-parent-option:focus-visible {
+  outline: 3px solid rgba(25, 184, 199, 0.34);
+  outline-offset: 2px;
+}
+
+.hh-parent-unlock-panel {
+  border: 1px solid rgba(46, 152, 150, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 250, 0.98), rgba(224, 251, 246, 0.96));
+  color: var(--hh-ink);
+  box-shadow: 0 24px 60px rgba(18, 57, 59, 0.28), inset 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.hh-parent-unlock-icon {
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  color: #ffffff;
+}
+
+.hh-parent-unlock-input {
+  border: 1px solid rgba(46, 152, 150, 0.26);
+  background: rgba(255, 255, 246, 0.76);
+  color: var(--hh-ink);
+}
+
+.hh-parent-unlock-input:focus {
+  border-color: rgba(25, 184, 199, 0.72);
+  box-shadow: 0 0 0 3px rgba(25, 184, 199, 0.18);
+}
+
+.hh-parent-unlock-submit {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6 58%, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(28, 135, 137, 0.18), inset 0 1px rgba(255, 255, 255, 0.78);
+}
+
+.hh-parent-unlock-submit:hover:not(:disabled) {
+  filter: saturate(1.08) brightness(0.98);
+}
+
+
+/* Forms use neutral surfaces and a single accessible focus treatment. */
+.hh-sprite-theme input:focus-visible,
+.hh-sprite-theme textarea:focus-visible,
+.hh-sprite-theme select:focus-visible,
+.hh-login-screen input:focus-visible,
+.hh-login-screen textarea:focus-visible,
+.hh-login-screen select:focus-visible {
+  outline: 3px solid rgba(111, 111, 118, 0.35);
+  outline-offset: 2px;
+}
+
+.hh-sprite-theme button:disabled,
+.hh-login-screen button:disabled {
+  background: var(--hh-surface-soft);
+  color: var(--hh-muted);
+  filter: none;
+  opacity: 0.55;
+}

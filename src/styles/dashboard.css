@@ -1,0 +1,162 @@
+/* Keep dashboard controls below iOS/Android status bars and display cutouts. */
+.hh-sprite-theme .hh-dashboard-screen>header {
+  padding-top: max(50px, calc(env(safe-area-inset-top) + 35px));
+}
+
+@media (max-width: 860px) {
+  .hh-login-shell {
+    grid-template-columns: 1fr;
+    align-items: end;
+    align-content: space-between;
+    gap: 14px;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .hh-login-copy {
+    align-self: start;
+    margin-top: 54px;
+    margin-bottom: 0;
+  }
+
+  .hh-login-copy p {
+    max-width: 24rem;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+
+  .hh-login-panel {
+    max-width: 380px;
+    margin-inline: auto;
+    padding: 15px;
+  }
+
+}
+
+@media (max-width: 520px) {
+  .hh-login-copy {
+    max-width: 348px;
+  }
+
+  .hh-login-copy h1 {
+    font-size: clamp(54px, 15.5vw, 76px);
+  }
+
+  .hh-login-copy p {
+    max-width: 20.5rem;
+    margin-top: 10px;
+    font-size: 18px;
+    line-height: 1.42;
+  }
+
+  .hh-login-panel {
+    padding: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(224, 251, 246, 0.76)),
+      rgba(231, 255, 249, 0.72);
+  }
+
+  .hh-login-panel-head {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .hh-login-avatar {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .hh-login-panel-head h2 {
+    font-size: 20px;
+  }
+
+  .hh-login-panel-head p,
+  .hh-login-panel label {
+    font-size: 12px;
+  }
+
+  .hh-login-tabs {
+    margin-bottom: 12px;
+  }
+
+  .hh-login-tabs button {
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  .hh-login-panel label {
+    margin: 9px 0 5px;
+  }
+
+  .hh-login-panel input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 16px;
+  }
+
+  .hh-primary-button {
+    min-height: 46px;
+    margin-top: 14px;
+    font-size: 15px;
+  }
+
+  .hh-secondary-button {
+    margin-top: 8px;
+    min-height: 40px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .hh-login-canvas,
+  .hh-login-canvas::before,
+  .hh-login-canvas::after {
+    animation: none;
+  }
+
+  .hh-primary-button,
+  .hh-login-tabs button,
+  .hh-bottom-nav::before,
+  .hh-bottom-nav-button,
+  .hh-secondary-button,
+  .hh-secondary-inline,
+  .hh-icon-button {
+    transition: none;
+  }
+
+  .hh-login-loading {
+    transition: none;
+  }
+}
+
+
+/* Dashboard utilities resolve to semantic neutral roles instead of colored accents. */
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-blue-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-cyan-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-teal-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-indigo-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-purple-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-green-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-yellow-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-orange-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='bg-red-'] {
+  background-color: var(--hh-surface-soft);
+}
+
+.hh-sprite-theme .hh-dashboard-screen [class*='text-blue-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-cyan-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-teal-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-indigo-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-purple-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-green-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-yellow-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-orange-'],
+.hh-sprite-theme .hh-dashboard-screen [class*='text-red-'] {
+  color: var(--hh-ink);
+}
+
+.hh-sprite-theme .hh-dashboard-screen button[class*='bg-'] {
+  background: var(--hh-surface);
+  border: 1px solid var(--hh-border);
+  color: var(--hh-ink);
+}

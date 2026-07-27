@@ -1,0 +1,624 @@
+.hh-sprite-theme,
+.hh-login-screen {
+  position: relative;
+  min-width: 320px;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 38% 0%, rgba(255, 255, 255, 0.72), transparent 28%),
+    radial-gradient(circle at 78% 16%, rgba(147, 197, 253, 0.42), transparent 34%),
+    linear-gradient(180deg, #eef8ff 0%, #e5f3ff 48%, #f8fcff 100%);
+  color: var(--hh-ink);
+  font-family: "Nunito", system-ui, sans-serif;
+}
+
+.hh-sprite-theme::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 48% 30%, transparent 0 52%, rgba(96, 165, 250, 0.12) 72%, rgba(239, 249, 255, 0.36) 100%);
+}
+
+.hh-sprite-theme>* {
+  position: relative;
+  z-index: 1;
+}
+
+.hh-login-screen {
+  display: block;
+  overflow: hidden;
+}
+
+.hh-login-screen--loading {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+}
+
+.hh-login-screen--loading .hh-login-canvas,
+.hh-login-screen--loading .hh-login-sun,
+.hh-login-screen--loading .hh-login-vignette,
+.hh-login-screen--loading .hh-login-grain {
+  z-index: 0;
+}
+
+.hh-loading-content {
+  position: relative;
+  z-index: 2;
+}
+
+.hh-login-canvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(90deg, rgba(255, 244, 190, 0.1), rgba(255, 255, 255, 0) 42%, rgba(255, 244, 190, 0.08)),
+    url("/images/login-sprite-forest.png");
+  background-position: center;
+  background-size: cover;
+  overflow: hidden;
+  pointer-events: none;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.hh-login-canvas::before,
+.hh-login-canvas::after {
+  content: "";
+  position: absolute;
+  inset: -24%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.hh-login-canvas::before {
+  background-image:
+    radial-gradient(circle at 14% 22%, rgba(255, 220, 128, 0.72) 0 7px, transparent 34px),
+    radial-gradient(circle at 31% 10%, rgba(255, 244, 188, 0.74) 0 8px, transparent 38px),
+    radial-gradient(circle at 52% 20%, rgba(255, 231, 157, 0.56) 0 6px, transparent 30px),
+    radial-gradient(circle at 74% 26%, rgba(112, 244, 232, 0.56) 0 8px, transparent 38px),
+    radial-gradient(circle at 84% 62%, rgba(255, 202, 132, 0.52) 0 7px, transparent 34px),
+    radial-gradient(circle at 22% 78%, rgba(98, 240, 229, 0.42) 0 8px, transparent 36px),
+    radial-gradient(circle at 90% 38%, rgba(255, 230, 148, 0.48) 0 7px, transparent 34px);
+  filter: blur(0.7px);
+  opacity: 0.9;
+  animation: hh-login-bokeh-drift 15s ease-in-out infinite alternate;
+}
+
+.hh-login-canvas::after {
+  background-image:
+    linear-gradient(115deg, transparent 0 28%, rgba(255, 236, 162, 0.02) 34%, rgba(255, 246, 197, 0.34) 45%, rgba(121, 244, 234, 0.12) 52%, transparent 66% 100%);
+  filter: blur(10px);
+  opacity: 0.62;
+  transform: translate3d(-34%, -4%, 0) scale(1.08);
+  animation: hh-login-sun-sweep 16s ease-in-out infinite;
+}
+
+@keyframes hh-login-bokeh-drift {
+  from {
+    opacity: 0.58;
+    transform: translate3d(-5.5%, -1.8%, 0) scale(1);
+  }
+
+  to {
+    opacity: 0.96;
+    transform: translate3d(5.8%, 2.4%, 0) scale(1.04);
+  }
+}
+
+@keyframes hh-login-sun-sweep {
+  0% {
+    opacity: 0;
+    transform: translate3d(-42%, -5%, 0) scale(1.08);
+  }
+
+  28% {
+    opacity: 0.74;
+  }
+
+  62% {
+    opacity: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(34%, 4%, 0) scale(1.08);
+  }
+}
+
+@media (min-width: 700px) {
+  .hh-login-canvas {
+    background-image:
+      linear-gradient(90deg, rgba(255, 244, 190, 0.1), rgba(255, 255, 255, 0) 42%, rgba(255, 244, 190, 0.08)),
+      url("/images/login-sprite-forest-wide.png");
+  }
+}
+
+.hh-login-sun,
+.hh-login-vignette,
+.hh-login-grain {
+  position: fixed;
+  pointer-events: none;
+}
+
+.hh-login-sun {
+  inset: 0;
+  background:
+    radial-gradient(circle at 36% 2%, rgba(255, 247, 193, 0.58), transparent 26%),
+    radial-gradient(circle at 72% 18%, rgba(128, 247, 236, 0.26), transparent 34%),
+    radial-gradient(circle at 50% 80%, rgba(255, 202, 126, 0.22), transparent 30%);
+  mix-blend-mode: screen;
+}
+
+.hh-login-vignette {
+  inset: 0;
+  background:
+    radial-gradient(circle at 44% 34%, transparent 0 44%, rgba(255, 246, 207, 0.06) 70%, rgba(30, 101, 94, 0.2) 100%),
+    linear-gradient(90deg, rgba(255, 236, 174, 0.16), transparent 40%, rgba(9, 110, 112, 0.08));
+}
+
+.hh-login-grain {
+  inset: 0;
+  opacity: 0.06;
+  background-image:
+    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.18) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 70% 64%, rgba(168, 248, 255, 0.12) 0 1px, transparent 2px);
+  background-size: 52px 52px, 76px 76px;
+  mask-image: radial-gradient(circle at center, transparent 0 42%, black 92%);
+}
+
+.hh-login-shell {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(288px, 350px);
+  align-items: center;
+  gap: clamp(20px, 4vw, 64px);
+  min-height: 100dvh;
+  padding: clamp(20px, 4vw, 56px);
+  pointer-events: none;
+}
+
+.hh-login-copy {
+  align-self: start;
+  max-width: 560px;
+  margin-top: clamp(62px, 11vh, 126px);
+  color: #fffef4;
+  text-shadow: 0 3px 12px rgba(8, 76, 80, 0.48), 0 18px 48px rgba(255, 195, 104, 0.36);
+}
+
+.hh-login-copy h1 {
+  margin: 0;
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: clamp(56px, 9.2vw, 122px);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: 0;
+}
+
+.hh-login-copy p {
+  max-width: 34rem;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 248, 0.96);
+  text-shadow: 0 2px 12px rgba(8, 76, 80, 0.46);
+  font-size: clamp(19px, 2.05vw, 25px);
+  line-height: 1.62;
+}
+
+.hh-login-panel {
+  width: 100%;
+  padding: 18px;
+  border: 1px solid var(--hh-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(224, 251, 246, 0.76)),
+    rgba(231, 255, 249, 0.72);
+  color: var(--hh-ink);
+  box-shadow: 0 24px 70px rgba(20, 111, 111, 0.22), inset 0 1px rgba(255, 255, 255, 0.88);
+  pointer-events: auto;
+}
+
+.hh-login-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 38% 20%, rgba(147, 197, 253, 0.72), transparent 32%),
+    linear-gradient(180deg, #60a5fa, #eaf6ff);
+  color: #19324a;
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 18px;
+  transition: opacity 500ms ease, visibility 500ms ease;
+}
+
+.hh-login-loading.hide {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.hh-login-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.hh-login-panel-head h2,
+.hh-sprite-theme h1,
+.hh-sprite-theme h2,
+.hh-sprite-theme h3 {
+  font-family: "Fredoka", system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.hh-login-panel-head h2 {
+  margin: 0;
+  font-size: 27px;
+  line-height: 1.05;
+}
+
+.hh-login-panel-head p {
+  margin: 5px 0 0;
+  color: var(--hh-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hh-login-avatar,
+.hh-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  border: 1px solid var(--hh-line);
+  border-radius: 8px;
+  color: #1299a7;
+  background: rgba(255, 255, 246, 0.72);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.hh-login-tabs {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 32px);
+  max-width: 320px;
+  padding: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 16px 36px rgba(18, 57, 59, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.hh-login-tabs button {
+  flex: 1;
+  min-height: 46px;
+  border: 0;
+  border-radius: 9999px;
+  color: #1a4d50;
+  background: transparent;
+  font: 900 15px "Nunito", system-ui, sans-serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hh-login-tabs button.is-active {
+  color: #0f3032;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6 58%, #2563eb);
+  box-shadow: 0 4px 14px rgba(28, 135, 137, 0.28), inset 0 1px rgba(255, 255, 255, 0.8);
+}
+
+.hh-bottom-nav {
+  --active-index: 0;
+  --item-count: 4;
+  position: fixed;
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+  left: 50%;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(var(--item-count), minmax(0, 1fr));
+  gap: 4px;
+  width: calc(100% - 2rem);
+  max-width: 448px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 36px rgba(18, 57, 59, 0.18), 0 4px 12px rgba(0, 0, 0, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateX(-50%);
+}
+
+.hh-bottom-nav::before {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  width: calc((100% - 12px - (var(--item-count) - 1) * 4px) / var(--item-count));
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6 58%, #2563eb);
+  box-shadow: 0 4px 14px rgba(28, 135, 137, 0.22), inset 0 1px rgba(255, 255, 255, 0.8);
+  content: "";
+  pointer-events: none;
+  transform: translateX(calc(var(--active-index) * (100% + 4px)));
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hh-bottom-nav-button {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 9999px;
+  padding: 8px 10px;
+  color: #526b69;
+  background: transparent;
+  font: 800 14px "Nunito", system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.hh-bottom-nav-button:hover {
+  color: #1a4d50;
+  background: rgba(255, 238, 169, 0.3);
+}
+
+.hh-bottom-nav-button:active {
+  transform: scale(0.96);
+}
+
+.hh-bottom-nav-button.is-active {
+  color: #0f3032;
+  font-weight: 900;
+}
+
+.hh-bottom-nav-button:focus-visible {
+  outline: 3px solid rgba(242, 255, 155, 0.78);
+  outline-offset: 2px;
+}
+
+.hh-login-panel label,
+.hh-sprite-theme label {
+  display: block;
+  margin: 13px 0 7px;
+  color: rgba(20, 78, 80, 0.78);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hh-login-panel input:not([type="checkbox"]):not([type="radio"]),
+.hh-sprite-theme input:not([type="checkbox"]):not([type="radio"]),
+.hh-sprite-theme textarea,
+.hh-sprite-theme select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(46, 152, 150, 0.24);
+  border-radius: 8px;
+  padding: 0 13px;
+  outline: none;
+  background: rgba(255, 255, 247, 0.78);
+  color: var(--hh-ink);
+  font: 700 16px "Nunito", system-ui, sans-serif;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.hh-login-panel input:not([type="checkbox"]):not([type="radio"]):focus,
+.hh-sprite-theme input:not([type="checkbox"]):not([type="radio"]):focus,
+.hh-sprite-theme textarea:focus,
+.hh-sprite-theme select:focus {
+  border-color: rgba(22, 174, 183, 0.82);
+  box-shadow: 0 0 0 4px rgba(255, 213, 126, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.hh-primary-button,
+.hh-sprite-theme button[class*="bg-blue-500"],
+.hh-sprite-theme button[class*="bg-yellow-400"],
+.hh-sprite-theme button[class*="bg-yellow-500"],
+.hh-sprite-theme button[class*="bg-green-500"],
+.hh-sprite-theme button[class*="bg-purple-500"],
+.hh-sprite-theme button[class*="bg-orange-500"],
+.hh-sprite-theme button[class*="bg-cyan-600"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  color: #344b55;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6 58%, #2563eb);
+  font-family: "Nunito", system-ui, sans-serif;
+  font-weight: 900;
+  touch-action: manipulation;
+  box-shadow: 0 16px 34px rgba(42, 126, 157, 0.24), 0 10px 30px rgba(236, 186, 91, 0.18);
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+}
+
+.hh-primary-button {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 18px;
+  font-size: 16px;
+}
+
+.hh-primary-button:hover,
+.hh-sprite-theme button[class*="bg-blue-500"]:hover,
+.hh-sprite-theme button[class*="bg-yellow-400"]:hover,
+.hh-sprite-theme button[class*="bg-yellow-500"]:hover,
+.hh-sprite-theme button[class*="bg-green-500"]:hover,
+.hh-sprite-theme button[class*="bg-purple-500"]:hover,
+.hh-sprite-theme button[class*="bg-orange-500"]:hover,
+.hh-sprite-theme button[class*="bg-cyan-600"]:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.08) brightness(1.04);
+  box-shadow: 0 22px 46px rgba(43, 142, 175, 0.34);
+}
+
+.hh-primary-button:focus-visible,
+.hh-secondary-button:focus-visible,
+.hh-secondary-inline:focus-visible,
+.hh-icon-button:focus-visible,
+.hh-sprite-theme button:focus-visible {
+  outline: 3px solid rgba(242, 255, 155, 0.78);
+  outline-offset: 3px;
+}
+
+.hh-primary-button:disabled,
+.hh-primary-button.is-disabled,
+.hh-sprite-theme button:disabled {
+  cursor: not-allowed;
+  filter: brightness(0.75);
+  opacity: 0.7;
+  transform: none;
+}
+
+.hh-secondary-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.hh-secondary-button:hover,
+.hh-secondary-inline:hover,
+.hh-icon-button:hover {
+  background: rgba(147, 197, 253, 0.28);
+  color: var(--hh-ink);
+}
+
+.hh-login-error,
+.hh-sprite-theme [role="alert"] {
+  color: var(--hh-danger);
+  font-weight: 800;
+}
+
+.hh-login-note {
+  margin: 12px 0 0;
+  color: rgba(20, 78, 80, 0.72);
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.hh-login-screen--entry .hh-login-shell {
+  display: block;
+}
+
+.hh-login-screen--entry .hh-login-copy {
+  max-width: min(560px, 88vw);
+  pointer-events: none;
+}
+
+.hh-login-screen--entry .hh-login-panel {
+  position: fixed;
+  right: auto;
+  bottom: max(28px, calc(env(safe-area-inset-bottom) + 28px));
+  left: 50%;
+  width: min(286px, calc(100% - 32px));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: translateX(-50%);
+  backdrop-filter: none;
+}
+
+.hh-login-screen--entry .hh-login-panel.is-revealed {
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+}
+
+.hh-login-screen--entry .hh-login-panel.is-revealed .hh-login-tabs {
+  position: static;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 12px;
+  transform: none;
+}
+
+.hh-login-screen--entry .hh-login-tabs button {
+  min-height: 42px;
+  font-size: 14px;
+  border-radius: 9999px;
+}
+
+.hh-login-screen--entry .hh-primary-button {
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.hh-login-screen--entry .hh-secondary-button {
+  min-height: 38px;
+  margin-top: 7px;
+  font-size: 13px;
+}
+
+.hh-login-screen--entry .hh-login-fields {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 8px;
+  padding: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(224, 251, 246, 0.72)),
+    rgba(231, 255, 249, 0.72);
+  box-shadow: 0 18px 46px rgba(29, 142, 143, 0.16), inset 0 1px rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px) saturate(122%);
+  animation: hh-login-fields-in 260ms ease-out both;
+}
+
+@keyframes hh-login-fields-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Login surfaces are intentionally white and neutral; the canvas remains unfiltered. */
+.hh-login-screen {
+  background: var(--hh-surface);
+  color: var(--hh-ink);
+}
+
+.hh-login-panel,
+.hh-login-tabs,
+.hh-login-fields {
+  background: var(--hh-surface);
+  border-color: var(--hh-border);
+  color: var(--hh-ink);
+}
+
+.hh-login-panel input:not([type='checkbox']):not([type='radio']),
+.hh-login-panel textarea,
+.hh-login-panel select {
+  background: var(--hh-surface);
+  border-color: var(--hh-border);
+  color: var(--hh-ink);
+}

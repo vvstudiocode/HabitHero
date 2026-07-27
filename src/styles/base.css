@@ -1,0 +1,153 @@
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-left {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes hh-first-use-guide-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.hh-first-use-guide-fade-in {
+  animation: hh-first-use-guide-fade-in 240ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hh-first-use-guide-fade-in {
+    animation-duration: 0.01ms;
+  }
+}
+
+@keyframes hh-slide-up-exit {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes hh-slide-left-exit {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes hh-modal-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+}
+
+@keyframes hh-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hh-modal-panel {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  animation: hh-modal-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hh-form-modal-panel {
+  max-height: calc(100dvh - 8px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  scroll-padding-bottom: 160px;
+}
+
+.hh-form-modal-panel.hh-modal-exit,
+.hh-consent-modal-panel.hh-modal-exit,
+.hh-parent-confirm-panel.hh-modal-exit,
+.hh-reward-confirm-panel.hh-modal-exit {
+  animation: hh-slide-up-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+.hh-modal-panel.hh-modal-exit {
+  animation: hh-modal-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+.hh-settings-drawer.hh-modal-exit,
+.hh-document-shell.hh-modal-exit {
+  animation: hh-slide-left-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+body,
+.hh-sprite-theme,
+.hh-login-screen,
+.hh-sprite-theme .hh-dashboard-screen,
+.hh-sprite-theme .hh-dashboard-screen.bg-blue-50,
+.hh-sprite-theme .hh-dashboard-screen.bg-gray-50 {
+  background: var(--hh-neutral-body) !important;
+  color: var(--hh-neutral-ink);
+}
+
+/* Preserve character/model color. White theme is a surface treatment, not a filter. */
+.hh-login-canvas,
+.hh-character-hero__canvas,
+.hh-sprite-theme img,
+.hh-sprite-theme canvas {
+  filter: none !important;
+}
