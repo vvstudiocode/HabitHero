@@ -835,8 +835,8 @@
   background-image: none !important;
   opacity: 1;
   isolation: isolate;
-  border-bottom: 1px solid #e6edf0;
-  box-shadow: 0 12px 24px rgba(24, 50, 74, .1);
+  border-bottom: 0;
+  box-shadow: none;
   transform: translateZ(0);
 }
 
