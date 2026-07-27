@@ -49,11 +49,14 @@ test('character hitbox stays transparent when hovered', () => {
 test('child feature pages do not create horizontal overflow from the sticky header', () => {
   const characterStyles = read('../src/styles/character.css');
   const overlayStyles = read('../src/styles/overlays.css');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
 
   assert.match(characterStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
   assert.match(overlayStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
   assert.match(overlayStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?scrollbar-width:\s*none/);
   assert.match(overlayStyles, /\.hh-parent-content-modal::\-webkit-scrollbar[\s\S]*?display:\s*none/);
+  assert.match(neutralTheme, /\.hh-parent-content-modal-bar[\s\S]*?margin-top:\s*-24px\s*!important/);
+  assert.match(neutralTheme, /\.hh-parent-content-modal-bar[\s\S]*?box-shadow:\s*none\s*!important/);
   assert.doesNotMatch(`${characterStyles}\n${overlayStyles}`, /inset:\s*0\s+-100vw/);
 });
 
