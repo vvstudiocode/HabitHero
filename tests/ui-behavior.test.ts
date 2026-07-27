@@ -15,6 +15,20 @@ test('family switching dialogs use an enter animation and remain keyboard-safe',
   assert.match(styles, /max-height: calc\(100dvh - 32px\)/);
 });
 
+test('parent dashboard reuses shared modal and empty-state primitives', () => {
+  const dashboard = read('../src/components/ParentDashboard.tsx');
+  const formModal = read('../src/components/parent-dashboard/ParentDashboardFormModal.tsx');
+  const sharedUi = read('../src/components/shared/ParentDashboardUI.tsx');
+
+  assert.match(sharedUi, /export function ModalShell/);
+  assert.match(sharedUi, /export function EmptyState/);
+  assert.match(formModal, /<ModalShell/);
+  assert.match(dashboard, /<ModalShell variant="center"/);
+  assert.match(dashboard, /<EmptyState>/);
+  assert.doesNotMatch(dashboard, /hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl/);
+  assert.doesNotMatch(dashboard, /fixed inset-0 bg-black\/40 flex items-center justify-center p-6 z-\[70\]/);
+});
+
 test('neutral theme keeps surfaces white without applying a grayscale filter', () => {
   const entry = read('../src/main.tsx');
   const neutralTheme = read('../src/styles/neutral-theme.css');

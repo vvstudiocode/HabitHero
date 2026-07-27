@@ -22,6 +22,7 @@ import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCha
 import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashboard/ParentDashboardContent';
 import { ParentSettingsChildrenSection } from './parent-dashboard/ParentSettingsChildrenSection';
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
+import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
@@ -776,7 +777,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   </div>
                 ))}
                 {todoTasks.length === 0 && pendingTasks.length === 0 && completedTasks.length === 0 && (
-                  <div className="text-center py-8 text-gray-700 text-sm">目前沒有任務，趕快新增吧！</div>
+                  <EmptyState>目前沒有任務，趕快新增吧！</EmptyState>
                 )}
               </div>
             </section>
@@ -822,7 +823,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   </div>
                 ))}
                 {state.taskTemplates.length === 0 && (
-                  <div className="text-center py-8 text-gray-700 text-sm">目前沒有模板，點擊右上角新增。</div>
+                  <EmptyState>目前沒有模板，點擊右上角新增。</EmptyState>
                 )}
               </div>
             </section>
@@ -908,7 +909,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               小孩許願
             </h2>
             {allWishlist.length === 0 ? (
-              <div className="text-center py-8 text-gray-700 text-sm bg-white rounded-2xl">許願空空的</div>
+              <EmptyState className="bg-white rounded-2xl">許願空空的</EmptyState>
             ) : (
               <div className="space-y-3">
                 {allWishlist.map(item => (
@@ -1151,12 +1152,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {showTemplateForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
-          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">{editingTemplate ? '編輯模板' : '新增模板'}</h3>
-              <button onClick={() => closeHeroForm(() => setShowTemplateForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉新增模板"><X size={20} /></button>
-            </div>
+        <ModalShell
+          title={editingTemplate ? '編輯模板' : '新增模板'}
+          closeLabel="關閉新增模板"
+          onClose={() => closeHeroForm(() => setShowTemplateForm(false))}
+        >
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
@@ -1195,17 +1195,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               </div>
               <button onClick={() => void handleSaveTemplate()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : '儲存模板'}</button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {assigningTemplate && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
-          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">派發任務：{assigningTemplate.name}</h3>
-              <button onClick={() => closeHeroForm(() => setAssigningTemplate(null))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉派發模板"><X size={20} /></button>
-            </div>
+        <ModalShell
+          title={`派發任務：${assigningTemplate.name}`}
+          closeLabel="關閉派發模板"
+          onClose={() => closeHeroForm(() => setAssigningTemplate(null))}
+        >
             <div className="space-y-4">
               {state.children.length > 1 && (
                 <div>
@@ -1250,17 +1248,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               </div>
               <button onClick={() => void handleAssignTemplate()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '派發中…' : '確認派發'}</button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {showRewardForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
-          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">{editingReward ? '編輯獎勵' : '新增獎勵'}</h3>
-              <button onClick={() => closeHeroForm(() => setShowRewardForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉新增獎勵"><X size={20} /></button>
-            </div>
+        <ModalShell
+          title={editingReward ? '編輯獎勵' : '新增獎勵'}
+          closeLabel="關閉新增獎勵"
+          onClose={() => closeHeroForm(() => setShowRewardForm(false))}
+        >
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">獎勵名稱</label>
@@ -1307,14 +1303,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               </div>
               <button onClick={() => void handleSaveReward()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingReward ? '儲存變更' : '上架獎勵'}</button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Delete Confirm Modals */}
       {taskToDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
-          <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+        <ModalShell variant="center">
             <h3 className="text-xl font-bold mb-2">刪除任務</h3>
             <p className="text-gray-500 mb-6">確定要刪除「{taskToDelete.name}」嗎？這個動作無法復原。</p>
             <div className="flex gap-3 mt-6">
@@ -1324,13 +1318,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 dismissWithAnimation(() => setTaskToDelete(null), '.hh-parent-confirm-panel');
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確定刪除</button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {rewardToDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
-          <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+        <ModalShell variant="center">
             <h3 className="text-xl font-bold mb-2">刪除獎勵</h3>
             <p className="text-gray-500 mb-6">確定要刪除「{rewardToDelete.name}」嗎？這個動作無法復原。</p>
             <div className="flex gap-3 mt-6">
@@ -1340,13 +1332,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 dismissWithAnimation(() => setRewardToDelete(null), '.hh-parent-confirm-panel');
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確定刪除</button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {childToDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
-          <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
+        <ModalShell variant="center">
             <h3 className="text-xl font-bold mb-2 text-red-600">刪除小孩帳號</h3>
             <p className="text-gray-500 mb-4">這將會清除該小孩的所有任務與點數紀錄，並且無法復原。請輸入家長密碼以確認。</p>
             <input
@@ -1377,13 +1367,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 })();
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確認刪除</button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {resetChildId && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
-          <div className="hh-parent-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
+        <ModalShell variant="center">
             <h3 className="mb-2 text-xl font-bold text-blue-900">重設小孩密碼</h3>
             <p className="mb-4 text-sm text-gray-500">重設後請把新密碼告訴小孩；舊密碼會立即失效。</p>
             <div className="space-y-3">
@@ -1414,13 +1402,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 })()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">儲存</button>
               </div>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {accountSetupChildId && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
-          <div className="hh-parent-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
+        <ModalShell variant="center">
             <h3 className="mb-2 text-xl font-bold text-blue-900">建立小孩登入帳號</h3>
             <p className="mb-4 text-sm text-gray-500">建立後小孩可在任何裝置使用帳號登入。</p>
             <div className="space-y-3">
@@ -1443,8 +1429,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 <button onClick={() => void handleCreateExistingChildAccount()} disabled={childAccountSubmitting} aria-busy={childAccountSubmitting} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white disabled:cursor-wait disabled:opacity-50">{childAccountSubmitting ? '建立中…' : '建立'}</button>
               </div>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {showChildPicker && (
