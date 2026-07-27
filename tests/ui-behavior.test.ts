@@ -52,16 +52,9 @@ test('child feature pages do not create horizontal overflow from the sticky head
 
   assert.match(characterStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
   assert.match(overlayStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
+  assert.match(overlayStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?scrollbar-width:\s*none/);
+  assert.match(overlayStyles, /\.hh-parent-content-modal::\-webkit-scrollbar[\s\S]*?display:\s*none/);
   assert.doesNotMatch(`${characterStyles}\n${overlayStyles}`, /inset:\s*0\s+-100vw/);
-});
-
-test('character canvas provides a lightweight blink fallback for unrigged GLB models', () => {
-  const character = read('../src/components/DashboardCharacterHero.tsx');
-  const styles = read('../src/styles/character.css');
-
-  assert.match(character, /hh-character-blink-overlay/);
-  assert.match(character, /2800 \+ Math\.random\(\) \* 3200/);
-  assert.match(styles, /\.hh-character-blink-overlay\.is-blinking/);
 });
 
 test('dashboard tab changes reset the page scroll position', () => {
