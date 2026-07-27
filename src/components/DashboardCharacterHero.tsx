@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { cn } from '../lib/utils';
 
 export type CharacterMenuAction = {
   id: string;
@@ -34,6 +35,31 @@ const MODEL_URL = '/models/pink-cat-girl.glb';
 
 function CharacterCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isBlinking, setIsBlinking] = useState(false);
+
+  useEffect(() => {
+    let scheduleTimer: ReturnType<typeof setTimeout> | undefined;
+    let blinkTimer: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
+
+    const scheduleBlink = () => {
+      scheduleTimer = setTimeout(() => {
+        if (disposed) return;
+        setIsBlinking(true);
+        blinkTimer = setTimeout(() => {
+          if (!disposed) setIsBlinking(false);
+          scheduleBlink();
+        }, 120);
+      }, 2800 + Math.random() * 3200);
+    };
+
+    scheduleBlink();
+    return () => {
+      disposed = true;
+      if (scheduleTimer) clearTimeout(scheduleTimer);
+      if (blinkTimer) clearTimeout(blinkTimer);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -120,7 +146,15 @@ function CharacterCanvas() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="hh-character-hero__canvas" aria-label="置中的 3D 家長角色" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className="hh-character-hero__canvas" aria-label="置中的 3D 家長角色" />
+      <div className={cn('hh-character-blink-overlay', isBlinking && 'is-blinking')} aria-hidden="true">
+        <span className="hh-character-blink-eye hh-character-blink-eye--left" />
+        <span className="hh-character-blink-eye hh-character-blink-eye--right" />
+      </div>
+    </>
+  );
 }
 
 export function DashboardCharacterHero({

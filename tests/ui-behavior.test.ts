@@ -55,6 +55,15 @@ test('child feature pages do not create horizontal overflow from the sticky head
   assert.doesNotMatch(`${characterStyles}\n${overlayStyles}`, /inset:\s*0\s+-100vw/);
 });
 
+test('character canvas provides a lightweight blink fallback for unrigged GLB models', () => {
+  const character = read('../src/components/DashboardCharacterHero.tsx');
+  const styles = read('../src/styles/character.css');
+
+  assert.match(character, /hh-character-blink-overlay/);
+  assert.match(character, /2800 \+ Math\.random\(\) \* 3200/);
+  assert.match(styles, /\.hh-character-blink-overlay\.is-blinking/);
+});
+
 test('dashboard tab changes reset the page scroll position', () => {
   const parentDashboard = read('../src/components/ParentDashboard.tsx');
   const childDashboard = read('../src/components/ChildDashboard.tsx');

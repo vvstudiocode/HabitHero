@@ -165,6 +165,40 @@
   touch-action: pan-y;
 }
 
+/* The source model has no armature or facial blend shapes, so use a tiny
+   screen-space eyelid overlay until a rigged character is available. */
+.hh-character-blink-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 80ms ease-out;
+}
+
+.hh-character-blink-overlay.is-blinking {
+  opacity: 1;
+}
+
+.hh-character-blink-eye {
+  position: absolute;
+  top: 43%;
+  width: 18px;
+  height: 5px;
+  border-top: 3px solid #d78cae;
+  border-radius: 50%;
+  transform: rotate(-8deg);
+}
+
+.hh-character-blink-eye--left {
+  left: calc(50% - 43px);
+}
+
+.hh-character-blink-eye--right {
+  left: calc(50% + 25px);
+  transform: rotate(8deg);
+}
+
 .hh-character-hero-hitbox {
   position: absolute;
   z-index: 4;
