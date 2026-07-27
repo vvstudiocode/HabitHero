@@ -26,14 +26,16 @@ test('dashboard tab changes reset the page scroll position', () => {
 test('login and child password fields provide show-password controls', () => {
   const login = read('../src/components/AccountLogin.tsx');
   const dashboard = read('../src/components/ParentDashboard.tsx');
+  const childSettings = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
+  const dashboardPasswordControls = `${dashboard}\n${childSettings}`;
 
   assert.match(login, /Eye|EyeOff/);
   assert.match(login, /type=\{showPassword \? 'text' : 'password'\}/);
   assert.match(login, /aria-label=\{showPassword \? '隱藏密碼' : '顯示密碼'\}/);
-  assert.match(dashboard, /Eye|EyeOff/);
-  assert.match(dashboard, /type=\{showNewChildPassword \? 'text' : 'password'\}/);
-  assert.match(dashboard, /type=\{showResetChildPassword \? 'text' : 'password'\}/);
-  assert.match(dashboard, /type=\{showAccountSetupPassword \? 'text' : 'password'\}/);
+  assert.match(dashboardPasswordControls, /Eye|EyeOff/);
+  assert.match(dashboardPasswordControls, /type=\{showNewChildPassword \? 'text' : 'password'\}/);
+  assert.match(dashboardPasswordControls, /type=\{showResetChildPassword \? 'text' : 'password'\}/);
+  assert.match(dashboardPasswordControls, /type=\{showAccountSetupPassword \? 'text' : 'password'\}/);
 });
 
 test('today goal form no longer renders template shortcut buttons', () => {
@@ -102,6 +104,8 @@ test('task creation explains that a child is required', () => {
 test('first-use guide covers the complete parent and child workflow', () => {
   const guide = read('../src/components/FirstUseGuide.tsx');
   const dashboard = read('../src/components/ParentDashboard.tsx');
+  const dashboardContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
+  const dashboardUi = `${dashboard}\n${dashboardContent}`;
 
   assert.match(guide, /建立小孩/);
   assert.match(guide, /小孩登入/);
@@ -133,7 +137,8 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(dashboard, /data-tour="settings"/);
   assert.match(dashboard, /data-tour="task-add"/);
   assert.match(dashboard, /data-tour=\{index === 0 \? 'task-card'/);
-  assert.match(dashboard, /data-tour="rewards-tab"\s*type="button"\s*onClick=\{\(\) => setActiveTab\('rewards'\)\}/);
+  assert.match(dashboardUi, /\{ id: 'rewards', label: '獎勵', tour: 'rewards-tab' \}/);
+  assert.match(dashboardUi, /data-tour=\{tab\.tour\}[\s\S]*onClick=\{\(\) => onTabChange\(tab\.id\)\}/);
   assert.match(dashboard, /openTaskForm\(undefined, true\)/);
   assert.match(guide, /step\.target === 'task-name'/);
   assert.match(guide, /settleDelay = step\.target === 'task-name' \|\| step\.target === 'new-child-name' \? 240/);
