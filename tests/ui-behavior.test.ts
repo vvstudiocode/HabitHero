@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 test('family switching dialogs use an enter animation and remain keyboard-safe', () => {
   const picker = read('../src/components/FamilyChildPicker.tsx');
   const unlock = read('../src/components/ParentUnlockModal.tsx');
-  const styles = read('../src/index.css');
+  const styles = `${read('../src/styles/base.css')}\n${read('../src/styles/index.css')}`;
 
   assert.match(picker, /hh-modal-panel/);
   assert.match(unlock, /hh-modal-panel/);
@@ -154,9 +154,10 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(guide, /guide-backdrop-\$\{stepIndex\}-\$\{positionReady/);
   assert.match(guide, /guide-copy-\$\{stepIndex\}-\$\{positionReady/);
   assert.doesNotMatch(guide, /<svg[^>]*hh-first-use-guide-fade-in/);
-  assert.match(read('../src/index.css'), /hh-first-use-guide-fade-in/);
-  assert.match(read('../src/index.css'), /animation: hh-first-use-guide-fade-in 240ms/);
-  assert.match(read('../src/index.css'), /prefers-reduced-motion/);
+  const baseStyles = read('../src/styles/base.css');
+  assert.match(baseStyles, /hh-first-use-guide-fade-in/);
+  assert.match(baseStyles, /animation: hh-first-use-guide-fade-in 240ms/);
+  assert.match(baseStyles, /prefers-reduced-motion/);
   assert.doesNotMatch(guide, /transition-\[top,left\]/);
   assert.doesNotMatch(guide, /transition-all duration-200/);
   assert.match(dashboard, /data-tour="settings"/);

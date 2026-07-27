@@ -3,16 +3,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 test('dashboard header reserves space for the device top safe area', () => {
-  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/styles/dashboard.css', import.meta.url), 'utf8');
 
   assert.match(css, /\.hh-sprite-theme\s+\.hh-dashboard-screen\s*>\s*header/);
   assert.match(css, /env\(safe-area-inset-top\)/);
 });
 
 test('settings drawer and document pages reserve the same top safe area', () => {
-  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/styles/dashboard.css', import.meta.url), 'utf8')
+    + readFileSync(new URL('../src/styles/modals.css', import.meta.url), 'utf8');
 
-  assert.match(css, /\.hh-settings-drawer[\s\S]*?padding-top:\s*max\(50px,\s*calc\(env\(safe-area-inset-top\) \+ 35px\)\)/);
+  assert.match(css, /\.hh-settings-drawer\s*\{[\s\S]*?padding-top:\s*max\(50px,\s*calc\(env\(safe-area-inset-top\) \+ 24px\)\)/);
   assert.match(css, /\.hh-document-header[\s\S]*?padding-top:\s*max\(72px,\s*calc\(env\(safe-area-inset-top,\s*0px\) \+ 35px\)\)/);
 });
 

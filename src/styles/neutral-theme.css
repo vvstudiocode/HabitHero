@@ -76,7 +76,6 @@ body,
 .hh-sprite-theme [class*="text-red-"],
 .hh-sprite-theme [class*="text-pink-"],
 .hh-sprite-theme [class*="text-emerald-"],
-.hh-sprite-theme [class*="text-white"],
 .hh-sprite-theme [class*="text-gray-"] {
   color: var(--hh-neutral-ink) !important;
 }
