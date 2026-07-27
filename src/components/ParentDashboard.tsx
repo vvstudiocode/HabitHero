@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
-import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
-import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Users, KeyRound, Baby } from 'lucide-react';
+import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Baby } from 'lucide-react';
 import { TaskStatus, Task, Reward } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -20,6 +19,9 @@ import { buildGrowthStats } from '../features/growth/growth-stats';
 import { validateRewardPoints } from '../lib/reward-validation';
 import { FirstUseGuide, hasCompletedFirstUseGuide } from './FirstUseGuide';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
+import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashboard/ParentDashboardContent';
+import { ParentSettingsChildrenSection } from './parent-dashboard/ParentSettingsChildrenSection';
+import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
@@ -46,7 +48,7 @@ type GroupedReward = {
   children: { childId: string; childName: string; rewardId: string }[];
 };
 
-type ParentTab = 'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist';
+type ParentTab = ParentDashboardTab;
 
 export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccepted = false }: ParentDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & {
@@ -692,108 +694,20 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         )}
       />
 
-      {/* Main Content */}
-      <main
-        className={cn(
-          "flex-1 p-6 pb-28",
-          heroFeature ? "hh-parent-content-modal" : "hh-parent-content-hidden"
-        )}
-        role={heroFeature ? 'dialog' : undefined}
-        aria-modal={heroFeature ? true : undefined}
-        aria-label={heroFeature ? '家長功能頁面' : undefined}
+      <ParentDashboardContent
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        proposedTaskCount={proposedTasks.length + pendingTasks.length}
+        pendingTicketCount={pendingTickets.length}
+        wishlistCount={allWishlist.length}
+        heroFeature={heroFeature}
+        featureTitle={heroMenuActions.find((action) => action.id === heroFeature)?.title}
+        onCloseFeature={closeHeroFeature}
+        isOffline={isOffline}
+        error={error}
+        loading={loading}
+        onRetry={() => void retry()}
       >
-        {heroFeature && (
-          <div className="hh-parent-content-modal-bar">
-            <strong>{heroMenuActions.find((action) => action.id === heroFeature)?.title}</strong>
-            <button type="button" onClick={closeHeroFeature} aria-label="關閉功能頁面" className="hh-character-icon-button">
-              <X size={18} />
-            </button>
-          </div>
-        )}
-        {isOffline && (
-          <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <span>目前離線，尚未同步的變更不會被視為成功。</span>
-            <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
-          </div>
-        )}
-        {error && (
-          <div role="alert" className="mb-6 flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <span>{error}</span>
-            <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
-          </div>
-        )}
-        {/* Fixed Bottom Oval Capsule Tabs Bar */}
-        <nav
-          aria-label="家長選單分頁"
-          className="hh-bottom-nav hh-bottom-nav--parent"
-          style={{ '--active-index': ['review', 'tasks', 'growth', 'rewards', 'wishlist'].indexOf(activeTab), '--item-count': 5 } as React.CSSProperties}
-        >
-          <button
-            data-tour="review-tab"
-            type="button"
-            onClick={() => setActiveTab('review')}
-            className={cn(
-              "hh-bottom-nav-button",
-              activeTab === 'review' && "is-active"
-            )}
-          >
-            審核
-            {(proposedTasks.length + pendingTasks.length) > 0 && (
-              <span className="absolute top-1 right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 leading-none">
-                {proposedTasks.length + pendingTasks.length}
-              </span>
-            )}
-          </button>
-          <button
-            data-tour="tasks-tab"
-            type="button"
-            onClick={() => setActiveTab('tasks')}
-            className={cn(
-              "hh-bottom-nav-button",
-              activeTab === 'tasks' && "is-active"
-            )}
-          >
-            任務
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('growth')}
-            className={cn(
-              "hh-bottom-nav-button",
-              activeTab === 'growth' && "is-active"
-            )}
-          >
-            成長
-          </button>
-          <button
-            data-tour="rewards-tab"
-            type="button"
-            onClick={() => setActiveTab('rewards')}
-            className={cn(
-              "hh-bottom-nav-button",
-              activeTab === 'rewards' && "is-active"
-            )}
-          >
-            獎勵
-            {pendingTickets.length > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('wishlist')}
-            className={cn(
-              "hh-bottom-nav-button",
-              activeTab === 'wishlist' && "is-active"
-            )}
-          >
-            許願
-            {allWishlist.length > 0 && (
-              <span className="absolute top-1 right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center transform scale-90 leading-none">
-                {allWishlist.length}
-              </span>
-            )}
-          </button>
-        </nav>
-
         {activeTab === 'review' && (
           <GoalReviewPanel
             proposedTasks={proposedTasks}
@@ -1026,7 +940,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             )}
           </div>
         )}
-      </main>
+      </ParentDashboardContent>
 
       {/* Settings Modal */}
       {showSettings && (
@@ -1038,76 +952,31 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             </div>
             
             <div className="space-y-8">
-              {/* Children List */}
-              <section>
-                  <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-                  <Users size={18} /> 小孩帳號管理
-                </h4>
-                <div className="space-y-4">
-                  {state.children.map(child => (
-                    <div key={child.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
-                      <div className="flex items-center justify-between">
-                    <input
-                    type="text"
-                          value={childNameDrafts[child.id] ?? child.name}
-                          onChange={(e) => setChildNameDrafts((drafts) => ({ ...drafts, [child.id]: e.target.value }))}
-                          onBlur={(e) => {
-                            const name = e.target.value.trim();
-                            if (name && name !== child.name) void updateChildName(child.id, name);
-                          }}
-                          className="font-bold text-lg bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none w-1/2 min-w-0"
-                          placeholder="小孩名字"
-                        />
-                        {state.children.length > 1 && (
-                          <button onClick={() => setChildToDelete(child.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg text-sm flex items-center gap-1 shrink-0">
-                            <Trash2 size={16} /> 刪除
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-start gap-2 text-xs text-amber-700">
-                        <KeyRound size={16} className="mt-0.5 shrink-0" />
-                        <span>{child.loginName ? `登入帳號：${child.loginName}。密碼不會顯示在這裡，忘記時請由家長重新設定。` : '此小孩尚未建立登入帳號。'}</span>
-                      </div>
-                      {child.loginName ? <button onClick={() => { setResetChildId(child.id); setResetChildError(''); }} className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50">重設小孩密碼</button> : <button onClick={() => { setAccountSetupChildId(child.id); setAccountSetupError(''); }} className="rounded-lg bg-blue-500 px-3 py-2 text-sm font-bold text-white hover:bg-blue-600">建立小孩帳號</button>}
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Add Child */}
-              <section data-tour="add-child" className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                <h4 className="text-md font-bold text-blue-900 mb-3 flex items-center gap-2">
-                  <Plus size={18} /> 新增小孩
-                </h4>
-                <div className="mb-2">
-                  <input
-                    data-tour="new-child-name"
-                    type="text"
-                    placeholder="名字"
-                    value={newChildName}
-                    onChange={e => setNewChildName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-blue-200 outline-none focus:ring-2 focus:ring-blue-400 min-w-0"
-                  />
-                </div>
-                <input type="text" autoComplete="username" placeholder="小孩帳號名稱，例如 leo123" value={newChildUsername} onChange={e => { setNewChildUsername(e.target.value); setNewChildError(''); }} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
-                <div className="relative mb-2">
-                  <input type={showNewChildPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="小孩密碼（至少 6 碼英數）" value={newChildPassword} onChange={e => { setNewChildPassword(e.target.value); setNewChildError(''); }} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
-                  <button type="button" onClick={() => setShowNewChildPassword((visible) => !visible)} aria-label={showNewChildPassword ? '隱藏小孩密碼' : '顯示小孩密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">
-                    {showNewChildPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                <div className="relative mb-2">
-                  <input type={showNewChildPasswordConfirmation ? 'text' : 'password'} autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => { setNewChildPasswordConfirmation(e.target.value); setNewChildError(''); }} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
-                  <button type="button" onClick={() => setShowNewChildPasswordConfirmation((visible) => !visible)} aria-label={showNewChildPasswordConfirmation ? '隱藏確認密碼' : '顯示確認密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">
-                    {showNewChildPasswordConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {newChildError && <p role="alert" className="mb-3 text-xs leading-5 text-red-600">{newChildError}</p>}
-                <p className="mb-3 text-xs leading-5 text-blue-800">帳號名稱需 3–32 碼英數或底線；小孩可在任何裝置用帳號與密碼登入。</p>
-                <button data-tour="create-child" onClick={() => void handleAddChild()} disabled={!newChildName.trim() || !newChildUsername || !newChildPassword || !newChildPasswordConfirmation || loading || childAccountSubmitting} aria-busy={childAccountSubmitting} className="w-full rounded-xl bg-blue-500 py-2 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50">
-                  {childAccountSubmitting ? '建立中…' : '建立小孩'}
-                </button>
-              </section>
+              <ParentSettingsChildrenSection
+                children={state.children}
+                childNameDrafts={childNameDrafts}
+                onChildNameDraftChange={(childId, name) => setChildNameDrafts(drafts => ({ ...drafts, [childId]: name }))}
+                onChildNameBlur={(childId, value) => { const name = value.trim(); const child = state.children.find(item => item.id === childId); if (name && child && name !== child.name) void updateChildName(childId, name); }}
+                onDeleteChild={setChildToDelete}
+                onResetPassword={childId => { setResetChildId(childId); setResetChildError(''); }}
+                onSetupAccount={childId => { setAccountSetupChildId(childId); setAccountSetupError(''); }}
+                newChildName={newChildName}
+                newChildUsername={newChildUsername}
+                newChildPassword={newChildPassword}
+                newChildPasswordConfirmation={newChildPasswordConfirmation}
+                showNewChildPassword={showNewChildPassword}
+                showNewChildPasswordConfirmation={showNewChildPasswordConfirmation}
+                newChildError={newChildError}
+                loading={loading}
+                childAccountSubmitting={childAccountSubmitting}
+                onNewChildNameChange={setNewChildName}
+                onNewChildUsernameChange={value => { setNewChildUsername(value); setNewChildError(''); }}
+                onNewChildPasswordChange={value => { setNewChildPassword(value); setNewChildError(''); }}
+                onNewChildPasswordConfirmationChange={value => { setNewChildPasswordConfirmation(value); setNewChildError(''); }}
+                onToggleNewChildPassword={() => setShowNewChildPassword(visible => !visible)}
+                onToggleNewChildPasswordConfirmation={() => setShowNewChildPasswordConfirmation(visible => !visible)}
+                onAddChild={() => void handleAddChild()}
+              />
 
               {/* System */}
               <section className="space-y-3 border-t border-gray-100 pt-6">
@@ -1207,12 +1076,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {/* Task Overlays */}
       {showTaskForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
-          <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">{editingTask ? '編輯任務' : '新增任務'}</h3>
-              <button onClick={() => closeHeroForm(() => setShowTaskForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉新增任務"><X size={20} /></button>
-            </div>
+        <ParentDashboardFormModal title={editingTask ? '編輯任務' : '新增任務'} closeLabel="關閉新增任務" onClose={() => closeHeroForm(() => setShowTaskForm(false))}>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
@@ -1283,8 +1147,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               </div>
               <button onClick={() => void handleSaveTask()} disabled={loading || newTaskPoints < 1} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 mb-4 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingTask ? '儲存變更' : '新增'}</button>
             </div>
-          </div>
-        </div>
+        </ParentDashboardFormModal>
       )}
 
       {showTemplateForm && (
