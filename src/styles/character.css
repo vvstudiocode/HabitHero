@@ -822,7 +822,7 @@
 
 .hh-parent-content-modal-bar {
   position: sticky;
-  top: 0;
+  top: -24px;
   z-index: 3;
   display: flex;
   align-items: center;

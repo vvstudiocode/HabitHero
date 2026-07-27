@@ -180,6 +180,7 @@ body,
 /* Every parent/child feature page uses the same edge-to-edge header. */
 .hh-sprite-theme .hh-parent-content-modal-bar {
   margin-top: -24px !important;
+  top: -24px !important;
   border-bottom: 0 !important;
   box-shadow: none !important;
 }
