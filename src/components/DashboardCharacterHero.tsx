@@ -30,7 +30,7 @@ interface DashboardCharacterHeroProps {
   onMenuOpenChange?: (open: boolean) => void;
 }
 
-const MODEL_URL = '/models/black-man-character.glb';
+const MODEL_URL = '/models/pink-cat-girl.glb';
 
 function CharacterCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);

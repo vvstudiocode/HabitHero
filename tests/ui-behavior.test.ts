@@ -40,6 +40,12 @@ test('neutral theme keeps surfaces white without applying a grayscale filter', (
   assert.doesNotMatch(neutralTheme, /linear-gradient/);
 });
 
+test('character hitbox stays transparent when hovered', () => {
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(neutralTheme, /\.hh-character-hero-hitbox:hover[\s\S]*?background:\s*transparent\s*!important/);
+});
+
 test('dashboard tab changes reset the page scroll position', () => {
   const parentDashboard = read('../src/components/ParentDashboard.tsx');
   const childDashboard = read('../src/components/ChildDashboard.tsx');

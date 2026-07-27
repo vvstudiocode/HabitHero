@@ -1,0 +1,220 @@
+/* HabitHero neutral white theme.
+ * Keep the existing layout and interaction rules in index.css; this file only
+ * defines the final visual surface so the app stays white without grayscale filters.
+ */
+
+:root {
+  --hh-neutral-ink: #202124;
+  --hh-neutral-body: #ffffff;
+  --hh-neutral-surface: #ffffff;
+  --hh-neutral-soft: #f7f7f8;
+  --hh-neutral-muted: #6b6b70;
+  --hh-neutral-line: #e5e5e7;
+  --hh-neutral-focus: #6f6f76;
+  --hh-neutral-shadow: rgba(32, 33, 36, 0.08);
+}
+
+body,
+.hh-sprite-theme,
+.hh-login-screen,
+.hh-sprite-theme .hh-dashboard-screen,
+.hh-sprite-theme .hh-dashboard-screen.bg-blue-50,
+.hh-sprite-theme .hh-dashboard-screen.bg-gray-50 {
+  background: var(--hh-neutral-body) !important;
+  color: var(--hh-neutral-ink);
+}
+
+/* Preserve character/model color. White theme is a surface treatment, not a filter. */
+.hh-login-canvas,
+.hh-character-hero__canvas,
+.hh-sprite-theme img,
+.hh-sprite-theme canvas {
+  filter: none !important;
+}
+
+.hh-sprite-theme header,
+.hh-sprite-theme .hh-dashboard-screen header,
+.hh-character-dashboard-header,
+.hh-sprite-theme .hh-dashboard-screen > .hh-character-dashboard-header {
+  background: var(--hh-neutral-surface) !important;
+  border-color: var(--hh-neutral-line) !important;
+  color: var(--hh-neutral-ink) !important;
+  box-shadow: 0 8px 24px var(--hh-neutral-shadow) !important;
+}
+
+.hh-sprite-theme .bg-white,
+.hh-sprite-theme .bg-gray-50,
+.hh-sprite-theme .bg-gray-100,
+.hh-sprite-theme .bg-gray-200,
+.hh-sprite-theme [class*="bg-blue-"],
+.hh-sprite-theme [class*="bg-cyan-"],
+.hh-sprite-theme [class*="bg-teal-"],
+.hh-sprite-theme [class*="bg-indigo-"],
+.hh-sprite-theme [class*="bg-purple-"],
+.hh-sprite-theme [class*="bg-green-"],
+.hh-sprite-theme [class*="bg-yellow-"],
+.hh-sprite-theme [class*="bg-orange-"],
+.hh-sprite-theme [class*="bg-amber-"],
+.hh-sprite-theme [class*="bg-red-"],
+.hh-sprite-theme [class*="bg-pink-"],
+.hh-sprite-theme [class*="bg-emerald-"] {
+  background: var(--hh-neutral-surface) !important;
+  border-color: var(--hh-neutral-line) !important;
+  color: var(--hh-neutral-ink) !important;
+  box-shadow: 0 8px 24px var(--hh-neutral-shadow) !important;
+}
+
+.hh-sprite-theme [class*="text-blue-"],
+.hh-sprite-theme [class*="text-cyan-"],
+.hh-sprite-theme [class*="text-teal-"],
+.hh-sprite-theme [class*="text-indigo-"],
+.hh-sprite-theme [class*="text-purple-"],
+.hh-sprite-theme [class*="text-green-"],
+.hh-sprite-theme [class*="text-yellow-"],
+.hh-sprite-theme [class*="text-orange-"],
+.hh-sprite-theme [class*="text-amber-"],
+.hh-sprite-theme [class*="text-red-"],
+.hh-sprite-theme [class*="text-pink-"],
+.hh-sprite-theme [class*="text-emerald-"],
+.hh-sprite-theme [class*="text-white"],
+.hh-sprite-theme [class*="text-gray-"] {
+  color: var(--hh-neutral-ink) !important;
+}
+
+.hh-sprite-theme .hh-primary-button,
+.hh-sprite-theme button[class*="bg-blue-"],
+.hh-sprite-theme button[class*="bg-cyan-"],
+.hh-sprite-theme button[class*="bg-teal-"],
+.hh-sprite-theme button[class*="bg-purple-"],
+.hh-sprite-theme button[class*="bg-green-"],
+.hh-sprite-theme button[class*="bg-yellow-"],
+.hh-sprite-theme button[class*="bg-orange-"],
+.hh-sprite-theme button[class*="bg-red-"],
+.hh-sprite-theme button[class*="bg-amber-"] {
+  background: var(--hh-neutral-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--hh-neutral-line) !important;
+  color: var(--hh-neutral-ink) !important;
+  box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
+}
+
+.hh-sprite-theme button:hover,
+.hh-sprite-theme button:focus-visible,
+.hh-login-screen button:hover,
+.hh-login-screen button:focus-visible {
+  background: var(--hh-neutral-soft) !important;
+  color: var(--hh-neutral-ink) !important;
+}
+
+.hh-sprite-theme button:focus-visible,
+.hh-login-screen button:focus-visible,
+.hh-sprite-theme input:focus-visible,
+.hh-sprite-theme textarea:focus-visible,
+.hh-sprite-theme select:focus-visible {
+  outline: 3px solid rgba(111, 111, 118, 0.35) !important;
+  outline-offset: 2px;
+}
+
+.hh-sprite-theme button:disabled,
+.hh-login-screen button:disabled {
+  background: var(--hh-neutral-soft) !important;
+  color: var(--hh-neutral-muted) !important;
+  filter: none !important;
+  opacity: 0.55;
+}
+
+.hh-sprite-theme input:not([type="checkbox"]):not([type="radio"]),
+.hh-sprite-theme textarea,
+.hh-sprite-theme select,
+.hh-parent-content-modal input,
+.hh-parent-content-modal textarea,
+.hh-parent-content-modal select {
+  background: var(--hh-neutral-surface) !important;
+  border-color: var(--hh-neutral-line) !important;
+  color: var(--hh-neutral-ink) !important;
+  box-shadow: inset 0 1px 2px rgba(32, 33, 36, 0.04) !important;
+}
+
+.hh-sprite-theme input:focus,
+.hh-sprite-theme textarea:focus,
+.hh-sprite-theme select:focus,
+.hh-parent-content-modal input:focus,
+.hh-parent-content-modal textarea:focus,
+.hh-parent-content-modal select:focus {
+  border-color: var(--hh-neutral-focus) !important;
+  box-shadow: 0 0 0 3px rgba(111, 111, 118, 0.14) !important;
+}
+
+.hh-character-icon-button,
+.hh-character-menu-action,
+.hh-character-menu-action:hover,
+.hh-character-menu-action:focus-visible {
+  background: var(--hh-neutral-surface) !important;
+  border-color: var(--hh-neutral-line) !important;
+  color: var(--hh-neutral-ink) !important;
+  box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
+}
+
+.hh-character-menu-action strong,
+.hh-character-menu-action svg,
+.hh-character-icon-button svg {
+  color: var(--hh-neutral-ink) !important;
+}
+
+.hh-parent-content-modal,
+.hh-parent-content-modal-bar,
+.hh-settings-drawer,
+.hh-form-modal-panel,
+.hh-parent-confirm-panel,
+.hh-consent-modal,
+.hh-privacy-policy-page {
+  background: var(--hh-neutral-surface) !important;
+  color: var(--hh-neutral-ink) !important;
+}
+
+.hh-parent-content-modal h1,
+.hh-parent-content-modal h2,
+.hh-parent-content-modal h3,
+.hh-parent-content-modal h4,
+.hh-parent-content-modal p,
+.hh-parent-content-modal span,
+.hh-parent-content-modal strong,
+.hh-settings-drawer h1,
+.hh-settings-drawer h2,
+.hh-settings-drawer h3,
+.hh-settings-drawer h4,
+.hh-settings-drawer p,
+.hh-settings-drawer span,
+.hh-settings-drawer strong {
+  color: var(--hh-neutral-ink) !important;
+}
+
+.hh-bottom-nav,
+.hh-login-tabs,
+.hh-bottom-nav::before,
+.hh-login-tabs button.is-active {
+  background: var(--hh-neutral-surface) !important;
+  border-color: var(--hh-neutral-line) !important;
+  box-shadow: 0 8px 24px var(--hh-neutral-shadow) !important;
+}
+
+.hh-bottom-nav-button,
+.hh-bottom-nav-button.is-active,
+.hh-login-tabs button,
+.hh-login-tabs button.is-active {
+  color: var(--hh-neutral-ink) !important;
+}
+
+.hh-parent-feature-backdrop,
+.hh-goal-proposal-backdrop,
+.hh-consent-modal-shell,
+.hh-switch-modal-shell {
+  background: rgba(32, 33, 36, 0.28) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hh-sprite-theme button,
+  .hh-login-screen button {
+    transition: none !important;
+  }
+}

@@ -105,6 +105,12 @@ body,
   color: var(--hh-neutral-ink) !important;
 }
 
+/* The character hitbox is intentionally transparent; never paint its full-body hover area. */
+.hh-sprite-theme .hh-character-hero-hitbox:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .hh-sprite-theme button:focus-visible,
 .hh-login-screen button:focus-visible,
 .hh-sprite-theme input:focus-visible,
