@@ -15,6 +15,17 @@ test('family switching dialogs use an enter animation and remain keyboard-safe',
   assert.match(styles, /max-height: calc\(100dvh - 32px\)/);
 });
 
+test('neutral theme keeps surfaces white without applying a grayscale filter', () => {
+  const entry = read('../src/main.tsx');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(entry, /import ['"]\.\/styles\/neutral-theme\.css['"]/);
+  assert.match(neutralTheme, /--hh-neutral-body: #ffffff/);
+  assert.match(neutralTheme, /--hh-neutral-line:/);
+  assert.doesNotMatch(neutralTheme, /grayscale\(/);
+  assert.doesNotMatch(neutralTheme, /linear-gradient/);
+});
+
 test('dashboard tab changes reset the page scroll position', () => {
   const parentDashboard = read('../src/components/ParentDashboard.tsx');
   const childDashboard = read('../src/components/ChildDashboard.tsx');
