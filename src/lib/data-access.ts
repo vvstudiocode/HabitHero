@@ -267,6 +267,7 @@ export interface DataRepository {
   updateReward(id: string, updates: Partial<Reward>): Promise<void>;
   deleteReward(id: string): Promise<void>;
   insertWishlist(familyId: string, childId: string, name: string): Promise<void>;
+  deleteWishlist(wishlistId: string): Promise<void>;
   approveWishlist(familyId: string, childId: string, wishlistId: string, points: number): Promise<void>;
   redeemReward(rewardId: string): Promise<void>;
   fulfillTicket(ticketId: string): Promise<void>;
@@ -406,6 +407,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     },
     async deleteReward(id) { check(await client.from('rewards').delete().eq('id', id)); },
     async insertWishlist(familyId, childId, name) { check(await client.from('wishlist_items').insert({ family_id: familyId, child_profile_id: childId, name })); },
+    async deleteWishlist(wishlistId) { check(await client.from('wishlist_items').delete().eq('id', wishlistId)); },
     async approveWishlist(familyId, childId, wishlistId, points) {
       check(await client.rpc('approve_wishlist_item', {
         target_family_id: familyId,

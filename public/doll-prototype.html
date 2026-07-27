@@ -139,7 +139,7 @@
       position: relative;
       height: 620px;
       cursor: pointer;
-      touch-action: none;
+      touch-action: manipulation;
     }
 
     .stage::before {
@@ -198,53 +198,17 @@
       animation-play-state: paused;
     }
 
-    .stage-copy {
-      position: absolute;
-      left: 30px;
-      bottom: 28px;
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .stage-copy strong {
-      display: block;
-      font-size: 18px;
-    }
-
-    .stage-copy span {
-      display: block;
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .hint {
-      position: absolute;
-      top: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2;
-      padding: 9px 14px;
-      border: 1px solid rgba(255, 255, 255, .72);
-      border-radius: 99px;
-      background: rgba(255, 255, 255, .56);
-      color: #527469;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-
     .control-panel {
       position: absolute;
       z-index: 5;
       display: none;
-      width: 340px;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       padding: 0;
       border: 0;
       background: transparent;
       pointer-events: none;
-      transform: translate(-50%, -50%);
     }
 
     .control-panel.is-open {
@@ -265,23 +229,15 @@
     }
 
     .control-panel::before {
-      content: "";
-      position: absolute;
-      inset: 52px 18px 52px;
-      border: 1px solid rgba(255, 255, 255, .75);
-      border-radius: 50%;
-      background: rgba(255, 255, 255, .25);
-      box-shadow: 0 16px 36px rgba(75, 103, 87, .12);
-      backdrop-filter: blur(8px);
+      display: none;
     }
 
     .control-panel>* {
       position: relative;
     }
 
-    .control-panel .panel-kicker,
-    .control-panel h2,
-    .control-panel .panel-description {
+    .panel-kicker,
+    .panel-description {
       display: none;
     }
 
@@ -293,9 +249,14 @@
     }
 
     h2 {
-      margin: 8px 0 8px;
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      margin: 0;
       font-size: 26px;
       letter-spacing: -.03em;
+      transform: translateX(-50%);
+      white-space: nowrap;
     }
 
     .panel-description {
@@ -307,54 +268,56 @@
 
     .parent-actions {
       position: relative;
-      width: 340px;
-      height: 340px;
+      width: 100%;
+      height: 100%;
       display: block;
     }
 
     .parent-action {
       position: absolute;
       display: grid;
-      grid-template-columns: 40px 1fr;
+      place-items: center;
       align-items: center;
-      gap: 9px;
-      width: 158px;
-      min-height: 70px;
-      padding: 9px 11px 9px 9px;
-      border: 1px solid rgba(213, 198, 165, .75);
-      border-radius: 20px;
+      width: 132px;
+      min-height: 46px;
+      padding: 10px 14px;
+      border: 1px solid rgba(213, 198, 165, .62);
+      border-radius: 16px;
       color: var(--ink);
-      background: rgba(255, 255, 255, .93);
-      box-shadow: 0 10px 22px rgba(94, 87, 54, .13);
+      background: rgba(255, 255, 255, .76);
+      box-shadow: 0 8px 18px rgba(94, 87, 54, .10);
       text-align: left;
       cursor: pointer;
       transition: none;
       pointer-events: auto;
+      backdrop-filter: blur(5px);
     }
 
     .parent-action:nth-child(1) {
-      top: 0;
-      left: 91px;
+      top: 82px;
+      left: 12%;
     }
 
     .parent-action:nth-child(2) {
-      top: 71px;
-      left: 181px;
+      top: 82px;
+      right: 12%;
+      left: auto;
     }
 
     .parent-action:nth-child(3) {
-      top: 188px;
-      left: 166px;
+      top: 248px;
+      left: 6%;
     }
 
     .parent-action:nth-child(4) {
-      top: 246px;
-      left: 91px;
+      top: 410px;
+      right: 10%;
+      left: auto;
     }
 
     .parent-action:nth-child(5) {
-      top: 71px;
-      left: 1px;
+      top: 410px;
+      left: 10%;
     }
 
     .parent-action:hover,
@@ -369,34 +332,26 @@
       transform: translateY(0) scale(.98);
     }
 
-    .action-icon {
-      display: grid;
-      place-items: center;
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
-      color: #8b641d;
-      background: #fff1c9;
+    .control-panel.is-open .parent-action {
+      animation: card-fade-in 700ms ease-out both, card-float 3.8s 700ms ease-in-out both infinite;
     }
 
-    .action-icon.mint {
-      color: #277e6a;
-      background: #d8f4e8;
+    .control-panel.is-open .parent-action:nth-child(2) { animation-delay: 70ms; }
+    .control-panel.is-open .parent-action:nth-child(3) { animation-delay: 140ms; }
+    .control-panel.is-open .parent-action:nth-child(4) { animation-delay: 210ms; }
+    .control-panel.is-open .parent-action:nth-child(5) { animation-delay: 280ms; }
+
+    @keyframes card-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
-    .action-icon.blue {
-      color: #3e6f9e;
-      background: #dceefd;
-    }
-
-    .action-icon.pink {
-      color: #a05c74;
-      background: #fbe2e9;
-    }
-
-    .action-icon.purple {
-      color: #725899;
-      background: #ece2ff;
+    @keyframes card-float {
+      0% { transform: translateY(0) scale(1); }
+      25% { transform: translateY(-3px) scale(1.005); }
+      50% { transform: translateY(0) scale(1); }
+      75% { transform: translateY(3px) scale(.995); }
+      100% { transform: translateY(0) scale(1); }
     }
 
     .action-title {
@@ -405,17 +360,9 @@
       font-weight: 900;
     }
 
-    .action-subtitle {
-      display: block;
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .arrow {
-      color: #91a0a7;
-      font-size: 21px;
-    }
+    .action-icon,
+    .action-subtitle,
+    .arrow { display: none; }
 
     .toast {
       position: absolute;
@@ -548,42 +495,10 @@
         min-height: 520px;
       }
 
-      .control-panel {
-        width: 300px;
-      }
-
-      .parent-actions {
-        width: 300px;
-        height: 300px;
-      }
-
       .parent-action {
-        width: 142px;
-        min-height: 66px;
-      }
-
-      .parent-action:nth-child(1) {
-        left: 79px;
-      }
-
-      .parent-action:nth-child(2) {
-        top: 65px;
-        left: 159px;
-      }
-
-      .parent-action:nth-child(3) {
-        top: 166px;
-        left: 146px;
-      }
-
-      .parent-action:nth-child(4) {
-        top: 218px;
-        left: 79px;
-      }
-
-      .parent-action:nth-child(5) {
-        top: 65px;
-        left: 1px;
+        width: 116px;
+        min-height: 44px;
+        padding: 8px 10px;
       }
 
       .toast {
@@ -641,14 +556,11 @@
 
     <section class="stage-card">
       <div class="stage" id="stage" aria-label="可互動的 3D 彩虹星光玩偶">
-        <div class="hint">點擊玩偶開啟家長功能</div>
         <div class="loading" id="loading">正在載入 3D 玩偶…</div>
         <canvas id="canvas"></canvas>
-        <div class="stage-copy"><strong>Starlight Rainbow</strong><span id="doll-state">等待互動 · 點擊我開啟功能</span></div>
       </div>
-      <aside class="control-panel" aria-labelledby="parent-title">
+      <aside class="control-panel" aria-label="家長功能">
         <div class="panel-kicker">PARENT SPACE</div>
-        <h2 id="parent-title">家長控制中心</h2>
         <p class="panel-description">這五個入口先作為版面預覽，之後可以替換成真正的家長功能。</p>
         <div class="parent-actions">
           <button class="parent-action" data-label="今日任務"><span class="action-icon"><svg viewBox="0 0 24 24" width="20"
@@ -706,7 +618,6 @@
   <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
     const canvas = document.querySelector('#canvas');
     const stage = document.querySelector('#stage');
@@ -728,15 +639,12 @@
     const floor = new THREE.Mesh(new THREE.CircleGeometry(1.55, 64), new THREE.MeshBasicMaterial({ color: 0x9ac5ad, transparent: true, opacity: .22 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -1.55; floor.scale.set(1.4, .55, 1); scene.add(floor);
 
-    const controls = new OrbitControls(camera, canvas);
-    controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = .08;
-    controls.minDistance = 3.7; controls.maxDistance = 6.4; controls.target.set(0, -.25, 0);
     let doll = null; let baseY = 0; let baseScaleY = 1; let mixer = null; let activeAction = null;
     const bones = Object.create(null);
     const actions = new Map();
     let menuOpen = false;
     const controlPanel = document.querySelector('.control-panel');
-    const stateLabel = document.querySelector('#doll-state');
+    const stateLabel = { textContent: '' };
     const wander = { target: new THREE.Vector3(), nextDecision: 0, walking: false };
     const menuWorldPoint = new THREE.Vector3();
     const modelUrl = new URL('./models/frosty-hoodie-character.glb', window.location.href).href;
@@ -776,7 +684,7 @@
       return;
     }
 
-    function resize() { const rect = stage.getBoundingClientRect(); renderer.setSize(rect.width, rect.height, false); camera.aspect = rect.width / rect.height; camera.updateProjectionMatrix(); if (menuOpen) positionMenu(); }
+    function resize() { const rect = stage.getBoundingClientRect(); renderer.setSize(rect.width, rect.height, false); camera.aspect = rect.width / rect.height; camera.updateProjectionMatrix(); }
     window.addEventListener('resize', resize); resize();
     const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
     function chooseNextTarget(now) {
@@ -788,28 +696,14 @@
     function openMenu() {
       menuOpen = true;
       controlPanel.classList.add('is-open');
-      controls.enabled = false;
       stateLabel.textContent = '想做什麼呢？選一個家長功能';
-      positionMenu();
     }
     function closeMenu() {
       menuOpen = false;
       controlPanel.classList.remove('is-open');
-      controls.enabled = true;
       toast.textContent = '';
       playAnimation('Idle');
       if (doll) stateLabel.textContent = '正在散步探索 · 點擊我互動';
-    }
-    function positionMenu() {
-      if (!doll) return;
-      menuWorldPoint.copy(doll.position); menuWorldPoint.y += .22; menuWorldPoint.project(camera);
-      const rect = stage.getBoundingClientRect();
-      const x = (menuWorldPoint.x * .5 + .5) * rect.width;
-      const y = (-menuWorldPoint.y * .5 + .5) * rect.height - 18;
-      const safeX = Math.max(174, Math.min(rect.width - 174, x));
-      const safeY = Math.max(178, Math.min(rect.height - 178, y));
-      controlPanel.style.left = `${safeX}px`;
-      controlPanel.style.top = `${safeY}px`;
     }
     stage.addEventListener('click', (event) => {
       if (!doll) return;
@@ -869,12 +763,11 @@
         const bob = 0;
         doll.position.y = baseY + bob;
         doll.scale.y = baseScaleY;
-        if (menuOpen) positionMenu();
-        stateLabel.textContent = menuOpen ? '想做什麼呢？選一個家長功能' : '等待互動 · 點擊我開啟功能';
+          stateLabel.textContent = menuOpen ? '想做什麼呢？選一個家長功能' : '等待互動 · 點擊我開啟功能';
       }
       if (mixer) mixer.update(delta);
       if (doll) applyMotionLayer(t, wander.walking && !menuOpen);
-      controls.update(); renderer.render(scene, camera);
+      renderer.render(scene, camera);
     }
     animate();
   </script>

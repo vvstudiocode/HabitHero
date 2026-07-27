@@ -37,7 +37,7 @@ function formatTaskWindow(task: { dueTime?: string | null; endTime?: string | nu
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
-  const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
+  const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, deleteWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<'goals' | 'growth' | 'wishlist' | 'history'>('goals');
 
@@ -55,6 +55,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const tasks = (activeChild?.tasks || []) as GrowthTask[];
   const rewards = activeChild?.rewards || [];
   const tickets = activeChild?.tickets || [];
+  const wishlist = activeChild?.wishlist || [];
   const childPoints = activeChild?.points || 0;
   const taskTemplates = state.taskTemplates as GrowthTaskTemplate[];
 
@@ -62,6 +63,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [showWishlistForm, setShowWishlistForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [wishName, setWishName] = useState('');
+  const [wishlistToCancel, setWishlistToCancel] = useState<import('../types').WishlistItem | null>(null);
   const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
   
   // Toast Message
@@ -232,6 +234,17 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       } finally {
         setActionPending(false);
       }
+    }
+  };
+
+  const handleCancelWish = async (wishlistId: string) => {
+    if (!activeChild) return;
+    setActionPending(true);
+    try {
+      await deleteWishlist(activeChild.id, wishlistId);
+      showToast('已取消這個願望。');
+    } finally {
+      setActionPending(false);
     }
   };
 
@@ -549,6 +562,39 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               <Plus size={24} /> 告訴爸媽我想要什麼...
             </button>
 
+            <section className="space-y-3" aria-labelledby="pending-wishlist-title">
+              <div className="flex items-center justify-between px-2">
+                <div>
+                  <h2 id="pending-wishlist-title" className="text-lg font-black text-gray-800">正在許願</h2>
+                  <p className="text-sm text-gray-500">送出後等爸媽核准，就會變成可以兌換的獎勵。</p>
+                </div>
+                {wishlist.length > 0 && <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-bold text-yellow-700">{wishlist.length} 個等待中</span>}
+              </div>
+              {wishlist.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400">目前沒有等待核准的願望。</div>
+              ) : (
+                <div className="space-y-3">
+                  {wishlist.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                      <div className="min-w-0">
+                        <div className="break-words font-bold text-gray-800">{item.name}</div>
+                        <div className="mt-1 text-xs font-bold text-yellow-700">等待爸媽核准</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setWishlistToCancel(item)}
+                        disabled={actionPending}
+                        aria-label={`取消願望：${item.name}`}
+                        className="min-h-11 shrink-0 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-wait disabled:opacity-50"
+                      >
+                        取消許願
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
             <div className="grid grid-cols-2 gap-4">
               {rewards.map(reward => {
                 const canAfford = childPoints >= reward.points;
@@ -670,6 +716,37 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => dismissWithAnimation(() => setRewardToConfirm(null), '.hh-reward-confirm-panel')} className="min-h-12 rounded-2xl bg-gray-100 px-4 font-black text-gray-600">先不要</button>
               <button type="button" onClick={() => void handleRedeem(rewardToConfirm)} disabled={actionPending} className="min-h-12 rounded-2xl bg-yellow-400 px-4 font-black text-yellow-950 disabled:cursor-wait disabled:opacity-60">確認兌換</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {wishlistToCancel && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+          <div className="hh-wishlist-cancel-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="wishlist-cancel-title">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div>
+                <h3 id="wishlist-cancel-title" className="text-xl font-black text-gray-900">確認取消許願</h3>
+                <p className="mt-2 break-words text-sm leading-6 text-gray-500">確定要取消「{wishlistToCancel.name}」嗎？取消後需要重新許願才能再請爸媽核准。</p>
+              </div>
+              <button type="button" onClick={() => dismissWithAnimation(() => setWishlistToCancel(null), '.hh-wishlist-cancel-panel')} aria-label="關閉" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => dismissWithAnimation(() => setWishlistToCancel(null), '.hh-wishlist-cancel-panel')} className="min-h-12 rounded-2xl bg-gray-100 px-4 font-black text-gray-600">先不要</button>
+              <button
+                type="button"
+                onClick={() => {
+                  const item = wishlistToCancel;
+                  dismissWithAnimation(() => setWishlistToCancel(null), '.hh-wishlist-cancel-panel');
+                  void handleCancelWish(item.id);
+                }}
+                disabled={actionPending}
+                className="min-h-12 rounded-2xl bg-red-500 px-4 font-black text-white disabled:cursor-wait disabled:opacity-60"
+              >
+                確認取消
+              </button>
             </div>
           </div>
         </div>

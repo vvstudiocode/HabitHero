@@ -5,6 +5,7 @@ import { createDataRepository, DataRepository } from './lib/data-access';
 import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
 import { subscribeToAppData } from './lib/realtime';
 import { resolveActiveChildId } from './lib/family-switch';
+import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
 
 interface AppContextType {
   state: AppState;
@@ -70,6 +71,7 @@ interface AppContextType {
   updateReward: (childId: string, rewardId: string, updates: Partial<Reward>) => Promise<void>;
   deleteReward: (childId: string, rewardId: string) => Promise<void>;
   addWishlist: (childId: string, name: string) => Promise<void>;
+  deleteWishlist: (childId: string, wishlistId: string) => Promise<void>;
   approveWishlist: (childId: string, wishlistId: string, points: number) => Promise<void>;
   redeemReward: (childId: string, reward: Reward) => Promise<void>;
   fulfillTicket: (childId: string, ticketId: string) => Promise<void>;
@@ -104,6 +106,33 @@ const emptyState: AppState = {
   ledger: [],
   lastResetDate: null,
 };
+
+function timerStorageKey(userId: string) {
+  return `habithero:task-timers:${userId}`;
+}
+
+function readTimerSnapshots(userId: string): TimerSnapshot[] {
+  try {
+    const raw = window.localStorage.getItem(timerStorageKey(userId));
+    return raw ? JSON.parse(raw) as TimerSnapshot[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeTimerSnapshots(appState: AppState, snapshots: TimerSnapshot[]) {
+  const byTaskId = new Map(snapshots.map((snapshot) => [snapshot.taskId, snapshot]));
+  return {
+    ...appState,
+    children: appState.children.map((child) => ({
+      ...child,
+      tasks: child.tasks.map((task) => {
+        const snapshot = byTaskId.get(task.id);
+        return snapshot && snapshot.childId === child.id ? applyTimerSnapshot(task, snapshot) : task;
+      }),
+    })),
+  };
+}
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -164,8 +193,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (loaded.role === 'parent') {
           loaded.state.parentActiveChildId = resolveActiveChildId(stateRef.current.parentActiveChildId, loaded.state.children);
         }
-        if (JSON.stringify(stateRef.current) !== JSON.stringify(loaded.state)) {
-          setState(loaded.state);
+        const currentSnapshots = stateRef.current.children.flatMap((child) => child.tasks
+          .filter((task) => task.timerIsRunning || task.timerRemainingMs !== undefined && task.timerRemainingMs !== null)
+          .map((task) => toTimerSnapshot(child.id, task)));
+        const restoredState = mergeTimerSnapshots(loaded.state, [...readTimerSnapshots(session.user.id), ...currentSnapshots]);
+        if (JSON.stringify(stateRef.current) !== JSON.stringify(restoredState)) {
+          stateRef.current = restoredState;
+          setState(restoredState);
         }
         setFamilyId(loaded.familyId);
         setRole(loaded.role);
@@ -187,6 +221,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [repository, session]);
 
   useEffect(() => { void retry(); }, [retry]);
+
+  useEffect(() => {
+    if (!session || !dataReady) return;
+    const snapshots = state.children.flatMap((child) => child.tasks
+      .filter((task) => task.timerIsRunning || task.timerRemainingMs !== undefined && task.timerRemainingMs !== null)
+      .map((task) => toTimerSnapshot(child.id, task)));
+    try {
+      window.localStorage.setItem(timerStorageKey(session.user.id), JSON.stringify(snapshots));
+    } catch {
+      // Timer state still remains in the provider when storage is unavailable.
+    }
+  }, [dataReady, session, state]);
 
   // Track first full load completion (session check + data load)
   useEffect(() => {
@@ -380,6 +426,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const localId = createLocalId();
       return mutate((repo, id) => repo.insertWishlist(id, childId, name), (previous) => patchChild(previous, childId, (child) => ({ ...child, wishlist: [...child.wishlist, { id: localId, name }] })));
     },
+    deleteWishlist: (childId: string, wishlistId: string) => mutate((repo) => repo.deleteWishlist(wishlistId), (previous) => patchChild(previous, childId, (child) => ({ ...child, wishlist: child.wishlist.filter((item) => item.id !== wishlistId) }))),
     approveWishlist: (childId: string, wishlistId: string, points: number) => mutate((repo, id) => repo.approveWishlist(id, childId, wishlistId, points), (previous) => patchChild(previous, childId, (child) => ({ ...child, wishlist: child.wishlist.filter((item) => item.id !== wishlistId) }))),
     redeemReward: (childId: string, reward: Reward) => {
       const localId = createLocalId();

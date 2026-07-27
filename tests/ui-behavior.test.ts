@@ -61,6 +61,15 @@ test('child goals are separated into self-created and parent-given sections', ()
   assert.match(source, /parentGoalTasks\.map/);
 });
 
+test('cancelling a wishlist item requires confirmation before deletion', () => {
+  const source = read('../src/components/ChildDashboard.tsx');
+
+  assert.match(source, /wishlistToCancel/);
+  assert.match(source, /確認取消許願/);
+  assert.match(source, /先不要/);
+  assert.match(source, /handleCancelWish\(item\.id\)/);
+});
+
 test('all task start-time inputs use numeric hour and minute selectors', () => {
   const parentDashboard = read('../src/components/ParentDashboard.tsx');
   const goalForm = read('../src/features/growth/components/GoalProposalForm.tsx');
