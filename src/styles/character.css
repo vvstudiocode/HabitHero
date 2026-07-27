@@ -74,6 +74,7 @@
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  overflow-x: hidden;
 }
 
 .hh-character-hero-panel>.hh-character-dashboard-actions {
@@ -770,6 +771,7 @@
   inset: 0;
   min-height: 100dvh;
   overflow-y: auto;
+  overflow-x: hidden;
   isolation: isolate;
   scroll-padding-top: 88px;
   background: #ffffff;
@@ -828,14 +830,6 @@
   border-bottom: 1px solid #e6edf0;
   box-shadow: 0 12px 24px rgba(24, 50, 74, .1);
   transform: translateZ(0);
-}
-
-.hh-parent-content-modal-bar::before {
-  position: absolute;
-  z-index: -1;
-  inset: 0 -100vw;
-  background: #ffffff;
-  content: '';
 }
 
 .hh-parent-content-modal-bar strong {

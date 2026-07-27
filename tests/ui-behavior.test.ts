@@ -46,6 +46,15 @@ test('character hitbox stays transparent when hovered', () => {
   assert.match(neutralTheme, /\.hh-character-hero-hitbox:hover[\s\S]*?background:\s*transparent\s*!important/);
 });
 
+test('child feature pages do not create horizontal overflow from the sticky header', () => {
+  const characterStyles = read('../src/styles/character.css');
+  const overlayStyles = read('../src/styles/overlays.css');
+
+  assert.match(characterStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
+  assert.match(overlayStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
+  assert.doesNotMatch(`${characterStyles}\n${overlayStyles}`, /inset:\s*0\s+-100vw/);
+});
+
 test('dashboard tab changes reset the page scroll position', () => {
   const parentDashboard = read('../src/components/ParentDashboard.tsx');
   const childDashboard = read('../src/components/ChildDashboard.tsx');
