@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
+import { CheckCircle2, Circle, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { Reward } from '../types';
@@ -13,7 +13,7 @@ import { goalCopy } from '../features/growth/goal-copy';
 import { getChildGrowthSummary } from '../features/growth/growth-stats';
 import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
 import { getTaskExecutionState, isTaskExecutableAt } from '../lib/task-time';
-import { DashboardCharacterHero } from './DashboardCharacterHero';
+import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -25,6 +25,8 @@ interface ChildDashboardProps {
   onLogout: () => void;
   onSwitchChild: () => void;
 }
+
+type ChildTab = 'goals' | 'growth' | 'wishlist' | 'history';
 
 function formatTaskTime(dueTime?: string | null) {
   return dueTime ? dueTime.slice(0, 5) : '全天';
@@ -39,7 +41,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
   const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, deleteWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
-  const [activeTab, setActiveTab] = useState<'goals' | 'growth' | 'wishlist' | 'history'>('goals');
+  const [activeTab, setActiveTab] = useState<ChildTab>('goals');
+  const [heroFeature, setHeroFeature] = useState<ChildTab | null>(null);
+  const [heroMenuGroup, setHeroMenuGroup] = useState<ChildTab | null>(null);
+  const [heroMenuVisible, setHeroMenuVisible] = useState(false);
+  const [heroFormReturnGroup, setHeroFormReturnGroup] = useState<ChildTab | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -195,6 +201,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const handleSubmitGoalProposal = async (input: GoalProposalInput) => {
     await handleProposeGoal(input);
+    setHeroFormReturnGroup(null);
     dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet');
   };
 
@@ -228,6 +235,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       setActionPending(true);
       try {
         await addWishlist(activeChild.id, wishName.trim());
+        setHeroFormReturnGroup(null);
         dismissWithAnimation(() => setShowWishlistForm(false));
         setWishName('');
         showToast('願望已送出。');
@@ -261,6 +269,72 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       }
     }
   };
+
+  const openChildFeature = (tab: ChildTab) => {
+    setActiveTab(tab);
+    setHeroFeature(tab);
+    setHeroMenuGroup(null);
+    setHeroMenuVisible(false);
+  };
+
+  const closeChildFeature = () => {
+    dismissWithAnimation(() => setHeroFeature(null), '.hh-parent-content-modal', 260);
+    setHeroMenuGroup(null);
+    setHeroMenuVisible(false);
+  };
+
+  const openChildForm = (tab: ChildTab, action: () => void) => {
+    setHeroFormReturnGroup(heroMenuGroup ?? tab);
+    openChildFeature(tab);
+    window.setTimeout(action, 0);
+  };
+
+  const closeChildForm = (closeForm: () => void, selector?: string) => {
+    dismissWithAnimation(() => {
+      closeForm();
+      if (heroFormReturnGroup) {
+        setHeroFeature(null);
+        setHeroMenuGroup(heroFormReturnGroup);
+        setHeroMenuVisible(true);
+      }
+      setHeroFormReturnGroup(null);
+    }, selector);
+  };
+
+  const toggleHeroMenuGroup = (tab: ChildTab) => {
+    setHeroMenuGroup((current) => current === tab ? null : tab);
+  };
+
+  const heroRootMenuActions: CharacterMenuAction[] = [
+    { id: 'goals', title: '目標', icon: <CheckCircle2 size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('goals') },
+    { id: 'growth', title: '成長', icon: <Star size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('growth') },
+    { id: 'wishlist', title: '許願', icon: <Plus size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
+    { id: 'history', title: '兌換', icon: <History size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('history') },
+  ];
+
+  const heroSubMenuActions: Record<ChildTab, CharacterMenuAction[]> = {
+    goals: [
+      { id: 'today-goals', title: '今日目標', icon: <Circle size={17} />, onSelect: () => openChildFeature('goals') },
+      { id: 'new-goal', title: '新增目標', icon: <Plus size={17} />, onSelect: () => openChildForm('goals', () => setShowGoalForm(true)) },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+    growth: [
+      { id: 'growth-record', title: '成長紀錄', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+    wishlist: [
+      { id: 'my-wishlist', title: '我的許願', icon: <Star size={17} />, onSelect: () => openChildFeature('wishlist') },
+      { id: 'new-wishlist', title: '新增許願', icon: <Plus size={17} />, onSelect: () => openChildForm('wishlist', () => setShowWishlistForm(true)) },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+    history: [
+      { id: 'rewards', title: '可兌換獎勵', icon: <Gift size={17} />, onSelect: () => openChildFeature('wishlist') },
+      { id: 'history-record', title: '兌換紀錄', icon: <History size={17} />, onSelect: () => openChildFeature('history') },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+  };
+
+  const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -308,6 +382,13 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         secondStatLabel="今日完成"
         secondStatValue={completedTasks.length}
         secondStatSuffix={` / ${tasks.length} 任務`}
+        menuActions={heroMenuActions}
+        rootMenuActions={heroRootMenuActions}
+        activeMenuId={heroMenuGroup}
+        menuVariant="child"
+        onMenuClose={() => setHeroMenuGroup(null)}
+        menuOpen={heroMenuVisible}
+        onMenuOpenChange={setHeroMenuVisible}
         actions={(
           <>
             <button onClick={onSwitchChild} aria-label="切換到家長視角" title="切換到家長視角" className="hh-character-icon-button">
@@ -321,7 +402,23 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       />
 
       {/* Main Content */}
-      <main className="flex-1 p-6 pb-28">
+      <main
+        className={cn(
+          "flex-1 p-6 pb-28",
+          heroFeature ? "hh-parent-content-modal" : "hh-parent-content-hidden"
+        )}
+        role={heroFeature ? 'dialog' : undefined}
+        aria-modal={heroFeature ? true : undefined}
+        aria-label={heroFeature ? '小孩功能頁面' : undefined}
+      >
+        {heroFeature && (
+          <div className="hh-parent-content-modal-bar">
+            <strong>{heroRootMenuActions.find((action) => action.id === heroFeature)?.title}</strong>
+            <button type="button" onClick={closeChildFeature} aria-label="關閉功能頁面" className="hh-character-icon-button">
+              <X size={18} />
+            </button>
+          </div>
+        )}
         {isOffline && (
           <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             <span>目前離線，變更尚未同步。</span>
@@ -398,7 +495,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                     action={(
                       <button
                         onClick={() => setSubmittingTask(task)}
-                        className="flex min-h-12 min-w-16 items-center justify-center rounded-2xl bg-orange-500 px-3 text-sm font-black text-white shadow-md"
+                        className="flex min-h-12 min-w-16 items-center justify-center rounded-full bg-orange-500 px-4 text-sm font-black text-white shadow-md"
                       >
                         補充
                       </button>
@@ -447,7 +544,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                       onClick={() => toggleTimer(task)}
                       disabled={!isExecutable}
                       className={cn(
-                        "flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
+                        "flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
                         isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
                       )}
                     >
@@ -459,7 +556,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                     <button
                       onClick={() => void handleFinishTask(task.id)}
                       disabled={actionPending || !isExecutable}
-                      className="flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                      className="flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                     >
                       <CheckCircle2 size={28} />
                       <span>{isExecutable ? '完成' : executionState === 'expired' ? '已截止' : '未到'}</span>
@@ -507,7 +604,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                         onClick={() => toggleTimer(task)}
                         disabled={!isExecutable}
                         className={cn(
-                          "flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
+                          "flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
                           isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
                         )}
                       >
@@ -519,7 +616,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                       <button
                         onClick={() => void handleFinishTask(task.id)}
                         disabled={actionPending || !isExecutable}
-                        className="flex h-20 w-20 max-[420px]:h-16 max-[420px]:w-16 flex-col items-center justify-center gap-1 rounded-2xl bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                        className="flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                       >
                         <CheckCircle2 size={28} />
                         <span>{isExecutable ? '完成' : executionState === 'expired' ? '已截止' : '未到'}</span>
@@ -659,18 +756,18 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       {/* Overlays */}
       {showGoalForm && (
         <div className="hh-goal-proposal-overlay" role="dialog" aria-modal="true" aria-label="新增今日目標">
-          <button type="button" className="hh-goal-proposal-backdrop" aria-label="關閉新增目標" onClick={() => dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} />
+          <button type="button" className="hh-goal-proposal-backdrop" aria-label="關閉新增目標" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} />
           <div className="hh-goal-proposal-sheet">
             <div className="hh-goal-proposal-sheet-bar">
               <strong>新增今日目標</strong>
-              <button type="button" onClick={() => dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} aria-label="關閉" className="hh-character-icon-button"><X size={18} /></button>
+              <button type="button" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} aria-label="關閉新增目標" className="hh-character-icon-button"><X size={18} /></button>
             </div>
             <GoalProposalForm templates={taskTemplates} loading={actionPending || loading} onSubmit={handleSubmitGoalProposal} />
           </div>
         </div>
       )}
       {submittingTask && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center">
           <div className="hh-form-modal-panel w-full max-w-md animate-slide-up">
             <GoalSubmissionForm
               task={submittingTask}
@@ -683,11 +780,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       )}
 
       {showWishlistForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
           <div className="hh-form-modal-panel bg-white w-full max-w-sm animate-slide-up rounded-3xl p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">我要許願</h3>
-              <button onClick={() => dismissWithAnimation(() => setShowWishlistForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => closeChildForm(() => setShowWishlistForm(false))} aria-label="關閉新增許願" className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
             <input
               type="text"
@@ -702,7 +799,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       )}
 
       {rewardToConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
           <div className="hh-reward-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
@@ -722,7 +819,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       )}
 
       {wishlistToCancel && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
           <div className="hh-wishlist-cancel-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="wishlist-cancel-title">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>

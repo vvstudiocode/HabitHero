@@ -19,7 +19,7 @@ import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/const
 import { buildGrowthStats } from '../features/growth/growth-stats';
 import { validateRewardPoints } from '../lib/reward-validation';
 import { FirstUseGuide, hasCompletedFirstUseGuide } from './FirstUseGuide';
-import { DashboardCharacterHero } from './DashboardCharacterHero';
+import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
@@ -46,6 +46,8 @@ type GroupedReward = {
   children: { childId: string; childName: string; rewardId: string }[];
 };
 
+type ParentTab = 'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist';
+
 export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccepted = false }: ParentDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & {
     confirmGoal?: (childId: string, taskId: string, input: GoalConfirmationInput) => Promise<void>;
@@ -62,7 +64,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     }) => Promise<void>;
   };
   const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
-  const [activeTab, setActiveTab] = useState<'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist'>('review');
+  const [activeTab, setActiveTab] = useState<ParentTab>('review');
+  const [heroFeature, setHeroFeature] = useState<ParentTab | null>(null);
+  const [heroMenuGroup, setHeroMenuGroup] = useState<ParentTab | null>(null);
+  const [heroMenuVisible, setHeroMenuVisible] = useState(false);
+  const [heroFormReturnGroup, setHeroFormReturnGroup] = useState<ParentTab | null>(null);
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
 
   useEffect(() => {
@@ -121,6 +127,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
   const allWishlist = state.children.flatMap(c => c.wishlist.map(w => ({ ...w, childId: c.id, childName: c.name })));
   const totalPoints = state.children.reduce((acc, c) => acc + c.points, 0);
+  const reviewCount = proposedTasks.length + pendingTasks.length + pendingTickets.length;
 
   // Task form
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -268,6 +275,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     } else {
       for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned' } as never);
     }
+    setHeroFormReturnGroup(null);
     dismissWithAnimation(() => setShowTaskForm(false));
     dismissWithAnimation(() => setAssigningTemplate(null));
     setMutationKind(null);
@@ -300,6 +308,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     } else {
       await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, category: newTaskCategory, suggestedEvidence: 'reflection' } as never);
     }
+    setHeroFormReturnGroup(null);
     dismissWithAnimation(() => setShowTemplateForm(false));
     setMutationKind(null);
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
@@ -473,6 +482,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       } else {
         await Promise.all(newRewardTargetChildIds.map(childId => addReward(childId, { name: newRewardName, points: rewardPoints, icon: 'Gift' })));
       }
+      setHeroFormReturnGroup(null);
       dismissWithAnimation(() => setShowRewardForm(false));
       setMutationKind(null);
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
@@ -575,8 +585,84 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     }
   };
 
+  const openHeroFeature = (tab: ParentTab) => {
+    setActiveTab(tab);
+    setHeroFeature(tab);
+    setHeroMenuGroup(null);
+    setHeroMenuVisible(false);
+  };
+
+  const closeHeroFeature = () => {
+    dismissWithAnimation(() => setHeroFeature(null), '.hh-parent-content-modal', 260);
+    setHeroMenuGroup(null);
+    setHeroMenuVisible(false);
+  };
+
+  const openHeroForm = (tab: ParentTab, action: () => void) => {
+    setHeroFormReturnGroup(heroMenuGroup ?? tab);
+    openHeroFeature(tab);
+    window.setTimeout(action, 0);
+  };
+
+  const closeHeroForm = (closeForm: () => void, selector?: string) => {
+    dismissWithAnimation(() => {
+      closeForm();
+      if (heroFormReturnGroup) {
+        setHeroFeature(null);
+        setHeroMenuGroup(heroFormReturnGroup);
+        setHeroMenuVisible(true);
+      }
+      setHeroFormReturnGroup(null);
+    }, selector);
+  };
+
+  const toggleHeroMenuGroup = (tab: ParentTab) => {
+    setHeroMenuGroup((current) => current === tab ? null : tab);
+  };
+
+  const heroRootMenuActions: CharacterMenuAction[] = [
+    { id: 'review', title: '審核', icon: <Eye size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('review') },
+    { id: 'tasks', title: '任務', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
+    { id: 'growth', title: '成長', icon: <Star size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('growth') },
+    { id: 'rewards', title: '獎勵', icon: <Gift size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('rewards') },
+    { id: 'wishlist', title: '許願', icon: <Plus size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
+  ];
+
+  const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
+    review: [
+      { id: 'review-goals', title: '待確認目標', icon: <Eye size={17} />, onSelect: () => openHeroFeature('review') },
+      { id: 'review-completions', title: '待審核完成', icon: <PlayCircle size={17} />, onSelect: () => openHeroFeature('review') },
+      { id: 'review-tickets', title: '待兌換獎勵', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+    tasks: [
+      { id: 'today-tasks', title: '今日任務', icon: <Circle size={17} />, onSelect: () => openHeroFeature('tasks') },
+      { id: 'task-templates', title: '常用模板', icon: <Star size={17} />, onSelect: () => openHeroFeature('tasks') },
+      { id: 'add-task', title: '新增任務', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTaskForm()) },
+      { id: 'add-template', title: '新增模板', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTemplateForm()) },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+    growth: [
+      { id: 'growth-record', title: '成長紀錄', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
+      { id: 'completed-tasks', title: '完成任務', icon: <PlayCircle size={17} />, onSelect: () => openHeroFeature('growth') },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+    rewards: [
+      { id: 'pending-rewards', title: '待兌換', icon: <Eye size={17} />, onSelect: () => openHeroFeature('rewards') },
+      { id: 'reward-list', title: '獎勵清單', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
+      { id: 'add-reward', title: '新增獎勵', icon: <Plus size={17} />, onSelect: () => openHeroForm('rewards', () => openRewardForm()) },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+    wishlist: [
+      { id: 'wishlist-list', title: '小孩許願', icon: <Star size={17} />, onSelect: () => openHeroFeature('wishlist') },
+      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+    ],
+  };
+
+  const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
+
   return (
-    <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-gray-50 pb-20">
+    <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-gray-50">
       <DashboardCharacterHero
         eyebrow={`家庭冒險 · ${state.children.length} 位小孩`}
         title="家長"
@@ -585,8 +671,15 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         firstStatValue={totalPoints}
         firstStatSuffix="pt"
         secondStatLabel="待審核項目"
-        secondStatValue={proposedTasks.length + pendingTasks.length + pendingTickets.length}
+        secondStatValue={reviewCount}
         secondStatSuffix="待審核"
+        menuActions={heroMenuActions}
+        rootMenuActions={heroRootMenuActions}
+        activeMenuId={heroMenuGroup}
+        menuVariant="parent"
+        onMenuClose={() => setHeroMenuGroup(null)}
+        menuOpen={heroMenuVisible}
+        onMenuOpenChange={setHeroMenuVisible}
         actions={(
           <>
             <button data-tour="settings" onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="hh-character-icon-button">
@@ -600,7 +693,23 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       />
 
       {/* Main Content */}
-      <main className="flex-1 p-6 pb-28">
+      <main
+        className={cn(
+          "flex-1 p-6 pb-28",
+          heroFeature ? "hh-parent-content-modal" : "hh-parent-content-hidden"
+        )}
+        role={heroFeature ? 'dialog' : undefined}
+        aria-modal={heroFeature ? true : undefined}
+        aria-label={heroFeature ? '家長功能頁面' : undefined}
+      >
+        {heroFeature && (
+          <div className="hh-parent-content-modal-bar">
+            <strong>{heroMenuActions.find((action) => action.id === heroFeature)?.title}</strong>
+            <button type="button" onClick={closeHeroFeature} aria-label="關閉功能頁面" className="hh-character-icon-button">
+              <X size={18} />
+            </button>
+          </div>
+        )}
         {isOffline && (
           <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             <span>目前離線，尚未同步的變更不會被視為成功。</span>
@@ -753,7 +862,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   </div>
                 ))}
                 {todoTasks.length === 0 && pendingTasks.length === 0 && completedTasks.length === 0 && (
-                  <div className="text-center py-8 text-gray-400 text-sm">目前沒有任務，趕快新增吧！</div>
+                  <div className="text-center py-8 text-gray-700 text-sm">目前沒有任務，趕快新增吧！</div>
                 )}
               </div>
             </section>
@@ -799,7 +908,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   </div>
                 ))}
                 {state.taskTemplates.length === 0 && (
-                  <div className="text-center py-8 text-gray-400 text-sm">目前沒有模板，點擊右上角新增。</div>
+                  <div className="text-center py-8 text-gray-700 text-sm">目前沒有模板，點擊右上角新增。</div>
                 )}
               </div>
             </section>
@@ -885,7 +994,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               小孩許願
             </h2>
             {allWishlist.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-2xl">許願空空的</div>
+              <div className="text-center py-8 text-gray-700 text-sm bg-white rounded-2xl">許願空空的</div>
             ) : (
               <div className="space-y-3">
                 {allWishlist.map(item => (
@@ -1098,11 +1207,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {/* Task Overlays */}
       {showTaskForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingTask ? '編輯任務' : '新增任務'}</h3>
-              <button onClick={() => dismissWithAnimation(() => setShowTaskForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => closeHeroForm(() => setShowTaskForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉新增任務"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1179,11 +1288,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {showTemplateForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingTemplate ? '編輯模板' : '新增模板'}</h3>
-              <button onClick={() => dismissWithAnimation(() => setShowTemplateForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => closeHeroForm(() => setShowTemplateForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉新增模板"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1228,11 +1337,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {assigningTemplate && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">派發任務：{assigningTemplate.name}</h3>
-              <button onClick={() => dismissWithAnimation(() => setAssigningTemplate(null))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => closeHeroForm(() => setAssigningTemplate(null))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉派發模板"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               {state.children.length > 1 && (
@@ -1283,11 +1392,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {showRewardForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[60]">
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-[70]">
           <div className="hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">{editingReward ? '編輯獎勵' : '新增獎勵'}</h3>
-              <button onClick={() => dismissWithAnimation(() => setShowRewardForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => closeHeroForm(() => setShowRewardForm(false))} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label="關閉新增獎勵"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1341,7 +1450,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       {/* Delete Confirm Modals */}
       {taskToDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
           <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
             <h3 className="text-xl font-bold mb-2">刪除任務</h3>
             <p className="text-gray-500 mb-6">確定要刪除「{taskToDelete.name}」嗎？這個動作無法復原。</p>
@@ -1357,7 +1466,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {rewardToDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
           <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
             <h3 className="text-xl font-bold mb-2">刪除獎勵</h3>
             <p className="text-gray-500 mb-6">確定要刪除「{rewardToDelete.name}」嗎？這個動作無法復原。</p>
@@ -1373,7 +1482,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {childToDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[60]">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
           <div className="hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up">
             <h3 className="text-xl font-bold mb-2 text-red-600">刪除小孩帳號</h3>
             <p className="text-gray-500 mb-4">這將會清除該小孩的所有任務與點數紀錄，並且無法復原。請輸入家長密碼以確認。</p>
@@ -1410,7 +1519,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {resetChildId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
           <div className="hh-parent-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-xl font-bold text-blue-900">重設小孩密碼</h3>
             <p className="mb-4 text-sm text-gray-500">重設後請把新密碼告訴小孩；舊密碼會立即失效。</p>
@@ -1447,7 +1556,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       )}
 
       {accountSetupChildId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
           <div className="hh-parent-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-xl font-bold text-blue-900">建立小孩登入帳號</h3>
             <p className="mb-4 text-sm text-gray-500">建立後小孩可在任何裝置使用帳號登入。</p>

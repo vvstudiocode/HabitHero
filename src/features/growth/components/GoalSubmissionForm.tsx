@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { MOOD_CHOICES } from '../constants';
 import type { GoalReflectionInput, GrowthMood, GrowthTask } from '../types';
 
@@ -22,7 +23,12 @@ export function GoalSubmissionForm({ task, loading = false, onCancel, onSubmit }
 
   return (
     <div className="rounded-3xl border border-green-100 bg-white p-5 shadow-xl">
-      <h3 className="text-xl font-black text-gray-900">完成心得</h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-xl font-black text-gray-900">完成心得</h3>
+        <button type="button" onClick={onCancel} aria-label="關閉完成心得" className="hh-character-icon-button">
+          <X size={18} />
+        </button>
+      </div>
       <p className="mt-1 text-sm font-bold text-green-700">{task.name}</p>
       <div className="mt-4 space-y-4">
         <label className="block">
