@@ -8,6 +8,7 @@ export type SortOrder = number;
 
 export type Role = 'parent' | 'child' | null;
 export type MemberRole = 'parent' | 'child';
+export type ChildGender = 'boy' | 'girl';
 export type TaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed';
 export type TaskCategory = 'life_habit' | 'learning' | 'health' | 'relationship' | 'family_contribution' | 'creativity';
 export type TaskOrigin = 'child_proposed' | 'parent_suggested' | 'parent_assigned' | 'system_template';
@@ -46,6 +47,9 @@ export interface ChildProfileRow {
   profile_id: Id | null;
   login_name: string | null;
   display_name: string;
+  gender: ChildGender;
+  character_id: string;
+  joined_at: Timestamp;
   points_balance: Points;
   created_at: Timestamp;
   updated_at: Timestamp;
@@ -180,7 +184,11 @@ export interface FamilyMemberUpdateInput {
 
 export interface ChildProfileCreateInput {
   family_id: Id;
-  profile_id: Id;
+  profile_id: Id | null;
+  display_name: string;
+  gender: ChildGender;
+  character_id: string;
+  joined_at?: Timestamp;
   points_balance?: Points;
 }
 export interface ChildProfileUpdateInput {
@@ -321,6 +329,10 @@ export interface ChildViewModel {
   profileId: Id | null;
   loginName: string | null;
   name: string;
+  gender: ChildGender;
+  characterId: string;
+  joinedAt: Timestamp;
+  joinedDays: number;
   points: Points;
 }
 

@@ -10,6 +10,7 @@ const passwordPattern = /^[A-Za-z0-9]{6,}$/;
 const childEmailDomain = 'children.habithero.local';
 
 type Action = 'create' | 'reset-password' | 'delete';
+type ChildGender = 'boy' | 'girl';
 
 interface RequestBody {
   action: Action;
@@ -18,6 +19,8 @@ interface RequestBody {
   childName?: string;
   loginName?: string;
   password?: string;
+  gender?: ChildGender;
+  characterId?: string;
 }
 
 function json(body: unknown, status = 200) {
@@ -70,7 +73,10 @@ Deno.serve(async (request) => {
     if (body.action === 'create') {
       const loginName = body.loginName?.trim().toLowerCase() ?? '';
       const childName = body.childName?.trim() ?? '';
-      if (!childName || childName.length > 80 || !usernamePattern.test(loginName) || !body.password || !passwordPattern.test(body.password)) {
+      const characterId = body.characterId?.trim() ?? '';
+      if (!childName || childName.length > 80 || !usernamePattern.test(loginName) || !body.password || !passwordPattern.test(body.password)
+        || (!body.childProfileId && (body.gender !== 'boy' && body.gender !== 'girl'))
+        || (!body.childProfileId && (characterId.length < 1 || characterId.length > 80))) {
         return json({ error: 'Invalid child account details' }, 400);
       }
 
@@ -89,6 +95,8 @@ Deno.serve(async (request) => {
             target_child_profile_id: body.childProfileId,
             target_login_name: loginName,
             target_profile_id: createdUser.user.id,
+            target_gender: body.gender,
+            target_character_id: characterId,
           }
         : {
             target_family_id: body.familyId,

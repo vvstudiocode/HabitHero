@@ -12,6 +12,7 @@ import type {
   ChildProfileRow, FamilyMemberRow, ProfileRow, RewardRow,
   RewardRedemptionRow, TaskRow, TaskTemplateRow, WishlistItemRow, PointLedgerRow,
 } from '../types';
+import type { ChildProfileCreationInput } from './data-contracts';
 import type { AppState, Child, FeedbackTone, Reward, Task, TaskCategory, TaskStatus, TaskTemplate } from '../types';
 import { validateRewardPoints } from './reward-validation';
 
@@ -81,6 +82,27 @@ export interface ReviewTaskCompletionInput {
   tone?: FeedbackTone | null;
   revisionNote?: string | null;
 }
+
+export interface CreateChildAccountInput {
+  name: string;
+  loginName: string;
+  password: string;
+  gender: 'boy' | 'girl';
+  characterId: string;
+}
+
+export const buildCreateChildAccountPayload = (
+  familyId: string,
+  child: CreateChildAccountInput,
+) => ({
+  action: 'create' as const,
+  familyId,
+  childName: child.name,
+  loginName: child.loginName,
+  password: child.password,
+  gender: child.gender,
+  characterId: child.characterId,
+});
 
 function normalizeFeedbackTone(tone?: FeedbackTone | null): FeedbackTone | null {
   if (tone === 'celebration' || tone === 'celebrating') return 'celebratory';
@@ -247,7 +269,7 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
 
 export interface DataRepository {
   load(userId: string): Promise<LoadedAppData>;
-  insertChild(familyId: string, name: string, loginName: string, password: string, childProfileId?: string): Promise<void>;
+  insertChild(familyId: string, name: string, loginName: string, password: string, childProfileId?: string, identity?: ChildProfileCreationInput): Promise<void>;
   updateChildPassword(familyId: string, childId: string, password: string): Promise<void>;
   updateChild(familyId: string, childId: string, name: string): Promise<void>;
   deleteChild(familyId: string, childId: string): Promise<void>;
@@ -277,9 +299,18 @@ export interface DataRepository {
 export function createDataRepository(client: SupabaseClient): DataRepository {
   return {
     load: (userId) => loadAppData(client, userId),
-    async insertChild(familyId, name, loginName, password, childProfileId) {
+    async insertChild(familyId, name, loginName, password, childProfileId, identity) {
       const { data, error } = await client.functions.invoke('manage-child-account', {
-        body: { action: 'create', familyId, childProfileId, childName: name, loginName, password },
+        body: {
+          action: 'create',
+          familyId,
+          childProfileId,
+          childName: name,
+          loginName,
+          password,
+          gender: identity?.gender,
+          characterId: identity?.characterId,
+        },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);

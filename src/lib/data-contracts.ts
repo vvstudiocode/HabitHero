@@ -1,5 +1,6 @@
 import {
   ChildProfileRow,
+  ChildGender,
   ChildViewModel,
   FamilyMemberRow,
   FamilyMemberViewModel,
@@ -24,6 +25,41 @@ import {
 const toUnixMilliseconds = (timestamp: Timestamp): UnixMilliseconds => Date.parse(timestamp);
 const defaultCategory: TaskCategory = 'life_habit';
 const defaultOrigin: TaskOrigin = 'parent_assigned';
+
+export interface ChildProfileCreationInput {
+  gender: ChildGender | string;
+  characterId: string;
+}
+
+export const validateChildProfileCreation = (
+  input: ChildProfileCreationInput,
+): string | null => {
+  if (input.gender !== 'boy' && input.gender !== 'girl') return 'gender is invalid';
+  if (typeof input.characterId !== 'string' || input.characterId.trim().length === 0) {
+    return 'character is required';
+  }
+  if (input.characterId.trim().length > 80) return 'character is invalid';
+  return null;
+};
+
+const taipeiCalendarDate = (value: string | Date): string => {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+};
+
+export const calculateJoinedDays = (joinedAt: Timestamp, now: Timestamp | Date = new Date()): number => {
+  const joinedDate = Date.parse(joinedAt);
+  const nowDate = now instanceof Date ? now.getTime() : Date.parse(now);
+  if (!Number.isFinite(joinedDate) || !Number.isFinite(nowDate)) return 1;
+  const start = Date.parse(`${taipeiCalendarDate(joinedAt)}T00:00:00+08:00`);
+  const end = Date.parse(`${taipeiCalendarDate(now)}T00:00:00+08:00`);
+  return Math.max(1, Math.floor((end - start) / 86_400_000) + 1);
+};
 
 export const profileRowToViewModel = (row: ProfileRow): ProfileViewModel => ({
   id: row.id,
@@ -55,6 +91,10 @@ export const childProfileRowToViewModel = (
   profileId: row.profile_id,
   loginName: row.login_name,
   name: profile?.displayName ?? row.display_name,
+  gender: row.gender,
+  characterId: row.character_id,
+  joinedAt: row.joined_at,
+  joinedDays: calculateJoinedDays(row.joined_at),
   points: row.points_balance,
 });
 
