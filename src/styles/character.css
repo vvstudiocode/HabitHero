@@ -65,7 +65,7 @@
   height: 100dvh;
   overflow: hidden;
   background-color: #eadde0;
-  background-image: url('/images/parent-room-background.png');
+  background-image: url('/images/habithero-catgirl-room.png');
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -976,6 +976,40 @@
 @media (min-width: 760px) {
   .hh-character-hero-panel {
     height: 100dvh;
+  }
+
+  .hh-character-hero__image {
+    width: min(54vw, 480px);
+    height: min(80dvh, 680px);
+  }
+
+  .hh-character-menu {
+    --hh-menu-action-size: 76px;
+  }
+
+  .hh-character-menu-action {
+    width: var(--hh-menu-action-size);
+    min-width: var(--hh-menu-action-size);
+    height: var(--hh-menu-action-size);
+    min-height: var(--hh-menu-action-size);
+  }
+
+  .hh-parent-content-modal {
+    padding-right: clamp(24px, 5vw, 80px);
+    padding-left: clamp(24px, 5vw, 80px);
+  }
+
+  .hh-parent-content-modal > *:not(.hh-parent-content-modal-bar) {
+    width: min(100%, 960px);
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .hh-parent-content-modal-bar {
+    margin-right: calc(clamp(24px, 5vw, 80px) * -1);
+    margin-left: calc(clamp(24px, 5vw, 80px) * -1);
+    padding-right: clamp(20px, 5vw, 80px);
+    padding-left: clamp(20px, 5vw, 80px);
   }
 
   .hh-character-dashboard-header {

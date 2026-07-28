@@ -28,10 +28,6 @@ interface DashboardCharacterHeroProps {
   onMenuOpenChange?: (open: boolean) => void;
 }
 
-function CharacterImage() {
-  return <img src="/images/parent-character.png" className="hh-character-hero__image" alt="HabitHero 角色" />;
-}
-
 export function DashboardCharacterHero({
   title,
   eyebrow,
@@ -73,7 +69,6 @@ export function DashboardCharacterHero({
         <div className="hh-character-hero-cloud hh-character-hero-cloud--two" aria-hidden="true" />
         <div className="hh-character-hero-hill hh-character-hero-hill--back" aria-hidden="true" />
         <div className="hh-character-hero-hill" aria-hidden="true" />
-        <CharacterImage />
         {hasMenu && (
           <div
             className={`hh-character-menu is-open ${activeMenuId ? 'has-submenu' : ''}`}
