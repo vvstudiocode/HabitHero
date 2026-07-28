@@ -1064,6 +1064,13 @@
   }
 }
 
+/* Touch browsers should keep menu controls layout-stable; margin animation can visibly jitter during scroll/repaint. */
+@media (hover: none) and (pointer: coarse) {
+  .hh-character-menu-action {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   .hh-character-icon-button,

@@ -46,6 +46,7 @@ The user has installed several global skills and MCP/CLI tools. Use them when th
 
 ## Default Behavior
 
+- **CSS 修改前必讀**：請先閱讀 [`CSS_RULES.md`](./CSS_RULES.md)。它是 HabitHero 的 CSS 分層、selector owner、responsive、狀態與驗證流程的唯一維護規則；禁止直接追加覆蓋式 CSS 來修問題。
 - For ordinary coding tasks, inspect the repo first and use the existing project patterns.
 - For visual/frontend work, prefer `ui-ux-pro-max` as the general design skill and add `apple-design` only when the interaction or requested style calls for it.
 - For design-token extraction from an external site, use `extract-design-system` instead of hand-copying colors or typography.
