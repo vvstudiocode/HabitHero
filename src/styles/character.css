@@ -81,6 +81,8 @@
   border-radius: 0;
   box-shadow: none;
   overflow-x: hidden;
+  --hh-character-copy-top: max(48px, calc(env(safe-area-inset-top) + 8px));
+  --hh-character-content-left: 28px;
 }
 
 .hh-character-hero-panel>.hh-character-dashboard-actions {
@@ -93,8 +95,8 @@
 .hh-character-hero-copy {
   position: absolute;
   z-index: 3;
-  top: max(28px, env(safe-area-inset-top));
-  left: 28px;
+  top: var(--hh-character-copy-top);
+  left: var(--hh-character-content-left);
   max-width: 56%;
 }
 
@@ -207,6 +209,9 @@
   z-index: 7;
   inset: 0;
   pointer-events: none;
+  --hh-menu-action-size: 68px;
+  --hh-menu-submenu-gap: 12px;
+  --hh-menu-submenu-offset: calc(var(--hh-menu-action-size) + var(--hh-menu-submenu-gap));
 }
 
 /* Main actions are always available; only the selected group's submenu is progressive. */
@@ -225,20 +230,24 @@
 .hh-character-menu-action {
   position: absolute;
   display: inline-flex;
-  min-width: 86px;
-  min-height: 44px;
+  width: 68px;
+  min-width: 68px;
+  height: 68px;
+  min-height: 68px;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 9px 12px;
+  flex-direction: column;
   color: #ffffff;
   background: #050505;
   border: 1px solid #050505;
-  border-radius: 16px;
-  box-shadow: none;
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(32, 33, 36, 0.12), 0 0 16px rgba(255, 255, 255, 0.72);
   opacity: 0;
   transform: translateY(8px) scale(.94);
-  transition: opacity 180ms ease, transform 180ms ease, background 180ms ease;
+  transition: opacity 220ms ease, transform 220ms ease, background 180ms ease;
+  animation: hh-menu-float 4.2s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -246,7 +255,8 @@
   font-size: 14px;
   font-weight: 900;
   line-height: 1;
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
 }
 
 .hh-character-menu-action svg {
@@ -279,6 +289,31 @@
   transform: translateX(-50%) translateY(8px) scale(.94);
 }
 
+.hh-character-menu-root>.hh-character-menu-action:nth-child(1) {
+  animation-duration: 3.8s;
+  animation-delay: -0.2s;
+}
+
+.hh-character-menu-root>.hh-character-menu-action:nth-child(2) {
+  animation-duration: 4.4s;
+  animation-delay: -1.1s;
+}
+
+.hh-character-menu-root>.hh-character-menu-action:nth-child(3) {
+  animation-duration: 4.9s;
+  animation-delay: -2.3s;
+}
+
+.hh-character-menu-root>.hh-character-menu-action:nth-child(4) {
+  animation-duration: 4.1s;
+  animation-delay: -0.8s;
+}
+
+.hh-character-menu-root>.hh-character-menu-action:nth-child(5) {
+  animation-duration: 5.2s;
+  animation-delay: -1.7s;
+}
+
 .hh-character-menu.is-open .hh-character-menu-root>.hh-character-menu-action {
   opacity: 1;
   transform: translateY(0) scale(1);
@@ -289,6 +324,47 @@
   opacity: 0;
   transform: translateY(8px) scale(.94);
   pointer-events: none;
+}
+
+.hh-character-menu.is-open.has-submenu .hh-character-menu-root>.hh-character-menu-action:nth-child(1) {
+  transition-delay: 0ms;
+}
+
+.hh-character-menu.is-open.has-submenu .hh-character-menu-root>.hh-character-menu-action:nth-child(2) {
+  transition-delay: 70ms;
+}
+
+.hh-character-menu.is-open.has-submenu .hh-character-menu-root>.hh-character-menu-action:nth-child(3) {
+  transition-delay: 140ms;
+}
+
+.hh-character-menu.is-open.has-submenu .hh-character-menu-root>.hh-character-menu-action:nth-child(4) {
+  transition-delay: 210ms;
+}
+
+.hh-character-menu.is-open.has-submenu .hh-character-menu-root>.hh-character-menu-action:nth-child(5) {
+  transition-delay: 280ms;
+}
+
+/* Use a deliberately varied reveal rhythm when returning to the root menu. */
+.hh-character-menu.is-open:not(.has-submenu) .hh-character-menu-root>.hh-character-menu-action:nth-child(1) {
+  transition-delay: 120ms;
+}
+
+.hh-character-menu.is-open:not(.has-submenu) .hh-character-menu-root>.hh-character-menu-action:nth-child(2) {
+  transition-delay: 20ms;
+}
+
+.hh-character-menu.is-open:not(.has-submenu) .hh-character-menu-root>.hh-character-menu-action:nth-child(3) {
+  transition-delay: 180ms;
+}
+
+.hh-character-menu.is-open:not(.has-submenu) .hh-character-menu-root>.hh-character-menu-action:nth-child(4) {
+  transition-delay: 60ms;
+}
+
+.hh-character-menu.is-open:not(.has-submenu) .hh-character-menu-root>.hh-character-menu-action:nth-child(5) {
+  transition-delay: 240ms;
 }
 
 .hh-character-menu.is-open .hh-character-menu-submenu {
@@ -304,10 +380,41 @@
 .hh-character-menu.is-open .hh-character-menu-submenu .hh-character-menu-action {
   position: relative;
   inset: auto;
+  width: auto;
   min-width: 132px;
+  height: auto;
+  min-height: 40px;
+  flex-direction: row;
+  padding: 8px 12px;
+  border-radius: 16px;
+  white-space: nowrap;
   opacity: 1;
   transform: translateY(8px) scale(.94);
   pointer-events: auto;
+}
+
+.hh-character-menu-submenu .hh-character-menu-action:nth-child(1) {
+  animation-duration: 4.6s;
+  animation-delay: -0.7s;
+}
+
+.hh-character-menu-submenu .hh-character-menu-action:nth-child(2) {
+  animation-duration: 5.1s;
+  animation-delay: -2.0s;
+}
+
+.hh-character-menu-submenu .hh-character-menu-action:nth-child(3) {
+  animation-duration: 4.0s;
+  animation-delay: -1.4s;
+}
+
+.hh-character-menu-submenu .hh-character-menu-action:nth-child(4) {
+  animation-duration: 5.4s;
+  animation-delay: -2.8s;
+}
+
+.hh-character-menu-submenu .hh-character-menu-action strong {
+  white-space: nowrap;
 }
 
 .hh-character-menu.is-open .hh-character-menu-submenu .hh-character-menu-action:nth-child(5) {
@@ -342,42 +449,48 @@
 }
 
 .hh-character-menu.is-open .hh-character-menu-submenu .hh-character-menu-action {
+  width: max-content;
+  min-width: 124px;
+  max-width: calc(100vw - 32px);
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
   transform: translateY(0) scale(1);
 }
 
 .hh-character-menu[data-active-menu="review"] .hh-character-menu-submenu {
-  top: calc(29% + 52px);
+  top: calc(29% + var(--hh-menu-submenu-offset));
   left: 8%;
 }
 
 .hh-character-menu[data-active-menu="tasks"] .hh-character-menu-submenu {
-  top: calc(29% + 52px);
+  top: calc(29% + var(--hh-menu-submenu-offset));
   right: 8%;
 }
 
 .hh-character-menu[data-active-menu="growth"] .hh-character-menu-submenu {
-  top: calc(48% + 52px);
+  top: calc(48% + var(--hh-menu-submenu-offset));
   left: 7%;
 }
 
 .hh-character-menu[data-active-menu="rewards"] .hh-character-menu-submenu {
-  top: calc(48% + 52px);
+  top: calc(48% + var(--hh-menu-submenu-offset));
   right: 7%;
 }
 
 .hh-character-menu[data-active-menu="wishlist"] .hh-character-menu-submenu {
   right: 50%;
-  bottom: calc(13% + 52px);
+  bottom: calc(13% + var(--hh-menu-submenu-offset));
   transform: translateX(50%);
 }
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="goals"] .hh-character-menu-submenu {
-  top: calc(29% + 52px);
+  top: calc(29% + var(--hh-menu-submenu-offset));
   left: 8%;
 }
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="growth"] .hh-character-menu-submenu {
-  top: calc(29% + 52px);
+  top: calc(29% + var(--hh-menu-submenu-offset));
   right: 8%;
   left: auto;
   transform: none;
@@ -398,30 +511,19 @@
 }
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="wishlist"] .hh-character-menu-submenu {
-  bottom: calc(18% + 52px);
+  bottom: calc(18% + var(--hh-menu-submenu-offset));
   left: 8%;
   right: auto;
   transform: none;
 }
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="history"] .hh-character-menu-submenu {
-  bottom: calc(18% + 52px);
+  bottom: calc(18% + var(--hh-menu-submenu-offset));
   right: 8%;
 }
 
 .hh-character-menu.is-open .hh-character-menu-action:nth-child(5) {
   transform: translateX(-50%) translateY(0) scale(1);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .hh-character-menu-action:hover {
-    background: #1f1f1f;
-    transform: translateY(-2px) scale(1.02);
-  }
-
-  .hh-character-menu-action:nth-child(5):hover {
-    transform: translateX(-50%) translateY(-2px) scale(1.02);
-  }
 }
 
 .hh-character-menu-action:active {
@@ -459,8 +561,8 @@
 .hh-character-stats {
   position: absolute;
   z-index: 5;
-  bottom: max(34px, env(safe-area-inset-bottom));
-  left: 28px;
+  top: max(2px, env(safe-area-inset-top));
+  left: var(--hh-character-content-left);
   display: flex;
   gap: 8px;
   max-width: 58%;
@@ -474,6 +576,15 @@
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+@keyframes hh-menu-float {
+  0%, 100% {
+    margin-top: 0;
+  }
+  50% {
+    margin-top: -4px;
+  }
 }
 
 .hh-character-stats small {
@@ -880,9 +991,6 @@
     padding-left: 0;
   }
 
-  .hh-character-stats {
-    left: 24px;
-  }
 }
 
 @media (max-width: 390px) {
@@ -902,11 +1010,10 @@
   .hh-character-hero-panel {
     height: 100dvh;
     border-radius: 0;
+    --hh-character-content-left: 12px;
   }
 
   .hh-character-hero-copy {
-    top: 18px;
-    left: 18px;
     max-width: 58%;
   }
 
@@ -915,9 +1022,16 @@
   }
 
   .hh-character-menu-action {
-    min-width: 76px;
+    width: 64px;
+    min-width: 64px;
+    height: 64px;
+    min-height: 64px;
     padding-right: 10px;
     padding-left: 10px;
+  }
+
+  .hh-character-menu {
+    --hh-menu-action-size: 64px;
   }
 
   .hh-character-menu-action:nth-child(1) {
@@ -945,8 +1059,8 @@
   }
 
   .hh-character-stats {
-    bottom: 12px;
-    left: 12px;
+    top: 2px;
+    bottom: auto;
     gap: 6px;
     max-width: 62%;
   }
@@ -965,6 +1079,7 @@
   .hh-goal-proposal-trigger,
   .hh-parent-feature-close {
     transition: none;
+    animation: none;
   }
 
   .hh-goal-proposal-sheet,
@@ -973,25 +1088,4 @@
   .hh-parent-content-modal {
     animation-duration: .01ms;
   }
-}
-
-/* Keep the document canvas white without overriding component colors or controls. */
-body {
-  background: #ffffff;
-}
-/* Neutral character navigation controls. */
-.hh-character-icon-button,
-.hh-character-menu-action,
-.hh-character-menu-action:hover,
-.hh-character-menu-action:focus-visible {
-  background: var(--hh-neutral-surface) !important;
-  border-color: var(--hh-neutral-line) !important;
-  color: var(--hh-neutral-ink) !important;
-  box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
-}
-
-.hh-character-menu-action strong,
-.hh-character-menu-action svg,
-.hh-character-icon-button svg {
-  color: var(--hh-neutral-ink) !important;
 }

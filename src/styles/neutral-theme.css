@@ -158,16 +158,24 @@ body,
 
 .hh-character-icon-button,
 .hh-character-menu-action,
+.hh-character-menu-action:hover,
 .hh-character-menu-action:focus-visible {
   background: var(--hh-neutral-surface) !important;
-  border-color: var(--hh-neutral-line) !important;
   color: var(--hh-neutral-ink) !important;
-  box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
+  box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 20px rgba(255, 177, 205, 0.68) !important;
+}
+
+.hh-character-menu-action {
+  border: 0 !important;
+}
+
+.hh-character-icon-button {
+  border: 0 !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .hh-character-menu-action:hover {
-    background: var(--hh-neutral-soft) !important;
+    transform: none;
   }
 }
 

@@ -47,6 +47,7 @@ export function DashboardCharacterHero({
   rootMenuActions,
   activeMenuId = null,
   menuVariant = 'parent',
+  onMenuClose,
 }: DashboardCharacterHeroProps) {
   const rootActions = rootMenuActions ?? menuActions ?? [];
   const subActions = rootMenuActions && activeMenuId ? (menuActions ?? []) : [];
@@ -54,7 +55,15 @@ export function DashboardCharacterHero({
 
   return (
     <header className="hh-character-dashboard-header">
-      <div className="hh-character-hero-panel">
+      <div
+        className="hh-character-hero-panel"
+        onClick={(event) => {
+          if (!activeMenuId || !onMenuClose) return;
+          const target = event.target;
+          if (target instanceof Element && target.closest('button')) return;
+          onMenuClose();
+        }}
+      >
         <div className="hh-character-hero-copy">
           {eyebrow && <p>{eyebrow}</p>}
           <h1>{title}</h1>
