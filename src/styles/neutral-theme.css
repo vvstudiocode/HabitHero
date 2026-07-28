@@ -97,9 +97,15 @@ body,
   box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
 }
 
-.hh-sprite-theme button:hover,
+@media (hover: hover) and (pointer: fine) {
+  .hh-sprite-theme button:hover,
+  .hh-login-screen button:hover {
+    background: var(--hh-neutral-soft) !important;
+    color: var(--hh-neutral-ink) !important;
+  }
+}
+
 .hh-sprite-theme button:focus-visible,
-.hh-login-screen button:hover,
 .hh-login-screen button:focus-visible {
   background: var(--hh-neutral-soft) !important;
   color: var(--hh-neutral-ink) !important;
@@ -152,12 +158,17 @@ body,
 
 .hh-character-icon-button,
 .hh-character-menu-action,
-.hh-character-menu-action:hover,
 .hh-character-menu-action:focus-visible {
   background: var(--hh-neutral-surface) !important;
   border-color: var(--hh-neutral-line) !important;
   color: var(--hh-neutral-ink) !important;
   box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hh-character-menu-action:hover {
+    background: var(--hh-neutral-soft) !important;
+  }
 }
 
 .hh-character-menu-action strong,

@@ -147,6 +147,7 @@ body,
 /* Preserve character/model color. White theme is a surface treatment, not a filter. */
 .hh-login-canvas,
 .hh-character-hero__canvas,
+.hh-character-hero__image,
 .hh-sprite-theme img,
 .hh-sprite-theme canvas {
   filter: none !important;

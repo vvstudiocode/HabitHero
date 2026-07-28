@@ -74,6 +74,19 @@
   outline-offset: 2px;
 }
 
+.hh-review-gate-checkbox {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: #16aeb7;
+  cursor: pointer;
+}
+
+.hh-review-gate-checkbox:focus-visible {
+  outline: 3px solid rgba(22, 174, 183, 0.35);
+  outline-offset: 2px;
+}
+
 .hh-switch-modal-shell {
   /* The app shell styles direct children as relative; keep switch dialogs viewport-fixed. */
   position: fixed !important;

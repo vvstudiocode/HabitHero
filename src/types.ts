@@ -63,6 +63,7 @@ export interface TaskTemplateRow {
   suggested_evidence: string;
   due_time: string | null;
   end_time: string | null;
+  requires_review_before_next_task?: boolean;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -81,6 +82,7 @@ export interface TaskRow {
   due_on: string | null;
   due_time: string | null;
   end_time: string | null;
+  requires_review_before_next_task?: boolean;
   category: TaskCategory;
   origin: TaskOrigin;
   original_name: string | null;
@@ -332,6 +334,7 @@ export interface TaskTemplateViewModel {
   suggestedEvidence: string;
   dueTime: string | null;
   endTime: string | null;
+  requiresReviewBeforeNextTask: boolean;
 }
 
 export interface TaskViewModel {
@@ -351,6 +354,7 @@ export interface TaskViewModel {
   dueOn: string | null;
   dueTime: string | null;
   endTime: string | null;
+  requiresReviewBeforeNextTask: boolean;
   category: TaskCategory;
   origin: TaskOrigin;
   originalName: string | null;
@@ -405,12 +409,13 @@ export interface PointLedgerViewModel {
 }
 
 // Legacy localStorage view types. Keep these aliases until the storage adapter is replaced.
-export interface TaskTemplate extends Omit<TaskTemplateViewModel, 'duration' | 'category' | 'suggestedEvidence' | 'dueTime' | 'endTime'> {
+export interface TaskTemplate extends Omit<TaskTemplateViewModel, 'duration' | 'category' | 'suggestedEvidence' | 'dueTime' | 'endTime' | 'requiresReviewBeforeNextTask'> {
   duration?: number;
   category?: TaskCategory;
   suggestedEvidence?: string;
   dueTime?: string | null;
   endTime?: string | null;
+  requiresReviewBeforeNextTask?: boolean;
 }
 export interface Task extends Omit<
   TaskViewModel,
@@ -424,6 +429,7 @@ export interface Task extends Omit<
   | 'dueOn'
   | 'dueTime'
   | 'endTime'
+  | 'requiresReviewBeforeNextTask'
   | 'category'
   | 'origin'
   | 'originalName'
@@ -453,6 +459,7 @@ export interface Task extends Omit<
   dueOn?: string | null;
   dueTime?: string | null;
   endTime?: string | null;
+  requiresReviewBeforeNextTask?: boolean;
   category?: TaskCategory;
   origin?: TaskOrigin;
   originalName?: string | null;

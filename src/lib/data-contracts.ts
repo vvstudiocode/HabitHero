@@ -75,6 +75,7 @@ export const taskRowToViewModel = (row: TaskRow): TaskViewModel => ({
   dueOn: row.due_on,
   dueTime: row.due_time,
   endTime: row.end_time,
+  requiresReviewBeforeNextTask: row.requires_review_before_next_task ?? false,
   category: row.category ?? defaultCategory,
   origin: row.origin ?? defaultOrigin,
   originalName: row.original_name ?? null,
@@ -109,6 +110,7 @@ export const taskTemplateRowToViewModel = (
   suggestedEvidence: row.suggested_evidence ?? 'reflection',
   dueTime: row.due_time ?? null,
   endTime: row.end_time ?? null,
+  requiresReviewBeforeNextTask: row.requires_review_before_next_task ?? false,
 });
 
 export const redemptionRowToViewModel = (

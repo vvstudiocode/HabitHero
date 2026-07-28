@@ -314,6 +314,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         suggested_evidence: template.suggestedEvidence ?? 'reflection',
         due_time: template.dueTime ?? null,
         end_time: template.endTime ?? null,
+        requires_review_before_next_task: template.requiresReviewBeforeNextTask ?? false,
       }));
     },
     async updateTemplate(id, updates) {
@@ -326,6 +327,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         suggested_evidence: updates.suggestedEvidence,
         due_time: updates.dueTime,
         end_time: updates.endTime,
+        requires_review_before_next_task: updates.requiresReviewBeforeNextTask,
       })).eq('id', id));
     },
     async deleteTemplate(id) { check(await client.from('task_templates').delete().eq('id', id)); },
@@ -342,6 +344,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         due_on: task.dueOn ?? null,
         due_time: task.dueTime ?? null,
         end_time: task.endTime ?? null,
+        requires_review_before_next_task: task.requiresReviewBeforeNextTask ?? false,
         category: task.category ?? 'life_habit',
         origin: task.origin ?? 'parent_assigned',
       }));
@@ -357,6 +360,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         due_on: updates.dueOn,
         due_time: updates.dueTime,
         end_time: updates.endTime,
+        requires_review_before_next_task: updates.requiresReviewBeforeNextTask,
         category: updates.category,
         origin: updates.origin,
         approved_points: updates.approvedPoints,

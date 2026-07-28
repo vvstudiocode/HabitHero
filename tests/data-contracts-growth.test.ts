@@ -66,6 +66,7 @@ describe('growth data contracts', () => {
       dueOn: '2026-07-22',
       dueTime: '17:30:00',
       endTime: '19:00:00',
+      requiresReviewBeforeNextTask: false,
       category: 'learning',
       origin: 'child_proposed',
       originalName: 'Read',
@@ -116,6 +117,7 @@ describe('growth data contracts', () => {
       suggestedEvidence: 'reflection',
       dueTime: '18:00:00',
       endTime: '20:00:00',
+      requiresReviewBeforeNextTask: false,
     });
   });
 });

@@ -55,10 +55,12 @@
   transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
-.hh-character-icon-button:hover {
-  background: #1f1f1f;
-  box-shadow: none;
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .hh-character-icon-button:hover {
+    background: #1f1f1f;
+    box-shadow: none;
+    transform: translateY(-2px);
+  }
 }
 
 .hh-character-icon-button:active {
@@ -70,7 +72,11 @@
   min-height: 100dvh;
   height: 100dvh;
   overflow: hidden;
-  background: #ffffff;
+  background-color: #eadde0;
+  background-image: url('/images/parent-room-background.png');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -94,7 +100,7 @@
 
 .hh-character-hero-copy p {
   margin: 0 0 5px;
-  color: #217476;
+  color: #050505;
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -102,7 +108,7 @@
 
 .hh-character-hero-copy h1 {
   margin: 0;
-  color: #183d55;
+  color: #050505;
   font-family: Fredoka, sans-serif;
   font-size: clamp(28px, 7vw, 40px);
   line-height: 1.05;
@@ -112,22 +118,17 @@
 .hh-character-hero-copy span {
   display: block;
   margin-top: 9px;
-  color: #356873;
+  color: #050505;
   font-size: 14px;
   font-weight: 800;
   line-height: 1.45;
 }
 
-.hh-character-hero-sun {
-  position: absolute;
-  z-index: 1;
-  top: 15%;
-  right: 18%;
-  width: 58px;
-  height: 58px;
-  background: #fff1a8;
-  border-radius: 50%;
-  box-shadow: 0 0 0 18px rgba(255, 241, 168, 0.18);
+.hh-dashboard-screen--child {
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .hh-character-hero-cloud {
@@ -165,6 +166,20 @@
   touch-action: pan-y;
 }
 
+.hh-character-hero__image {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 2%;
+  width: min(68vw, 420px);
+  height: min(82dvh, 650px);
+  object-fit: contain;
+  object-position: center bottom;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
 .hh-character-hero-hitbox {
   position: absolute;
   z-index: 4;
@@ -192,6 +207,13 @@
   z-index: 7;
   inset: 0;
   pointer-events: none;
+}
+
+/* Main actions are always available; only the selected group's submenu is progressive. */
+.hh-character-menu:not(.has-submenu) .hh-character-menu-root>.hh-character-menu-action {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 .hh-character-menu-root {
@@ -391,13 +413,15 @@
   transform: translateX(-50%) translateY(0) scale(1);
 }
 
-.hh-character-menu-action:hover {
-  background: #1f1f1f;
-  transform: translateY(-2px) scale(1.02);
-}
+@media (hover: hover) and (pointer: fine) {
+  .hh-character-menu-action:hover {
+    background: #1f1f1f;
+    transform: translateY(-2px) scale(1.02);
+  }
 
-.hh-character-menu-action:nth-child(5):hover {
-  transform: translateX(-50%) translateY(-2px) scale(1.02);
+  .hh-character-menu-action:nth-child(5):hover {
+    transform: translateX(-50%) translateY(-2px) scale(1.02);
+  }
 }
 
 .hh-character-menu-action:active {
