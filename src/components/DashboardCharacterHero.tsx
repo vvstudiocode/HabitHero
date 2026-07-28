@@ -60,6 +60,18 @@ export function DashboardCharacterHero({
           onMenuClose();
         }}
       >
+        <video
+          className="hh-character-hero-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="/images/habithero-dashboard-room.png"
+          aria-hidden="true"
+        >
+          <source src="/videos/habithero-dashboard.mp4" type="video/mp4" />
+        </video>
         <div className="hh-character-hero-copy">
           {eyebrow && <p>{eyebrow}</p>}
           <h1>{title}</h1>

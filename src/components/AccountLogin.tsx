@@ -8,11 +8,12 @@ import { SpriteLoginScene } from './SpriteLoginScene';
 
 interface AccountLoginProps {
   onGoSignup: () => void;
+  onForgotPassword: () => void;
   onComplete: (mode: 'parent' | 'child') => void;
   initialMode?: 'parent' | 'child';
 }
 
-export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }: AccountLoginProps) {
+export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, initialMode = 'parent' }: AccountLoginProps) {
   const { error: sessionError } = useAppStore();
   const [mode, setMode] = useState<'parent' | 'child'>(initialMode);
   const [revealed, setRevealed] = useState(false);
@@ -117,6 +118,7 @@ export function AccountLogin({ onGoSignup, onComplete, initialMode = 'parent' }:
                 {submitting ? '登入中…' : '登入任務森林'}
               </button>
               {mode === 'parent' && <button type="button" onClick={onGoSignup} className="hh-secondary-button">沒有家長帳號？註冊</button>}
+              {mode === 'parent' && <button type="button" onClick={onForgotPassword} className="hh-secondary-inline">忘記家長密碼？</button>}
               {mode === 'child' && <p className="hh-login-note">小孩帳號由家長在管理端建立，無法自行註冊。</p>}
             </div>
           )}

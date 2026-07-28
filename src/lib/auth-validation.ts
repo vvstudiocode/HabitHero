@@ -42,6 +42,14 @@ export function validateParentRegistrationCredentials(email: string, password: s
   return { ok: true };
 }
 
+export function validateParentResetPassword(password: string): ValidationResult {
+  return validateParentRegistrationCredentials('reset@example.com', password);
+}
+
+export function getPasswordRecoveryRedirectUrl(origin: string): string {
+  return origin.replace(/\/$/, '');
+}
+
 export function validateChildPassword(password: string): ValidationResult {
   if (!childPasswordPattern.test(password)) {
     return { ok: false, message: '小孩密碼需至少 6 碼，且只能使用英文字母與數字。' };

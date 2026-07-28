@@ -1,5 +1,9 @@
 export const PARENT_IDLE_LOCK_MS = 3 * 60 * 1000;
 
+export function isPublicAuthView(view: string): boolean {
+  return ['login', 'parentSetup', 'forgotPassword', 'resetPassword'].includes(view);
+}
+
 export function isParentModeUnlocked(unlockedAt: number, now: number) {
   return Number.isFinite(unlockedAt) && now - unlockedAt < PARENT_IDLE_LOCK_MS;
 }

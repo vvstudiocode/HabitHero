@@ -1,6 +1,6 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
-import { childAccountEmail } from '../lib/auth-validation';
+import { childAccountEmail, getPasswordRecoveryRedirectUrl } from '../lib/auth-validation';
 
 export interface AuthCredentials {
   email: string;
@@ -29,6 +29,18 @@ export async function verifyCurrentParentPassword(password: string) {
 }
 
 export async function updateCurrentParentPassword(password: string) {
+  const { error } = await getSupabaseClient().auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
+export async function requestParentPasswordReset(email: string) {
+  const redirectTo = typeof window === 'undefined'
+    ? undefined
+    : getPasswordRecoveryRedirectUrl(window.location.origin);
+  return getSupabaseClient().auth.resetPasswordForEmail(email.trim(), redirectTo ? { redirectTo } : undefined);
+}
+
+export async function resetCurrentParentPassword(password: string) {
   const { error } = await getSupabaseClient().auth.updateUser({ password });
   if (error) throw new Error(error.message);
 }
