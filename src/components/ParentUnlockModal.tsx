@@ -39,6 +39,7 @@ export function ParentUnlockModal({
           </div>
           {onCancel && <button type="button" onClick={() => dismissWithAnimation(onCancel, '.hh-switch-modal-panel')} className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-gray-100 text-gray-500" aria-label="關閉"><X size={20} /></button>}
         </div>
+        <input type="text" name="username" autoComplete="username" tabIndex={-1} aria-hidden="true" className="sr-only" />
         <label className="block">
           <span className="mb-2 block text-sm font-bold text-gray-700">家長密碼</span>
           <input

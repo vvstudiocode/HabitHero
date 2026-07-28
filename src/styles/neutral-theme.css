@@ -98,14 +98,14 @@ body,
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .hh-sprite-theme button:hover,
+  .hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):hover,
   .hh-login-screen button:hover {
     background: var(--hh-neutral-soft) !important;
     color: var(--hh-neutral-ink) !important;
   }
 }
 
-.hh-sprite-theme button:focus-visible,
+.hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):focus-visible,
 .hh-login-screen button:focus-visible {
   background: var(--hh-neutral-soft) !important;
   color: var(--hh-neutral-ink) !important;
@@ -117,7 +117,7 @@ body,
   box-shadow: none !important;
 }
 
-.hh-sprite-theme button:focus-visible,
+.hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):focus-visible,
 .hh-login-screen button:focus-visible,
 .hh-sprite-theme input:focus-visible,
 .hh-sprite-theme textarea:focus-visible,
@@ -158,31 +158,37 @@ body,
 
 .hh-character-icon-button,
 .hh-character-menu-action,
+.hh-character-icon-button:hover,
 .hh-character-menu-action:hover,
+.hh-character-icon-button:focus-visible,
 .hh-character-menu-action:focus-visible {
-  background: var(--hh-neutral-surface) !important;
-  color: var(--hh-neutral-ink) !important;
-  box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 20px rgba(255, 177, 205, 0.68) !important;
+  background: var(--hh-neutral-surface);
+  color: var(--hh-neutral-ink);
+  box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 20px rgba(255, 177, 205, 0.68);
 }
 
+.hh-character-icon-button,
 .hh-character-menu-action {
-  border: 0 !important;
-}
-
-.hh-character-icon-button {
-  border: 0 !important;
+  border: 0;
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .hh-character-icon-button:hover,
   .hh-character-menu-action:hover {
     transform: none;
   }
 }
 
+.hh-character-icon-button:focus-visible,
+.hh-character-menu-action:focus-visible {
+  outline: 3px solid rgba(255, 177, 205, 0.72);
+  outline-offset: 2px;
+}
+
 .hh-character-menu-action strong,
 .hh-character-menu-action svg,
 .hh-character-icon-button svg {
-  color: var(--hh-neutral-ink) !important;
+  color: var(--hh-neutral-ink);
 }
 
 .hh-parent-content-modal,
