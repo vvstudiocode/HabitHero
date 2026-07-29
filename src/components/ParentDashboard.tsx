@@ -12,7 +12,7 @@ import { ParentSettingsDocuments, type ParentSettingsDocument } from './ParentSe
 import { ParentConsentModal } from './ParentConsentModal';
 import { ParentPrivacyPolicyPage } from './ParentPrivacyPolicyPage';
 import { FamilyChildPicker } from './FamilyChildPicker';
-import { deleteCurrentAccount, updateCurrentParentPassword, verifyCurrentParentPassword } from '../auth';
+import { deleteCurrentAccount, toAuthErrorMessage, updateCurrentParentPassword, verifyCurrentParentPassword } from '../auth';
 import { isCurrentParentConsent, PARENT_CONSENT_VERSION } from '../lib/legal-content';
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
 import { buildGrowthStats } from '../features/growth/growth-stats';
@@ -579,7 +579,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewChildCharacterId('');
       return true;
     } catch (error) {
-      setNewChildError(error instanceof Error ? error.message : '建立小孩失敗，請重試。');
+      setNewChildError(toAuthErrorMessage(error));
       return false;
     } finally {
       childAccountSubmissionInFlight.current = false;
@@ -614,7 +614,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setAccountSetupPassword('');
       setAccountSetupConfirmation('');
     } catch (error) {
-      setAccountSetupError(error instanceof Error ? error.message : '建立小孩帳號失敗，請重試。');
+      setAccountSetupError(toAuthErrorMessage(error));
     } finally {
       childAccountSubmissionInFlight.current = false;
       setChildAccountSubmitting(false);

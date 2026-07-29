@@ -81,12 +81,19 @@ export function onAuthStateChange(listener: AuthStateListener): () => void {
 
 export function toAuthErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
-    const message = error.message.toLowerCase();
+    const rawMessage = error.message;
+    if (/[\u3400-\u9fff]/.test(rawMessage)) return rawMessage;
+    const message = rawMessage.toLowerCase();
     if (message.includes('invalid login credentials')) return 'Email 或密碼錯誤，請重新輸入。';
+    if (message.includes('user already registered') || message.includes('already registered')) return '這個 Email 已經註冊，請直接登入。';
+    if (message.includes('invalid email') || message.includes('email address')) return '請輸入有效的 Email。';
+    if (message.includes('password should be at least') || message.includes('password is too short')) return '密碼長度不足，請重新輸入。';
+    if (message.includes('child account name is already in use') || message.includes('username is already in use') || message.includes('already has an account')) return '這個小孩帳號名稱已被使用，請換一個。';
+    if (message.includes('invalid child password') || message.includes('child password must be')) return '小孩密碼格式不正確，請輸入至少 6 碼英數字。';
     if (message.includes('email not confirmed')) return '目前帳號尚未啟用，請重新註冊或聯絡管理者。';
     if (message.includes('anonymous sign-ins are disabled') || message.includes('anonymous sign-in')) return '小孩登入功能尚未在 Supabase 啟用，請稍後再試。';
     if (message.includes('network') || message.includes('fetch')) return '目前無法連線，請檢查網路後重試。';
-    return error.message;
+    return '帳號操作失敗，請稍後再試。';
   }
   return '登入服務暫時無法使用，請稍後重試。';
 }

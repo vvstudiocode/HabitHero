@@ -547,9 +547,12 @@
 }
 
 @keyframes hh-menu-float {
-  0%, 100% {
+
+  0%,
+  100% {
     margin-top: 0;
   }
+
   50% {
     margin-top: -4px;
   }
@@ -962,7 +965,7 @@
     padding-left: clamp(24px, 5vw, 80px);
   }
 
-  .hh-parent-content-modal > *:not(.hh-parent-content-modal-bar) {
+  .hh-parent-content-modal>*:not(.hh-parent-content-modal-bar) {
     width: min(100%, 960px);
     margin-right: auto;
     margin-left: auto;
@@ -982,7 +985,7 @@
 
 }
 
-@media (max-width: 390px) {
+@media (max-width: 760px) {
   .hh-character-dashboard-header {
     padding-right: 0;
     padding-left: 0;
@@ -1023,28 +1026,57 @@
     --hh-menu-action-size: 64px;
   }
 
-  .hh-character-menu-action:nth-child(1) {
+  .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-action:nth-child(1) {
+    top: 20%;
+    left: 21%;
+  }
+
+  .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-action:nth-child(2) {
     top: 28%;
-    left: 4%;
+    right: 13%;
   }
 
-  .hh-character-menu-action:nth-child(2) {
-    top: 28%;
-    right: 4%;
+  .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-action:nth-child(3) {
+    top: 53%;
+    left: 15%;
   }
 
-  .hh-character-menu-action:nth-child(3) {
-    top: 48%;
-    left: 3%;
+  .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-action:nth-child(4) {
+    top: 70%;
+    right: 10%;
   }
 
-  .hh-character-menu-action:nth-child(4) {
-    top: 48%;
-    right: 3%;
+  .hh-character-menu[data-menu-variant="parent"][data-active-menu="review"] .hh-character-menu-submenu {
+    top: calc(20% + var(--hh-menu-submenu-offset));
+    left: 21%;
+  }
+
+  .hh-character-menu[data-menu-variant="parent"][data-active-menu="tasks"] .hh-character-menu-submenu {
+    top: calc(28% + var(--hh-menu-submenu-offset));
+    right: 13%;
+  }
+
+  .hh-character-menu[data-menu-variant="parent"][data-active-menu="growth"] .hh-character-menu-submenu {
+    top: calc(53% + var(--hh-menu-submenu-offset));
+    left: 15%;
+  }
+
+  .hh-character-menu[data-menu-variant="parent"][data-active-menu="rewards"] .hh-character-menu-submenu {
+    top: auto;
+    right: 10%;
+    bottom: calc(30% + var(--hh-menu-submenu-gap));
+  }
+
+  .hh-character-menu[data-menu-variant="parent"][data-active-menu="wishlist"] .hh-character-menu-submenu {
+    right: auto;
+    bottom: calc(9% + var(--hh-menu-submenu-offset));
+    left: 43%;
+    transform: translateX(-50%);
   }
 
   .hh-character-menu-action:nth-child(5) {
-    bottom: 12%;
+    bottom: 9%;
+    left: 43%;
   }
 
   .hh-character-stats {
