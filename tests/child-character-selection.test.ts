@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const fileHash = (path: string) => createHash('md5').update(readFileSync(path)).digest('hex');
+const fileHash = (path: string | URL) => createHash('md5').update(readFileSync(path)).digest('hex');
 
 test('character catalog provides category-based options independent of gender', async () => {
   const { CHARACTER_CATALOG, getCharacterById, getCharactersForCategory } = await import('../src/features/characters/catalog.ts');

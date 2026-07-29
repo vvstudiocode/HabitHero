@@ -14,6 +14,7 @@ export interface CharacterOption {
 export const CHARACTER_CATALOG: readonly CharacterOption[] = [
   { id: 'pink-catgirl-room', name: '粉貓女', category: 'fantasy', imageUrl: '/images/habithero-catgirl-room.png', desktopImageUrl: '/images/habithero-catgirl-room-desktop.png', accentColor: '#f472b6', description: '在溫暖房間裡展開每天的小冒險' },
   { id: 'black-catboy-room', name: '黑貓男', category: 'fantasy', imageUrl: '/images/habithero-black-catboy-room.png', desktopImageUrl: '/images/habithero-black-catboy-room-desktop.png', accentColor: '#d9d9df', description: '在充滿收藏與靈感的房間裡展開每天的小冒險' },
+  { id: 'blue-catboy-room', name: '藍貓男', category: 'fantasy', imageUrl: '/images/habithero-blue-catboy-room.png', desktopImageUrl: '/images/habithero-blue-catboy-room-desktop.png', accentColor: '#a8dcff', description: '在藍色星光房間裡展開每天的小冒險' },
 ];
 
 export const CHARACTER_CATEGORIES: { id: 'all' | CharacterCategory; label: string }[] = [
