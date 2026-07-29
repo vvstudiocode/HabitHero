@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
+const fileHash = (path: string) => createHash('md5').update(readFileSync(path)).digest('hex');
 
 test('character catalog provides category-based options independent of gender', async () => {
   const { CHARACTER_CATALOG, getCharacterById, getCharactersForCategory } = await import('../src/features/characters/catalog.ts');
 
-  assert.equal(CHARACTER_CATALOG.length, 2);
-  assert.equal(getCharactersForCategory('all').length, 2);
+  assert.equal(CHARACTER_CATALOG.length, 3);
+  assert.equal(getCharactersForCategory('all').length, 3);
   assert.equal(CHARACTER_CATALOG[0].id, 'pink-catgirl-room');
   assert.equal(CHARACTER_CATALOG[0].imageUrl, '/images/habithero-catgirl-room.png');
   assert.equal(CHARACTER_CATALOG[0].desktopImageUrl, '/images/habithero-catgirl-room-desktop.png');
@@ -16,6 +18,12 @@ test('character catalog provides category-based options independent of gender', 
   assert.equal(getCharacterById('black-catboy-room')?.imageUrl, '/images/habithero-black-catboy-room.png');
   assert.equal(getCharacterById('black-catboy-room')?.desktopImageUrl, '/images/habithero-black-catboy-room-desktop.png');
   assert.equal(getCharacterById('black-catboy-room')?.accentColor, '#d9d9df');
+  assert.equal(getCharacterById('blue-catboy-room')?.name, '藍貓男');
+  assert.equal(getCharacterById('blue-catboy-room')?.imageUrl, '/images/habithero-blue-catboy-room.png');
+  assert.equal(getCharacterById('blue-catboy-room')?.desktopImageUrl, '/images/habithero-blue-catboy-room-desktop.png');
+  assert.equal(getCharacterById('blue-catboy-room')?.accentColor, '#a8dcff');
+  assert.equal(fileHash(new URL('../public/images/habithero-blue-catboy-room.png', import.meta.url)), '7daef77c30b28ef2386f0a3ea48546a1');
+  assert.equal(fileHash(new URL('../public/images/habithero-blue-catboy-room-desktop.png', import.meta.url)), 'a90ce4a5864829a12d0bb398162273fb');
   assert.equal(getCharacterById('pink-catgirl-room')?.imageUrl, '/images/habithero-catgirl-room.png');
   assert.equal(getCharacterById('missing-character'), undefined);
   assert.equal(new Set(CHARACTER_CATALOG.map(character => character.id)).size, CHARACTER_CATALOG.length);
