@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TouchEvent } from 'react';
+import { useEffect, useState, type TouchEvent } from 'react';
 import { ChevronLeft, ChevronRight, Check, Eye, EyeOff, KeyRound, Plus, Trash2, Users, X } from 'lucide-react';
 import { CHARACTER_CATEGORIES, getCharactersForCategory, type CharacterCategory, type ChildGender } from '../../features/characters/catalog';
 import { dismissWithAnimation } from '../../lib/utils';
@@ -37,7 +37,7 @@ interface ParentSettingsChildrenSectionProps {
   onNewChildPasswordConfirmationChange: (value: string) => void;
   onToggleNewChildPassword: () => void;
   onToggleNewChildPasswordConfirmation: () => void;
-  onAddChild: (profile?: NewChildProfile) => void;
+  onAddChild: (profile?: NewChildProfile) => Promise<boolean> | boolean;
   newChildGender?: ChildGender | '';
   newChildCharacterId?: string;
   onNewChildGenderChange?: (gender: ChildGender) => void;
@@ -51,7 +51,6 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
   const [showNewChildForm, setShowNewChildForm] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [previewStartX, setPreviewStartX] = useState<number | null>(null);
-  const previousNewChildName = useRef(newChildName);
   const selectedGender = newChildGender ?? localGender;
   const selectedCharacterId = newChildCharacterId ?? localCharacterId;
   const characterOptions = getCharactersForCategory(characterCategory);
@@ -89,16 +88,6 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
     };
   }, [showNewChildForm]);
 
-  useEffect(() => {
-    const wasFilled = previousNewChildName.current.trim().length > 0;
-    if (showNewChildForm && wasFilled && !newChildName && !childAccountSubmitting) {
-      closeNewChildForm();
-      previousNewChildName.current = newChildName;
-      return;
-    }
-    if (!(childAccountSubmitting && !newChildName)) previousNewChildName.current = newChildName;
-  }, [childAccountSubmitting, newChildName, showNewChildForm]);
-
   const selectGender = (gender: ChildGender) => {
     setLocalGender(gender);
     onNewChildGenderChange?.(gender);
@@ -109,9 +98,10 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
     onNewChildCharacterChange?.(characterId);
   };
 
-  const handleAddChild = () => {
+  const handleAddChild = async () => {
     if (!selectedGender || !selectedCharacterId) return;
-    onAddChild({ gender: selectedGender, characterId: selectedCharacterId });
+    const created = await onAddChild({ gender: selectedGender, characterId: selectedCharacterId });
+    if (created) closeNewChildForm();
   };
 
   const openCharacterPreview = (characterId: string) => {

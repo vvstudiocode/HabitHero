@@ -71,12 +71,13 @@ test('new child flow requires gender and character before creation', () => {
   assert.match(source, /disabled=\{[^}]*!selectedGender[^}]*!selectedCharacterId/);
 });
 
-test('new child drawer closes after a successful creation clears the draft', () => {
+test('new child drawer closes only after the creation request succeeds', () => {
   const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
 
-  assert.match(source, /previousNewChildName/);
-  assert.match(source, /!newChildName && !childAccountSubmitting/);
-  assert.match(source, /closeNewChildForm\(\)/);
+  assert.doesNotMatch(source, /previousNewChildName/);
+  assert.doesNotMatch(source, /wasFilled && !newChildName/);
+  assert.match(source, /const created = await onAddChild/);
+  assert.match(source, /if \(created\) closeNewChildForm\(\)/);
 });
 
 test('gender and character controls are keyboard and touch accessible', () => {
@@ -96,6 +97,7 @@ test('child account provisioning sends the selected identity to the RPC', () => 
 
   assert.match(source, /target_gender:\s*body\.gender/);
   assert.match(source, /target_character_id:\s*characterId/);
+  assert.match(source, /SUPABASE_ANON_KEY.*SUPABASE_PUBLISHABLE_KEY/);
 });
 
 test('existing children expose no gender or character editing controls', () => {

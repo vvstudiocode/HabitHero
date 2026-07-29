@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { dismissWithAnimation } from '../lib/utils';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
-import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Baby } from 'lucide-react';
+import { Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Baby } from 'lucide-react';
 import { TaskStatus, Task, Reward, type ChildGender } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -182,6 +182,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [accountSetupError, setAccountSetupError] = useState('');
   const [childAccountSubmitting, setChildAccountSubmitting] = useState(false);
   const childAccountSubmissionInFlight = useRef(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [resetChildId, setResetChildId] = useState<string | null>(null);
   const [resetChildPassword, setResetChildPassword] = useState('');
   const [resetChildPasswordConfirmation, setResetChildPasswordConfirmation] = useState('');
@@ -202,6 +204,19 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [deleteChildPin, setDeleteChildPin] = useState('');
   const [deleteChildPinError, setDeleteChildPinError] = useState('');
   const [childNameDrafts, setChildNameDrafts] = useState<Record<string, string>>({});
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
+
+  const showToast = (message: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastMessage(message);
+    toastTimer.current = setTimeout(() => {
+      setToastMessage(null);
+      toastTimer.current = null;
+    }, 2600);
+  };
 
   useEffect(() => {
     if (!mutationKind) return;
@@ -517,39 +532,39 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     }
   };
   
-  const handleAddChild = async (profile?: NewChildProfile, e?: React.FormEvent) => {
+  const handleAddChild = async (profile?: NewChildProfile, e?: React.FormEvent): Promise<boolean> => {
     if (e) e.preventDefault();
-    if (childAccountSubmissionInFlight.current) return;
+    if (childAccountSubmissionInFlight.current) return false;
     setNewChildError('');
     if (!newChildName.trim()) {
       setNewChildError('請輸入小孩名字。');
-      return;
+      return false;
     }
     const selectedGender = profile?.gender ?? newChildGender;
     const selectedCharacterId = profile?.characterId ?? newChildCharacterId;
     if (!selectedGender || !selectedCharacterId) {
       setNewChildError('請選擇性別與人物。');
-      return;
+      return false;
     }
     const usernameValidation = validateChildUsername(newChildUsername);
     if ('message' in usernameValidation) {
       setNewChildError(usernameValidation.message);
-      return;
+      return false;
     }
     const passwordValidation = validateChildPassword(newChildPassword);
     if ('message' in passwordValidation) {
       setNewChildError(passwordValidation.message);
-      return;
+      return false;
     }
     const confirmationValidation = validatePasswordConfirmation(newChildPassword, newChildPasswordConfirmation);
     if ('message' in confirmationValidation) {
       setNewChildError(confirmationValidation.message);
-      return;
+      return false;
     }
     if (!isCurrentParentConsent(state.parentConsentVersion) && !allowPendingChildAction.current) {
       setPendingChildAction('new');
       setShowConsentModal(true);
-      return;
+      return false;
     }
     allowPendingChildAction.current = false;
     childAccountSubmissionInFlight.current = true;
@@ -562,8 +577,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewChildPasswordConfirmation('');
       setNewChildGender('');
       setNewChildCharacterId('');
+      return true;
     } catch (error) {
       setNewChildError(error instanceof Error ? error.message : '建立小孩失敗，請重試。');
+      return false;
     } finally {
       childAccountSubmissionInFlight.current = false;
       setChildAccountSubmitting(false);
@@ -1390,7 +1407,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                     dismissWithAnimation(() => setChildToDelete(null), '.hh-parent-confirm-panel');
                     setDeleteChildPin('');
                     setDeleteChildPinError('');
-                  } catch { setDeleteChildPinError('密碼錯誤'); }
+                    showToast('小孩已刪除');
+                  } catch (error) {
+                    setDeleteChildPinError(error instanceof Error ? error.message : '刪除小孩失敗，請重試。');
+                  }
                 })();
               }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確認刪除</button>
             </div>
@@ -1465,6 +1485,13 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
           onSelect={(childId) => { setShowChildPicker(false); onSwitchToChild(childId); }}
           onParentMode={() => setShowChildPicker(false)}
         />
+      )}
+
+      {toastMessage && (
+        <div role="status" className="hh-toast fixed top-4 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-gray-800 px-6 py-3 text-white shadow-lg">
+          <Check size={18} aria-hidden="true" />
+          <span className="font-bold">{toastMessage}</span>
+        </div>
       )}
     </div>
   );

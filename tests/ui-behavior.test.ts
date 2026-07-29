@@ -158,6 +158,14 @@ test('child account creation shows a pending state and prevents duplicate submis
   assert.match(source, /childAccountSubmissionInFlight/);
 });
 
+test('parent child deletion shows success feedback after the card is removed', () => {
+  const source = read('../src/components/ParentDashboard.tsx');
+
+  assert.match(source, /toastMessage/);
+  assert.match(source, /小孩已刪除/);
+  assert.match(source, /await deleteChild\(childToDelete\)/);
+});
+
 test('task creation explains that a child is required', () => {
   const source = read('../src/components/ParentDashboard.tsx');
 

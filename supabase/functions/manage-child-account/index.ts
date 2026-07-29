@@ -40,7 +40,10 @@ Deno.serve(async (request) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const publishableKey = Deno.env.get('SUPABASE_ANON_KEY');
+  // Supabase currently exposes the legacy anon key to functions, while newer
+  // projects may expose the publishable key instead. Support both so account
+  // provisioning does not fail before the authenticated RPC is reached.
+  const publishableKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
   const authorization = request.headers.get('Authorization');
   if (!supabaseUrl || !serviceRoleKey || !publishableKey || !authorization) {
     return json({ error: 'Authentication is required' }, 401);
