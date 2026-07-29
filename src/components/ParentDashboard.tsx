@@ -695,7 +695,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
     { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
     { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('rewards') },
-    { id: 'wishlist', title: '許願', tour: 'wishlist-menu', icon: <Plus size={17} />, hasNotification: parentMenuNotifications.wishlist, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
+    { id: 'wishlist', title: '許願', tour: 'wishlist-menu', icon: <Plus size={17} />, hasNotification: parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('wishlist') },
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
@@ -716,10 +716,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       { id: 'add-reward', title: '新增獎勵', icon: <Plus size={17} />, onSelect: () => openHeroForm('rewards', () => openRewardForm()) },
       { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
     ],
-    wishlist: [
-      { id: 'wishlist-list', title: '小孩許願', icon: <Star size={17} />, onSelect: () => openHeroFeature('wishlist') },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
-    ],
+    wishlist: [],
   };
 
   const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
