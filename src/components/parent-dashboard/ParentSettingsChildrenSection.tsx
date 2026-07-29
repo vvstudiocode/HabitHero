@@ -42,13 +42,14 @@ interface ParentSettingsChildrenSectionProps {
   newChildCharacterId?: string;
   onNewChildGenderChange?: (gender: ChildGender) => void;
   onNewChildCharacterChange?: (characterId: string) => void;
+  showNewChildForm: boolean;
+  onNewChildFormChange: (show: boolean) => void;
 }
 
-export function ParentSettingsChildrenSection({ children, childNameDrafts, onChildNameDraftChange, onChildNameBlur, onDeleteChild, onResetPassword, onSetupAccount, newChildName, newChildUsername, newChildPassword, newChildPasswordConfirmation, showNewChildPassword, showNewChildPasswordConfirmation, newChildError, loading, childAccountSubmitting, onNewChildNameChange, onNewChildUsernameChange, onNewChildPasswordChange, onNewChildPasswordConfirmationChange, onToggleNewChildPassword, onToggleNewChildPasswordConfirmation, onAddChild, newChildGender, newChildCharacterId, onNewChildGenderChange, onNewChildCharacterChange }: ParentSettingsChildrenSectionProps) {
+export function ParentSettingsChildrenSection({ children, childNameDrafts, onChildNameDraftChange, onChildNameBlur, onDeleteChild, onResetPassword, onSetupAccount, newChildName, newChildUsername, newChildPassword, newChildPasswordConfirmation, showNewChildPassword, showNewChildPasswordConfirmation, newChildError, loading, childAccountSubmitting, onNewChildNameChange, onNewChildUsernameChange, onNewChildPasswordChange, onNewChildPasswordConfirmationChange, onToggleNewChildPassword, onToggleNewChildPasswordConfirmation, onAddChild, newChildGender, newChildCharacterId, onNewChildGenderChange, onNewChildCharacterChange, showNewChildForm, onNewChildFormChange }: ParentSettingsChildrenSectionProps) {
   const [localGender, setLocalGender] = useState<ChildGender | ''>('');
   const [localCharacterId, setLocalCharacterId] = useState('');
   const [characterCategory, setCharacterCategory] = useState<'all' | CharacterCategory>('all');
-  const [showNewChildForm, setShowNewChildForm] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [previewStartX, setPreviewStartX] = useState<number | null>(null);
   const selectedGender = newChildGender ?? localGender;
@@ -56,7 +57,7 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
   const characterOptions = getCharactersForCategory(characterCategory);
 
   const closeNewChildForm = () => {
-    dismissWithAnimation(() => setShowNewChildForm(false), '.hh-new-child-drawer', 300);
+    dismissWithAnimation(() => onNewChildFormChange(false), '.hh-new-child-drawer', 300);
   };
 
   useEffect(() => {
@@ -143,7 +144,7 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
           ))}
         </div>
       </section>
-      <button type="button" className="hh-add-child-trigger" aria-expanded={showNewChildForm} onClick={() => setShowNewChildForm(true)}><Plus size={18} /> 新增小孩</button>
+      <button type="button" data-tour="add-child-trigger" className="hh-add-child-trigger" aria-expanded={showNewChildForm} onClick={() => onNewChildFormChange(true)}><Plus size={18} /> 新增小孩</button>
       {showNewChildForm && <div className="hh-new-child-overlay" role="dialog" aria-modal="true" aria-labelledby="new-child-drawer-title">
         <button type="button" className="hh-new-child-backdrop" aria-label="關閉新增小孩" onClick={closeNewChildForm} />
         <section data-tour="add-child" className="hh-new-child-drawer">

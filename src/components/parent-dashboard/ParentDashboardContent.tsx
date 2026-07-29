@@ -89,9 +89,9 @@ function ParentDashboardTabBar({ activeTab, onTabChange, proposedTaskCount, pend
   const tabs: { id: ParentDashboardTab; label: string; tour?: string }[] = [
     { id: 'review', label: '審核', tour: 'review-tab' },
     { id: 'tasks', label: '任務', tour: 'tasks-tab' },
-    { id: 'growth', label: '成長' },
+    { id: 'growth', label: '成長', tour: 'growth-tab' },
     { id: 'rewards', label: '獎勵', tour: 'rewards-tab' },
-    { id: 'wishlist', label: '許願' },
+    { id: 'wishlist', label: '許願', tour: 'wishlist-tab' },
   ];
 
   return (

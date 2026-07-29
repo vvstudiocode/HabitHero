@@ -20,17 +20,17 @@ const guideSteps: GuideStep[] = [
     icon: Settings,
   },
   {
-    target: 'new-child-name',
+    target: 'add-child-trigger',
     eyebrow: '第 2 步／建立家庭成員',
-    title: '新增小孩',
-    description: '在這個區塊輸入孩子名字、登入帳號與密碼。任務一定要指定給小孩，所以這是開始使用前最重要的一步。',
+    title: '找到新增小孩',
+    description: '設定裡的「新增小孩」會開啟家庭成員表單。任務一定要指定給小孩，所以這是開始使用前最重要的一步。',
     icon: UserRound,
   },
   {
-    target: 'create-child',
+    target: 'add-child',
     eyebrow: '第 3 步／完成建立',
-    title: '按下建立小孩',
-    description: '確認資料後按這個按鈕。建立完成後，請把登入帳號與密碼交給孩子；密碼之後不會在管理端顯示。',
+    title: '建立小孩帳號',
+    description: '在這個抽屜填寫名字、性別、人物、登入帳號與密碼。建立後，請把登入帳號與密碼交給孩子；密碼之後不會在管理端顯示。',
     icon: UserRound,
   },
   {
@@ -41,17 +41,17 @@ const guideSteps: GuideStep[] = [
     icon: Baby,
   },
   {
-    target: 'tasks-tab',
+    target: 'tasks-menu',
     eyebrow: '第 5 步／開始派任務',
-    title: '切換到任務分頁',
-    description: '所有要交給孩子做的事情，都會從任務分頁建立。第一次建議只建立一件簡單、明確的事情。',
+    title: '開啟任務選單',
+    description: '家長首頁的「任務」選單可以查看今日任務、常用模板，以及建立新的任務。',
     icon: ListChecks,
   },
   {
-    target: 'task-add',
+    target: 'add-task-menu',
     eyebrow: '第 6 步／建立任務',
-    title: '按新增任務',
-    description: '接下來輸入任務名稱、完成可得的點數，也可以設定開始時間與預估時間。孩子完成後，這個任務就會出現在他的畫面。',
+    title: '選擇新增任務',
+    description: '從任務子選單選擇「新增任務」，接著輸入任務名稱、完成可得的點數，也可以設定開始時間與預估時間。',
     icon: ListChecks,
   },
   {
@@ -62,17 +62,31 @@ const guideSteps: GuideStep[] = [
     icon: CheckCircle2,
   },
   {
-    target: 'review-tab',
+    target: 'review-menu',
     eyebrow: '第 8 步／看孩子的回報',
-    title: '到審核分頁給回饋',
-    description: '孩子完成任務並提交心得後，這裡會出現待審核項目。閱讀孩子的心得，核准後就會得到點數；需要補充時也能退回修改。',
+    title: '開啟審核選單',
+    description: '孩子完成任務並提交心得後，從家長首頁的「審核」選單查看待確認目標、待審核完成與待兌換獎勵。',
     icon: CheckCircle2,
   },
   {
-    target: 'rewards-tab',
+    target: 'rewards-menu',
     eyebrow: '第 9 步／設定孩子想要的目標',
-    title: '設定獎勵完成循環',
-    description: '到獎勵分頁新增孩子期待的獎勵並設定點數。孩子存夠點數後可以兌換，你再按「已兌現」。',
+    title: '開啟獎勵選單',
+    description: '從家長首頁的「獎勵」選單查看待兌換項目、獎勵清單，或新增孩子期待的獎勵並設定點數。',
+    icon: Gift,
+  },
+  {
+    target: 'growth-menu',
+    eyebrow: '第 10 步／觀察家庭成長',
+    title: '開啟成長選單',
+    description: '從家長首頁的「成長」選單查看成長紀錄與完成任務，幫助你看見孩子持續努力的進步。',
+    icon: Sparkles,
+  },
+  {
+    target: 'wishlist-menu',
+    eyebrow: '第 11 步／回應孩子的期待',
+    title: '開啟許願選單',
+    description: '從家長首頁的「許願」選單查看孩子提出的願望，設定點數後就能把願望加入獎勵清單。',
     icon: Gift,
   },
 ];
@@ -130,18 +144,30 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
   useLayoutEffect(() => {
     setPositionReady(false);
     setActiveTarget(step.target);
-    const shouldCenterTarget = step.target === 'new-child-name' && window.innerWidth <= 640;
+    const shouldCenterTarget = step.target === 'add-child' && window.innerWidth <= 640;
     const shouldCenterTaskField = step.target === 'task-name';
     const positionTarget = (behavior: ScrollBehavior) => {
       const target = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`)
         ?? (step.target === 'task-name' ? document.querySelector<HTMLElement>('[data-tour="task-card"]') : null);
-      target?.scrollIntoView({ block: shouldCenterTarget || shouldCenterTaskField ? 'center' : 'nearest', inline: 'nearest', behavior });
+      if (target && getComputedStyle(target).position !== 'fixed') {
+        target.scrollIntoView({ block: shouldCenterTarget || shouldCenterTaskField ? 'center' : 'nearest', inline: 'nearest', behavior });
+      }
       measureTarget();
     };
     positionTarget('auto');
     // Bottom-sheet forms and the mobile settings drawer animate/scroll into
     // place. Reveal the guide only after their final position is measurable.
-    const settleDelay = step.target === 'task-name' || step.target === 'new-child-name' ? 240 : 0;
+    const settleDelay = [
+      'add-child-trigger',
+      'add-child',
+      'tasks-menu',
+      'add-task-menu',
+      'task-name',
+      'review-menu',
+      'rewards-menu',
+      'growth-menu',
+      'wishlist-menu',
+    ].includes(step.target) ? 240 : 0;
     const settleTimer = settleDelay > 0
       ? window.setTimeout(() => {
         positionTarget('auto');

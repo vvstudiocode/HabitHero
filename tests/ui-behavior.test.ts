@@ -177,6 +177,7 @@ test('task creation explains that a child is required', () => {
 test('first-use guide covers the complete parent and child workflow', () => {
   const guide = read('../src/components/FirstUseGuide.tsx');
   const dashboard = read('../src/components/ParentDashboard.tsx');
+  const childSettings = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
   const dashboardContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
   const dashboardUi = `${dashboard}\n${dashboardContent}`;
 
@@ -209,15 +210,24 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.doesNotMatch(guide, /transition-\[top,left\]/);
   assert.doesNotMatch(guide, /transition-all duration-200/);
   assert.match(dashboard, /data-tour="settings"/);
+  assert.match(childSettings, /data-tour="add-child-trigger"/);
+  assert.match(childSettings, /data-tour="add-child"/);
   assert.match(dashboard, /data-tour="task-add"/);
   assert.match(dashboard, /data-tour=\{index === 0 \? 'task-card'/);
-  assert.match(dashboardUi, /\{ id: 'rewards', label: '獎勵', tour: 'rewards-tab' \}/);
-  assert.match(dashboardUi, /data-tour=\{tab\.tour\}[\s\S]*onClick=\{\(\) => onTabChange\(tab\.id\)\}/);
-  assert.match(dashboard, /openTaskForm\(undefined, true\)/);
-  assert.match(guide, /step\.target === 'task-name'/);
-  assert.match(guide, /settleDelay = step\.target === 'task-name' \|\| step\.target === 'new-child-name' \? 240/);
-  assert.match(guide, /target: 'new-child-name'/);
-  assert.match(guide, /step\.target === 'new-child-name'/);
+  assert.match(dashboard, /id: 'review', title: '審核',[\s\S]*tour: 'review-menu'/);
+  assert.match(dashboard, /id: 'tasks', title: '任務',[\s\S]*tour: 'tasks-menu'/);
+  assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*tour: 'growth-menu'/);
+  assert.match(dashboard, /id: 'rewards', title: '獎勵',[\s\S]*tour: 'rewards-menu'/);
+  assert.match(dashboard, /id: 'wishlist', title: '許願',[\s\S]*tour: 'wishlist-menu'/);
+  assert.match(dashboard, /id: 'add-task', title: '新增任務',[\s\S]*tour: 'add-task-menu'/);
+  assert.match(dashboard, /openHeroForm\('tasks'/);
+  assert.match(dashboard, /showNewChildForm/);
+  assert.match(guide, /target: 'add-child'/);
+  assert.match(guide, /target: 'growth-menu'/);
+  assert.match(guide, /target: 'wishlist-menu'/);
+  assert.match(guide, /step\.target === 'add-child'/);
+  assert.match(guide, /'add-child-trigger',[\s\S]*'add-task-menu',[\s\S]*'wishlist-menu',[\s\S]*\.includes\(step\.target\) \? 240/);
+  assert.match(guide, /getComputedStyle\(target\)\.position !== 'fixed'/);
   assert.match(dashboard, /FirstUseGuide/);
   assert.match(dashboard, /重新觀看新手指引/);
   assert.doesNotMatch(dashboard, /Sparkles size=\{18\}[^\n]*重新觀看新手指引/);

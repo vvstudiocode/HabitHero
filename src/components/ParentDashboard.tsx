@@ -161,6 +161,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false);
+  const [showNewChildForm, setShowNewChildForm] = useState(false);
   const [showFirstUseGuide, setShowFirstUseGuide] = useState(false);
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [settingsDocument, setSettingsDocument] = useState<ParentSettingsDocument | null>(null);
@@ -377,39 +378,66 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setActiveTab('review');
       return;
     }
-    if (nextStep <= 2) {
+    if (nextStep === 1) {
       setShowSettings(true);
+      setShowTaskForm(false);
+      return;
+    }
+    if (nextStep === 2) {
+      setShowSettings(true);
+      setShowNewChildForm(true);
       setShowTaskForm(false);
       return;
     }
     if (nextStep === 3) {
       setShowSettings(false);
+      setShowNewChildForm(false);
       setShowTaskForm(false);
       return;
     }
     if (nextStep === 4) {
       setShowSettings(false);
+      setShowNewChildForm(false);
       setShowTaskForm(false);
-      setActiveTab('tasks');
+      setHeroMenuGroup(null);
+      setHeroMenuVisible(true);
       return;
     }
     if (nextStep === 5) {
-      setActiveTab('tasks');
+      setHeroMenuGroup('tasks');
+      setHeroMenuVisible(true);
       setShowTaskForm(false);
       return;
     }
     if (nextStep === 6) {
-      setActiveTab('tasks');
-      openTaskForm(undefined, true);
+      openHeroForm('tasks', () => openTaskForm(undefined, true));
       return;
     }
     if (nextStep === 7) {
       setShowTaskForm(false);
-      setActiveTab('review');
+      setHeroFeature(null);
+      setHeroMenuGroup(null);
+      setHeroMenuVisible(true);
+      return;
+    }
+    if (nextStep === 8) {
+      setShowTaskForm(false);
+      setHeroFeature(null);
+      setHeroMenuGroup(null);
+      setHeroMenuVisible(true);
+      return;
+    }
+    if (nextStep === 9) {
+      setShowTaskForm(false);
+      setHeroFeature(null);
+      setHeroMenuGroup(null);
+      setHeroMenuVisible(true);
       return;
     }
     setShowTaskForm(false);
-    setActiveTab('rewards');
+    setHeroFeature(null);
+    setHeroMenuGroup(null);
+    setHeroMenuVisible(true);
   };
 
   const handleConfirmGoal = async (childId: string, taskId: string, input: GoalConfirmationInput) => {
@@ -657,11 +685,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
 
   const heroRootMenuActions: CharacterMenuAction[] = [
-    { id: 'review', title: '審核', icon: <Eye size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('review') },
-    { id: 'tasks', title: '任務', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
-    { id: 'growth', title: '成長', icon: <Star size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('growth') },
-    { id: 'rewards', title: '獎勵', icon: <Gift size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('rewards') },
-    { id: 'wishlist', title: '許願', icon: <Plus size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
+    { id: 'review', title: '審核', tour: 'review-menu', icon: <Eye size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('review') },
+    { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
+    { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('growth') },
+    { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('rewards') },
+    { id: 'wishlist', title: '許願', tour: 'wishlist-menu', icon: <Plus size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
@@ -674,7 +702,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     tasks: [
       { id: 'today-tasks', title: '今日任務', icon: <Circle size={17} />, onSelect: () => openHeroFeature('tasks') },
       { id: 'task-templates', title: '常用模板', icon: <Star size={17} />, onSelect: () => openHeroFeature('tasks') },
-      { id: 'add-task', title: '新增任務', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTaskForm()) },
+      { id: 'add-task', title: '新增任務', tour: 'add-task-menu', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTaskForm()) },
       { id: 'add-template', title: '新增模板', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTemplateForm()) },
       { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
     ],
@@ -1017,6 +1045,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 onNewChildGenderChange={setNewChildGender}
                 onNewChildCharacterChange={setNewChildCharacterId}
                 onAddChild={handleAddChild}
+                showNewChildForm={showNewChildForm}
+                onNewChildFormChange={setShowNewChildForm}
               />
 
               {/* System */}

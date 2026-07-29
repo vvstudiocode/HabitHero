@@ -6,6 +6,7 @@ export type CharacterMenuAction = {
   id: string;
   title: string;
   icon?: React.ReactNode;
+  tour?: string;
   closeOnSelect?: boolean;
   onSelect: () => void;
 };
@@ -95,6 +96,7 @@ export function DashboardCharacterHero({
               {rootActions.map((action) => (
                 <button
                   key={action.id}
+                  data-tour={action.tour}
                   type="button"
                   className={`hh-character-menu-action ${activeMenuId === action.id ? 'is-selected' : ''}`}
                   onClick={action.onSelect}
@@ -109,6 +111,7 @@ export function DashboardCharacterHero({
                 {subActions.map((action, index) => (
                   <button
                     key={`${action.id}-${index}`}
+                    data-tour={action.tour}
                     type="button"
                     className="hh-character-menu-action"
                     onClick={action.onSelect}
