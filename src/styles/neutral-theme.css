@@ -13,9 +13,18 @@
   --hh-neutral-focus: #6f6f76;
   --hh-neutral-shadow: rgba(32, 33, 36, 0.08);
   --hh-character-theme-color: #d99a24;
-  --hh-character-glow: color-mix(in srgb, var(--hh-character-theme-color) 68%, transparent);
-  --hh-character-glow-strong: color-mix(in srgb, var(--hh-character-theme-color) 82%, transparent);
-  --hh-character-focus-ring: color-mix(in srgb, var(--hh-character-theme-color) 72%, transparent);
+  /* The solid-color fallback keeps glow visible in older WebViews. */
+  --hh-character-glow: var(--hh-character-theme-color);
+  --hh-character-glow-strong: var(--hh-character-theme-color);
+  --hh-character-focus-ring: var(--hh-character-theme-color);
+}
+
+@supports (color: color-mix(in srgb, black, white)) {
+  :root {
+    --hh-character-glow: color-mix(in srgb, var(--hh-character-theme-color) 68%, transparent);
+    --hh-character-glow-strong: color-mix(in srgb, var(--hh-character-theme-color) 82%, transparent);
+    --hh-character-focus-ring: color-mix(in srgb, var(--hh-character-theme-color) 72%, transparent);
+  }
 }
 
 body,
