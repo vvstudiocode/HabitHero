@@ -46,6 +46,13 @@ test('character hitbox stays transparent when hovered', () => {
   assert.match(neutralTheme, /\.hh-character-hero-hitbox:hover[\s\S]*?background:\s*transparent\s*!important/);
 });
 
+test('character preview keeps the full portrait image inside the desktop art frame', () => {
+  const modalStyles = read('../src/styles/modals.css');
+
+  assert.match(modalStyles, /\.hh-character-preview-art\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?min-height:\s*0;/);
+  assert.match(modalStyles, /\.hh-character-preview-art img\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?min-height:\s*0;[\s\S]*?object-fit:\s*contain;/);
+});
+
 test('child feature pages do not create horizontal overflow from the sticky header', () => {
   const characterStyles = read('../src/styles/character.css');
   const overlayStyles = read('../src/styles/overlays.css');
