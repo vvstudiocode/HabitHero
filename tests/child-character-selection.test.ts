@@ -28,7 +28,7 @@ test('character catalog provides category-based options independent of gender', 
   assert.equal(getCharacterById('white-catgirl-room')?.name, '白貓女');
   assert.equal(getCharacterById('white-catgirl-room')?.imageUrl, '/images/habithero-white-catgirl-room.png');
   assert.equal(getCharacterById('white-catgirl-room')?.desktopImageUrl, '/images/habithero-white-catgirl-room-desktop.png');
-  assert.equal(getCharacterById('white-catgirl-room')?.accentColor, '#b7d98b');
+  assert.equal(getCharacterById('white-catgirl-room')?.accentColor, '#ffffff');
   assert.ok(fileHash(new URL('../public/images/habithero-white-catgirl-room.png', import.meta.url)).length > 0);
   assert.ok(fileHash(new URL('../public/images/habithero-white-catgirl-room-desktop.png', import.meta.url)).length > 0);
   assert.equal(getCharacterById('missing-character'), undefined);
