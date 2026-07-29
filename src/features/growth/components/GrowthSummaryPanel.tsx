@@ -79,7 +79,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
                 const meta = getTaskCategoryMeta(category.id);
                 return (
                   <div key={category.id} className="grid grid-cols-[76px_1fr_28px] items-center gap-2 text-xs">
-                    <span className="font-bold text-gray-600">{meta.shortLabel}</span>
+                    <span className="text-sm font-bold text-gray-600">{meta.shortLabel}</span>
                     <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                       <div className="h-full rounded-full bg-blue-400" style={{ width: `${width}%` }} />
                     </div>

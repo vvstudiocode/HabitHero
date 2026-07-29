@@ -247,3 +247,34 @@ test('parent hero menu avoids duplicate destinations', () => {
   assert.doesNotMatch(dashboard, /id: 'pending-rewards'/);
   assert.match(dashboard, /id: 'reward-list', title: '獎勵清單'/);
 });
+
+test('child growth menu opens the growth feature directly', () => {
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+
+  assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*onSelect: \(\) => openChildFeature\('growth'\)/);
+  assert.match(dashboard, /toggleHeroMenuGroup\('backpack'\)/);
+  assert.match(dashboard, /title: '今日目標'/);
+  assert.match(dashboard, /<Backpack size=\{18\}/);
+  assert.match(dashboard, /id: 'wishlist', title: '許願'/);
+  assert.match(dashboard, /id: 'history', title: '兌換'/);
+  assert.match(dashboard, /id: 'switch-child', title: '切換視角'/);
+  assert.match(dashboard, /id: 'logout', title: '登出'/);
+});
+
+test('child feature menu keeps the submenu mounted while it animates closed', () => {
+  const hero = read('../src/components/DashboardCharacterHero.tsx');
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+  const characterStyles = read('../src/styles/character.css');
+
+  assert.match(hero, /menuOpen === false \? 'is-collapsed' : ''/);
+  assert.match(dashboard, /const HERO_MENU_EXIT_MS = 900/);
+  assert.match(dashboard, /window\.setTimeout\(\(\) => \{[\s\S]*setHeroMenuGroup\(null\)[\s\S]*\}, HERO_MENU_EXIT_MS\)/);
+  assert.match(dashboard, /requestAnimationFrame\(\(\) => \{[\s\S]*setHeroMenuVisible\(true\)/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?translateY\(-6px\)/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?top: calc\(4px \+ var\(--hh-menu-submenu-offset\)\)/);
+  assert.match(characterStyles, /nth-child\(2\)[\s\S]*?transition-delay: 150ms/);
+  assert.match(characterStyles, /nth-child\(3\)[\s\S]*?transition-delay: 300ms/);
+  assert.match(characterStyles, /nth-child\(5\)[\s\S]*?transition-delay: 0ms/);
+  assert.match(characterStyles, /prefers-reduced-motion: reduce/);
+  assert.match(characterStyles, /data-menu-variant="child"[\s\S]*?--hh-menu-action-size: 84px/);
+});

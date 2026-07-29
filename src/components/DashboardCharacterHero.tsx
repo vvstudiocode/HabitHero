@@ -56,6 +56,7 @@ export function DashboardCharacterHero({
   activeMenuId = null,
   menuVariant = 'parent',
   onMenuClose,
+  menuOpen = true,
 }: DashboardCharacterHeroProps) {
   const rootActions = rootMenuActions ?? menuActions ?? [];
   const subActions = rootMenuActions && activeMenuId ? (menuActions ?? []) : [];
@@ -89,11 +90,11 @@ export function DashboardCharacterHero({
         </div>
         {hasMenu && (
           <div
-            className={`hh-character-menu is-open ${activeMenuId ? 'has-submenu' : ''}`}
+            className={`hh-character-menu is-open ${activeMenuId ? 'has-submenu' : ''} ${menuOpen === false ? 'is-collapsed' : ''}`}
             data-active-menu={activeMenuId ?? undefined}
             data-menu-variant={menuVariant}
           >
-            <div className="hh-character-menu-root" aria-label="家長功能主選單">
+            <div className="hh-character-menu-root" aria-label={`${menuVariant === 'child' ? '孩子' : '家長'}功能主選單`}>
               {rootActions.map((action) => (
                 <button
                   key={action.id}
@@ -109,13 +110,14 @@ export function DashboardCharacterHero({
               ))}
             </div>
             {subActions.length > 0 && (
-              <div className="hh-character-menu-submenu" aria-label="家長功能子選單">
+              <div className="hh-character-menu-submenu" aria-label={`${menuVariant === 'child' ? '孩子' : '家長'}功能子選單`} aria-hidden={menuOpen === false}>
                 {subActions.map((action, index) => (
                   <button
                     key={`${action.id}-${index}`}
                     data-tour={action.tour}
                     type="button"
                     className="hh-character-menu-action"
+                    tabIndex={menuOpen === false ? -1 : 0}
                     onClick={action.onSelect}
                   >
                     {action.icon && <span aria-hidden="true">{action.icon}</span>}

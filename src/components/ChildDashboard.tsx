@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { CheckCircle2, Circle, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
+import { Backpack, CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { Reward } from '../types';
@@ -30,6 +30,8 @@ interface ChildDashboardProps {
 }
 
 type ChildTab = 'goals' | 'growth' | 'wishlist' | 'history';
+type ChildMenuGroup = ChildTab | 'backpack';
+const HERO_MENU_EXIT_MS = 900;
 
 function formatTaskTime(dueTime?: string | null) {
   return dueTime ? dueTime.slice(0, 5) : '全天';
@@ -46,9 +48,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<ChildTab>('goals');
   const [heroFeature, setHeroFeature] = useState<ChildTab | null>(null);
-  const [heroMenuGroup, setHeroMenuGroup] = useState<ChildTab | null>(null);
+  const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
-  const [heroFormReturnGroup, setHeroFormReturnGroup] = useState<ChildTab | null>(null);
+  const heroMenuOpenFrame = useRef<number | null>(null);
+  const heroMenuCloseTimer = useRef<number | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -218,7 +221,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const handleSubmitGoalProposal = async (input: GoalProposalInput) => {
     await handleProposeGoal(input);
-    setHeroFormReturnGroup(null);
     dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet');
   };
 
@@ -252,7 +254,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       setActionPending(true);
       try {
         await addWishlist(activeChild.id, wishName.trim());
-        setHeroFormReturnGroup(null);
         dismissWithAnimation(() => setShowWishlistForm(false));
         setWishName('');
         showToast('願望已送出。');
@@ -294,61 +295,75 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setHeroMenuVisible(false);
   };
 
+  const closeHeroMenu = () => {
+    if (heroMenuOpenFrame.current !== null) {
+      window.cancelAnimationFrame(heroMenuOpenFrame.current);
+      heroMenuOpenFrame.current = null;
+    }
+    if (heroMenuCloseTimer.current !== null) {
+      window.clearTimeout(heroMenuCloseTimer.current);
+      heroMenuCloseTimer.current = null;
+    }
+    setHeroMenuVisible(false);
+    heroMenuCloseTimer.current = window.setTimeout(() => {
+      setHeroMenuGroup(null);
+      heroMenuCloseTimer.current = null;
+    }, HERO_MENU_EXIT_MS);
+  };
+
+  const closeChildForm = (closeForm: () => void, selector?: string) => {
+    dismissWithAnimation(closeForm, selector);
+  };
+
   const closeChildFeature = () => {
     dismissWithAnimation(() => setHeroFeature(null), '.hh-parent-content-modal', 260);
     setHeroMenuGroup(null);
     setHeroMenuVisible(false);
   };
 
-  const openChildForm = (tab: ChildTab, action: () => void) => {
-    setHeroFormReturnGroup(heroMenuGroup ?? tab);
-    openChildFeature(tab);
-    window.setTimeout(action, 0);
-  };
-
-  const closeChildForm = (closeForm: () => void, selector?: string) => {
-    dismissWithAnimation(() => {
-      closeForm();
-      if (heroFormReturnGroup) {
-        setHeroFeature(null);
-        setHeroMenuGroup(heroFormReturnGroup);
-        setHeroMenuVisible(true);
+  const toggleHeroMenuGroup = (tab: ChildMenuGroup) => {
+    if (heroMenuGroup === tab) {
+      if (heroMenuVisible) closeHeroMenu();
+      else {
+        if (heroMenuCloseTimer.current !== null) {
+          window.clearTimeout(heroMenuCloseTimer.current);
+          heroMenuCloseTimer.current = null;
+        }
+        heroMenuOpenFrame.current = window.requestAnimationFrame(() => {
+          setHeroMenuVisible(true);
+          heroMenuOpenFrame.current = null;
+        });
       }
-      setHeroFormReturnGroup(null);
-    }, selector);
-  };
-
-  const toggleHeroMenuGroup = (tab: ChildTab) => {
-    setHeroMenuGroup((current) => current === tab ? null : tab);
+      return;
+    }
+    if (heroMenuCloseTimer.current !== null) {
+      window.clearTimeout(heroMenuCloseTimer.current);
+      heroMenuCloseTimer.current = null;
+    }
+    setHeroMenuGroup(tab);
+    setHeroMenuVisible(false);
+    heroMenuOpenFrame.current = window.requestAnimationFrame(() => {
+      setHeroMenuVisible(true);
+      heroMenuOpenFrame.current = null;
+    });
   };
 
   const heroRootMenuActions: CharacterMenuAction[] = [
-    { id: 'goals', title: '目標', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('goals') },
-    { id: 'growth', title: '成長', icon: <Star size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('growth') },
-    { id: 'wishlist', title: '許願', icon: <Plus size={17} />, hasNotification: childMenuNotifications.wishlist, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
-    { id: 'history', title: '兌換', icon: <History size={17} />, hasNotification: childMenuNotifications.rewards, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('history') },
+    { id: 'goals', title: '今日目標', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
   ];
 
-  const heroSubMenuActions: Record<ChildTab, CharacterMenuAction[]> = {
-    goals: [
-      { id: 'today-goals', title: '今日目標', icon: <Circle size={17} />, onSelect: () => openChildFeature('goals') },
-      { id: 'new-goal', title: '新增目標', icon: <Plus size={17} />, onSelect: () => openChildForm('goals', () => setShowGoalForm(true)) },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+  const heroSubMenuActions: Record<ChildMenuGroup, CharacterMenuAction[]> = {
+    backpack: [
+      { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
+      { id: 'wishlist', title: '許願', icon: <Plus size={17} />, hasNotification: childMenuNotifications.wishlist, onSelect: () => openChildFeature('wishlist') },
+      { id: 'history', title: '兌換', icon: <History size={17} />, hasNotification: childMenuNotifications.rewards, onSelect: () => openChildFeature('history') },
+      { id: 'switch-child', title: '切換視角', icon: <User size={17} />, onSelect: onSwitchChild },
+      { id: 'logout', title: '登出', icon: <LogOut size={17} />, onSelect: onLogout },
     ],
-    growth: [
-      { id: 'growth-record', title: '成長紀錄', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
-    ],
-    wishlist: [
-      { id: 'my-wishlist', title: '我的許願', icon: <Star size={17} />, onSelect: () => openChildFeature('wishlist') },
-      { id: 'new-wishlist', title: '新增許願', icon: <Plus size={17} />, onSelect: () => openChildForm('wishlist', () => setShowWishlistForm(true)) },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
-    ],
-    history: [
-      { id: 'rewards', title: '可兌換獎勵', icon: <Gift size={17} />, onSelect: () => openChildFeature('wishlist') },
-      { id: 'history-record', title: '兌換紀錄', icon: <History size={17} />, onSelect: () => openChildFeature('history') },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
-    ],
+    goals: [],
+    growth: [],
+    wishlist: [],
+    history: [],
   };
 
   const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
@@ -407,16 +422,19 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         rootMenuActions={heroRootMenuActions}
         activeMenuId={heroMenuGroup}
         menuVariant="child"
-        onMenuClose={() => setHeroMenuGroup(null)}
+        onMenuClose={closeHeroMenu}
         menuOpen={heroMenuVisible}
         onMenuOpenChange={setHeroMenuVisible}
         actions={(
           <>
-            <button onClick={onSwitchChild} aria-label="切換到家長視角" title="切換到家長視角" className="hh-character-icon-button">
-              <User size={18} />
-            </button>
-            <button onClick={onLogout} aria-label="登出" title="登出" className="hh-character-icon-button">
-              <LogOut size={18} />
+            <button
+              onClick={() => toggleHeroMenuGroup('backpack')}
+              aria-label={heroMenuGroup === 'backpack' && heroMenuVisible ? '收合功能選單' : '開啟功能選單'}
+              title="功能選單"
+              className="hh-character-icon-button"
+              aria-expanded={heroMenuGroup === 'backpack' && heroMenuVisible}
+            >
+              <Backpack size={18} />
             </button>
           </>
         )}
