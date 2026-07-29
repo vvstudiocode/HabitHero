@@ -7,11 +7,15 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 test('character catalog provides category-based options independent of gender', async () => {
   const { CHARACTER_CATALOG, getCharacterById, getCharactersForCategory } = await import('../src/features/characters/catalog.ts');
 
-  assert.equal(CHARACTER_CATALOG.length, 1);
-  assert.equal(getCharactersForCategory('all').length, 1);
+  assert.equal(CHARACTER_CATALOG.length, 2);
+  assert.equal(getCharactersForCategory('all').length, 2);
   assert.equal(CHARACTER_CATALOG[0].id, 'pink-catgirl-room');
   assert.equal(CHARACTER_CATALOG[0].imageUrl, '/images/habithero-catgirl-room.png');
   assert.equal(CHARACTER_CATALOG[0].desktopImageUrl, '/images/habithero-catgirl-room-desktop.png');
+  assert.equal(getCharacterById('black-catboy-room')?.name, '黑貓男');
+  assert.equal(getCharacterById('black-catboy-room')?.imageUrl, '/images/habithero-black-catboy-room.png');
+  assert.equal(getCharacterById('black-catboy-room')?.desktopImageUrl, '/images/habithero-black-catboy-room-desktop.png');
+  assert.equal(getCharacterById('black-catboy-room')?.accentColor, '#d9d9df');
   assert.equal(getCharacterById('pink-catgirl-room')?.imageUrl, '/images/habithero-catgirl-room.png');
   assert.equal(getCharacterById('missing-character'), undefined);
   assert.equal(new Set(CHARACTER_CATALOG.map(character => character.id)).size, CHARACTER_CATALOG.length);
