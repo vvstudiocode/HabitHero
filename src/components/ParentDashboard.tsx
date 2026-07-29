@@ -1016,7 +1016,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 newChildCharacterId={newChildCharacterId}
                 onNewChildGenderChange={setNewChildGender}
                 onNewChildCharacterChange={setNewChildCharacterId}
-                onAddChild={(profile) => void handleAddChild(profile)}
+                onAddChild={handleAddChild}
               />
 
               {/* System */}
