@@ -40,6 +40,18 @@ test('neutral theme keeps surfaces white without applying a grayscale filter', (
   assert.doesNotMatch(neutralTheme, /linear-gradient/);
 });
 
+test('child goal proposal controls use the neutral black and white system', () => {
+  const characterStyles = read('../src/styles/character.css');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+  const inlineStyles = `${characterStyles.slice(characterStyles.indexOf('.hh-goal-proposal-inline'), characterStyles.indexOf('.hh-goal-proposal-overlay'))}\n${neutralTheme}`;
+
+  assert.match(neutralTheme, /\.hh-goal-proposal-inline\s*\{[\s\S]*?background:\s*var\(--hh-neutral-surface\)/);
+  assert.match(neutralTheme, /\.hh-goal-proposal-inline\s*\{[\s\S]*?border:\s*1px solid var\(--hh-neutral-line\)/);
+  assert.match(neutralTheme, /\.hh-goal-proposal-inline\s*\{[\s\S]*?color:\s*var\(--hh-neutral-ink\)/);
+  assert.match(neutralTheme, /\.hh-sprite-theme \.hh-goal-proposal-trigger:hover,[\s\n]*\s*\.hh-sprite-theme \.hh-goal-proposal-inline:hover\s*\{[\s\S]*?background:\s*var\(--hh-neutral-soft\)/);
+  assert.doesNotMatch(inlineStyles, /#1b7776|#f4fffb|#8edbd0/);
+});
+
 test('character hitbox stays transparent when hovered', () => {
   const neutralTheme = read('../src/styles/neutral-theme.css');
 

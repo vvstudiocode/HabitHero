@@ -115,6 +115,22 @@ body,
   box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
 }
 
+.hh-sprite-theme .hh-goal-proposal-trigger,
+.hh-sprite-theme .hh-goal-proposal-inline {
+  background: var(--hh-neutral-surface) !important;
+  border: 1px solid var(--hh-neutral-line) !important;
+  color: var(--hh-neutral-ink) !important;
+  box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hh-sprite-theme .hh-goal-proposal-trigger:hover,
+  .hh-sprite-theme .hh-goal-proposal-inline:hover {
+    background: var(--hh-neutral-soft) !important;
+    box-shadow: 0 8px 20px var(--hh-neutral-shadow) !important;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):hover,
   .hh-login-screen button:hover {

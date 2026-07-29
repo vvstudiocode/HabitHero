@@ -1,0 +1,39 @@
+- generic [ref=f1e1]:
+  - banner [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic [ref=f1e14]:
+        - paragraph [ref=f1e15]: 家庭冒險 · 3 位小孩
+        - heading "家長" [level=1] [ref=f1e16]
+      - generic:
+        - generic "家長功能主選單":
+          - button [ref=f1e17]:
+            - strong [ref=f1e22]: 審核
+          - button [ref=f1e23]:
+            - strong [ref=f1e27]: 任務
+          - button [ref=f1e28]:
+            - strong [ref=f1e32]: 成長
+          - button [ref=f1e33]:
+            - strong [ref=f1e39]: 獎勵
+          - button [ref=f1e40]:
+            - strong [ref=f1e43]: 許願
+      - generic "儀表板統計" [ref=f1e44]:
+        - generic "家庭總點數" [ref=f1e45]:
+          - strong [ref=f1e46]:
+            - text: "0"
+            - emphasis [ref=f1e47]: pt
+        - generic "待審核項目" [ref=f1e48]:
+          - strong [ref=f1e49]:
+            - text: "0"
+            - emphasis [ref=f1e50]: 待審核
+      - generic [ref=f1e51]:
+        - button "設定" [ref=f1e52]
+        - button "切換到小孩視角" [active] [ref=f1e56]
+  - dialog [ref=f1e60]:
+    - generic [ref=f1e61]:
+      - heading "要切換到哪裡？" [level=2] [ref=f1e66]
+      - paragraph [ref=f1e67]: 請選擇要使用的孩子視角，或進入家長管理端。
+      - generic [ref=f1e68]:
+        - button "lala的任務" [ref=f1e69]
+        - button "lulu的任務" [ref=f1e72]
+        - button "lclc的任務" [ref=f1e75]
+        - button "家長管理端" [ref=f1e78]
