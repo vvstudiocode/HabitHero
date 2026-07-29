@@ -1,0 +1,10 @@
+- generic [ref=f1e4]:
+  - img "發光玻璃精靈站在夢幻森林小徑上的登入背景"
+  - main:
+    - region "HabitHero 登入視覺":
+      - heading "HabitHero" [level=1]
+      - paragraph: 把每天的小任務變成孩子看得見也想完成的成就旅程
+    - region "登入表單":
+      - tablist "登入身份" [ref=f1e5]:
+        - tab "家長登入" [ref=f1e6] [cursor=pointer]
+        - tab "小孩登入" [ref=f1e11] [cursor=pointer]

@@ -1,0 +1,26 @@
+[   52611ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3001/@vite/client:963
+[   52614ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   53618ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   54624ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   55628ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   56632ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   57638ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   58641ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   59644ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   60647ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   61652ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   62658ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   63666ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   64683ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   65696ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   66711ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   67721ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   68751ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   69782ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   70853ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   71902ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   72988ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   74058ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   75289ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   76503ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
+[   78047ms] [ERROR] WebSocket connection to 'ws://localhost:3001/' failed:  @ http://localhost:3001/@vite/client:1034
