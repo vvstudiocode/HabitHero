@@ -26,7 +26,7 @@ test('shared hero exposes one theme color for all dashboard controls', () => {
   assert.match(hero, /data-theme-color/);
   assert.doesNotMatch(characterStyles, /var\(--hh-character-glow\)/);
   assert.match(neutralTheme, /--hh-character-glow/);
-  assert.match(neutralTheme, /--hh-character-glow:\s*var\(--hh-character-theme-color\)/);
+  assert.match(neutralTheme, /\.hh-character-hero-panel\s*\{[\s\S]*?--hh-character-glow:\s*var\(--hh-character-theme-color\)/);
   assert.match(neutralTheme, /@supports\s*\(color:\s*color-mix/);
   assert.match(neutralTheme, /box-shadow:[^;]*var\(--hh-character-glow\)/);
   assert.match(neutralTheme, /\.hh-character-icon-button:hover[\s\S]*?var\(--hh-character-glow\)/);
