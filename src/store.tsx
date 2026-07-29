@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
-import { AppState, FeedbackTone, Task, Reward, TaskCategory, TaskStatus, TaskTemplate } from './types';
+import { AppState, ChildGender, FeedbackTone, Task, Reward, TaskCategory, TaskStatus, TaskTemplate } from './types';
 import { useAuthSession } from './auth';
 import { createDataRepository, DataRepository } from './lib/data-access';
 import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
@@ -21,7 +21,7 @@ interface AppContextType {
   hasSession: boolean;
   updateState: (newState: Partial<AppState>) => void;
   setParentPin: (pin: string) => void;
-  addChild: (name: string, loginName: string, password: string, childProfileId?: string) => Promise<void>;
+  addChild: (name: string, loginName: string, password: string, childProfileId?: string, identity?: { gender: ChildGender; characterId: string }) => Promise<void>;
   updateChildPassword: (childId: string, password: string) => Promise<void>;
   updateChildCode: (childId: string, code: string) => Promise<void>;
   updateChildName: (childId: string, name: string) => Promise<void>;
@@ -105,6 +105,7 @@ const emptyState: AppState = {
   taskTemplates: [],
   ledger: [],
   lastResetDate: null,
+  familyTheme: { accentColor: 'amber', mobileBackgroundImageUrl: null, desktopBackgroundImageUrl: null },
 };
 
 function timerStorageKey(userId: string) {
@@ -367,7 +368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const actions = {
     recordParentConsent: (consentVersion: string) => mutate((repo, id) => repo.recordParentConsent(id, consentVersion), (previous) => ({ ...previous, parentConsentVersion: consentVersion })),
-    addChild: (name: string, loginName: string, password: string, childProfileId?: string) => mutate((repo, id) => repo.insertChild(id, name, loginName, password, childProfileId)),
+    addChild: (name: string, loginName: string, password: string, childProfileId?: string, identity?: { gender: ChildGender; characterId: string }) => mutate((repo, id) => repo.insertChild(id, name, loginName, password, childProfileId, identity)),
     updateChildPassword: (childId: string, password: string) => mutate((repo, id) => repo.updateChildPassword(id, childId, password)),
     updateChildCode: async () => { setDataError('孩子登入代碼需由尚未提供的 invite/join token 流程建立。'); },
     updateChildName: (childId: string, name: string) => mutate((repo, id) => repo.updateChild(id, childId, name), (previous) => patchChild(previous, childId, (child) => ({ ...child, name }))),

@@ -15,6 +15,7 @@ import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemp
 import { getTaskExecutionState, isTaskExecutableAt } from '../lib/task-time';
 import { canStartTask, hasBlockingReviewTask } from '../lib/task-gating';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
+import { getCharacterById } from '../features/characters/catalog';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -58,6 +59,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const activeChild = activeChildId
     ? state.children.find(c => c.id === activeChildId)
     : undefined;
+  const activeCharacter = getCharacterById(activeChild?.characterId) ?? getCharacterById('pink-catgirl-room')!;
 
   const tasks = (activeChild?.tasks || []) as GrowthTask[];
   const rewards = activeChild?.rewards || [];
@@ -382,15 +384,19 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   return (
     <div className="hh-dashboard-screen hh-dashboard-screen--child flex flex-col min-h-[100dvh] bg-blue-50 pb-24">
       <DashboardCharacterHero
+        sceneImage={activeCharacter.imageUrl}
+        sceneImageDesktop={activeCharacter.desktopImageUrl}
+        sceneAlt={`${activeCharacter.name}的冒險場景`}
+        theme={activeChild.theme}
         eyebrow=""
         title={`早安，${activeChild.name}！`}
         subtitle=""
-        firstStatLabel="我的點數"
-        firstStatValue={childPoints}
-        firstStatSuffix="pt"
-        secondStatLabel="今日完成"
-        secondStatValue={completedTasks.length}
-        secondStatSuffix={` / ${tasks.length} 任務`}
+        firstStatLabel="加入天數"
+        firstStatValue={activeChild.joinedDays}
+        firstStatSuffix="天"
+        secondStatLabel="我的點數"
+        secondStatValue={childPoints}
+        secondStatSuffix="pt"
         menuActions={heroMenuActions}
         rootMenuActions={heroRootMenuActions}
         activeMenuId={heroMenuGroup}

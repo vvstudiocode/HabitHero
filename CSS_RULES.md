@@ -47,7 +47,7 @@
 ## 4. 按鈕狀態與視覺契約
 
 - 角色首頁主按鈕、icon button、展開子按鈕的 default、hover、pressed/selected 必須維持同一幾何位置。
-- 粉色光圈是設計狀態的一部分；未 hover、hover、點擊/選取都要保留，不得只在 `:hover` 才出現。
+- 主題色光圈是設計狀態的一部分；家庭使用暖金／琥珀色，孩子使用人物代表色。未 hover、hover、點擊/選取都要保留，不得只在 `:hover` 才出現。
 - 不得加入黑色線條、灰色外框或 hover 時突然出現的白色/黑色邊框。
 - 不得在 hover 改變按鈕尺寸、位置、`border-width` 或造成 layout shift。
 - 觸控裝置（`hover: none` + `pointer: coarse`）停用 `hh-menu-float`；手機瀏覽器不要用會改變 layout 的 `margin` 動畫讓按鈕漂浮。
@@ -91,7 +91,7 @@ git diff --check
 - [ ] 沒有讓 hover/pressed 產生位置、尺寸或邊框跳動。
 - [ ] 角色首頁左上統計與標題仍共用同一左側變數。
 - [ ] 展開選單第一個子按鈕仍由 submenu offset 控制，沒有擋住主按鈕。
-- [ ] 沒有黑色/灰色外框，粉色光圈在未 hover 狀態仍存在。
+- [ ] 沒有黑色/灰色外框，當前主題色光圈在未 hover 狀態仍存在。
 - [ ] diff 只包含這次需求相關的檔案與規則。
 
 核心原則：先整理 cascade，再改規則；先修改 owner，再驗證結果；不要用更多 CSS 覆蓋問題。

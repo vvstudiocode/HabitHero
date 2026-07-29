@@ -95,14 +95,14 @@ Deno.serve(async (request) => {
             target_child_profile_id: body.childProfileId,
             target_login_name: loginName,
             target_profile_id: createdUser.user.id,
-            target_gender: body.gender,
-            target_character_id: characterId,
           }
         : {
             target_family_id: body.familyId,
             child_name: childName,
             target_login_name: loginName,
             target_profile_id: createdUser.user.id,
+            target_gender: body.gender,
+            target_character_id: characterId,
           };
       const { data: child, error: provisionError } = await userClient.rpc(rpcName, rpcArgs);
       if (provisionError) {

@@ -170,8 +170,8 @@ function MainApp() {
     );
   }
 
-  if (loading) return renderLoginBackgroundScreen(<p className="font-bold text-white drop-shadow-lg">正在更新資料…</p>);
-  if (error && hasSession && currentView === 'login') {
+  if (loading && !error) return renderLoginBackgroundScreen(<p className="font-bold text-white drop-shadow-lg">正在更新資料…</p>);
+  if (error && hasSession && !dataReady) {
     return renderLoginBackgroundScreen(<div className="flex flex-col items-center gap-4 p-6 text-center"><p role="alert" className="font-bold text-white drop-shadow-lg">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white shadow-lg">重試</button></div>);
   }
 

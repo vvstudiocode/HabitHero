@@ -2,6 +2,12 @@
 
 export type Id = string;
 export type Timestamp = string;
+export interface ThemeSettings {
+  /** A palette token or validated color value; null means use the catalog/default theme. */
+  accentColor: string | null;
+  mobileBackgroundImageUrl: string | null;
+  desktopBackgroundImageUrl: string | null;
+}
 export type UnixMilliseconds = number;
 export type Points = number;
 export type SortOrder = number;
@@ -30,6 +36,9 @@ export interface FamilyRow {
   created_by: Id;
   created_at: Timestamp;
   updated_at: Timestamp;
+  accent_color?: string;
+  background_image_mobile_url?: string | null;
+  background_image_desktop_url?: string | null;
 }
 
 export interface FamilyMemberRow {
@@ -53,6 +62,9 @@ export interface ChildProfileRow {
   points_balance: Points;
   created_at: Timestamp;
   updated_at: Timestamp;
+  accent_color?: string | null;
+  background_image_mobile_url?: string | null;
+  background_image_desktop_url?: string | null;
 }
 
 export interface TaskTemplateRow {
@@ -171,6 +183,9 @@ export interface FamilyCreateInput {
 }
 export interface FamilyUpdateInput {
   name?: string;
+  accent_color?: string;
+  background_image_mobile_url?: string | null;
+  background_image_desktop_url?: string | null;
 }
 
 export interface FamilyMemberCreateInput {
@@ -193,6 +208,9 @@ export interface ChildProfileCreateInput {
 }
 export interface ChildProfileUpdateInput {
   points_balance?: Points;
+  accent_color?: string | null;
+  background_image_mobile_url?: string | null;
+  background_image_desktop_url?: string | null;
 }
 
 export interface TaskTemplateCreateInput {
@@ -314,6 +332,7 @@ export interface FamilyViewModel {
   id: Id;
   name: string;
   members: FamilyMemberViewModel[];
+  theme: ThemeSettings;
 }
 
 export interface FamilyMemberViewModel {
@@ -334,6 +353,7 @@ export interface ChildViewModel {
   joinedAt: Timestamp;
   joinedDays: number;
   points: Points;
+  theme: ThemeSettings;
 }
 
 export interface TaskTemplateViewModel {
@@ -502,6 +522,7 @@ export interface Ticket extends Omit<RewardRedemptionViewModel, 'pointsCost' | '
 export interface Child {
   id: Id;
   name: string;
+  characterId: string;
   code: string;
   loginName: string | null;
   points: Points;
@@ -509,6 +530,7 @@ export interface Child {
   rewards: Reward[];
   wishlist: WishlistItem[];
   tickets: Ticket[];
+  theme: ThemeSettings;
 }
 
 export interface AppState {
@@ -520,4 +542,5 @@ export interface AppState {
   taskTemplates: TaskTemplate[];
   ledger: PointLedgerViewModel[];
   lastResetDate: string | null;
+  familyTheme: ThemeSettings;
 }

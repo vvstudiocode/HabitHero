@@ -3,7 +3,7 @@ import { useAppStore } from '../store';
 import { dismissWithAnimation } from '../lib/utils';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
 import { Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Baby } from 'lucide-react';
-import { TaskStatus, Task, Reward } from '../types';
+import { TaskStatus, Task, Reward, type ChildGender } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
 import { GoalReviewPanel } from '../features/growth/components/GoalReviewPanel';
@@ -20,7 +20,7 @@ import { validateRewardPoints } from '../lib/reward-validation';
 import { FirstUseGuide, hasCompletedFirstUseGuide } from './FirstUseGuide';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
 import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashboard/ParentDashboardContent';
-import { ParentSettingsChildrenSection } from './parent-dashboard/ParentSettingsChildrenSection';
+import { ParentSettingsChildrenSection, type NewChildProfile } from './parent-dashboard/ParentSettingsChildrenSection';
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
 import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
@@ -171,6 +171,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [showNewChildPassword, setShowNewChildPassword] = useState(false);
   const [showNewChildPasswordConfirmation, setShowNewChildPasswordConfirmation] = useState(false);
   const [newChildError, setNewChildError] = useState('');
+  const [newChildGender, setNewChildGender] = useState<ChildGender | ''>('');
+  const [newChildCharacterId, setNewChildCharacterId] = useState('');
   const [accountSetupChildId, setAccountSetupChildId] = useState<string | null>(null);
   const [accountSetupUsername, setAccountSetupUsername] = useState('');
   const [accountSetupPassword, setAccountSetupPassword] = useState('');
@@ -515,12 +517,18 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     }
   };
   
-  const handleAddChild = async (e?: React.FormEvent) => {
+  const handleAddChild = async (profile?: NewChildProfile, e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (childAccountSubmissionInFlight.current) return;
     setNewChildError('');
     if (!newChildName.trim()) {
       setNewChildError('請輸入小孩名字。');
+      return;
+    }
+    const selectedGender = profile?.gender ?? newChildGender;
+    const selectedCharacterId = profile?.characterId ?? newChildCharacterId;
+    if (!selectedGender || !selectedCharacterId) {
+      setNewChildError('請選擇性別與人物。');
       return;
     }
     const usernameValidation = validateChildUsername(newChildUsername);
@@ -547,11 +555,13 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     childAccountSubmissionInFlight.current = true;
     setChildAccountSubmitting(true);
     try {
-      await addChild(newChildName.trim(), newChildUsername.trim().toLowerCase(), newChildPassword);
+      await addChild(newChildName.trim(), newChildUsername.trim().toLowerCase(), newChildPassword, undefined, { gender: selectedGender, characterId: selectedCharacterId });
       setNewChildName('');
       setNewChildUsername('');
       setNewChildPassword('');
       setNewChildPasswordConfirmation('');
+      setNewChildGender('');
+      setNewChildCharacterId('');
     } catch (error) {
       setNewChildError(error instanceof Error ? error.message : '建立小孩失敗，請重試。');
     } finally {
@@ -673,6 +683,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   return (
     <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-gray-50">
       <DashboardCharacterHero
+        sceneImage="/images/habithero-parent-living-room.png"
+        sceneImageDesktop="/images/habithero-parent-living-room-desktop.png"
+        theme={state.familyTheme}
         eyebrow={`家庭冒險 · ${state.children.length} 位小孩`}
         title="家長"
         subtitle=""
@@ -982,7 +995,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 onNewChildPasswordConfirmationChange={value => { setNewChildPasswordConfirmation(value); setNewChildError(''); }}
                 onToggleNewChildPassword={() => setShowNewChildPassword(visible => !visible)}
                 onToggleNewChildPasswordConfirmation={() => setShowNewChildPasswordConfirmation(visible => !visible)}
-                onAddChild={() => void handleAddChild()}
+                newChildGender={newChildGender}
+                newChildCharacterId={newChildCharacterId}
+                onNewChildGenderChange={setNewChildGender}
+                onNewChildCharacterChange={setNewChildCharacterId}
+                onAddChild={(profile) => void handleAddChild(profile)}
               />
 
               {/* System */}

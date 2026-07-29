@@ -19,6 +19,7 @@ import {
   TaskOrigin,
   TaskViewModel,
   Timestamp,
+  ThemeSettings,
   UnixMilliseconds,
 } from '../types';
 
@@ -67,10 +68,16 @@ export const profileRowToViewModel = (row: ProfileRow): ProfileViewModel => ({
   avatarUrl: row.avatar_url,
 });
 
+const themeFromRow = (row: Pick<FamilyRow | ChildProfileRow, 'accent_color' | 'background_image_mobile_url' | 'background_image_desktop_url'>): ThemeSettings => ({
+  accentColor: row.accent_color ?? null,
+  mobileBackgroundImageUrl: row.background_image_mobile_url ?? null,
+  desktopBackgroundImageUrl: row.background_image_desktop_url ?? null,
+});
+
 export const familyRowToViewModel = (
   row: FamilyRow,
   members: FamilyMemberViewModel[] = [],
-): FamilyViewModel => ({ id: row.id, name: row.name, members });
+): FamilyViewModel => ({ id: row.id, name: row.name, members, theme: themeFromRow(row) });
 
 export const familyMemberRowToViewModel = (
   row: FamilyMemberRow,
@@ -96,6 +103,7 @@ export const childProfileRowToViewModel = (
   joinedAt: row.joined_at,
   joinedDays: calculateJoinedDays(row.joined_at),
   points: row.points_balance,
+  theme: themeFromRow(row),
 });
 
 export const taskRowToViewModel = (row: TaskRow): TaskViewModel => ({

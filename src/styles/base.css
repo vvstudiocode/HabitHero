@@ -129,6 +129,7 @@
 }
 
 .hh-settings-drawer.hh-modal-exit,
+.hh-new-child-drawer.hh-modal-exit,
 .hh-document-shell.hh-modal-exit {
   animation: hh-slide-left-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
   pointer-events: none;

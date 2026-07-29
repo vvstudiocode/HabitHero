@@ -1,4 +1,6 @@
 import React from 'react';
+import { getCharacterByImageUrl } from '../features/characters/catalog';
+import type { ThemeSettings } from '../types';
 
 export type CharacterMenuAction = {
   id: string;
@@ -9,6 +11,10 @@ export type CharacterMenuAction = {
 };
 
 interface DashboardCharacterHeroProps {
+  sceneImage: string;
+  sceneImageDesktop?: string;
+  sceneAlt?: string;
+  theme?: ThemeSettings;
   title: string;
   eyebrow: string;
   subtitle: string;
@@ -29,6 +35,10 @@ interface DashboardCharacterHeroProps {
 }
 
 export function DashboardCharacterHero({
+  sceneImage,
+  sceneImageDesktop,
+  sceneAlt = '',
+  theme,
   title,
   eyebrow,
   subtitle,
@@ -48,11 +58,17 @@ export function DashboardCharacterHero({
   const rootActions = rootMenuActions ?? menuActions ?? [];
   const subActions = rootMenuActions && activeMenuId ? (menuActions ?? []) : [];
   const hasMenu = rootActions.length > 0;
+  const character = getCharacterByImageUrl(sceneImage);
+  const themeColor = theme?.accentColor ?? character?.accentColor ?? (menuVariant === 'parent' ? '#d99a24' : '#f472b6');
+  const resolvedSceneImage = theme?.mobileBackgroundImageUrl ?? sceneImage;
+  const resolvedSceneImageDesktop = theme?.desktopBackgroundImageUrl ?? sceneImageDesktop;
 
   return (
     <header className="hh-character-dashboard-header">
       <div
         className="hh-character-hero-panel"
+        data-theme-color={character?.id ?? menuVariant}
+        style={{ '--hh-character-theme-color': themeColor } as React.CSSProperties}
         onClick={(event) => {
           if (!activeMenuId || !onMenuClose) return;
           const target = event.target;
@@ -60,27 +76,15 @@ export function DashboardCharacterHero({
           onMenuClose();
         }}
       >
-        <video
-          className="hh-character-hero-video"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster="/images/habithero-dashboard-room.png"
-          aria-hidden="true"
-        >
-          <source src="/videos/habithero-dashboard.mp4" type="video/mp4" />
-        </video>
+        <picture className="hh-character-hero-picture">
+          {resolvedSceneImageDesktop && <source media="(min-width: 760px)" srcSet={resolvedSceneImageDesktop} />}
+          <img className="hh-character-hero-image" src={resolvedSceneImage} alt={sceneAlt} aria-hidden={sceneAlt ? undefined : true} />
+        </picture>
         <div className="hh-character-hero-copy">
           {eyebrow && <p>{eyebrow}</p>}
           <h1>{title}</h1>
           {subtitle && <span>{subtitle}</span>}
         </div>
-        <div className="hh-character-hero-cloud hh-character-hero-cloud--one" aria-hidden="true" />
-        <div className="hh-character-hero-cloud hh-character-hero-cloud--two" aria-hidden="true" />
-        <div className="hh-character-hero-hill hh-character-hero-hill--back" aria-hidden="true" />
-        <div className="hh-character-hero-hill" aria-hidden="true" />
         {hasMenu && (
           <div
             className={`hh-character-menu is-open ${activeMenuId ? 'has-submenu' : ''}`}

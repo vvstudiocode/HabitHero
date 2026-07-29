@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   childProfileRowToViewModel,
+  familyRowToViewModel,
   familyMemberRowToViewModel,
   profileRowToViewModel,
   redemptionRowToViewModel,
@@ -10,7 +11,7 @@ import {
 } from './data-contracts';
 import type {
   ChildProfileRow, FamilyMemberRow, ProfileRow, RewardRow,
-  RewardRedemptionRow, TaskRow, TaskTemplateRow, WishlistItemRow, PointLedgerRow,
+  RewardRedemptionRow, TaskRow, TaskTemplateRow, WishlistItemRow, PointLedgerRow, FamilyRow,
 } from '../types';
 import type { ChildProfileCreationInput } from './data-contracts';
 import type { AppState, Child, FeedbackTone, Reward, Task, TaskCategory, TaskStatus, TaskTemplate } from '../types';
@@ -31,6 +32,7 @@ const emptyState = (): AppState => ({
   taskTemplates: [],
   ledger: [],
   lastResetDate: null,
+  familyTheme: { accentColor: 'amber', mobileBackgroundImageUrl: null, desktopBackgroundImageUrl: null },
 });
 
 // Keep enough history in the app state for the UI's 30-item pages.
@@ -182,7 +184,14 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
   const profileResult = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
   let profile = check(profileResult) as ProfileRow | null;
   if (!profile) {
-    profile = check(await client.from('profiles').insert({ id: userId, display_name: userId.slice(0, 8) }).select().single()) as ProfileRow;
+    // Multiple auth/data-loading effects can bootstrap the same profile at
+    // once (especially after a persisted session is restored). Upsert makes
+    // this recovery path safe when another request creates the row first.
+    profile = check(await client
+      .from('profiles')
+      .upsert({ id: userId, display_name: userId.slice(0, 8) }, { onConflict: 'id' })
+      .select()
+      .single()) as ProfileRow;
   }
 
   let members = asRows<FamilyMemberRow>(check(await client.from('family_members').select('*').eq('profile_id', userId)));
@@ -199,7 +208,14 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
 
   const familyId = members[0].family_id;
   const role = members.find((member) => member.profile_id === userId)?.role ?? 'parent';
+  // Family rows intentionally remain parent-only under the existing RLS hardening.
+  // Child sessions use the persisted amber family default until family theme
+  // reads are explicitly exposed to that role.
+  const family = role === 'parent'
+    ? check(await client.from('families').select('*').eq('id', familyId).single()) as FamilyRow
+    : null;
   const state = emptyState();
+  if (family) state.familyTheme = familyRowToViewModel(family).theme;
   if (role === 'parent') {
     const consent = check(await client.from('parent_consents').select('consent_version').eq('family_id', familyId).eq('parent_profile_id', userId).eq('consent_type', 'parental').maybeSingle()) as { consent_version: string } | null;
     state.parentConsentVersion = consent?.consent_version ?? null;

@@ -669,7 +669,7 @@
 
         <section class="portrait-card" aria-labelledby="portrait-title">
             <div class="portrait-frame">
-                <img src="./images/starlight-rainbow-portrait.png" alt="彩色星光彩虹玩偶立繪：白髮、薄荷綠眼睛與白色連帽衫" />
+                <img src="./images/habithero-catgirl-room.png" alt="粉貓女與溫暖房間背景" />
             </div>
             <div class="portrait-copy">
                 <div class="eyebrow">CHARACTER PORTRAIT</div>
@@ -845,11 +845,7 @@
         const spriteLayer = document.querySelector('#sprite-layer');
         const controlPanel = document.querySelector('.control-panel');
         const toast = document.querySelector('#toast');
-        const characters = [
-            { id: 'pink-monster', label: 'Pink Monster', idle: './sprites/craftpix/pink-idle-4.png', walk: './sprites/craftpix/pink-walk-6.png', idleFrames: 4, idleImageFrames: 4, walkFrames: 6, walkImageFrames: 6, walkFrameRate: 10, displayScale: 1.25, x: -.48, laneBottom: 4, dir: 1 },
-            { id: 'owlet-monster', label: 'Owlet Monster', idle: './sprites/craftpix/owlet-idle-4.png', walk: './sprites/craftpix/owlet-walk-6.png', idleFrames: 4, idleImageFrames: 4, walkFrames: 6, walkImageFrames: 6, walkFrameRate: 10, displayScale: 1.35, x: 0, laneBottom: 35, dir: -1 },
-            { id: 'dude-monster', label: 'Dude Monster', idle: './sprites/craftpix/dude-idle-4.png', walk: './sprites/craftpix/dude-walk-6.png', idleFrames: 4, idleImageFrames: 4, walkFrames: 6, walkImageFrames: 6, walkFrameRate: 10, displayScale: 1.25, x: .48, laneBottom: 66, dir: 1 }
-        ];
+        const characters = [];
         let menuOpen = false;
         let startedAt = performance.now();
 

@@ -12,6 +12,10 @@
   --hh-neutral-line: #e5e5e7;
   --hh-neutral-focus: #6f6f76;
   --hh-neutral-shadow: rgba(32, 33, 36, 0.08);
+  --hh-character-theme-color: #d99a24;
+  --hh-character-glow: color-mix(in srgb, var(--hh-character-theme-color) 68%, transparent);
+  --hh-character-glow-strong: color-mix(in srgb, var(--hh-character-theme-color) 82%, transparent);
+  --hh-character-focus-ring: color-mix(in srgb, var(--hh-character-theme-color) 72%, transparent);
 }
 
 body,
@@ -164,7 +168,7 @@ body,
 .hh-character-menu-action:focus-visible {
   background: var(--hh-neutral-surface);
   color: var(--hh-neutral-ink);
-  box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 20px rgba(255, 177, 205, 0.68);
+  box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 20px var(--hh-character-glow);
 }
 
 .hh-character-icon-button,
@@ -176,12 +180,19 @@ body,
   .hh-character-icon-button:hover,
   .hh-character-menu-action:hover {
     transform: none;
+    box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 28px var(--hh-character-glow-strong);
   }
+}
+
+.hh-character-icon-button:active,
+.hh-character-menu-action:active,
+.hh-character-menu-action.is-selected {
+  box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 28px var(--hh-character-glow-strong);
 }
 
 .hh-character-icon-button:focus-visible,
 .hh-character-menu-action:focus-visible {
-  outline: 3px solid rgba(255, 177, 205, 0.72);
+  outline: 3px solid var(--hh-character-focus-ring);
   outline-offset: 2px;
 }
 
