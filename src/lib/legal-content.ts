@@ -37,7 +37,7 @@ export const privacyPolicySections = [
   },
   {
     title: '聯絡我們',
-    paragraphs: ['若你需要查詢、更正、匯出或刪除資料，請透過支援頁聯絡 HabitHero。正式上架前，請將此段的聯絡方式替換成實際支援 Email 與公司/營運者名稱。'],
+    paragraphs: ['HabitHero（營運者名稱：習慣小英雄）提供資料查詢、更正、匯出或刪除服務。若你有相關需求，請透過支援頁或支援 Email 聯絡我們。'],
   },
 ] as const;
 
