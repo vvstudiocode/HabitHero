@@ -687,32 +687,25 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const heroRootMenuActions: CharacterMenuAction[] = [
     { id: 'review', title: '審核', tour: 'review-menu', icon: <Eye size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('review') },
     { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
-    { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('growth') },
+    { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
     { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('rewards') },
     { id: 'wishlist', title: '許願', tour: 'wishlist-menu', icon: <Plus size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
     review: [
-      { id: 'review-goals', title: '待確認目標', icon: <Eye size={17} />, onSelect: () => openHeroFeature('review') },
-      { id: 'review-completions', title: '待審核完成', icon: <PlayCircle size={17} />, onSelect: () => openHeroFeature('review') },
+      { id: 'review-goals', title: '審核項目', icon: <Eye size={17} />, onSelect: () => openHeroFeature('review') },
       { id: 'review-tickets', title: '待兌換獎勵', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
       { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
     ],
     tasks: [
-      { id: 'today-tasks', title: '今日任務', icon: <Circle size={17} />, onSelect: () => openHeroFeature('tasks') },
-      { id: 'task-templates', title: '常用模板', icon: <Star size={17} />, onSelect: () => openHeroFeature('tasks') },
+      { id: 'task-form', title: '任務表單', icon: <Circle size={17} />, onSelect: () => openHeroFeature('tasks') },
       { id: 'add-task', title: '新增任務', tour: 'add-task-menu', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTaskForm()) },
       { id: 'add-template', title: '新增模板', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTemplateForm()) },
       { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
     ],
-    growth: [
-      { id: 'growth-record', title: '成長紀錄', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
-      { id: 'completed-tasks', title: '完成任務', icon: <PlayCircle size={17} />, onSelect: () => openHeroFeature('growth') },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
-    ],
+    growth: [],
     rewards: [
-      { id: 'pending-rewards', title: '待兌換', icon: <Eye size={17} />, onSelect: () => openHeroFeature('rewards') },
       { id: 'reward-list', title: '獎勵清單', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
       { id: 'add-reward', title: '新增獎勵', icon: <Plus size={17} />, onSelect: () => openHeroForm('rewards', () => openRewardForm()) },
       { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
@@ -760,11 +753,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       />
 
       <ParentDashboardContent
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        proposedTaskCount={proposedTasks.length + pendingTasks.length}
-        pendingTicketCount={pendingTickets.length}
-        wishlistCount={allWishlist.length}
         heroFeature={heroFeature}
         featureTitle={heroMenuActions.find((action) => action.id === heroFeature)?.title}
         onCloseFeature={closeHeroFeature}

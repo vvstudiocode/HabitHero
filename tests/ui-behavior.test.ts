@@ -179,7 +179,6 @@ test('first-use guide covers the complete parent and child workflow', () => {
   const dashboard = read('../src/components/ParentDashboard.tsx');
   const childSettings = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
   const dashboardContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
-  const dashboardUi = `${dashboard}\n${dashboardContent}`;
 
   assert.match(guide, /建立小孩/);
   assert.match(guide, /小孩登入/);
@@ -212,7 +211,9 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(dashboard, /data-tour="settings"/);
   assert.match(childSettings, /data-tour="add-child-trigger"/);
   assert.match(childSettings, /data-tour="add-child"/);
-  assert.match(dashboard, /data-tour="task-add"/);
+  assert.doesNotMatch(dashboardContent, /ParentDashboardTabBar/);
+  assert.doesNotMatch(dashboardContent, /review-tab|tasks-tab|growth-tab|rewards-tab|wishlist-tab/);
+  assert.doesNotMatch(dashboard, /onTabChange=\{setActiveTab\}/);
   assert.match(dashboard, /data-tour=\{index === 0 \? 'task-card'/);
   assert.match(dashboard, /id: 'review', title: '審核',[\s\S]*tour: 'review-menu'/);
   assert.match(dashboard, /id: 'tasks', title: '任務',[\s\S]*tour: 'tasks-menu'/);
@@ -232,4 +233,17 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(dashboard, /重新觀看新手指引/);
   assert.doesNotMatch(dashboard, /Sparkles size=\{18\}[^\n]*重新觀看新手指引/);
   assert.match(dashboard, /signupConsentAccepted \|\| !hasCompletedFirstUseGuide\(\)/);
+});
+
+test('parent hero menu avoids duplicate destinations', () => {
+  const dashboard = read('../src/components/ParentDashboard.tsx');
+
+  assert.match(dashboard, /id: 'review-goals', title: '審核項目'/);
+  assert.doesNotMatch(dashboard, /id: 'review-completions'/);
+  assert.doesNotMatch(dashboard, /id: 'growth-record'|id: 'completed-tasks'/);
+  assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*openHeroFeature\('growth'\)/);
+  assert.match(dashboard, /id: 'task-form', title: '任務表單'/);
+  assert.doesNotMatch(dashboard, /id: 'today-tasks'|id: 'task-templates'/);
+  assert.doesNotMatch(dashboard, /id: 'pending-rewards'/);
+  assert.match(dashboard, /id: 'reward-list', title: '獎勵清單'/);
 });

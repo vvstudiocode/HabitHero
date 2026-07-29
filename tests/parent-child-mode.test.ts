@@ -38,3 +38,13 @@ test('parent child-mode migration keeps direct child ownership checks and adds p
   assert.match(sql, /revoke all on function public\.propose_child_goal/);
   assert.match(sql, /grant execute on function public\.submit_task_reflection/);
 });
+
+test('latest child goal RPC keeps parent child-mode authorization after execution-time changes', () => {
+  const sql = read('../supabase/migrations/20260729100000_parent_child_goal_authorization.sql');
+
+  assert.match(sql, /create or replace function public\.propose_child_goal\(/);
+  assert.match(sql, /private\.is_child_owner\(target_family_id, target_child_profile_id\)/);
+  assert.match(sql, /private\.is_family_parent\(target_family_id\)/);
+  assert.match(sql, /goal_end_time time/);
+  assert.match(sql, /grant execute on function public\.propose_child_goal\(uuid, uuid, text, integer, text, text, integer, date, time, time\)/);
+});
