@@ -6,6 +6,7 @@ export type CharacterMenuAction = {
   id: string;
   title: string;
   icon?: React.ReactNode;
+  hasNotification?: boolean;
   tour?: string;
   closeOnSelect?: boolean;
   onSelect: () => void;
@@ -102,6 +103,7 @@ export function DashboardCharacterHero({
                   onClick={action.onSelect}
                 >
                   {action.icon && <span aria-hidden="true">{action.icon}</span>}
+                  {action.hasNotification && <span className="hh-character-menu-notification" aria-label="有新項目" />}
                   <strong>{action.title}</strong>
                 </button>
               ))}
@@ -117,6 +119,7 @@ export function DashboardCharacterHero({
                     onClick={action.onSelect}
                   >
                     {action.icon && <span aria-hidden="true">{action.icon}</span>}
+                    {action.hasNotification && <span className="hh-character-menu-notification" aria-label="有新項目" />}
                     <strong>{action.title}</strong>
                   </button>
                 ))}

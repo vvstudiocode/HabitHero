@@ -14,6 +14,7 @@ import { getChildGrowthSummary } from '../features/growth/growth-stats';
 import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
 import { getTaskExecutionState, isTaskExecutableAt } from '../lib/task-time';
 import { canStartTask, hasBlockingReviewTask } from '../lib/task-gating';
+import { getChildMenuNotifications } from '../lib/menu-notifications';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
 import { getCharacterById } from '../features/characters/catalog';
 
@@ -110,6 +111,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const completedTasks = tasks.filter(t => t.status === 'completed');
   const completedTasksWithChild = activeChild ? completedTasks.map((task) => ({ ...task, childId: activeChild.id, childName: activeChild.name })) : [];
   const growthSummary = activeChild ? getChildGrowthSummary({ ...activeChild, tasks } as typeof activeChild, state.ledger) : null;
+  const childMenuNotifications = getChildMenuNotifications({
+    goals: proposedTasks.length + todoTasks.length + revisionTasks.length,
+    rewards: rewards.length + tickets.length,
+    wishlist: wishlist.length,
+  });
   const [submittingTask, setSubmittingTask] = useState<GrowthTask | null>(null);
 
   const [now, setNow] = useState(Date.now());
@@ -317,10 +323,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   };
 
   const heroRootMenuActions: CharacterMenuAction[] = [
-    { id: 'goals', title: '目標', icon: <CheckCircle2 size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('goals') },
+    { id: 'goals', title: '目標', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('goals') },
     { id: 'growth', title: '成長', icon: <Star size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('growth') },
-    { id: 'wishlist', title: '許願', icon: <Plus size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
-    { id: 'history', title: '兌換', icon: <History size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('history') },
+    { id: 'wishlist', title: '許願', icon: <Plus size={17} />, hasNotification: childMenuNotifications.wishlist, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('wishlist') },
+    { id: 'history', title: '兌換', icon: <History size={17} />, hasNotification: childMenuNotifications.rewards, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('history') },
   ];
 
   const heroSubMenuActions: Record<ChildTab, CharacterMenuAction[]> = {

@@ -227,6 +227,19 @@
   white-space: normal;
 }
 
+.hh-character-menu-notification {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  z-index: 2;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--hh-neutral-surface);
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 1px 4px rgba(127, 29, 29, .35);
+}
+
 .hh-character-menu-action svg {
   color: var(--hh-neutral-ink);
 }
