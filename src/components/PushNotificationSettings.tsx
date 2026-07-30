@@ -25,7 +25,7 @@ export function PushNotificationSettings({ settings }: PushNotificationSettingsP
           <span className="hh-notification-toggle-thumb" />
         </span>
       </button>
-      {settings.error && <span className="sr-only" role="alert">{settings.error}</span>}
+      {settings.error && <p className="hh-notification-settings-error" role="alert">{settings.error}</p>}
     </section>
   );
 }

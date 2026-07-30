@@ -50,9 +50,11 @@ export async function requestAndRegisterIosPush(context: PushDeviceContext) {
     let settled = false;
     let registrationHandle: { remove: () => Promise<void> } | null = null;
     let errorHandle: { remove: () => Promise<void> } | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     const finish = (error?: Error, value?: string) => {
       if (settled) return;
       settled = true;
+      if (timeoutHandle) clearTimeout(timeoutHandle);
       void registrationHandle?.remove();
       void errorHandle?.remove();
       if (error) reject(error);
@@ -64,6 +66,7 @@ export async function requestAndRegisterIosPush(context: PushDeviceContext) {
     ]).then(([registered, failed]) => {
       registrationHandle = registered;
       errorHandle = failed;
+      timeoutHandle = setTimeout(() => finish(new Error('iOS 尚未取得 Push Token，請重新啟動 App 後再試。')), 12000);
       void PushNotifications.register().catch(error => finish(error instanceof Error ? error : new Error('Push registration failed')));
     }).catch(error => finish(error instanceof Error ? error : new Error('Push listener setup failed')));
   });
