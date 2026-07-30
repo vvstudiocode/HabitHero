@@ -912,9 +912,9 @@
   justify-content: space-between;
   gap: 16px;
   padding: 16px;
-  border: 1px solid rgba(226, 232, 240, .9);
-  border-radius: 20px;
-  background: rgba(248, 250, 252, .84);
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  background: #f9fafb;
 }
 
 .hh-notification-settings-heading {
