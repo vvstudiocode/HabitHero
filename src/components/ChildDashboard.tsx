@@ -826,7 +826,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       )}
 
       {showWishlistForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
+        <div className="hh-safe-modal-shell fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
           <div className="hh-form-modal-panel bg-white w-full max-w-sm animate-slide-up rounded-3xl p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">我要許願</h3>
@@ -845,7 +845,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       )}
 
       {rewardToConfirm && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
+        <div className="hh-safe-modal-shell fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
           <div className="hh-reward-confirm-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
@@ -865,7 +865,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       )}
 
       {wishlistToCancel && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
+        <div className="hh-safe-modal-shell fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6">
           <div className="hh-wishlist-cancel-panel w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="wishlist-cancel-title">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>

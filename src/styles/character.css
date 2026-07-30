@@ -66,6 +66,7 @@
   box-shadow: none;
   overflow-x: hidden;
   --hh-character-copy-top: max(48px, calc(env(safe-area-inset-top) + 8px));
+  --hh-character-top-offset: 40px;
   --hh-character-content-left: 28px;
 }
 
@@ -86,13 +87,13 @@
   position: absolute;
   z-index: 6;
   right: 16px;
-  top: 16px;
+  top: calc(16px + var(--hh-character-top-offset));
 }
 
 .hh-character-hero-copy {
   position: absolute;
   z-index: 3;
-  top: var(--hh-character-copy-top);
+  top: calc(var(--hh-character-copy-top) + var(--hh-character-top-offset));
   left: var(--hh-character-content-left);
   max-width: 56%;
 }
@@ -506,7 +507,7 @@
 }
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
-  top: calc(4px + var(--hh-menu-submenu-offset));
+  top: calc(9px + var(--hh-menu-submenu-offset));
   right: 16px;
 }
 
@@ -633,7 +634,7 @@
 .hh-character-stats {
   position: absolute;
   z-index: 5;
-  top: max(2px, env(safe-area-inset-top));
+  top: max(2px, calc(env(safe-area-inset-top) + var(--hh-character-top-offset)));
   left: var(--hh-character-content-left);
   display: flex;
   gap: 8px;
@@ -1184,7 +1185,7 @@
   }
 
   .hh-character-stats {
-    top: 2px;
+    top: max(2px, calc(env(safe-area-inset-top) + var(--hh-character-top-offset)));
     bottom: auto;
     gap: 6px;
     max-width: 62%;

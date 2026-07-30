@@ -92,6 +92,16 @@
   position: fixed !important;
   inset: 0 !important;
   z-index: 300 !important;
+  padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 20px));
+  padding-right: max(20px, env(safe-area-inset-right));
+  padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+  padding-left: max(20px, env(safe-area-inset-left));
+}
+
+@media (max-width: 760px) {
+  .hh-switch-modal-shell {
+    padding-top: max(40px, calc(env(safe-area-inset-top, 0px) + 40px));
+  }
 }
 
 .hh-switch-modal-panel {

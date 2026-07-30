@@ -271,7 +271,7 @@ test('child feature menu keeps the submenu mounted while it animates closed', ()
   assert.match(dashboard, /window\.setTimeout\(\(\) => \{[\s\S]*setHeroMenuGroup\(null\)[\s\S]*\}, HERO_MENU_EXIT_MS\)/);
   assert.match(dashboard, /requestAnimationFrame\(\(\) => \{[\s\S]*setHeroMenuVisible\(true\)/);
   assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?translateY\(-6px\)/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?top: calc\(4px \+ var\(--hh-menu-submenu-offset\)\)/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?top: calc\(9px \+ var\(--hh-menu-submenu-offset\)\)/);
   assert.match(characterStyles, /nth-child\(2\)[\s\S]*?transition-delay: 150ms/);
   assert.match(characterStyles, /nth-child\(3\)[\s\S]*?transition-delay: 300ms/);
   assert.match(characterStyles, /nth-child\(5\)[\s\S]*?transition-delay: 0ms/);

@@ -23,7 +23,7 @@ export function ModalShell({
 }: ModalShellProps) {
   const backdropClassName = variant === 'bottom'
     ? 'fixed inset-0 bg-black/40 flex items-end justify-center z-[70]'
-    : 'fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]';
+    : 'hh-safe-modal-shell fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]';
   const defaultPanelClassName = variant === 'bottom'
     ? 'hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up'
     : 'hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up';

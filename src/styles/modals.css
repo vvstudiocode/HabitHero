@@ -94,6 +94,14 @@
   touch-action: pan-y;
 }
 
+/* Centered dialogs inherit the viewport padding from their wrapper. */
+.hh-safe-modal-shell {
+  padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 24px));
+  padding-right: max(24px, env(safe-area-inset-right));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  padding-left: max(24px, env(safe-area-inset-left));
+}
+
 .hh-character-picker {
   min-width: 0;
 }
@@ -297,6 +305,20 @@
   box-shadow: 0 24px 70px rgba(25, 39, 50, 0.28);
   animation: hh-character-preview-modal-in 220ms ease-out both;
   touch-action: pan-y;
+}
+
+@media (max-width: 760px) {
+  .hh-safe-modal-shell {
+    padding-top: max(44px, calc(env(safe-area-inset-top, 0px) + 44px));
+  }
+
+  .hh-settings-drawer {
+    padding-top: max(70px, calc(env(safe-area-inset-top, 0px) + 44px));
+  }
+
+  .hh-new-child-drawer-header {
+    padding-top: max(48px, calc(env(safe-area-inset-top, 0px) + 38px));
+  }
 }
 
 .hh-character-preview-categories {

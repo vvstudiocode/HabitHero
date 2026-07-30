@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.habithero.app',
+  appId: 'com.vvstudiocode.habithero',
   appName: 'HabitHero',
   webDir: 'dist',
   server: {

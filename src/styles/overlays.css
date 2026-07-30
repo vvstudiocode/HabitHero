@@ -100,7 +100,7 @@
   flex-direction: column;
   justify-content: center;
   gap: 28px;
-  padding: max(34px, env(safe-area-inset-top)) 24px max(34px, env(safe-area-inset-bottom));
+  padding: max(70px, calc(env(safe-area-inset-top, 0px) + 24px)) 24px max(34px, env(safe-area-inset-bottom));
   color: #183d55;
   background: linear-gradient(180deg, rgba(238, 249, 255, .97), rgba(246, 252, 255, .98));
   animation: hh-feature-modal-in 260ms ease-out both;
@@ -284,7 +284,7 @@
   justify-content: space-between;
   gap: 16px;
   margin: -24px -24px 24px;
-  padding: max(14px, env(safe-area-inset-top)) 20px 14px;
+  padding: max(38px, calc(env(safe-area-inset-top, 0px) + 14px)) 20px 14px;
   min-height: 72px;
   background: #ffffff !important;
   background-image: none !important;
@@ -329,4 +329,23 @@ body {
   border-color: transparent;
   border-bottom: 0;
   box-shadow: none;
+}
+
+/* Fixed feedback should also clear the status bar / Dynamic Island. */
+.hh-toast {
+  top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
+}
+
+@media (max-width: 760px) {
+  .hh-parent-feature-modal {
+    padding-top: max(90px, calc(env(safe-area-inset-top, 0px) + 44px));
+  }
+
+  .hh-parent-content-modal-bar {
+    padding-top: max(58px, calc(env(safe-area-inset-top, 0px) + 34px));
+  }
+
+  .hh-toast {
+    top: max(36px, calc(env(safe-area-inset-top, 0px) + 36px));
+  }
 }
