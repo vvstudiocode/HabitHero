@@ -292,11 +292,11 @@ export interface DataRepository {
   insertTemplate(familyId: string, template: Omit<TaskTemplate, 'id'>): Promise<void>;
   updateTemplate(id: string, updates: Partial<TaskTemplate>): Promise<void>;
   deleteTemplate(id: string): Promise<void>;
-  insertTask(familyId: string, childId: string, task: Omit<Task, 'id' | 'status'>): Promise<void>;
+  insertTask(familyId: string, childId: string, task: Omit<Task, 'id' | 'status'>): Promise<string>;
   updateTask(id: string, updates: Partial<Task>): Promise<void>;
   deleteTask(id: string): Promise<void>;
   updateTaskStatus(id: string, status: TaskStatus): Promise<void>;
-  proposeChildGoal(familyId: string, childId: string, goal: ProposeChildGoalInput): Promise<void>;
+  proposeChildGoal(familyId: string, childId: string, goal: ProposeChildGoalInput): Promise<string>;
   confirmChildGoal(taskId: string, confirmation: ConfirmChildGoalInput): Promise<void>;
   returnChildGoal(taskId: string, revisionNote: string): Promise<void>;
   submitTaskReflection(taskId: string, submission: SubmitTaskReflectionInput): Promise<void>;
@@ -394,7 +394,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     },
     async deleteTemplate(id) { check(await client.from('task_templates').delete().eq('id', id)); },
     async insertTask(familyId, childId, task) {
-      check(await client.from('tasks').insert({
+      const row = check(await client.from('tasks').insert({
         family_id: familyId,
         child_profile_id: childId,
         template_id: task.templateId ?? null,
@@ -409,7 +409,8 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         requires_review_before_next_task: task.requiresReviewBeforeNextTask ?? false,
         category: task.category ?? 'life_habit',
         origin: task.origin ?? 'parent_assigned',
-      }));
+      }).select('id').single()) as { id: string };
+      return row.id;
     },
     async updateTask(id, updates) {
       check(await client.from('tasks').update(removeUndefined({
@@ -442,7 +443,8 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
       else check(await client.from('tasks').update({ status, completed_at: null }).eq('id', id));
     },
     async proposeChildGoal(familyId, childId, goal) {
-      check(await client.rpc('propose_child_goal', buildProposeChildGoalPayload(familyId, childId, goal)));
+      const row = check(await client.rpc('propose_child_goal', buildProposeChildGoalPayload(familyId, childId, goal))) as { id: string } | null;
+      return row?.id ?? '';
     },
     async confirmChildGoal(taskId, confirmation) {
       check(await client.rpc('confirm_child_goal', buildConfirmChildGoalPayload(taskId, confirmation)));

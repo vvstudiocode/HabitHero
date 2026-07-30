@@ -1,4 +1,4 @@
-export const PRIVACY_POLICY_VERSION = '2026-07-23';
+export const PRIVACY_POLICY_VERSION = '2026-07-30';
 export const PARENT_CONSENT_VERSION = '2026-07-23';
 
 export function isCurrentParentConsent(version: string | null | undefined): boolean {
@@ -10,6 +10,7 @@ export const privacyPolicySections = [
     title: '我們收集哪些資料',
     paragraphs: [
       'HabitHero 會收集家長帳號 Email、家庭成員設定、孩子顯示名稱、任務與獎勵紀錄，以及孩子主動提交的心得、心情與難度評分。',
+      '若你開啟通知，我們會保存裝置 Push Token 與通知偏好，用來把家庭任務提醒送到指定成員的裝置；關閉通知後會停用該裝置的推播。',
       '我們只收集提供家庭任務、同步、登入、安全與支援服務所必要的資料，不以兒童資料投放個人化廣告。',
     ],
   },

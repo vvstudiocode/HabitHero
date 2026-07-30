@@ -6,9 +6,11 @@ import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
 import { subscribeToAppData } from './lib/realtime';
 import { resolveActiveChildId } from './lib/family-switch';
 import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
+import { notifyTaskCreated } from './lib/push-notifications';
 
 interface AppContextType {
   state: AppState;
+  familyId: string | null;
   loading: boolean;
   initialLoading: boolean;
   dataReady: boolean;
@@ -291,10 +293,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 800);
   }, [retry]);
 
-  const mutate = useCallback(async (
-    operation: (repository: DataRepository, familyId: string) => Promise<void>,
+  const mutate = useCallback(async <T,>(
+    operation: (repository: DataRepository, familyId: string) => Promise<T>,
     optimisticUpdate?: (previous: AppState) => AppState,
-  ) => {
+  ): Promise<T> => {
     if (!familyId || !repository) {
       setDataError('尚未載入家庭資料，請先登入後重試。');
       throw new Error('尚未載入家庭資料，請先登入後重試。');
@@ -318,10 +320,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
     }
     try {
-      await operation(repository, familyId);
+      const result = await operation(repository, familyId);
       // The local state already reflects the action. Reconcile quietly in the
       // background so the dashboard never flashes a loading screen.
       scheduleBackgroundRefresh();
+      return result;
     } catch (error) {
       if (optimisticUpdate) {
         setState((current) => {
@@ -379,18 +382,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     updateTaskTemplate: (id: string, updates: Partial<TaskTemplate>) => mutate((repo) => repo.updateTemplate(id, updates), (previous) => ({ ...previous, taskTemplates: previous.taskTemplates.map((item) => item.id === id ? { ...item, ...updates } : item) })),
     deleteTaskTemplate: (id: string) => mutate((repo) => repo.deleteTemplate(id), (previous) => ({ ...previous, taskTemplates: previous.taskTemplates.filter((item) => item.id !== id) })),
-    addTask: (childId: string, task: Omit<Task, 'id' | 'status'>) => {
+    addTask: async (childId: string, task: Omit<Task, 'id' | 'status'>) => {
       const localId = createLocalId();
       const now = new Date().toISOString();
-      return mutate((repo, id) => repo.insertTask(id, childId, task), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...task, id: localId, status: 'todo', createdAt: now, updatedAt: now, completedAt: null } as Task] })));
+      const taskId = await mutate((repo, id) => repo.insertTask(id, childId, task), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...task, id: localId, status: 'todo', createdAt: now, updatedAt: now, completedAt: null } as Task] })));
+      void notifyTaskCreated(getSupabaseClient(), taskId).catch(() => undefined);
     },
     updateTask: (_childId: string, taskId: string, updates: Partial<Task>) => mutate((repo) => repo.updateTask(taskId, updates), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...updates }))),
     deleteTask: (_childId: string, taskId: string) => mutate((repo) => repo.deleteTask(taskId), (previous) => ({ ...previous, children: previous.children.map((child) => ({ ...child, tasks: child.tasks.filter((task) => task.id !== taskId) })) })),
     updateTaskStatus: (_childId: string, taskId: string, status: TaskStatus) => mutate((repo) => repo.updateTaskStatus(taskId, status), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status, completedAt: status === 'completed' ? new Date().toISOString() : task.completedAt }))),
-    proposeChildGoal: (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => {
+    proposeChildGoal: async (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => {
       const localId = createLocalId();
       const now = new Date().toISOString();
-      return mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...goal, id: localId, icon: goal.icon, status: 'todo', origin: 'child_proposed', duration: goal.duration ?? undefined, dueOn: goal.dueOn ?? null, createdAt: now, updatedAt: now, completedAt: null, confirmedAt: null } as Task] })));
+      const taskId = await mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...goal, id: localId, icon: goal.icon, status: 'todo', origin: 'child_proposed', duration: goal.duration ?? undefined, dueOn: goal.dueOn ?? null, createdAt: now, updatedAt: now, completedAt: null, confirmedAt: null } as Task] })));
+      void notifyTaskCreated(getSupabaseClient(), taskId).catch(() => undefined);
     },
     confirmChildGoal: (taskId: string, confirmation: Parameters<AppContextType['confirmChildGoal']>[1]) => mutate((repo) => repo.confirmChildGoal(taskId, confirmation), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...confirmation, confirmedAt: new Date().toISOString() }))),
     returnChildGoal: (taskId: string, revisionNote: string) => mutate((repo) => repo.returnChildGoal(taskId, revisionNote), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status: 'proposal_revision_requested', revisionNote }))),
@@ -448,7 +453,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const initialLoading = !initialLoadDone;
 
   return <AppContext.Provider value={{
-    state, loading, initialLoading, dataReady: dataReadyForSession, mutationPending, stale, isOffline, error: sessionError || dataError,
+    state, familyId, loading, initialLoading, dataReady: dataReadyForSession, mutationPending, stale, isOffline, error: sessionError || dataError,
     retry, role, hasSession: Boolean(session), updateState, setParentPin,
     setParentActiveChild, setChildLoggedIn, clearProtectedState,
     startTaskTimer: (childId, taskId) => setState((previous) => ({

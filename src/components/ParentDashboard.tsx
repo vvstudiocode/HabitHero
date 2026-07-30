@@ -24,6 +24,8 @@ import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashbo
 import { ParentSettingsChildrenSection, type NewChildProfile } from './parent-dashboard/ParentSettingsChildrenSection';
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
 import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
+import { PushNotificationSettings } from './PushNotificationSettings';
+import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 
 interface ParentDashboardProps {
@@ -68,7 +70,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       revisionNote?: string | null;
     }) => Promise<void>;
   };
-  const { state, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
+  const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
   const [activeTab, setActiveTab] = useState<ParentTab>('review');
   const [heroFeature, setHeroFeature] = useState<ParentTab | null>(null);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ParentTab | null>(null);
@@ -224,6 +226,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       toastTimer.current = null;
     }, 2600);
   };
+
+  const notificationSettings = useNotificationSettings({
+    familyId,
+    childProfileId: null,
+    onForegroundNotification: (title, body) => showToast(`${title}：${body}`),
+  });
 
   useEffect(() => {
     if (!mutationKind) return;
@@ -1008,6 +1016,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             </div>
             
             <div className="space-y-8">
+              <PushNotificationSettings settings={notificationSettings} />
               <ParentSettingsChildrenSection
                 children={state.children}
                 childNameDrafts={childNameDrafts}

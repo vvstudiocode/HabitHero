@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { Backpack, CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User } from 'lucide-react';
+import { Backpack, CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { Reward } from '../types';
@@ -17,6 +17,8 @@ import { canStartTask, hasBlockingReviewTask } from '../lib/task-gating';
 import { getChildMenuNotifications } from '../lib/menu-notifications';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
 import { getCharacterById } from '../features/characters/catalog';
+import { PushNotificationSettings } from './PushNotificationSettings';
+import { useNotificationSettings } from '../hooks/useNotificationSettings';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -44,7 +46,7 @@ function formatTaskWindow(task: { dueTime?: string | null; endTime?: string | nu
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
-  const { state, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, deleteWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
+  const { state, familyId, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, deleteWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<ChildTab>('goals');
   const [heroFeature, setHeroFeature] = useState<ChildTab | null>(null);
@@ -84,6 +86,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [toastLeaving, setToastLeaving] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   
   const showToast = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -98,6 +101,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       }, 280);
     }, 2720);
   };
+
+  const notificationSettings = useNotificationSettings({
+    familyId,
+    childProfileId: activeChild?.id ?? null,
+    onForegroundNotification: (title, body) => showToast(`${title}：${body}`),
+  });
 
   useEffect(() => () => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -357,6 +366,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
       { id: 'wishlist', title: '許願', icon: <Plus size={17} />, hasNotification: childMenuNotifications.wishlist, onSelect: () => openChildFeature('wishlist') },
       { id: 'history', title: '兌換', icon: <History size={17} />, hasNotification: childMenuNotifications.rewards, onSelect: () => openChildFeature('history') },
+      { id: 'settings', title: '設定', icon: <Settings size={17} />, onSelect: () => setShowNotificationSettings(true) },
       { id: 'switch-child', title: '切換視角', icon: <User size={17} />, onSelect: onSwitchChild },
       { id: 'logout', title: '登出', icon: <LogOut size={17} />, onSelect: onLogout },
     ],
@@ -891,6 +901,23 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 確認取消
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showNotificationSettings && (
+        <div className="hh-safe-modal-shell fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-6">
+          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="child-notification-settings-title">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-blue-500">背包設定</p>
+                <h3 id="child-notification-settings-title" className="mt-1 text-xl font-black text-gray-900">通知設定</h3>
+              </div>
+              <button type="button" onClick={() => setShowNotificationSettings(false)} aria-label="關閉通知設定" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                <X size={18} />
+              </button>
+            </div>
+            <PushNotificationSettings settings={notificationSettings} />
           </div>
         </div>
       )}
