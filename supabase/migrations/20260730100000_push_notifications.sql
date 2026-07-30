@@ -25,6 +25,15 @@ alter table public.push_devices enable row level security;
 revoke all on table public.push_devices from public, anon;
 -- The app only needs write access; raw APNs tokens are never readable by clients.
 grant insert, update, delete on table public.push_devices to authenticated;
+-- UPDATE/UPSERT needs a SELECT privilege and SELECT policy. Do not grant
+-- access to `token`; the client only needs non-sensitive metadata for RLS.
+grant select (id, family_id, profile_id, child_profile_id, platform, enabled, created_at, updated_at)
+  on table public.push_devices to authenticated;
+
+drop policy if exists push_devices_select on public.push_devices;
+create policy push_devices_select on public.push_devices
+  for select to authenticated
+  using (profile_id = (select auth.uid()));
 
 drop policy if exists push_devices_insert on public.push_devices;
 create policy push_devices_insert on public.push_devices

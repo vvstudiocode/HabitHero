@@ -1,6 +1,7 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
 import { childAccountEmail, getPasswordRecoveryRedirectUrl } from '../lib/auth-validation';
+import { disablePushDevicesForProfile } from '../lib/push-notifications';
 
 export interface AuthCredentials {
   email: string;
@@ -46,6 +47,10 @@ export async function resetCurrentParentPassword(password: string) {
 }
 
 export async function switchChildToParent(password: string) {
+  const currentUser = await getSupabaseClient().auth.getUser();
+  if (currentUser.data.user) {
+    await disablePushDevicesForProfile(getSupabaseClient(), currentUser.data.user.id);
+  }
   const { data, error } = await getSupabaseClient().functions.invoke('switch-to-parent', { body: { password } });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
@@ -60,6 +65,14 @@ export async function signUp(credentials: AuthCredentials) {
 }
 
 export async function signOut() {
+  const currentUser = await getSupabaseClient().auth.getUser();
+  if (currentUser.data.user) {
+    try {
+      await disablePushDevicesForProfile(getSupabaseClient(), currentUser.data.user.id);
+    } catch {
+      // Sign-out must still complete if the network is unavailable.
+    }
+  }
   return getSupabaseClient().auth.signOut();
 }
 
