@@ -30,7 +30,10 @@ export function PushNotificationSettings({ settings }: PushNotificationSettingsP
         onClick={() => void settings.toggle(!settings.enabled)}
       >
         {settings.saving && <LoaderCircle size={16} className="hh-notification-toggle-spinner" aria-hidden="true" />}
-        <span>{settings.enabled ? '已開啟' : '已關閉'}</span>
+        <span className="hh-notification-toggle-track" aria-hidden="true">
+          <span className="hh-notification-toggle-thumb" />
+        </span>
+        <span className="hh-notification-toggle-label">{settings.enabled ? '已開啟' : '已關閉'}</span>
       </button>
       {settings.error && <p className="hh-notification-settings-error" role="alert">{settings.error}</p>}
       <p className="hh-notification-settings-help">開啟後，家長新增任務或孩子提出目標時，對方可以收到系統通知。</p>

@@ -952,9 +952,10 @@
   display: inline-flex;
   min-height: 44px;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 10px 16px;
+  justify-content: flex-start;
+  gap: 10px;
+  width: fit-content;
+  padding: 7px 12px 7px 8px;
   color: #334155;
   border: 1px solid #cbd5e1;
   border-radius: 14px;
@@ -968,6 +969,48 @@
   color: #fff;
   border-color: #2563eb;
   background: #2563eb;
+}
+
+.hh-notification-toggle-track {
+  position: relative;
+  display: inline-flex;
+  width: 42px;
+  height: 26px;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 3px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background-color .18s ease;
+}
+
+.hh-notification-toggle.is-on .hh-notification-toggle-track {
+  background: #93c5fd;
+}
+
+.hh-notification-toggle-thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .28);
+  transform: translateX(0);
+  transition: transform .18s ease;
+}
+
+.hh-notification-toggle.is-on .hh-notification-toggle-thumb {
+  transform: translateX(16px);
+}
+
+.hh-notification-toggle-label {
+  min-width: 42px;
+  text-align: left;
+}
+
+.hh-notification-toggle:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, .28);
+  outline-offset: 3px;
 }
 
 .hh-notification-toggle:disabled {
@@ -995,7 +1038,9 @@
   .hh-document-back,
   .hh-document-primary-button,
   .hh-document-danger-button,
-  .hh-settings-document-row {
+  .hh-settings-document-row,
+  .hh-notification-toggle-track,
+  .hh-notification-toggle-thumb {
     transition: none;
   }
 }

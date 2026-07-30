@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   getNotificationPermissionLabel,
   getNotificationRecipientRole,
+  hasEnabledPushDevice,
   shouldRegisterPushNotifications,
 } from '../src/lib/notification-preferences';
 
@@ -23,4 +24,11 @@ test('task origin maps to the intended notification recipient', () => {
   assert.equal(getNotificationRecipientRole('parent_assigned'), 'child');
   assert.equal(getNotificationRecipientRole('system_template'), 'child');
   assert.equal(getNotificationRecipientRole('child_proposed'), 'parent');
+});
+
+test('notification preference is enabled when at least one device is active', () => {
+  assert.equal(hasEnabledPushDevice([{ enabled: true }]), true);
+  assert.equal(hasEnabledPushDevice([{ enabled: false }, { enabled: true }]), true);
+  assert.equal(hasEnabledPushDevice([{ enabled: false }]), false);
+  assert.equal(hasEnabledPushDevice([]), false);
 });

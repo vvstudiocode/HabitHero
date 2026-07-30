@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PushNotifications, type ActionPerformed, type PushNotificationSchema } from '@capacitor/push-notifications';
+import { hasEnabledPushDevice } from './notification-preferences';
 import type { NotificationPermission } from './notification-preferences';
 
 export interface PushDeviceContext {
@@ -80,18 +81,21 @@ export async function requestAndRegisterIosPush(context: PushDeviceContext) {
 }
 
 export async function readNotificationPreference(supabase: SupabaseClient, profileId: string) {
-  const { data, error } = await supabase.from('profiles').select('notifications_enabled').eq('id', profileId).single();
+  const { data, error } = await supabase
+    .from('push_devices')
+    .select('enabled')
+    .eq('profile_id', profileId)
+    .eq('platform', 'ios')
+    .eq('enabled', true)
+    .limit(1);
   if (error) throw new Error(error.message);
-  return Boolean(data?.notifications_enabled);
+  return hasEnabledPushDevice(data);
 }
 
 export async function setNotificationPreference(supabase: SupabaseClient, profileId: string, enabled: boolean) {
-  const { error } = await supabase.from('profiles').update({ notifications_enabled: enabled }).eq('id', profileId);
+  if (enabled) return;
+  const { error } = await supabase.from('push_devices').update({ enabled: false }).eq('profile_id', profileId);
   if (error) throw new Error(error.message);
-  if (!enabled) {
-    const { error: deviceError } = await supabase.from('push_devices').update({ enabled: false }).eq('profile_id', profileId);
-    if (deviceError) throw new Error(deviceError.message);
-  }
 }
 
 export async function disablePushDevicesForProfile(supabase: SupabaseClient, profileId: string) {

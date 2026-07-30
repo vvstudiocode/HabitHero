@@ -4,6 +4,10 @@ export type NotificationPermission = 'granted' | 'denied' | 'prompt' | 'unsuppor
 export type NotificationPlatform = 'ios' | 'web' | 'unsupported';
 export type NotificationRecipientRole = 'parent' | 'child';
 
+export function hasEnabledPushDevice(devices: Array<{ enabled?: boolean | null }> | null | undefined) {
+  return devices?.some(device => device.enabled === true) ?? false;
+}
+
 export function shouldRegisterPushNotifications(input: {
   enabled: boolean;
   permission: NotificationPermission;
