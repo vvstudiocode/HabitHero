@@ -42,6 +42,23 @@ const patchTask = (
   })),
 });
 
+const archiveCompletedGeneralGroup = (previous: AppState, taskId: string): AppState => {
+  const target = previous.children.flatMap((child) => child.tasks).find((task) => task.id === taskId);
+  if (!target?.adventureGroupId || target.adventureType !== 'general' || target.status !== 'completed') return previous;
+
+  const groupTasks = previous.children
+    .flatMap((child) => child.tasks)
+    .filter((task) => task.adventureGroupId === target.adventureGroupId);
+  if (groupTasks.length === 0 || groupTasks.some((task) => task.status !== 'completed')) return previous;
+
+  return {
+    ...previous,
+    adventureGroups: (previous.adventureGroups ?? []).map((group) => group.id === target.adventureGroupId
+      ? { ...group, status: 'archived', archivedAt: new Date().toISOString() }
+      : group),
+  };
+};
+
 const patchSchedule = (
   schedule: TaskSchedule,
   updates: AdventureScheduleUpdateInput,
@@ -199,7 +216,7 @@ export function createAdventureStoreActions({
         (repository) => repository.reviewAdventureCompletion(taskId, review),
         (previous) => {
           const reviewedAt = new Date().toISOString();
-          return {
+          const reviewed: AppState = {
             ...previous,
             children: previous.children.map((child) => {
               const target = child.tasks.find((task) => task.id === taskId);
@@ -221,6 +238,7 @@ export function createAdventureStoreActions({
               };
             }),
           };
+          return archiveCompletedGeneralGroup(reviewed, taskId);
         },
       ),
 
@@ -388,17 +406,6 @@ export function createAdventureStoreActions({
               }],
           };
         },
-      ),
-
-    archiveAdventureGroup: (groupId: string) =>
-      mutate(
-        (repository) => repository.archiveAdventureGroup(groupId),
-        (previous) => ({
-          ...previous,
-          adventureGroups: (previous.adventureGroups ?? []).map((group) => group.id === groupId
-            ? { ...group, status: 'archived', archivedAt: new Date().toISOString() }
-            : group),
-        }),
       ),
 
     startAdventureTimer: (taskId: string) =>

@@ -34,7 +34,7 @@ interface ChildDashboardProps {
   onSwitchChild: () => void;
 }
 
-type ChildTab = 'goals' | 'growth' | 'wishlist' | 'history';
+type ChildTab = 'goals' | 'growth' | 'wishlist';
 type ChildMenuGroup = ChildTab | 'backpack';
 const HERO_MENU_EXIT_MS = 1200;
 
@@ -422,8 +422,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     backpack: [
       { id: 'goals', title: '今日目標', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
       { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
-      { id: 'wishlist', title: '許願', icon: <Plus size={17} />, hasNotification: childMenuNotifications.wishlist, onSelect: () => openChildFeature('wishlist') },
-      { id: 'history', title: '兌換', icon: <History size={17} />, hasNotification: childMenuNotifications.rewards, onSelect: () => openChildFeature('history') },
+      { id: 'wishlist', title: '獎勵', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
       { id: 'switch-child', title: '切換視角', icon: <User size={17} />, onSelect: onSwitchChild },
       { id: 'settings', title: '設定', icon: <Settings size={17} />, onSelect: () => setShowNotificationSettings(true) },
       { id: 'logout', title: '登出', icon: <LogOut size={17} />, onSelect: onLogout },
@@ -431,7 +430,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     goals: [],
     growth: [],
     wishlist: [],
-    history: [],
   };
 
   const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
@@ -546,8 +544,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       >
         {heroFeature && (
           <div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">
-            <button type="button" onClick={closeChildFeature} aria-label="關閉功能頁面" className="hh-character-icon-button">
-              <X size={18} />
+            <button type="button" onClick={closeChildFeature} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
+              <X size={20} />
             </button>
           </div>
         )}
@@ -561,7 +559,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         <nav
           aria-label="選單分頁"
           className="hh-bottom-nav hh-bottom-nav--child"
-          style={{ '--active-index': ['goals', 'growth', 'wishlist', 'history'].indexOf(activeTab), '--item-count': 4 } as React.CSSProperties}
+          style={{ '--active-index': ['goals', 'growth', 'wishlist'].indexOf(activeTab), '--item-count': 3 } as React.CSSProperties}
         >
           <button
             type="button"
@@ -594,17 +592,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               activeTab === 'wishlist' && "is-active"
             )}
           >
-            許願
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('history')}
-            className={cn(
-              "hh-bottom-nav-button",
-              activeTab === 'history' && "is-active"
-            )}
-          >
-            兌換
+            獎勵
           </button>
         </nav>
 
@@ -850,37 +838,35 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 );
               })}
             </div>
-          </div>
-        )}
 
-        {activeTab === 'history' && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-bold text-gray-900 px-2 flex items-center gap-2">
-              <History size={20} className="text-purple-500" />
-              我的兌換紀錄
-            </h2>
-            {tickets.length === 0 ? (
-              <div className="bg-white p-8 rounded-3xl text-center border border-gray-100">
-                <Gift size={48} className="mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">還沒有兌換過獎勵喔</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {[...tickets].reverse().map(ticket => (
-                  <div key={ticket.id} className={cn("p-4 rounded-2xl border flex flex-col gap-2", ticket.status === 'fulfilled' ? "bg-gray-50 border-gray-200 opacity-70" : "bg-purple-50 border-purple-200")}>
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-gray-800 text-lg">{ticket.rewardName}</div>
-                      <div className={cn("px-3 py-1 rounded-full text-xs font-bold", ticket.status === 'fulfilled' ? "bg-gray-200 text-gray-600" : "bg-purple-200 text-purple-700")}>
-                        {ticket.status === 'fulfilled' ? '已使用' : '等待兌現'}
+            <section className="space-y-4" aria-labelledby="child-redemption-history-title">
+              <h2 id="child-redemption-history-title" className="flex items-center gap-2 px-2 text-lg font-bold text-gray-900">
+                <History size={20} className="text-purple-500" />
+                我的兌換紀錄
+              </h2>
+              {tickets.length === 0 ? (
+                <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center">
+                  <Gift size={48} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500">還沒有兌換過獎勵喔</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {[...tickets].reverse().map(ticket => (
+                    <div key={ticket.id} className={cn("flex flex-col gap-2 rounded-2xl border p-4", ticket.status === 'fulfilled' ? "border-gray-200 bg-gray-50 opacity-70" : "border-purple-200 bg-purple-50")}>
+                      <div className="flex items-center justify-between">
+                        <div className="text-lg font-bold text-gray-800">{ticket.rewardName}</div>
+                        <div className={cn("rounded-full px-3 py-1 text-xs font-bold", ticket.status === 'fulfilled' ? "bg-gray-200 text-gray-600" : "bg-purple-200 text-purple-700")}>
+                          {ticket.status === 'fulfilled' ? '已使用' : '等待兌現'}
+                        </div>
+                      </div>
+                      <div className="text-xs font-medium text-gray-400">
+                        {new Date(ticket.createdAt).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="text-xs text-gray-400 font-medium">
-                      {new Date(ticket.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         )}
       </main>

@@ -109,6 +109,19 @@ test('group archiving rejects unfinished adventures instead of silently losing t
   assert.match(sql, /unfinished adventures must be moved or cancelled before archiving/i);
 });
 
+test('completed general adventure groups are archived by the completion transaction', () => {
+  const migration = readFileSync(
+    new URL('../supabase/migrations/20260731170000_auto_archive_completed_general_adventures.sql', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(migration, /after update of status on public\.tasks/i);
+  assert.match(migration, /new\.adventure_type = 'general'/i);
+  assert.match(migration, /new\.status = 'completed'/i);
+  assert.match(migration, /not exists \([\s\S]*task\.status <> 'completed'/i);
+  assert.match(migration, /set status = 'archived'/i);
+});
+
 test('adventure tables and definer RPCs have explicit authorization boundaries', () => {
   const sql = readAdventureMigration();
 

@@ -374,7 +374,6 @@ export interface DataRepository {
   disableAdventureSchedule(scheduleId: string): Promise<void>;
   createGeneralAdventure(familyId: string, input: GeneralAdventureInput): Promise<string[]>;
   updateGeneralAdventureTitle(familyId: string, childProfileId: string, title: string): Promise<AdventureGroup | null>;
-  archiveAdventureGroup(groupId: string): Promise<void>;
   startAdventureTimer(taskId: string): Promise<TaskTimerSession | null>;
   pauseAdventureTimer(taskId: string): Promise<TaskTimerSession | null>;
   resumeAdventureTimer(taskId: string): Promise<TaskTimerSession | null>;
@@ -608,9 +607,6 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         new_title: title,
       })) as AdventureGroupRow | null;
       return result ? adventureGroupRowToViewModel(result) : null;
-    },
-    async archiveAdventureGroup(groupId) {
-      check(await client.rpc('archive_adventure_group', { target_group_id: groupId }));
     },
     async startAdventureTimer(taskId) {
       const result = check(await client.rpc('start_adventure_timer', { target_task_id: taskId })) as TaskTimerSessionRow | null;

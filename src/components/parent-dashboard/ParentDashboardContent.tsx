@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export type ParentDashboardTab = 'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist';
 
 interface ParentDashboardContentProps {
   heroFeature: ParentDashboardTab | null;
-  featureTitle?: string;
   onCloseFeature: () => void;
+  onBackFeature?: () => void;
   isOffline: boolean;
   error: string | null;
   loading: boolean;
@@ -17,8 +17,8 @@ interface ParentDashboardContentProps {
 
 export function ParentDashboardContent({
   heroFeature,
-  featureTitle,
   onCloseFeature,
+  onBackFeature,
   isOffline,
   error,
   loading,
@@ -37,10 +37,15 @@ export function ParentDashboardContent({
     >
       {heroFeature && (
         <div className="hh-parent-content-modal-bar">
-          <strong>{featureTitle}</strong>
-          <button type="button" onClick={onCloseFeature} aria-label="關閉功能頁面" className="hh-character-icon-button">
-            <X size={18} />
-          </button>
+          {heroFeature === 'wishlist' ? (
+            <button type="button" onClick={onBackFeature ?? onCloseFeature} aria-label="返回獎勵頁面" title="返回" className="hh-character-icon-button">
+              <ArrowLeft size={20} />
+            </button>
+          ) : (
+            <button type="button" onClick={onCloseFeature} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button ml-auto">
+              <X size={20} />
+            </button>
+          )}
         </div>
       )}
       {isOffline && (

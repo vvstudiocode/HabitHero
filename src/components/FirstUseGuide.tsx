@@ -72,7 +72,7 @@ const guideSteps: GuideStep[] = [
     target: 'rewards-menu',
     eyebrow: '第 9 步／設定孩子想要的目標',
     title: '開啟獎勵選單',
-    description: '從家長首頁的「獎勵」選單查看待兌換項目、獎勵清單，或新增孩子期待的獎勵並設定點數。',
+    description: '從家長首頁的「獎勵」選單進入獎勵中心，查看獎勵清單、兌換紀錄，也能在頁面上方查看孩子的許願。',
     icon: Gift,
   },
   {
@@ -81,13 +81,6 @@ const guideSteps: GuideStep[] = [
     title: '開啟成長選單',
     description: '從家長首頁的「成長」選單查看成長紀錄與完成任務，幫助你看見孩子持續努力的進步。',
     icon: Sparkles,
-  },
-  {
-    target: 'wishlist-menu',
-    eyebrow: '第 11 步／回應孩子的期待',
-    title: '開啟許願選單',
-    description: '從家長首頁的「許願」選單查看孩子提出的願望，設定點數後就能把願望加入獎勵清單。',
-    icon: Gift,
   },
 ];
 
@@ -166,7 +159,6 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
       'review-menu',
       'rewards-menu',
       'growth-menu',
-      'wishlist-menu',
     ].includes(step.target) ? 240 : 0;
     const settleTimer = settleDelay > 0
       ? window.setTimeout(() => {

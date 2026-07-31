@@ -80,7 +80,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     updateGeneralAdventureTitle: (childId: string, title: string) => Promise<void>;
     batchReviewDailyAdventures: (taskIds: string[]) => Promise<{ failedTaskIds: string[] }>;
     disableAdventureSchedule: (scheduleId: string) => Promise<void>;
-    archiveAdventureGroup: (groupId: string) => Promise<void>;
   };
   const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
   const [activeTab, setActiveTab] = useState<ParentTab>('review');
@@ -751,14 +750,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     { id: 'review', title: '審核', tour: 'review-menu', icon: <Eye size={17} />, hasNotification: parentMenuNotifications.review, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('review') },
     { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
     { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
-    { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('rewards') },
-    { id: 'wishlist', title: '許願', tour: 'wishlist-menu', icon: <Plus size={17} />, hasNotification: parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('wishlist') },
+    { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards || parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('rewards') },
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
     review: [
       { id: 'review-goals', title: '審核項目', icon: <Eye size={17} />, onSelect: () => openHeroFeature('review') },
-      { id: 'review-tickets', title: '待兌換獎勵', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
     ],
     tasks: [
       { id: 'task-form', title: '冒險管理', tour: 'add-task-menu', icon: <CalendarDays size={17} />, onSelect: () => openHeroFeature('tasks') },
@@ -766,10 +763,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       { id: 'add-general-adventure', title: '一般冒險', icon: <Plus size={17} />, onSelect: () => openAdventureForm('general') },
     ],
     growth: [],
-    rewards: [
-      { id: 'reward-list', title: '獎勵清單', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
-      { id: 'add-reward', title: '新增獎勵', icon: <Plus size={17} />, onSelect: () => openHeroForm('rewards', () => openRewardForm()) },
-    ],
+    rewards: [],
     wishlist: [],
   };
 
@@ -811,8 +805,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
       <ParentDashboardContent
         heroFeature={heroFeature}
-        featureTitle={heroMenuActions.find((action) => action.id === heroFeature)?.title}
         onCloseFeature={closeHeroFeature}
+        onBackFeature={() => openHeroFeature('rewards')}
         isOffline={isOffline}
         error={error}
         loading={loading}
@@ -834,7 +828,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             children={state.children.map(child => ({ id: child.id, name: child.name }))}
             tasks={calendarTasks}
             schedules={state.taskSchedules ?? []}
-            groups={state.adventureGroups ?? []}
             generalTitle={generalAdventureTitle}
             activeFrom={todayDateKey}
             loading={loading || mutationPending}
@@ -845,7 +838,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             onBatchReviewDaily={appStore.batchReviewDailyAdventures}
             onUpdateSchedule={appStore.updateAdventureSchedule}
             onDisableSchedule={appStore.disableAdventureSchedule}
-            onArchiveGroup={appStore.archiveAdventureGroup}
             onEditTask={task => openTaskForm(calendarTaskGroup(task))}
             onDeleteTask={task => setTaskToDelete(calendarTaskGroup(task))}
             requestedForm={adventureFormRequest}
@@ -967,31 +959,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
         {activeTab === 'rewards' && (
           <div className="space-y-6">
-            {/* Pending Tickets */}
-            {pendingTickets.length > 0 && (
-              <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Gift size={20} className="text-purple-500" />
-                  待兌現獎勵 ({pendingTickets.length})
-                </h2>
-                <div className="space-y-3">
-                  {pendingTickets.map(ticket => (
-                    <div key={ticket.id} className="bg-purple-50 p-4 rounded-2xl shadow-sm border border-purple-100 flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="bg-purple-200 text-purple-800 text-xs px-2 py-0.5 rounded font-bold">{ticket.childName}</span>
-                        </div>
-                        <div className="font-medium text-purple-900">{ticket.rewardName}</div>
-                        <div className="text-purple-600 text-xs mt-1">等待家長實現</div>
-                      </div>
-                      <button onClick={() => void fulfillTicket(ticket.childId, ticket.id)} disabled={loading} className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:cursor-wait disabled:opacity-50">
-                        已兌現
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => openHeroFeature('wishlist')}
+                className="min-h-11 rounded-xl bg-yellow-100 px-4 text-sm font-bold text-yellow-800 transition-colors hover:bg-yellow-200"
+              >
+                <Star size={16} className="mr-1 inline-block" />
+                許願
+              </button>
+            </div>
 
             {/* Rewards */}
             <section>
@@ -1029,6 +1006,41 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   </div>
                 ))}
               </div>
+            </section>
+
+            {/* Redemption History */}
+            <section>
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-gray-900">
+                <Gift size={20} className="text-purple-500" />
+                兌換紀錄 ({allTickets.length})
+              </h2>
+              {allTickets.length === 0 ? (
+                <EmptyState className="rounded-2xl bg-white">目前還沒有兌換紀錄</EmptyState>
+              ) : (
+                <div className="space-y-3">
+                  {allTickets.map(ticket => {
+                    const isPending = ticket.status === 'pending';
+                    const createdDate = new Date(ticket.createdAt).toLocaleDateString('zh-TW');
+                    return (
+                      <div key={ticket.id} className={`flex items-center justify-between gap-3 rounded-2xl border p-4 shadow-sm ${isPending ? 'border-purple-100 bg-purple-50' : 'border-gray-100 bg-white'}`}>
+                        <div className="min-w-0">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-800">{ticket.childName}</span>
+                            <span className={`text-xs font-bold ${isPending ? 'text-purple-700' : 'text-green-700'}`}>{isPending ? '待兌現' : '已兌現'}</span>
+                          </div>
+                          <div className="break-words font-medium text-gray-900">{ticket.rewardName}</div>
+                          <div className="mt-1 text-xs text-gray-500">{ticket.pointsCost} pt · {createdDate}</div>
+                        </div>
+                        {isPending && (
+                          <button onClick={() => void fulfillTicket(ticket.childId, ticket.id)} disabled={loading} className="shrink-0 rounded-xl bg-purple-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-purple-600 disabled:cursor-wait disabled:opacity-50">
+                            已兌現
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </div>
         )}

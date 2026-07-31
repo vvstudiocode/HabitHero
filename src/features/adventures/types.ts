@@ -43,7 +43,5 @@ export const ADVENTURE_ACTIVE_STATUSES: readonly GrowthTaskStatus[] = [
   'proposed',
   'proposal_revision_requested',
   'todo',
-  'pending',
   'revision_requested',
-  'completed',
 ];

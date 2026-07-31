@@ -70,6 +70,16 @@ test('daily and general adventures are split without carrying a dated daily occu
   assert.deepEqual(groups.general.map(({ id }) => id), ['general']);
 });
 
+test('submitted and approved adventures leave the child dashboard task list', () => {
+  const groups = splitAdventureTasks([
+    task('available', 'todo'),
+    task('submitted', 'pending'),
+    task('approved', 'completed'),
+  ], '2026-07-31');
+
+  assert.deepEqual(groups.general.map(({ id }) => id), ['available']);
+});
+
 test('adventures use only the adventure board completion entry, not the legacy goal list', () => {
   assert.equal(isLegacyGrowthTask(task('general', 'todo')), false);
   assert.equal(isLegacyGrowthTask(task('daily', 'todo', { adventureType: 'daily', isDaily: true })), false);

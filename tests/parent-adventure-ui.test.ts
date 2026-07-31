@@ -227,32 +227,24 @@ test('adventure workspace toolbar uses consistent plain buttons', () => {
   assert.doesNotMatch(workspace, /bg-blue-500 px-3 text-sm font-bold text-white/);
 });
 
-test('parent workspace manages schedules and prevents unsafe group archiving', () => {
+test('parent workspace manages schedules without manual group archiving', () => {
   const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
 
   assert.match(workspace, /每日冒險排程/);
   assert.match(workspace, /刪除排程/);
   assert.match(workspace, /刪除只會停止未來產生的每日冒險/);
   assert.match(workspace, /onUpdateSchedule/);
-  assert.match(workspace, /尚有未完成冒險/);
-  assert.match(workspace, /onArchiveGroup/);
+  assert.doesNotMatch(workspace, /尚有未完成冒險/);
+  assert.doesNotMatch(workspace, /onArchiveGroup/);
 });
 
-test('archived general adventure groups stay discoverable and can reveal their history', () => {
+test('completed general adventure groups are archived automatically', () => {
   const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
 
-  assert.match(workspace, /const \[showArchivedGroups, setShowArchivedGroups\] = useState\(false\)/);
-  assert.match(workspace, /const activeGroups = groups\.filter\(group => group\.status === 'active'\)/);
-  assert.match(workspace, /const archivedGroups = groups\.filter\(group => group\.status === 'archived'\)/);
-  assert.match(workspace, /await onArchiveGroup\(group\.id\);[\s\S]*?setShowArchivedGroups\(true\)/);
-  assert.match(workspace, /封存後不會刪除集合或完成紀錄/);
-  assert.match(workspace, /已封存（\{archivedGroups\.length\}）/);
-  assert.match(workspace, /open=\{showArchivedGroups\}/);
-  assert.match(workspace, /archivedGroups\.map\(group =>/);
-  assert.match(workspace, /groupTasks\.map\(task =>/);
-  assert.match(workspace, /目前沒有封存的集合/);
-  assert.match(workspace, /目前沒有使用中的一般冒險集合/);
-  assert.doesNotMatch(workspace, /\{groups\.some\(group => group\.status === 'active'\) && \(/);
+  assert.doesNotMatch(workspace, /一般冒險集合/);
+  assert.doesNotMatch(workspace, /封存集合/);
+  assert.doesNotMatch(workspace, /archivedGroups/);
+  assert.doesNotMatch(workspace, /onArchiveGroup/);
 });
 
 test('schedule editing requires an explicit safe update scope', () => {

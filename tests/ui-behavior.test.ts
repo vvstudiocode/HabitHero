@@ -223,16 +223,17 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(dashboard, /id: 'tasks', title: '任務',[\s\S]*tour: 'tasks-menu'/);
   assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*tour: 'growth-menu'/);
   assert.match(dashboard, /id: 'rewards', title: '獎勵',[\s\S]*tour: 'rewards-menu'/);
-  assert.match(dashboard, /id: 'wishlist', title: '許願',[\s\S]*tour: 'wishlist-menu'/);
+  assert.doesNotMatch(dashboard, /id: 'wishlist', title: '許願',[\s\S]*tour: 'wishlist-menu'/);
   assert.match(dashboard, /id: 'task-form', title: '冒險管理',[\s\S]*tour: 'add-task-menu'/);
   assert.match(dashboard, /openAdventureForm\('daily'\)/);
   assert.match(dashboard, /openAdventureForm\('general'\)/);
   assert.match(dashboard, /showNewChildForm/);
   assert.match(guide, /target: 'add-child'/);
   assert.match(guide, /target: 'growth-menu'/);
-  assert.match(guide, /target: 'wishlist-menu'/);
+  assert.doesNotMatch(guide, /target: 'wishlist-menu'/);
+  assert.match(guide, /獎勵中心/);
   assert.match(guide, /step\.target === 'add-child'/);
-  assert.match(guide, /'add-child-trigger',[\s\S]*'add-task-menu',[\s\S]*'wishlist-menu',[\s\S]*\.includes\(step\.target\) \? 240/);
+  assert.match(guide, /'add-child-trigger',[\s\S]*'add-task-menu',[\s\S]*'growth-menu',[\s\S]*\.includes\(step\.target\) \? 240/);
   assert.match(guide, /getComputedStyle\(target\)\.position !== 'fixed'/);
   assert.match(dashboard, /FirstUseGuide/);
   assert.match(dashboard, /重新觀看新手指引/);
@@ -242,6 +243,7 @@ test('first-use guide covers the complete parent and child workflow', () => {
 
 test('parent hero menu avoids duplicate destinations', () => {
   const dashboard = read('../src/components/ParentDashboard.tsx');
+  const dashboardContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
 
   assert.match(dashboard, /id: 'review-goals', title: '審核項目'/);
   assert.doesNotMatch(dashboard, /id: 'review-completions'/);
@@ -253,7 +255,14 @@ test('parent hero menu avoids duplicate destinations', () => {
   assert.doesNotMatch(dashboard, /id: 'add-template'|id: 'back', title: '返回'/);
   assert.doesNotMatch(dashboard, /id: 'today-tasks'|id: 'task-templates'/);
   assert.doesNotMatch(dashboard, /id: 'pending-rewards'/);
-  assert.match(dashboard, /id: 'reward-list', title: '獎勵清單'/);
+  assert.match(dashboard, /id: 'rewards', title: '獎勵',[\s\S]*openHeroFeature\('rewards'\)/);
+  assert.doesNotMatch(dashboard, /id: 'wishlist', title: '許願'/);
+  assert.doesNotMatch(dashboard, /id: 'review-tickets'/);
+  assert.match(dashboard, /兌換紀錄/);
+  assert.match(dashboard, /openHeroFeature\('wishlist'\)/);
+  assert.match(dashboardContent, /heroFeature === 'wishlist'/);
+  assert.match(dashboardContent, /onBackFeature/);
+  assert.match(dashboard, /onBackFeature=\{\(\) => openHeroFeature\('rewards'\)\}/);
 });
 
 test('child growth menu opens the growth feature directly', () => {
@@ -265,8 +274,9 @@ test('child growth menu opens the growth feature directly', () => {
   assert.match(hero, /const hasMenu = rootActions\.length > 0 \|\| subActions\.length > 0/);
   assert.match(dashboard, /toggleHeroMenuGroup\('backpack'\)/);
   assert.match(dashboard, /<Backpack size=\{18\}/);
-  assert.match(dashboard, /id: 'wishlist', title: '許願'/);
-  assert.match(dashboard, /id: 'history', title: '兌換'/);
+  assert.match(dashboard, /id: 'wishlist', title: '獎勵'/);
+  assert.doesNotMatch(dashboard, /id: 'history'/);
+  assert.match(dashboard, /child-redemption-history-title/);
   assert.match(dashboard, /id: 'switch-child', title: '切換視角'/);
   assert.match(dashboard, /id: 'logout', title: '登出'/);
 });

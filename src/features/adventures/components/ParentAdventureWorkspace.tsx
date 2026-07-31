@@ -4,7 +4,7 @@ import { ParentDashboardFormModal } from '../../../components/parent-dashboard/P
 import { ModalShell } from '../../../components/shared/ParentDashboardUI';
 import type { AdventureScheduleUpdateInput } from '../../../lib/adventure-data-access';
 import { dismissWithAnimation } from '../../../lib/utils';
-import type { AdventureGroup, TaskSchedule } from '../../../types';
+import type { TaskSchedule } from '../../../types';
 import type { TaskCategory } from '../../growth/types';
 import { ParentAdventureCalendar, type ParentCalendarAdventureTask } from './ParentAdventureCalendar';
 import { ParentAdventureScheduleForm, type ParentAdventureScheduleInput } from './ParentAdventureScheduleForm';
@@ -47,7 +47,6 @@ interface ParentAdventureWorkspaceProps {
   children: { id: string; name: string }[];
   tasks: ParentCalendarAdventureTask[];
   schedules: TaskSchedule[];
-  groups: AdventureGroup[];
   generalTitle: string;
   activeFrom: string;
   loading?: boolean;
@@ -61,7 +60,6 @@ interface ParentAdventureWorkspaceProps {
   onDeleteTask: (task: ParentCalendarAdventureTask) => void;
   onUpdateSchedule: (scheduleId: string, updates: AdventureScheduleUpdateInput) => Promise<void>;
   onDisableSchedule: (scheduleId: string) => Promise<void>;
-  onArchiveGroup: (groupId: string) => Promise<void>;
   requestedForm?: { type: 'daily' | 'general'; requestId: number } | null;
 }
 
@@ -73,7 +71,6 @@ export function ParentAdventureWorkspace({
   children,
   tasks,
   schedules,
-  groups,
   generalTitle,
   activeFrom,
   loading = false,
@@ -87,7 +84,6 @@ export function ParentAdventureWorkspace({
   onDeleteTask,
   onUpdateSchedule,
   onDisableSchedule,
-  onArchiveGroup,
   requestedForm,
 }: ParentAdventureWorkspaceProps) {
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
@@ -97,11 +93,6 @@ export function ParentAdventureWorkspace({
   const [scheduleToDisable, setScheduleToDisable] = useState<TaskSchedule | null>(null);
   const [scheduleToEdit, setScheduleToEdit] = useState<TaskSchedule | null>(null);
   const [managementBusyId, setManagementBusyId] = useState<string | null>(null);
-  const [managementError, setManagementError] = useState<string | null>(null);
-  const [showArchivedGroups, setShowArchivedGroups] = useState(false);
-
-  const activeGroups = groups.filter(group => group.status === 'active');
-  const archivedGroups = groups.filter(group => group.status === 'archived');
 
   const openForm = (next: 'daily' | 'general') => {
     setFormError(null);
@@ -220,30 +211,11 @@ export function ParentAdventureWorkspace({
   const disableSchedule = async () => {
     if (!scheduleToDisable) return;
     setManagementBusyId(scheduleToDisable.id);
-    setManagementError(null);
     try {
       await onDisableSchedule(scheduleToDisable.id);
       setScheduleToDisable(null);
     } catch (caught) {
-      setManagementError(toErrorMessage(caught, '刪除排程失敗，請稍後再試。'));
-    } finally {
-      setManagementBusyId(null);
-    }
-  };
-
-  const archiveGroup = async (group: AdventureGroup) => {
-    const hasUnfinished = tasks.some(task => task.adventureGroupId === group.id && task.status !== 'completed');
-    if (hasUnfinished) {
-      setManagementError('尚有未完成冒險；請先完成、移動或取消，不能直接封存。');
-      return;
-    }
-    setManagementBusyId(group.id);
-    setManagementError(null);
-    try {
-      await onArchiveGroup(group.id);
-      setShowArchivedGroups(true);
-    } catch (caught) {
-      setManagementError(toErrorMessage(caught, '封存失敗；若仍有未完成冒險，請先處理後再試。'));
+      setFormError(toErrorMessage(caught, '刪除排程失敗，請稍後再試。'));
     } finally {
       setManagementBusyId(null);
     }
@@ -295,8 +267,8 @@ export function ParentAdventureWorkspace({
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <button type="button" disabled={managementBusyId === schedule.id} className="min-h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-blue-700 disabled:opacity-50" onClick={() => { setFormError(null); setScheduleToEdit(schedule); setForm('daily'); }}>編輯</button>
-                      <button type="button" disabled={managementBusyId === schedule.id} className="min-h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-700 disabled:opacity-50" onClick={() => setScheduleToDisable(schedule)}>刪除排程</button>
+                      <button type="button" className="min-h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-blue-700" onClick={() => { setFormError(null); setScheduleToEdit(schedule); setForm('daily'); }}>編輯</button>
+                      <button type="button" className="min-h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-700" onClick={() => setScheduleToDisable(schedule)}>刪除排程</button>
                     </div>
                   </div>
                 ))}
@@ -304,67 +276,6 @@ export function ParentAdventureWorkspace({
               </div>
             </section>
 
-            <section aria-labelledby="general-groups-title" className="rounded-2xl border border-gray-200 bg-white p-4">
-              <h3 id="general-groups-title" className="font-black text-gray-900">一般冒險集合</h3>
-              <p className="mt-1 text-sm leading-5 text-gray-500">封存後不會刪除集合或完成紀錄，而是移到下方「已封存」清單；尚有未完成冒險時不能封存。</p>
-
-              <div className="mt-4 space-y-2">
-                {activeGroups.map(group => {
-                  const hasUnfinished = tasks.some(task => task.adventureGroupId === group.id && task.status !== 'completed');
-                  return (
-                    <div key={group.id} className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 p-3">
-                      <div>
-                        <strong className="block text-gray-900">{group.title}</strong>
-                        <span className="text-xs text-gray-500">{children.find(child => child.id === group.childProfileId)?.name ?? '小孩'}{hasUnfinished ? ' · 尚有未完成冒險' : ' · 可以安全封存'}</span>
-                      </div>
-                      <button type="button" disabled={hasUnfinished || managementBusyId === group.id} className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void archiveGroup(group)}>{managementBusyId === group.id ? '封存中…' : '封存集合'}</button>
-                    </div>
-                  );
-                })}
-                {activeGroups.length === 0 && (
-                  <p className="rounded-xl bg-gray-50 p-3 text-sm leading-5 text-gray-500">目前沒有使用中的一般冒險集合。新增一般冒險時，系統會建立新的集合。</p>
-                )}
-              </div>
-
-              <details
-                className="mt-4 border-t border-gray-200 pt-2"
-                open={showArchivedGroups}
-                onToggle={event => setShowArchivedGroups(event.currentTarget.open)}
-              >
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 py-2 font-bold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
-                  <span>已封存（{archivedGroups.length}）</span>
-                  <span className="text-xs font-medium text-gray-500">{showArchivedGroups ? '收合' : '展開查看'}</span>
-                </summary>
-                <div className="mt-2 space-y-2">
-                  {archivedGroups.map(group => {
-                    const groupTasks = tasks.filter(task => task.adventureGroupId === group.id);
-                    return (
-                      <details key={group.id} className="rounded-xl bg-gray-50">
-                        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
-                          <span className="min-w-0">
-                            <strong className="block break-words text-gray-900">{group.title}</strong>
-                            <span className="text-xs text-gray-500">{children.find(child => child.id === group.childProfileId)?.name ?? '小孩'} · 已封存</span>
-                          </span>
-                          <span className="shrink-0 text-xs font-medium text-gray-500">{groupTasks.length} 個冒險</span>
-                        </summary>
-                        <div className="space-y-2 border-t border-gray-200 px-3 py-3">
-                          {groupTasks.map(task => (
-                            <div key={task.id} className="rounded-lg bg-white px-3 py-2">
-                              <strong className="block break-words text-sm text-gray-900">{task.name}</strong>
-                              <span className="text-xs text-gray-500">{task.status === 'completed' ? '已完成' : '保留紀錄'}</span>
-                            </div>
-                          ))}
-                          {groupTasks.length === 0 && <p className="text-sm text-gray-500">此集合沒有可顯示的冒險紀錄。</p>}
-                        </div>
-                      </details>
-                    );
-                  })}
-                  {archivedGroups.length === 0 && <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-500">目前沒有封存的集合。</p>}
-                </div>
-              </details>
-            </section>
-
-            {managementError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{managementError}</p>}
           </>
         ) : legacyTaskList}
       </div>

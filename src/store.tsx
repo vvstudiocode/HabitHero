@@ -95,7 +95,6 @@ export interface AppContextType {
   disableAdventureSchedule: (scheduleId: string) => Promise<void>;
   createGeneralAdventure: (input: GeneralAdventureInput) => Promise<void>;
   updateGeneralAdventureTitle: (childId: string, title: string) => Promise<void>;
-  archiveAdventureGroup: (groupId: string) => Promise<void>;
   startAdventureTimer: (taskId: string) => Promise<void>;
   pauseAdventureTimer: (taskId: string) => Promise<void>;
   resumeAdventureTimer: (taskId: string) => Promise<void>;
