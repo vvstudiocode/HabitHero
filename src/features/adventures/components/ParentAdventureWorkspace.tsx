@@ -57,6 +57,8 @@ interface ParentAdventureWorkspaceProps {
   onCreateGeneral: (input: CreateGeneralAdventureInput) => Promise<void>;
   onUpdateGeneralTitle: (childId: string, title: string) => Promise<void>;
   onBatchReviewDaily: (taskIds: string[]) => Promise<{ failedTaskIds: string[] }>;
+  onEditTask: (task: ParentCalendarAdventureTask) => void;
+  onDeleteTask: (task: ParentCalendarAdventureTask) => void;
   onUpdateSchedule: (scheduleId: string, updates: AdventureScheduleUpdateInput) => Promise<void>;
   onDisableSchedule: (scheduleId: string) => Promise<void>;
   onArchiveGroup: (groupId: string) => Promise<void>;
@@ -81,6 +83,8 @@ export function ParentAdventureWorkspace({
   onCreateGeneral,
   onUpdateGeneralTitle,
   onBatchReviewDaily,
+  onEditTask,
+  onDeleteTask,
   onUpdateSchedule,
   onDisableSchedule,
   onArchiveGroup,
@@ -221,7 +225,7 @@ export function ParentAdventureWorkspace({
       await onDisableSchedule(scheduleToDisable.id);
       setScheduleToDisable(null);
     } catch (caught) {
-      setManagementError(toErrorMessage(caught, '停用排程失敗，請稍後再試。'));
+      setManagementError(toErrorMessage(caught, '刪除排程失敗，請稍後再試。'));
     } finally {
       setManagementBusyId(null);
     }
@@ -274,11 +278,13 @@ export function ParentAdventureWorkspace({
               onOpenTask={task => { if (task.status === 'pending') onOpenReview(); }}
               onReviewTask={onOpenReview}
               onBatchReviewDaily={onBatchReviewDaily}
+              onEditTask={onEditTask}
+              onDeleteTask={onDeleteTask}
             />
 
             <section aria-labelledby="daily-schedules-title" className="rounded-2xl border border-gray-200 bg-white p-4">
               <h3 id="daily-schedules-title" className="font-black text-gray-900">每日冒險排程</h3>
-              <p className="mt-1 text-sm text-gray-500">停用只影響尚未產生的未來冒險，過去紀錄與已送出的任務不會刪除。</p>
+              <p className="mt-1 text-sm text-gray-500">刪除只會停止未來產生的每日冒險，過去紀錄與已送出的任務不會刪除。</p>
               <div className="mt-4 space-y-2">
                 {schedules.filter(schedule => schedule.isActive).map(schedule => (
                   <div key={schedule.id} className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 p-3">
@@ -290,7 +296,7 @@ export function ParentAdventureWorkspace({
                     </div>
                     <div className="flex gap-2">
                       <button type="button" disabled={managementBusyId === schedule.id} className="min-h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-blue-700 disabled:opacity-50" onClick={() => { setFormError(null); setScheduleToEdit(schedule); setForm('daily'); }}>編輯</button>
-                      <button type="button" disabled={managementBusyId === schedule.id} className="min-h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-700 disabled:opacity-50" onClick={() => setScheduleToDisable(schedule)}>停用排程</button>
+                      <button type="button" disabled={managementBusyId === schedule.id} className="min-h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-700 disabled:opacity-50" onClick={() => setScheduleToDisable(schedule)}>刪除排程</button>
                     </div>
                   </div>
                 ))}
@@ -409,11 +415,11 @@ export function ParentAdventureWorkspace({
 
       {scheduleToDisable && renderAdventureOverlay(
         <ModalShell variant="center">
-          <h3 className="text-xl font-black text-gray-900">停用每日排程</h3>
-          <p className="mt-2 text-sm leading-6 text-gray-600">確定停用「{scheduleToDisable.name}」？停用只影響尚未產生的未來冒險，不會刪除過去紀錄，也不會更改等待審核或已完成的任務。</p>
+          <h3 className="text-xl font-black text-gray-900">刪除每日排程</h3>
+          <p className="mt-2 text-sm leading-6 text-gray-600">確定刪除「{scheduleToDisable.name}」排程？刪除只會停止未來產生的每日冒險，不會刪除過去紀錄、等待審核或已完成的任務與點數。</p>
           <div className="mt-6 flex gap-3">
             <button type="button" className="min-h-12 flex-1 rounded-xl bg-gray-100 px-4 font-bold text-gray-700" onClick={() => setScheduleToDisable(null)}>取消</button>
-            <button type="button" disabled={managementBusyId === scheduleToDisable.id} className="min-h-12 flex-1 rounded-xl bg-red-500 px-4 font-bold text-white disabled:cursor-wait disabled:opacity-50" onClick={() => void disableSchedule()}>{managementBusyId === scheduleToDisable.id ? '停用中…' : '確認停用'}</button>
+            <button type="button" disabled={managementBusyId === scheduleToDisable.id} className="min-h-12 flex-1 rounded-xl bg-red-500 px-4 font-bold text-white disabled:cursor-wait disabled:opacity-50" onClick={() => void disableSchedule()}>{managementBusyId === scheduleToDisable.id ? '刪除中…' : '確認刪除'}</button>
           </div>
         </ModalShell>
       )}

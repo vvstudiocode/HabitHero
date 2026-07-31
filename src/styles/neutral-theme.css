@@ -288,7 +288,7 @@ body,
 
 .hh-adventure-task-row.is-submitted .hh-adventure-task-state,
 .hh-adventure-task-row.is-completed .hh-adventure-task-state {
-  color: var(--hh-character-theme-color);
+  color: var(--hh-neutral-ink);
 }
 
 .hh-adventure-task-row.is-waiting .hh-adventure-task-state {

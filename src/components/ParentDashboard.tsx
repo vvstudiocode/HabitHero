@@ -132,6 +132,13 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     adventureType: task.adventureType ?? (task.isDaily ? 'daily' : 'general'),
     adventureGroupId: task.adventureGroupId,
     status: task.status,
+    points: task.points,
+    duration: task.duration,
+    dueTime: task.dueTime,
+    endTime: task.endTime,
+    category: task.category,
+    isDaily: task.isDaily,
+    requiresReviewBeforeNextTask: task.requiresReviewBeforeNextTask,
   }));
   const activeGeneralGroups = state.adventureGroups?.filter(group => group.status === 'active') ?? [];
   const generalAdventureTitle = activeGeneralGroups[0]?.title ?? '一般冒險';
@@ -530,6 +537,19 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     group.children.forEach(c => deleteTask(c.childId, c.taskId));
   };
 
+  const calendarTaskGroup = (task: ParentCalendarAdventureTask): GroupedTask & { isDaily?: boolean } => ({
+    id: task.id,
+    name: task.name,
+    points: task.points ?? 0,
+    duration: task.duration ?? undefined,
+    dueTime: task.dueTime,
+    endTime: task.endTime,
+    category: (task.category as TaskCategory | undefined) ?? DEFAULT_TASK_CATEGORY,
+    isDaily: task.isDaily ?? task.adventureType === 'daily',
+    requiresReviewBeforeNextTask: task.requiresReviewBeforeNextTask,
+    children: [{ childId: task.childId, childName: task.childName, taskId: task.id }],
+  });
+
   const openRewardForm = (group?: GroupedReward) => {
     setRewardFormError('');
     if (group) {
@@ -826,6 +846,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             onUpdateSchedule={appStore.updateAdventureSchedule}
             onDisableSchedule={appStore.disableAdventureSchedule}
             onArchiveGroup={appStore.archiveAdventureGroup}
+            onEditTask={task => openTaskForm(calendarTaskGroup(task))}
+            onDeleteTask={task => setTaskToDelete(calendarTaskGroup(task))}
             requestedForm={adventureFormRequest}
             legacyTaskList={(
               <>

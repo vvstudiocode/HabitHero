@@ -178,6 +178,24 @@ test('calendar exposes month navigation, date details and daily batch review', (
   assert.doesNotMatch(calendar, /查看每日與一般冒險的安排、完成及待審核狀態/);
 });
 
+test('calendar task rows expose edit and delete actions only for unfinished tasks', () => {
+  const calendar = read('../src/features/adventures/components/ParentAdventureCalendar.tsx');
+
+  assert.match(calendar, /onEditTask\?:/);
+  assert.match(calendar, /onDeleteTask\?:/);
+  assert.match(calendar, /const canManage = task\.status === 'todo' \|\| task\.status === 'revision_requested'/);
+  assert.match(calendar, />編輯<\/button>/);
+  assert.match(calendar, />刪除<\/button>/);
+});
+
+test('daily schedule management exposes a history-safe delete action', () => {
+  const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
+
+  assert.match(workspace, /過去紀錄與已送出的任務不會刪除/);
+  assert.match(workspace, />刪除排程<\/button>/);
+  assert.match(workspace, /刪除只會停止未來產生的每日冒險/);
+});
+
 test('parent dashboard routes adventure creation through dedicated components', () => {
   const dashboard = read('../src/components/ParentDashboard.tsx');
   const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
@@ -213,8 +231,8 @@ test('parent workspace manages schedules and prevents unsafe group archiving', (
   const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
 
   assert.match(workspace, /每日冒險排程/);
-  assert.match(workspace, /停用排程/);
-  assert.match(workspace, /停用只影響尚未產生的未來冒險/);
+  assert.match(workspace, /刪除排程/);
+  assert.match(workspace, /刪除只會停止未來產生的每日冒險/);
   assert.match(workspace, /onUpdateSchedule/);
   assert.match(workspace, /尚有未完成冒險/);
   assert.match(workspace, /onArchiveGroup/);

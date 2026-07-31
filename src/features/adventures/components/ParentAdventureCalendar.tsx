@@ -12,6 +12,13 @@ export interface ParentCalendarAdventureTask {
   adventureType: 'daily' | 'general';
   adventureGroupId?: string | null;
   status: ParentCalendarTaskStatus;
+  points?: number;
+  duration?: number | null;
+  dueTime?: string | null;
+  endTime?: string | null;
+  category?: string;
+  isDaily?: boolean;
+  requiresReviewBeforeNextTask?: boolean;
 }
 
 export interface AdventureCalendarDay {
@@ -29,6 +36,8 @@ interface ParentAdventureCalendarProps {
   onOpenTask?: (task: ParentCalendarAdventureTask) => void;
   onReviewTask?: (task: ParentCalendarAdventureTask) => Promise<void> | void;
   onBatchReviewDaily?: (taskIds: string[]) => Promise<{ failedTaskIds?: string[] } | void>;
+  onEditTask?: (task: ParentCalendarAdventureTask) => void;
+  onDeleteTask?: (task: ParentCalendarAdventureTask) => void;
 }
 
 const pad = (value: number) => String(value).padStart(2, '0');
@@ -84,6 +93,8 @@ export function ParentAdventureCalendar({
   onOpenTask,
   onReviewTask,
   onBatchReviewDaily,
+  onEditTask,
+  onDeleteTask,
 }: ParentAdventureCalendarProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [visibleMonth, setVisibleMonth] = useState(() => {
@@ -193,6 +204,7 @@ export function ParentAdventureCalendar({
                     const view = statusView[task.status];
                     const StatusIcon = view.icon;
                     const canBatch = task.adventureType === 'daily' && task.status === 'pending';
+                    const canManage = task.status === 'todo' || task.status === 'revision_requested';
                     const selected = selectedPendingIds.includes(task.id);
                     return (
                       <div key={task.id} className="flex min-h-12 items-center gap-3 rounded-xl bg-gray-50 p-3">
@@ -207,6 +219,12 @@ export function ParentAdventureCalendar({
                         </button>
                         {task.status === 'pending' && onReviewTask && (
                           <button type="button" disabled={reviewing} className="min-h-11 shrink-0 rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-blue-700 disabled:opacity-50" onClick={() => void onReviewTask(task)}>查看審核</button>
+                        )}
+                        {canManage && onEditTask && (
+                          <button type="button" className="min-h-11 shrink-0 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700" onClick={() => onEditTask(task)}>編輯</button>
+                        )}
+                        {canManage && onDeleteTask && (
+                          <button type="button" className="min-h-11 shrink-0 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-700" onClick={() => onDeleteTask(task)}>刪除</button>
                         )}
                       </div>
                     );

@@ -43,6 +43,12 @@ test('child adventure cards let the character scene show through', () => {
   assert.doesNotMatch(neutralTheme, /\.hh-character-icon-button,[\s\S]*?backdrop-filter:/);
 });
 
+test('completed adventure checks use the neutral black ink', () => {
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(neutralTheme, /\.hh-adventure-task-row\.is-submitted \.hh-adventure-task-state,[\s\S]*?\.hh-adventure-task-row\.is-completed \.hh-adventure-task-state\s*\{[\s\S]*?color:\s*var\(--hh-neutral-ink\)/);
+});
+
 test('shared hero allows persisted theme values to override catalog defaults', () => {
   const source = read('../src/components/DashboardCharacterHero.tsx');
   assert.match(source, /theme\?\.accentColor \?\?/);
