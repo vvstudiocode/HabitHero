@@ -67,7 +67,7 @@ export interface AppContextType {
     dueOn?: string | null;
     dueTime?: string | null;
     endTime?: string | null;
-  }) => Promise<void>;
+  }) => Promise<string>;
   confirmChildGoal: (taskId: string, confirmation: {
     name: string;
     points: number;
@@ -130,6 +130,22 @@ export function shouldBlockAppForDataLoad({ sessionLoading, dataLoading, hasSess
   if (hasSession && !dataReady) return true; // first load not finished
   if (dataLoading && !dataReady) return true; // still loading first time
   return false;
+}
+
+export function replaceOptimisticTaskId(
+  state: AppState,
+  childId: string,
+  localId: string,
+  taskId: string,
+): AppState {
+  if (!taskId) return state;
+  return {
+    ...state,
+    children: state.children.map((child) => child.id !== childId ? child : {
+      ...child,
+      tasks: child.tasks.map((task) => task.id === localId ? { ...task, id: taskId } : task),
+    }),
+  };
 }
 
 const emptyState: AppState = {
@@ -433,7 +449,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const localId = createLocalId();
       const now = new Date().toISOString();
       const taskId = await mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...goal, id: localId, icon: goal.icon, status: 'todo', origin: 'child_proposed', adventureType: 'general', completionReportMode: 'quick', duration: goal.duration ?? undefined, dueOn: goal.dueOn ?? null, createdAt: now, updatedAt: now, completedAt: null, confirmedAt: now } as Task] })));
+      setState((current) => {
+        const next = replaceOptimisticTaskId(current, childId, localId, taskId);
+        stateRef.current = next;
+        return next;
+      });
       void notifyTaskCreated(getSupabaseClient(), taskId).catch(() => undefined);
+      return taskId;
     },
     confirmChildGoal: (taskId: string, confirmation: Parameters<AppContextType['confirmChildGoal']>[1]) => mutate((repo) => repo.confirmChildGoal(taskId, confirmation), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...confirmation, confirmedAt: new Date().toISOString() }))),
     returnChildGoal: (taskId: string, revisionNote: string) => mutate((repo) => repo.returnChildGoal(taskId, revisionNote), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status: 'proposal_revision_requested', revisionNote }))),

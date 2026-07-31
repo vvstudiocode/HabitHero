@@ -560,6 +560,9 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         )) as { id?: string } | string | null;
         const id = typeof result === 'string' ? result : result?.id ?? '';
         if (id) ids.push(id);
+        check(await client.rpc('ensure_daily_adventure_occurrences', {
+          target_child_profile_id: childProfileId,
+        }));
       }
       return ids;
     },

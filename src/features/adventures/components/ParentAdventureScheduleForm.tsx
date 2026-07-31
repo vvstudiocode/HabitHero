@@ -15,7 +15,7 @@ export interface ParentAdventureScheduleInput {
   endTime: string;
   requiresTimer: boolean;
   durationMinutes: number | null;
-  requiresReview: boolean;
+  requiresReview?: boolean;
   points: number;
   editScope?: ScheduleEditScope;
 }
@@ -41,7 +41,7 @@ const WEEKDAYS = [
   { value: 7, label: '日' },
 ] as const;
 
-const fieldClass = 'min-h-12 w-full rounded-xl border border-gray-200 bg-white p-3 text-gray-900 outline-none focus:ring-2 focus:ring-blue-400';
+const fieldClass = 'hh-adventure-field min-h-12 w-full rounded-xl border p-3 outline-none';
 
 export function validateAdventureSchedule(input: ParentAdventureScheduleInput): string | null {
   if (!input.name.trim()) return '請輸入冒險名稱。';
@@ -69,7 +69,6 @@ export function ParentAdventureScheduleForm({
   const [endTime, setEndTime] = useState(initialValue?.endTime ?? '');
   const [requiresTimer, setRequiresTimer] = useState(initialValue?.requiresTimer ?? false);
   const [durationMinutes, setDurationMinutes] = useState<number | null>(initialValue?.durationMinutes ?? null);
-  const [requiresReview, setRequiresReview] = useState(initialValue?.requiresReview ?? true);
   const [points, setPoints] = useState(initialValue?.points ?? 5);
   const [editScope, setEditScope] = useState<ScheduleEditScope>(initialValue?.editScope ?? 'from_tomorrow');
   const [error, setError] = useState<string | null>(null);
@@ -83,10 +82,9 @@ export function ParentAdventureScheduleForm({
     endTime,
     requiresTimer,
     durationMinutes,
-    requiresReview,
     points,
     ...(mode === 'edit' ? { editScope } : {}),
-  }), [childIds, description, durationMinutes, editScope, endTime, mode, name, points, requiresReview, requiresTimer, startTime, weekdays]);
+  }), [childIds, description, durationMinutes, editScope, endTime, mode, name, points, requiresTimer, startTime, weekdays]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -117,8 +115,8 @@ export function ParentAdventureScheduleForm({
           {children.map(child => {
             const selected = childIds.includes(child.id);
             return (
-              <label key={child.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 ${selected ? 'border-blue-400 bg-blue-50 text-blue-900' : 'border-gray-200 bg-white text-gray-700'}`}>
-                <input type="checkbox" checked={selected} onChange={event => setChildIds(current => event.target.checked ? [...current, child.id] : current.filter(id => id !== child.id))} />
+              <label key={child.id} className={`hh-adventure-child-choice${selected ? ' is-selected' : ''} flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 py-2`}>
+                <input className="hh-adventure-control" type="checkbox" checked={selected} onChange={event => setChildIds(current => event.target.checked ? [...current, child.id] : current.filter(id => id !== child.id))} />
                 <span className="font-medium">{child.name}</span>
               </label>
             );
@@ -135,8 +133,8 @@ export function ParentAdventureScheduleForm({
             ['from_tomorrow', '從明天開始修改', '保留今天，從明天建立新的排程版本。'],
             ['today_and_future', '修改今天與未來', '更新今天仍為 todo 的任務，並套用到後續排程。'],
           ] as const).map(([value, label, helper]) => (
-            <label key={value} className="flex min-h-11 items-start gap-3 rounded-xl border border-gray-200 p-3">
-              <input className="mt-1" type="radio" name="schedule-edit-scope" checked={editScope === value} onChange={() => setEditScope(value)} />
+            <label key={value} className={`hh-adventure-edit-scope-choice${editScope === value ? ' is-selected' : ''} flex min-h-11 items-start gap-3 rounded-xl p-3`}>
+              <input className="hh-adventure-control mt-1" type="radio" name="schedule-edit-scope" checked={editScope === value} onChange={() => setEditScope(value)} />
               <span><strong className="block text-gray-900">{label}</strong><span className="text-sm text-gray-500">{helper}</span></span>
             </label>
           ))}
@@ -154,7 +152,7 @@ export function ParentAdventureScheduleForm({
                 key={day.value}
                 type="button"
                 aria-pressed={selected}
-                className={`min-h-11 rounded-xl border font-bold ${selected ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600'}`}
+                className={`hh-adventure-weekday${selected ? ' is-selected' : ''}`}
                 onClick={() => setWeekdays(current => selected ? current.filter(value => value !== day.value) : [...current, day.value])}
               >
                 {day.label}
@@ -177,24 +175,17 @@ export function ParentAdventureScheduleForm({
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-gray-700">計時</legend>
-        <label className="flex min-h-11 items-center gap-3 rounded-xl border border-gray-200 p-3">
-          <input type="radio" name="daily-timer" checked={!requiresTimer} onChange={() => setRequiresTimer(false)} />
+        <label className={`hh-adventure-timer-choice${!requiresTimer ? ' is-selected' : ''} flex min-h-11 items-center gap-3 rounded-xl p-3`}>
+          <input className="hh-adventure-control" type="radio" name="daily-timer" checked={!requiresTimer} onChange={() => setRequiresTimer(false)} />
           <span>不需要</span>
         </label>
-        <label className="flex min-h-11 flex-wrap items-center gap-3 rounded-xl border border-gray-200 p-3">
-          <input type="radio" name="daily-timer" checked={requiresTimer} onChange={() => setRequiresTimer(true)} />
+        <label className={`hh-adventure-timer-choice${requiresTimer ? ' is-selected' : ''} flex min-h-11 flex-wrap items-center gap-3 rounded-xl p-3`}>
+          <input className="hh-adventure-control" type="radio" name="daily-timer" checked={requiresTimer} onChange={() => setRequiresTimer(true)} />
           <span>需要完成</span>
-          <input aria-label="計時分鐘" type="number" min="1" className="w-24 rounded-lg border border-gray-200 p-2" disabled={!requiresTimer} value={durationMinutes ?? ''} onChange={event => setDurationMinutes(event.target.value ? Number(event.target.value) : null)} />
+          <input aria-label="計時分鐘" type="number" min="1" className="hh-adventure-field w-24 rounded-lg border p-2" disabled={!requiresTimer} value={durationMinutes ?? ''} onChange={event => setDurationMinutes(event.target.value ? Number(event.target.value) : null)} />
           <span>分鐘</span>
         </label>
       </fieldset>
-
-      <p className="rounded-xl bg-blue-50 p-3 text-sm leading-6 text-blue-800">每日冒險不要求孩子填寫心得；孩子送出後是否發點，仍由家長審核設定決定。</p>
-
-      <label className="flex min-h-11 items-center gap-3 rounded-xl border border-gray-200 p-3">
-        <input type="checkbox" checked={requiresReview} onChange={event => setRequiresReview(event.target.checked)} />
-        <span><strong className="block">等待這次家長確認前，先鎖住下一個冒險</strong><span className="text-sm text-gray-500">這只控制後續冒險是否暫時鎖定；每日冒險仍會進入家長確認流程。</span></span>
-      </label>
 
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="daily-adventure-points">完成點數</label>
@@ -205,8 +196,8 @@ export function ParentAdventureScheduleForm({
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="flex gap-3">
-        {onCancel && <button type="button" className="min-h-12 flex-1 rounded-xl bg-gray-100 px-4 font-bold text-gray-700" onClick={onCancel}>取消</button>}
-        <button type="submit" disabled={submitting || children.length === 0} className="min-h-12 flex-1 rounded-xl bg-blue-500 px-4 font-bold text-white disabled:cursor-wait disabled:opacity-50">
+        {onCancel && <button type="button" className="hh-adventure-secondary-action min-h-12 flex-1 rounded-xl px-4 font-bold" onClick={onCancel}>取消</button>}
+        <button type="submit" disabled={submitting || children.length === 0} className="hh-adventure-primary-action min-h-12 flex-1 rounded-xl px-4 font-bold disabled:cursor-wait disabled:opacity-50">
           {submitting ? (mode === 'edit' ? '儲存中…' : '建立中…') : (mode === 'edit' ? '儲存排程變更' : '建立排程')}
         </button>
       </div>

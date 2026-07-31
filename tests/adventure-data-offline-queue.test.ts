@@ -191,4 +191,44 @@ describe('offline adventure completion queue', () => {
     assert.equal(state.children[0].tasks[0].pendingSync, true);
     assert.equal(loadAdventureCompletionQueue(ownerUserId).length, 1);
   });
+
+  it('shows a matching daily schedule on the child board immediately', async () => {
+    let state = {
+      children: [{
+        id: 'child-daily',
+        points: 0,
+        tasks: [],
+      }],
+      taskSchedules: [],
+    } as unknown as AppState;
+    const actions = createAdventureStoreActions({
+      mutate: (async (_operation, optimisticUpdate) => {
+        if (optimisticUpdate) state = optimisticUpdate(state);
+      }) as never,
+      familyId: 'family-1',
+      getState: () => state,
+      setState: updater => { state = updater(state); },
+      createLocalId: (() => {
+        let id = 0;
+        return () => `local-${++id}`;
+      })(),
+      authenticatedUserId: 'parent-1',
+      isOnline: () => true,
+      setError: () => undefined,
+    });
+
+    await actions.createAdventureSchedule({
+      childProfileIds: ['child-daily'],
+      name: '刷牙',
+      points: 5,
+      icon: 'tooth',
+      category: 'life_habit',
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+      activeFrom: '2000-01-01',
+    });
+
+    assert.equal(state.children[0].tasks.length, 1);
+    assert.equal(state.children[0].tasks[0].adventureType, 'daily');
+    assert.equal(state.children[0].tasks[0].name, '刷牙');
+  });
 });

@@ -66,6 +66,23 @@ const patchSchedule = (
   updatedAt: new Date().toISOString(),
 });
 
+const getDateKeyInTimezone = (now: Date, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+};
+
+const getIsoWeekday = (dateKey: string) => {
+  const weekday = new Date(`${dateKey}T00:00:00Z`).getUTCDay();
+  return weekday === 0 ? 7 : weekday;
+};
+
 export function createAdventureStoreActions({
   mutate,
   familyId,
@@ -209,6 +226,10 @@ export function createAdventureStoreActions({
 
     createAdventureSchedule: (input: AdventureScheduleInput) => {
       const now = new Date().toISOString();
+      const occurrenceDate = getDateKeyInTimezone(new Date(), input.timezone ?? 'Asia/Taipei');
+      const createsToday = input.activeFrom <= occurrenceDate
+        && (!input.activeUntil || input.activeUntil >= occurrenceDate)
+        && input.weekdays.includes(getIsoWeekday(occurrenceDate));
       const schedules: TaskSchedule[] = input.childProfileIds.map((childProfileId) => ({
         id: createLocalId(),
         familyId: familyId ?? '',
@@ -233,7 +254,41 @@ export function createAdventureStoreActions({
       }));
       return mutate(
         (repository, id) => repository.createAdventureSchedule(id, input).then(() => undefined),
-        (previous) => ({ ...previous, taskSchedules: [...(previous.taskSchedules ?? []), ...schedules] }),
+        (previous) => ({
+          ...previous,
+          taskSchedules: [...(previous.taskSchedules ?? []), ...schedules],
+          children: previous.children.map((child) => {
+            const schedule = schedules.find((candidate) => candidate.childProfileId === child.id);
+            if (!createsToday || !schedule) return child;
+            return {
+              ...child,
+              tasks: [...child.tasks, {
+                id: createLocalId(),
+                name: input.name,
+                description: input.description ?? null,
+                points: input.points,
+                icon: input.icon,
+                status: 'todo',
+                isDaily: true,
+                adventureType: 'daily',
+                scheduleId: schedule.id,
+                occurrenceDate,
+                completionReportMode: 'none',
+                requiresTimer: input.requiresTimer ?? false,
+                requiresReviewBeforeNextTask: false,
+                category: input.category,
+                origin: 'parent_assigned',
+                duration: input.durationMinutes ?? undefined,
+                dueOn: occurrenceDate,
+                dueTime: input.startTime ?? null,
+                endTime: input.endTime ?? null,
+                createdAt: now,
+                updatedAt: now,
+                completedAt: null,
+              } as Task],
+            };
+          }),
+        }),
       );
     },
 

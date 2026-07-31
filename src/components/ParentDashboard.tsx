@@ -177,7 +177,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [newTaskDuration, setNewTaskDuration] = useState<number | ''>(''); // in minutes
   const [newTaskDueTime, setNewTaskDueTime] = useState('');
   const [newTaskEndTime, setNewTaskEndTime] = useState('');
-  const [newTaskRequiresReviewBeforeNextTask, setNewTaskRequiresReviewBeforeNextTask] = useState(false);
   const [newTaskIsDaily, setNewTaskIsDaily] = useState(true);
   const [newTaskCategory, setNewTaskCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
   const [newTaskTargetChildIds, setNewTaskTargetChildIds] = useState<string[]>([]);
@@ -288,7 +287,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewTaskDuration(group.duration || '');
       setNewTaskDueTime(group.dueTime?.slice(0, 5) ?? '');
       setNewTaskEndTime(group.endTime?.slice(0, 5) ?? '');
-      setNewTaskRequiresReviewBeforeNextTask(group.requiresReviewBeforeNextTask ?? false);
       setNewTaskIsDaily(group.isDaily ?? false);
       setNewTaskCategory(group.category ?? DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(group.children.map(c => c.childId));
@@ -299,7 +297,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewTaskDuration('');
       setNewTaskDueTime('');
       setNewTaskEndTime('');
-      setNewTaskRequiresReviewBeforeNextTask(false);
       setNewTaskIsDaily(false);
       setNewTaskCategory(DEFAULT_TASK_CATEGORY);
       setNewTaskTargetChildIds(state.children.map(c => c.id));
@@ -326,9 +323,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       for (const childId of newTaskTargetChildIds) {
         const existingChild = editingTask.children.find(c => c.childId === childId);
         if (existingChild) {
-          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, requiresReviewBeforeNextTask: newTaskRequiresReviewBeforeNextTask } as never);
+          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, requiresReviewBeforeNextTask: false } as never);
         } else {
-          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned', requiresReviewBeforeNextTask: newTaskRequiresReviewBeforeNextTask } as never);
+          await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned', requiresReviewBeforeNextTask: false } as never);
         }
       }
 
@@ -340,7 +337,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         }
       }
     } else {
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned', requiresReviewBeforeNextTask: newTaskRequiresReviewBeforeNextTask } as never);
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned', requiresReviewBeforeNextTask: false } as never);
     }
     setHeroFormReturnGroup(null);
     dismissWithAnimation(() => setShowTaskForm(false));
@@ -356,7 +353,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       const dueTime = newTaskDueTime || null;
       const endTime = newTaskEndTime || null;
       if (dueTime && endTime && endTime <= dueTime) return;
-      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, dueTime, endTime, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template', requiresReviewBeforeNextTask: assigningTemplate.requiresReviewBeforeNextTask ?? false } as never);
+      for (const childId of newTaskTargetChildIds) await addTask(childId, { name: assigningTemplate.name, points: assigningTemplate.points, icon: assigningTemplate.icon || 'Star', duration: assigningTemplate.duration, dueTime, endTime, isDaily: newTaskIsDaily, category: assigningTemplate.category ?? DEFAULT_TASK_CATEGORY, origin: 'system_template', requiresReviewBeforeNextTask: false } as never);
       dismissWithAnimation(() => setAssigningTemplate(null));
     } catch { /* provider error is rendered above the tabs; keep assignment open */ }
   };
@@ -371,9 +368,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     setMutationKind('template');
     try {
     if (editingTemplate) {
-      await updateTaskTemplate(editingTemplate.id, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, category: newTaskCategory, requiresReviewBeforeNextTask: newTaskRequiresReviewBeforeNextTask } as never);
+      await updateTaskTemplate(editingTemplate.id, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, category: newTaskCategory, requiresReviewBeforeNextTask: false } as never);
     } else {
-      await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, category: newTaskCategory, suggestedEvidence: 'reflection', requiresReviewBeforeNextTask: newTaskRequiresReviewBeforeNextTask } as never);
+      await addTaskTemplate({ name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, category: newTaskCategory, suggestedEvidence: 'reflection', requiresReviewBeforeNextTask: false } as never);
     }
     setHeroFormReturnGroup(null);
     dismissWithAnimation(() => setShowTemplateForm(false));
@@ -389,7 +386,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewTaskDuration(template.duration || '');
       setNewTaskDueTime(template.dueTime?.slice(0, 5) ?? '');
       setNewTaskEndTime(template.endTime?.slice(0, 5) ?? '');
-      setNewTaskRequiresReviewBeforeNextTask(template.requiresReviewBeforeNextTask ?? false);
       setNewTaskCategory(template.category ?? DEFAULT_TASK_CATEGORY);
     } else {
       setEditingTemplate(null);
@@ -398,7 +394,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewTaskDuration('');
       setNewTaskDueTime('');
       setNewTaskEndTime('');
-      setNewTaskRequiresReviewBeforeNextTask(false);
       setNewTaskCategory(DEFAULT_TASK_CATEGORY);
     }
     setShowTemplateForm(true);
@@ -1253,12 +1248,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <input type="number" min="1" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
-              <label className="flex flex-row items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
-                <input type="checkbox" checked={newTaskRequiresReviewBeforeNextTask} onChange={e => setNewTaskRequiresReviewBeforeNextTask(e.target.checked)} className="hh-review-gate-checkbox" />
-                <span className="min-w-0 flex-1">
-                  <strong className="block text-gray-800">完成後需家長審核才能執行其他任務</strong>
-                </span>
-              </label>
               <div className="min-w-0 w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-1 truncate">開始時間</label>
                 <TaipeiTimeInput value={newTaskDueTime} onChange={setNewTaskDueTime} />
@@ -1303,12 +1292,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   <input type="number" min="1" value={newTaskPoints} onChange={e => setNewTaskPoints(Number(e.target.value))} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 </div>
               </div>
-              <label className="flex flex-row items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
-                <input type="checkbox" checked={newTaskRequiresReviewBeforeNextTask} onChange={e => setNewTaskRequiresReviewBeforeNextTask(e.target.checked)} className="hh-review-gate-checkbox" />
-                <span className="min-w-0 flex-1">
-                  <strong className="block text-gray-800">完成後需家長審核才能執行其他任務</strong>
-                </span>
-              </label>
               <div className="min-w-0 w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-1 truncate">開始時間</label>
                 <TaipeiTimeInput value={newTaskDueTime} onChange={setNewTaskDueTime} />

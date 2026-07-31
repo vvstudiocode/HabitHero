@@ -228,4 +228,33 @@ describe('adventure data contracts', () => {
       'resume_adventure_timer',
     ]);
   });
+
+  it('creates today daily occurrences immediately after creating schedules', async () => {
+    const calls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      rpc: async (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return {
+          data: name === 'create_adventure_schedule' ? { id: 'schedule-1' } : [],
+          error: null,
+        };
+      },
+    };
+    const repository = createDataRepository(client as never);
+
+    await repository.createAdventureSchedule('family-1', {
+      childProfileIds: ['child-1'],
+      name: '刷牙',
+      points: 5,
+      icon: 'tooth',
+      category: 'life_habit',
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+      activeFrom: '2026-07-31',
+    });
+
+    assert.deepEqual(calls.map(call => call.name), [
+      'create_adventure_schedule',
+      'ensure_daily_adventure_occurrences',
+    ]);
+  });
 });

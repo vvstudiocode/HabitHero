@@ -8,11 +8,58 @@ test('parent adventure forms keep daily and general completion rules separate', 
   const daily = read('../src/features/adventures/components/ParentAdventureScheduleForm.tsx');
   const general = read('../src/features/adventures/components/ParentGeneralAdventureForm.tsx');
 
-  assert.match(daily, /每日冒險不要求孩子填寫心得/);
+  assert.doesNotMatch(daily, /每日冒險不要求孩子填寫心得/);
   assert.doesNotMatch(daily, /value="quick"/);
   assert.match(general, /value="quick"/);
   assert.match(general, /value="reflection"/);
   assert.doesNotMatch(general, /value="none"/);
+  assert.doesNotMatch(daily, /先鎖住下一個冒險/);
+});
+
+test('daily weekday selection uses a dedicated visible selected state', () => {
+  const daily = read('../src/features/adventures/components/ParentAdventureScheduleForm.tsx');
+  const modalStyles = read('../src/styles/modals.css');
+  const neutralStyles = read('../src/styles/neutral-theme.css');
+
+  assert.match(daily, /hh-adventure-weekday/);
+  assert.match(daily, /selected \? ' is-selected' : ''/);
+  assert.doesNotMatch(daily, /孩子首頁只會顯示今天有勾選的每日冒險/);
+  assert.match(modalStyles, /\.hh-adventure-weekday\s*\{/);
+  assert.match(neutralStyles, /\.hh-adventure-weekday\.is-selected\s*\{[^}]*background:\s*var\(--hh-neutral-ink\)/);
+});
+
+test('daily schedule choices and actions use the neutral app palette', () => {
+  const daily = read('../src/features/adventures/components/ParentAdventureScheduleForm.tsx');
+  const modalStyles = read('../src/styles/modals.css');
+  const neutralStyles = read('../src/styles/neutral-theme.css');
+
+  assert.match(daily, /hh-adventure-child-choice/);
+  assert.match(daily, /hh-adventure-timer-choice/);
+  assert.match(daily, /hh-adventure-control/);
+  assert.match(daily, /hh-adventure-primary-action/);
+  assert.match(daily, /hh-adventure-field/);
+  assert.doesNotMatch(daily, /(?:bg|border|text|ring)-blue-/);
+  assert.match(modalStyles, /\.hh-adventure-child-choice,/);
+  assert.match(neutralStyles, /\.hh-adventure-child-choice\.is-selected,/);
+  assert.match(neutralStyles, /\.hh-adventure-control\s*\{[^}]*accent-color:\s*var\(--hh-neutral-ink\)/);
+  assert.match(neutralStyles, /\.hh-adventure-primary-action\s*\{[^}]*background:\s*var\(--hh-neutral-ink\)/);
+});
+
+test('daily schedule overlays are portaled above the scrollable parent feature', () => {
+  const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
+  const overlayStyles = read('../src/styles/overlays.css');
+
+  assert.match(workspace, /createPortal/);
+  assert.match(workspace, /renderAdventureOverlay/);
+  assert.match(overlayStyles, /\.hh-modal-overlay\s*\{[^}]*animation:\s*hh-modal-overlay-in/);
+});
+
+test('daily schedule management copy uses Chinese task states', () => {
+  const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
+
+  assert.match(workspace, /等待審核或已完成的任務/);
+  assert.match(workspace, /schedule\.weekdays\]\.sort\(\(a, b\) => a - b\)/);
+  assert.doesNotMatch(workspace, /pending or completed/);
 });
 
 test('child adventure board collapses an expanded section when the blank background is pressed', () => {
@@ -60,28 +107,47 @@ test('a newly created general adventure opens immediately after the creation lay
   const proposalForm = read('../src/features/growth/components/GoalProposalForm.tsx');
   const overlayStyles = read('../src/styles/overlays.css');
 
-  assert.match(board, /requestedTask\?: \{ name: string; requestId: number \}/);
+  assert.match(board, /requestedTask\?: \{ id: string; requestId: number \}/);
   assert.match(board, /setOpenCard\('general'\)/);
-  assert.match(board, /setSelectedTaskId\(requestedAdventure\.id\)/);
+  assert.match(board, /task\.id === requestedTask\.id/);
+  assert.match(board, /setSelectedTaskId\(requestedTask\.id\)/);
   assert.match(dashboard, /requestedTask=\{adventureOpenRequest\}/);
-  assert.match(dashboard, /setAdventureOpenRequest\(\{ name: input\.name\.trim\(\), requestId: Date\.now\(\) \}\)/);
+  assert.match(dashboard, /setAdventureOpenRequest\(\{ id: taskId, requestId: Date\.now\(\) \}\)/);
   assert.match(dashboard, /dismissWithAnimation\([\s\S]*?\.hh-goal-proposal-overlay/);
   assert.match(proposalForm, /建立並開始/);
   assert.match(proposalForm, /完成後再由爸媽確認點數/);
   assert.match(overlayStyles, /\.hh-goal-proposal-overlay\.hh-modal-exit[\s\S]*?hh-goal-overlay-exit/);
 });
 
-test('mobile adventure completion keeps the submit action visible above the safe area', () => {
+test('adventure detail header is excluded from global header shadows and metadata uses white surfaces', () => {
+  const neutralStyles = read('../src/styles/neutral-theme.css');
+
+  assert.match(
+    neutralStyles,
+    /\.hh-sprite-theme header:not\(\.hh-adventure-detail-header\)/,
+  );
+  assert.match(
+    neutralStyles,
+    /\.hh-sprite-theme \.hh-dashboard-screen header:not\(\.hh-adventure-detail-header\)/,
+  );
+  assert.match(
+    neutralStyles,
+    /\.hh-adventure-detail-meta\s*>\s*div\s*\{[^}]*background:\s*var\(--hh-neutral-surface\)/,
+  );
+});
+
+test('mobile adventure completion keeps the submit action below the reflection field', () => {
   const completion = read('../src/features/adventures/components/AdventureCompletionForm.tsx');
   const overlayStyles = read('../src/styles/overlays.css');
   const neutralStyles = read('../src/styles/neutral-theme.css');
 
   assert.match(completion, /hh-adventure-completion-actions/);
-  assert.match(overlayStyles, /@media \(max-width: 760px\)[\s\S]*?\.hh-adventure-completion-actions\s*\{[\s\S]*?position:\s*fixed/);
-  assert.match(overlayStyles, /@media \(max-width: 760px\)[\s\S]*?\.hh-adventure-completion-actions\s*\{[\s\S]*?width:\s*auto/);
+  assert.match(overlayStyles, /--hh-adventure-completion-action-clearance:\s*calc\(24px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(overlayStyles, /@media \(max-width: 760px\)[\s\S]*?\.hh-adventure-completion-actions\s*\{[\s\S]*?position:\s*static/);
+  assert.match(overlayStyles, /@media \(max-width: 760px\)[\s\S]*?\.hh-adventure-completion-actions\s*\{[\s\S]*?width:\s*100%/);
   assert.match(overlayStyles, /\.hh-adventure-completion-actions\s*\{[\s\S]*?box-sizing:\s*border-box/);
   assert.match(overlayStyles, /\.hh-adventure-complete-button\s*\{[\s\S]*?box-sizing:\s*border-box/);
-  assert.match(overlayStyles, /\.hh-adventure-completion\s*\{[\s\S]*?padding-bottom:/);
+  assert.match(overlayStyles, /\.hh-adventure-completion\s*\{[\s\S]*?padding-bottom:\s*var\(--hh-adventure-completion-action-clearance\)/);
   assert.match(neutralStyles, /\.hh-adventure-complete-button\s*\{[\s\S]*?color:\s*#ffffff;[\s\S]*?background:\s*var\(--hh-neutral-ink\)/);
   assert.doesNotMatch(neutralStyles, /\.hh-adventure-complete-button\s*\{[\s\S]*?background:\s*var\(--hh-character-theme-color\)/);
 });
@@ -127,6 +193,22 @@ test('parent dashboard routes adventure creation through dedicated components', 
   assert.match(workspace, /dismissWithAnimation/);
 });
 
+test('adventure workspace toolbar uses consistent plain buttons', () => {
+  const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
+
+  assert.match(workspace, /const toolbarButtonClass =/);
+  assert.match(workspace, /aria-pressed=\{view === 'calendar'\} className=\{toolbarButtonClass\(view === 'calendar'\)\}/);
+  assert.match(workspace, /aria-pressed=\{view === 'list'\} className=\{toolbarButtonClass\(view === 'list'\)\}/);
+  assert.match(workspace, /className=\{toolbarButtonClass\(false\)\} onClick=\{\(\) => openForm\('daily'\)\}/);
+  assert.match(workspace, /className=\{toolbarButtonClass\(false\)\} onClick=\{\(\) => openForm\('general'\)\}/);
+  assert.match(workspace, /border border-gray-200/);
+  assert.match(workspace, /aria-pressed:border-gray-900/);
+  assert.match(workspace, /focus-visible:ring-2/);
+  assert.doesNotMatch(workspace, /hh-adventure-view-switch flex rounded-xl bg-gray-100 p-1/);
+  assert.doesNotMatch(workspace, /bg-white text-gray-900 shadow-sm/);
+  assert.doesNotMatch(workspace, /bg-blue-500 px-3 text-sm font-bold text-white/);
+});
+
 test('parent workspace manages schedules and prevents unsafe group archiving', () => {
   const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
 
@@ -138,6 +220,23 @@ test('parent workspace manages schedules and prevents unsafe group archiving', (
   assert.match(workspace, /onArchiveGroup/);
 });
 
+test('archived general adventure groups stay discoverable and can reveal their history', () => {
+  const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
+
+  assert.match(workspace, /const \[showArchivedGroups, setShowArchivedGroups\] = useState\(false\)/);
+  assert.match(workspace, /const activeGroups = groups\.filter\(group => group\.status === 'active'\)/);
+  assert.match(workspace, /const archivedGroups = groups\.filter\(group => group\.status === 'archived'\)/);
+  assert.match(workspace, /await onArchiveGroup\(group\.id\);[\s\S]*?setShowArchivedGroups\(true\)/);
+  assert.match(workspace, /封存後不會刪除集合或完成紀錄/);
+  assert.match(workspace, /已封存（\{archivedGroups\.length\}）/);
+  assert.match(workspace, /open=\{showArchivedGroups\}/);
+  assert.match(workspace, /archivedGroups\.map\(group =>/);
+  assert.match(workspace, /groupTasks\.map\(task =>/);
+  assert.match(workspace, /目前沒有封存的集合/);
+  assert.match(workspace, /目前沒有使用中的一般冒險集合/);
+  assert.doesNotMatch(workspace, /\{groups\.some\(group => group\.status === 'active'\) && \(/);
+});
+
 test('schedule editing requires an explicit safe update scope', () => {
   const form = read('../src/features/adventures/components/ParentAdventureScheduleForm.tsx');
 
@@ -146,5 +245,5 @@ test('schedule editing requires an explicit safe update scope', () => {
   assert.match(form, /today_and_future/);
   assert.match(form, /不會修改過去紀錄、等待審核、已完成或要求補充/);
   assert.match(form, /正在計時或暫停中/);
-  assert.match(form, /等待這次家長確認前，先鎖住下一個冒險/);
+  assert.doesNotMatch(form, /等待這次家長確認前，先鎖住下一個冒險/);
 });

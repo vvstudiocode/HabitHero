@@ -8,15 +8,15 @@ const task = (id: string, status: 'todo' | 'pending' | 'revision_requested' | 'c
   requiresReviewBeforeNextTask,
 });
 
-test('a pending task only blocks other tasks when review gating is enabled', () => {
-  assert.equal(hasBlockingReviewTask([task('a', 'pending', true)]), true);
+test('pending review never blocks another task', () => {
+  assert.equal(hasBlockingReviewTask([task('a', 'pending', true)]), false);
   assert.equal(hasBlockingReviewTask([task('a', 'pending', false)]), false);
 });
 
-test('review gating remains locked after a task is returned for revision', () => {
-  assert.equal(hasBlockingReviewTask([task('a', 'revision_requested', true)]), true);
+test('a returned task does not lock other tasks', () => {
+  assert.equal(hasBlockingReviewTask([task('a', 'revision_requested', true)]), false);
   assert.equal(canStartTask([task('a', 'revision_requested', true), task('b', 'todo')], 'a'), true);
-  assert.equal(canStartTask([task('a', 'revision_requested', true), task('b', 'todo')], 'b'), false);
+  assert.equal(canStartTask([task('a', 'revision_requested', true), task('b', 'todo')], 'b'), true);
 });
 
 test('approved tasks no longer block other tasks', () => {

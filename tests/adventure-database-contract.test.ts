@@ -140,3 +140,16 @@ test('adventure tables and definer RPCs have explicit authorization boundaries',
     assert.match(sql, new RegExp(`grant execute on function public\\.${functionName}\\([^;]+\\) to authenticated`, 'i'));
   }
 });
+
+test('review gates are retired for tasks, templates, and schedules', () => {
+  const sql = readFileSync(
+    new URL('../supabase/migrations/20260731153000_remove_review_gates.sql', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(sql, /drop trigger if exists tasks_review_gate_guard/i);
+  assert.match(sql, /update public\.tasks[\s\S]*requires_review_before_next_task = false/i);
+  assert.match(sql, /update public\.task_templates[\s\S]*requires_review_before_next_task = false/i);
+  assert.match(sql, /update public\.task_schedules[\s\S]*requires_review_before_next_task = false/i);
+  assert.match(sql, /check \(requires_review_before_next_task = false\)/i);
+});

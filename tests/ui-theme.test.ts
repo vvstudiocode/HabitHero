@@ -34,6 +34,15 @@ test('shared hero exposes one theme color for all dashboard controls', () => {
   assert.doesNotMatch(neutralTheme, /rgba\(255, 177, 205, 0\.68\)/);
 });
 
+test('child adventure cards let the character scene show through', () => {
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(neutralTheme, /\.hh-adventure-card\s*\{[\s\S]*?background:\s*color-mix\(in srgb, var\(--hh-neutral-surface\) 68%, transparent\)/);
+  assert.doesNotMatch(neutralTheme, /\.hh-adventure-card\s*\{[\s\S]*?backdrop-filter:/);
+  assert.match(neutralTheme, /\.hh-character-icon-button,[\s\S]*?background:\s*color-mix\(in srgb, var\(--hh-neutral-surface\) 68%, transparent\)/);
+  assert.doesNotMatch(neutralTheme, /\.hh-character-icon-button,[\s\S]*?backdrop-filter:/);
+});
+
 test('shared hero allows persisted theme values to override catalog defaults', () => {
   const source = read('../src/components/DashboardCharacterHero.tsx');
   assert.match(source, /theme\?\.accentColor \?\?/);

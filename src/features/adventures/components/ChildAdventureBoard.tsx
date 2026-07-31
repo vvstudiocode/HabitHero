@@ -11,7 +11,7 @@ interface ChildAdventureBoardProps {
   generalTitle?: string | null;
   now: number;
   loading?: boolean;
-  requestedTask?: { name: string; requestId: number } | null;
+  requestedTask?: { id: string; requestId: number } | null;
   isTaskExecutable: (task: AdventureTask) => { allowed: boolean; reason?: string | null };
   onCreateGeneral: () => void;
   onTimerToggle: (task: AdventureTask) => void;
@@ -46,12 +46,9 @@ export function ChildAdventureBoard({
 
   useEffect(() => {
     if (!requestedTask) return;
-    const requestedAdventure = [...groups.general]
-      .reverse()
-      .find((task) => task.name.trim() === requestedTask.name);
-    if (!requestedAdventure) return;
+    if (!groups.general.some((task) => task.id === requestedTask.id)) return;
     setOpenCard('general');
-    setSelectedTaskId(requestedAdventure.id);
+    setSelectedTaskId(requestedTask.id);
   }, [groups.general, requestedTask]);
 
   useEffect(() => {

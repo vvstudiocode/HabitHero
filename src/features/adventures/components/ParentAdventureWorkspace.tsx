@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ParentDashboardFormModal } from '../../../components/parent-dashboard/ParentDashboardFormModal';
 import { ModalShell } from '../../../components/shared/ParentDashboardUI';
 import type { AdventureScheduleUpdateInput } from '../../../lib/adventure-data-access';
@@ -63,6 +64,8 @@ interface ParentAdventureWorkspaceProps {
 }
 
 const toErrorMessage = (caught: unknown, fallback: string) => caught instanceof Error ? caught.message : fallback;
+const renderAdventureOverlay = (content: ReactNode) =>
+  typeof document === 'undefined' ? content : createPortal(content, document.body);
 
 export function ParentAdventureWorkspace({
   children,
@@ -91,6 +94,10 @@ export function ParentAdventureWorkspace({
   const [scheduleToEdit, setScheduleToEdit] = useState<TaskSchedule | null>(null);
   const [managementBusyId, setManagementBusyId] = useState<string | null>(null);
   const [managementError, setManagementError] = useState<string | null>(null);
+  const [showArchivedGroups, setShowArchivedGroups] = useState(false);
+
+  const activeGroups = groups.filter(group => group.status === 'active');
+  const archivedGroups = groups.filter(group => group.status === 'archived');
 
   const openForm = (next: 'daily' | 'general') => {
     setFormError(null);
@@ -126,7 +133,7 @@ export function ParentAdventureWorkspace({
         weekdays: input.weekdays,
         timezone: 'Asia/Taipei',
         requiresTimer: input.requiresTimer,
-        requiresReviewBeforeNextTask: input.requiresReview,
+        requiresReviewBeforeNextTask: false,
         activeFrom,
       });
       closeForm();
@@ -154,7 +161,7 @@ export function ParentAdventureWorkspace({
         weekdays: input.weekdays,
         timezone: 'Asia/Taipei',
         requiresTimer: input.requiresTimer,
-        requiresReviewBeforeNextTask: input.requiresReview,
+        requiresReviewBeforeNextTask: false,
         activeFrom: scheduleToEdit.activeFrom,
         activeUntil: scheduleToEdit.activeUntil,
         applyMode: input.editScope,
@@ -184,7 +191,7 @@ export function ParentAdventureWorkspace({
         endTime: input.endTime || undefined,
         reportMode: input.reportMode,
         requiresTimer: input.requiresTimer,
-        requiresReviewBeforeNextTask: true,
+        requiresReviewBeforeNextTask: false,
       });
       closeForm();
     } catch (caught) {
@@ -230,6 +237,7 @@ export function ParentAdventureWorkspace({
     setManagementError(null);
     try {
       await onArchiveGroup(group.id);
+      setShowArchivedGroups(true);
     } catch (caught) {
       setManagementError(toErrorMessage(caught, '封存失敗；若仍有未完成冒險，請先處理後再試。'));
     } finally {
@@ -238,18 +246,23 @@ export function ParentAdventureWorkspace({
   };
 
   const weekdayLabels: Record<number, string> = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 7: '日' };
+  const toolbarButtonClass = (pressed: boolean) =>
+    [
+      'hh-adventure-action min-h-11 rounded-xl border bg-white px-3 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 aria-pressed:border-gray-900 aria-pressed:text-gray-900',
+      pressed ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700',
+    ].join(' ');
 
   return (
     <>
       <div className="hh-adventure-workspace space-y-6">
         <div className="hh-adventure-toolbar">
-          <div className="hh-adventure-view-switch flex rounded-xl bg-gray-100 p-1" role="group" aria-label="冒險管理檢視">
-            <button type="button" aria-pressed={view === 'calendar'} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${view === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`} onClick={() => setView('calendar')}>行事曆</button>
-            <button type="button" aria-pressed={view === 'list'} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${view === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`} onClick={() => setView('list')}>任務清單</button>
+          <div className="hh-adventure-view-switch flex gap-2" role="group" aria-label="冒險管理檢視">
+            <button type="button" aria-pressed={view === 'calendar'} className={toolbarButtonClass(view === 'calendar')} onClick={() => setView('calendar')}>行事曆</button>
+            <button type="button" aria-pressed={view === 'list'} className={toolbarButtonClass(view === 'list')} onClick={() => setView('list')}>任務清單</button>
           </div>
           <div className="hh-adventure-actions">
-            <button data-tour="add-daily-adventure" type="button" disabled={children.length === 0} className="hh-adventure-action min-h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-blue-700 disabled:opacity-50" onClick={() => openForm('daily')}>＋ 每日冒險</button>
-            <button type="button" disabled={children.length === 0} className="hh-adventure-action min-h-11 rounded-xl bg-blue-500 px-3 text-sm font-bold text-white disabled:opacity-50" onClick={() => openForm('general')}>＋ 一般冒險</button>
+            <button data-tour="add-daily-adventure" type="button" disabled={children.length === 0} className={toolbarButtonClass(false)} onClick={() => openForm('daily')}>＋ 每日冒險</button>
+            <button type="button" disabled={children.length === 0} className={toolbarButtonClass(false)} onClick={() => openForm('general')}>＋ 一般冒險</button>
           </div>
         </div>
 
@@ -272,7 +285,7 @@ export function ParentAdventureWorkspace({
                     <div className="min-w-0">
                       <strong className="block break-words text-gray-900">{schedule.name}</strong>
                       <span className="text-xs text-gray-500">
-                        {children.find(child => child.id === schedule.childProfileId)?.name ?? '小孩'} · {schedule.weekdays.map(day => weekdayLabels[day] ?? day).join('、')} · {schedule.startTime?.slice(0, 5) || '全天'}
+                        {children.find(child => child.id === schedule.childProfileId)?.name ?? '小孩'} · {[...schedule.weekdays].sort((a, b) => a - b).map(day => weekdayLabels[day] ?? day).join('、')} · {schedule.startTime?.slice(0, 5) || '全天'}
                       </span>
                     </div>
                     <div className="flex gap-2">
@@ -285,33 +298,72 @@ export function ParentAdventureWorkspace({
               </div>
             </section>
 
-            {groups.some(group => group.status === 'active') && (
-              <section aria-labelledby="general-groups-title" className="rounded-2xl border border-gray-200 bg-white p-4">
-                <h3 id="general-groups-title" className="font-black text-gray-900">一般冒險集合</h3>
-                <p className="mt-1 text-sm text-gray-500">封存會保留完成歷史；尚有未完成冒險時系統會拒絕封存。</p>
-                <div className="mt-4 space-y-2">
-                  {groups.filter(group => group.status === 'active').map(group => {
-                    const hasUnfinished = tasks.some(task => task.adventureGroupId === group.id && task.status !== 'completed');
-                    return (
-                      <div key={group.id} className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 p-3">
-                        <div>
-                          <strong className="block text-gray-900">{group.title}</strong>
-                          <span className="text-xs text-gray-500">{children.find(child => child.id === group.childProfileId)?.name ?? '小孩'}{hasUnfinished ? ' · 尚有未完成冒險' : ' · 可以安全封存'}</span>
-                        </div>
-                        <button type="button" disabled={hasUnfinished || managementBusyId === group.id} className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void archiveGroup(group)}>封存集合</button>
+            <section aria-labelledby="general-groups-title" className="rounded-2xl border border-gray-200 bg-white p-4">
+              <h3 id="general-groups-title" className="font-black text-gray-900">一般冒險集合</h3>
+              <p className="mt-1 text-sm leading-5 text-gray-500">封存後不會刪除集合或完成紀錄，而是移到下方「已封存」清單；尚有未完成冒險時不能封存。</p>
+
+              <div className="mt-4 space-y-2">
+                {activeGroups.map(group => {
+                  const hasUnfinished = tasks.some(task => task.adventureGroupId === group.id && task.status !== 'completed');
+                  return (
+                    <div key={group.id} className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 p-3">
+                      <div>
+                        <strong className="block text-gray-900">{group.title}</strong>
+                        <span className="text-xs text-gray-500">{children.find(child => child.id === group.childProfileId)?.name ?? '小孩'}{hasUnfinished ? ' · 尚有未完成冒險' : ' · 可以安全封存'}</span>
                       </div>
+                      <button type="button" disabled={hasUnfinished || managementBusyId === group.id} className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void archiveGroup(group)}>{managementBusyId === group.id ? '封存中…' : '封存集合'}</button>
+                    </div>
+                  );
+                })}
+                {activeGroups.length === 0 && (
+                  <p className="rounded-xl bg-gray-50 p-3 text-sm leading-5 text-gray-500">目前沒有使用中的一般冒險集合。新增一般冒險時，系統會建立新的集合。</p>
+                )}
+              </div>
+
+              <details
+                className="mt-4 border-t border-gray-200 pt-2"
+                open={showArchivedGroups}
+                onToggle={event => setShowArchivedGroups(event.currentTarget.open)}
+              >
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 py-2 font-bold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                  <span>已封存（{archivedGroups.length}）</span>
+                  <span className="text-xs font-medium text-gray-500">{showArchivedGroups ? '收合' : '展開查看'}</span>
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {archivedGroups.map(group => {
+                    const groupTasks = tasks.filter(task => task.adventureGroupId === group.id);
+                    return (
+                      <details key={group.id} className="rounded-xl bg-gray-50">
+                        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                          <span className="min-w-0">
+                            <strong className="block break-words text-gray-900">{group.title}</strong>
+                            <span className="text-xs text-gray-500">{children.find(child => child.id === group.childProfileId)?.name ?? '小孩'} · 已封存</span>
+                          </span>
+                          <span className="shrink-0 text-xs font-medium text-gray-500">{groupTasks.length} 個冒險</span>
+                        </summary>
+                        <div className="space-y-2 border-t border-gray-200 px-3 py-3">
+                          {groupTasks.map(task => (
+                            <div key={task.id} className="rounded-lg bg-white px-3 py-2">
+                              <strong className="block break-words text-sm text-gray-900">{task.name}</strong>
+                              <span className="text-xs text-gray-500">{task.status === 'completed' ? '已完成' : '保留紀錄'}</span>
+                            </div>
+                          ))}
+                          {groupTasks.length === 0 && <p className="text-sm text-gray-500">此集合沒有可顯示的冒險紀錄。</p>}
+                        </div>
+                      </details>
                     );
                   })}
+                  {archivedGroups.length === 0 && <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-500">目前沒有封存的集合。</p>}
                 </div>
-              </section>
-            )}
+              </details>
+            </section>
 
             {managementError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{managementError}</p>}
           </>
         ) : legacyTaskList}
       </div>
 
-      {form === 'daily' && (
+      {form === 'daily' && renderAdventureOverlay(
         <ParentDashboardFormModal
           title={scheduleToEdit ? '編輯每日冒險排程' : '新增每日冒險'}
           closeLabel={scheduleToEdit ? '關閉編輯每日冒險排程' : '關閉新增每日冒險'}
@@ -332,7 +384,6 @@ export function ParentAdventureWorkspace({
               endTime: scheduleToEdit.endTime ?? '',
               requiresTimer: scheduleToEdit.requiresTimer,
               durationMinutes: scheduleToEdit.durationMinutes,
-              requiresReview: scheduleToEdit.requiresReviewBeforeNextTask,
               points: scheduleToEdit.points,
               editScope: 'from_tomorrow',
             } : undefined}
@@ -343,7 +394,7 @@ export function ParentAdventureWorkspace({
         </ParentDashboardFormModal>
       )}
 
-      {form === 'general' && (
+      {form === 'general' && renderAdventureOverlay(
         <ParentDashboardFormModal
           title="新增一般冒險"
           closeLabel="關閉新增一般冒險"
@@ -356,10 +407,10 @@ export function ParentAdventureWorkspace({
         </ParentDashboardFormModal>
       )}
 
-      {scheduleToDisable && (
+      {scheduleToDisable && renderAdventureOverlay(
         <ModalShell variant="center">
           <h3 className="text-xl font-black text-gray-900">停用每日排程</h3>
-          <p className="mt-2 text-sm leading-6 text-gray-600">確定停用「{scheduleToDisable.name}」？停用只影響尚未產生的未來冒險，不會刪除過去紀錄，也不會更改 pending 或 completed 任務。</p>
+          <p className="mt-2 text-sm leading-6 text-gray-600">確定停用「{scheduleToDisable.name}」？停用只影響尚未產生的未來冒險，不會刪除過去紀錄，也不會更改等待審核或已完成的任務。</p>
           <div className="mt-6 flex gap-3">
             <button type="button" className="min-h-12 flex-1 rounded-xl bg-gray-100 px-4 font-bold text-gray-700" onClick={() => setScheduleToDisable(null)}>取消</button>
             <button type="button" disabled={managementBusyId === scheduleToDisable.id} className="min-h-12 flex-1 rounded-xl bg-red-500 px-4 font-bold text-white disabled:cursor-wait disabled:opacity-50" onClick={() => void disableSchedule()}>{managementBusyId === scheduleToDisable.id ? '停用中…' : '確認停用'}</button>
