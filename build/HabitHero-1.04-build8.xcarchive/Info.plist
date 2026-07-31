@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ApplicationProperties</key>
+	<dict>
+		<key>ApplicationPath</key>
+		<string>Applications/App.app</string>
+		<key>Architectures</key>
+		<array>
+			<string>arm64</string>
+		</array>
+		<key>CFBundleIdentifier</key>
+		<string>com.vvstudiocode.habithero</string>
+		<key>CFBundleShortVersionString</key>
+		<string>1.04</string>
+		<key>CFBundleVersion</key>
+		<string>8</string>
+		<key>SigningIdentity</key>
+		<string>Apple Development: vvstudiocode@gmail.com (T36HZ49H5T)</string>
+		<key>Team</key>
+		<string>94HYTX75L9</string>
+	</dict>
+	<key>ArchiveVersion</key>
+	<integer>2</integer>
+	<key>CreationDate</key>
+	<date>2026-07-30T10:58:45Z</date>
+	<key>Name</key>
+	<string>App</string>
+	<key>SchemeName</key>
+	<string>App</string>
+</dict>
+</plist>

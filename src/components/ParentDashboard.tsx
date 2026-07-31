@@ -1016,7 +1016,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             </div>
             
             <div className="space-y-8">
-              <PushNotificationSettings settings={notificationSettings} />
               <ParentSettingsChildrenSection
                 children={state.children}
                 childNameDrafts={childNameDrafts}
@@ -1103,6 +1102,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
               {/* System */}
               <section className="pt-4 pb-8">
+                <PushNotificationSettings settings={notificationSettings} />
                 <button type="button" onClick={() => { setShowSettings(false); setShowFirstUseGuide(true); }} className="mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-3 font-bold text-blue-700 transition-colors hover:bg-blue-100">
                   重新觀看新手指引
                 </button>

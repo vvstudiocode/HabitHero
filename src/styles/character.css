@@ -83,6 +83,27 @@
   object-fit: cover;
 }
 
+.hh-character-hero-video {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .hh-character-hero-picture.has-mobile-video {
+    display: none;
+  }
+
+  .hh-character-hero-video {
+    display: block;
+  }
+}
+
 .hh-character-hero-panel>.hh-character-dashboard-actions {
   position: absolute;
   z-index: 6;
@@ -395,6 +416,16 @@
   animation-delay: -2.8s;
 }
 
+.hh-character-menu-submenu .hh-character-menu-action:nth-child(5) {
+  animation-duration: 4.8s;
+  animation-delay: -1.9s;
+}
+
+.hh-character-menu-submenu .hh-character-menu-action:nth-child(6) {
+  animation-duration: 5.7s;
+  animation-delay: -3.1s;
+}
+
 .hh-character-menu-submenu .hh-character-menu-action strong {
   white-space: nowrap;
 }
@@ -428,6 +459,10 @@
 
 .hh-character-menu.is-open .hh-character-menu-submenu .hh-character-menu-action:nth-child(5) {
   transition-delay: 200ms;
+}
+
+.hh-character-menu.is-open .hh-character-menu-submenu .hh-character-menu-action:nth-child(6) {
+  transition-delay: 240ms;
 }
 
 .hh-character-menu.is-open .hh-character-menu-submenu .hh-character-menu-action {
@@ -545,6 +580,10 @@
   transition-delay: 600ms;
 }
 
+.hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-open:not(.is-collapsed) .hh-character-menu-submenu .hh-character-menu-action:nth-child(6) {
+  transition-delay: 750ms;
+}
+
 .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-collapsed .hh-character-menu-submenu {
   pointer-events: none;
 }
@@ -572,6 +611,10 @@
 }
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-collapsed .hh-character-menu-submenu .hh-character-menu-action:nth-child(5) {
+  transition-delay: 0ms;
+}
+
+.hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-collapsed .hh-character-menu-submenu .hh-character-menu-action:nth-child(6) {
   transition-delay: 0ms;
 }
 

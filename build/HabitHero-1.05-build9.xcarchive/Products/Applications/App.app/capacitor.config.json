@@ -1,0 +1,24 @@
+{
+	"appId": "com.vvstudiocode.habithero",
+	"appName": "HabitHero",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "http"
+	},
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		},
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"banner",
+				"list"
+			]
+		}
+	},
+	"packageClassList": [
+		"PushNotificationsPlugin"
+	]
+}

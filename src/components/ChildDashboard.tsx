@@ -366,8 +366,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
       { id: 'wishlist', title: '許願', icon: <Plus size={17} />, hasNotification: childMenuNotifications.wishlist, onSelect: () => openChildFeature('wishlist') },
       { id: 'history', title: '兌換', icon: <History size={17} />, hasNotification: childMenuNotifications.rewards, onSelect: () => openChildFeature('history') },
-      { id: 'settings', title: '設定', icon: <Settings size={17} />, onSelect: () => setShowNotificationSettings(true) },
       { id: 'switch-child', title: '切換視角', icon: <User size={17} />, onSelect: onSwitchChild },
+      { id: 'settings', title: '設定', icon: <Settings size={17} />, onSelect: () => setShowNotificationSettings(true) },
       { id: 'logout', title: '登出', icon: <LogOut size={17} />, onSelect: onLogout },
     ],
     goals: [],
@@ -417,6 +417,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       <DashboardCharacterHero
         sceneImage={activeCharacter.imageUrl}
         sceneImageDesktop={activeCharacter.desktopImageUrl}
+        mobileSceneVideo={activeCharacter.id === 'pink-catgirl-room' ? '/videos/habithero-dashboard.mp4' : activeCharacter.id === 'black-catboy-room' ? '/videos/habithero-black-catboy.mp4' : activeCharacter.id === 'blue-catboy-room' ? '/videos/habithero-blue-catboy.mp4' : activeCharacter.id === 'white-catgirl-room' ? '/videos/habithero-white-catgirl.mp4' : undefined}
         sceneAlt={`${activeCharacter.name}的冒險場景`}
         theme={activeChild.theme}
         eyebrow=""
@@ -461,8 +462,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         aria-label={heroFeature ? '小孩功能頁面' : undefined}
       >
         {heroFeature && (
-          <div className="hh-parent-content-modal-bar">
-            <strong>{heroRootMenuActions.find((action) => action.id === heroFeature)?.title}</strong>
+          <div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">
             <button type="button" onClick={closeChildFeature} aria-label="關閉功能頁面" className="hh-character-icon-button">
               <X size={18} />
             </button>

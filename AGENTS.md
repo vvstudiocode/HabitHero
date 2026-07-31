@@ -53,3 +53,12 @@ The user has installed several global skills and MCP/CLI tools. Use them when th
 - For feature planning/specification work, consider Spec Kit, but ask before initializing project files.
 - Do not start a local preview/dev server unless the user explicitly asks for it.
 - Keep project changes scoped and explain any generated files before asking the user to confirm.
+
+## iOS Build and Supabase Configuration
+
+- The iOS app embeds `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` into the bundled web assets at build time. A valid Web/Vercel deployment does not guarantee that the local iOS bundle has valid credentials.
+- Before testing or distributing an iOS build, verify that the local publishable key is the current Vercel Production key for project `habit-hero`; never use a placeholder/demo JWT or a service-role key in the app.
+- Validate the key against `https://<project-ref>.supabase.co/auth/v1/settings` with the `apikey` header. A response containing `UNAUTHORIZED_INVALID_API_KEY` or `Invalid API key` means the build must not proceed.
+- After changing the key, always run `npm run cap:sync` before opening, archiving, or uploading with Xcode; old archives and installed apps retain the previous embedded key.
+- If iOS login and registration both return HTTP 401 while Web works, first inspect the embedded Supabase URL/key and request response. This is an Auth Gateway configuration problem, not a SQL migration problem. Check `push_devices` SQL/RLS only after Auth succeeds.
+- For a new App Store Connect upload, increment `CURRENT_PROJECT_VERSION` in `ios/App/App.xcodeproj/project.pbxproj`; do not reuse an already-uploaded build number.

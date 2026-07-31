@@ -261,6 +261,21 @@ test('child growth menu opens the growth feature directly', () => {
   assert.match(dashboard, /id: 'logout', title: '登出'/);
 });
 
+test('child submenu keeps settings immediately above logout and animates every action', () => {
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+  const characterStyles = read('../src/styles/character.css');
+
+  assert.match(dashboard, /id: 'switch-child',[\s\S]*id: 'settings',[\s\S]*id: 'logout'/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?nth-child\(6\)[\s\S]*?transition-delay: 750ms/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?is-collapsed[\s\S]*?nth-child\(6\)[\s\S]*?transition-delay: 0ms/);
+});
+
+test('switching child views does not disable the saved notification preference', () => {
+  const hook = read('../src/hooks/useNotificationSettings.ts');
+
+  assert.doesNotMatch(hook, /useEffect\(\(\) => \{[\s\S]*disablePushDevicesForProfile\(client, profileId\)/);
+});
+
 test('child feature menu keeps the submenu mounted while it animates closed', () => {
   const hero = read('../src/components/DashboardCharacterHero.tsx');
   const dashboard = read('../src/components/ChildDashboard.tsx');
@@ -277,4 +292,12 @@ test('child feature menu keeps the submenu mounted while it animates closed', ()
   assert.match(characterStyles, /nth-child\(5\)[\s\S]*?transition-delay: 0ms/);
   assert.match(characterStyles, /prefers-reduced-motion: reduce/);
   assert.match(characterStyles, /data-menu-variant="child"[\s\S]*?--hh-menu-action-size: 84px/);
+});
+
+test('child feature pages omit the duplicate modal title while keeping the close control', () => {
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+  const overlays = read('../src/styles/overlays.css');
+
+  assert.match(dashboard, /<div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">\s*<button/);
+  assert.match(overlays, /\.hh-parent-content-modal-bar--child[\s\S]*?justify-content: flex-end[\s\S]*?min-height: 48px/);
 });

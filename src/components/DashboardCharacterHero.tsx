@@ -15,6 +15,7 @@ export type CharacterMenuAction = {
 interface DashboardCharacterHeroProps {
   sceneImage: string;
   sceneImageDesktop?: string;
+  mobileSceneVideo?: string;
   sceneAlt?: string;
   theme?: ThemeSettings;
   title: string;
@@ -39,6 +40,7 @@ interface DashboardCharacterHeroProps {
 export function DashboardCharacterHero({
   sceneImage,
   sceneImageDesktop,
+  mobileSceneVideo,
   sceneAlt = '',
   theme,
   title,
@@ -79,10 +81,22 @@ export function DashboardCharacterHero({
           onMenuClose();
         }}
       >
-        <picture className="hh-character-hero-picture">
+        <picture className={`hh-character-hero-picture${mobileSceneVideo ? ' has-mobile-video' : ''}`}>
           {resolvedSceneImageDesktop && <source media="(min-width: 760px)" srcSet={resolvedSceneImageDesktop} />}
           <img className="hh-character-hero-image" src={resolvedSceneImage} alt={sceneAlt} aria-hidden={sceneAlt ? undefined : true} />
         </picture>
+        {mobileSceneVideo && (
+          <video
+            className="hh-character-hero-video"
+            src={mobileSceneVideo}
+            poster={resolvedSceneImage}
+            autoPlay
+            muted
+            loop
+            playsInline
+            aria-hidden="true"
+          />
+        )}
         <div className="hh-character-hero-copy">
           {eyebrow && <p>{eyebrow}</p>}
           <h1>{title}</h1>

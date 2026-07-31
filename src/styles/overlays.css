@@ -301,6 +301,11 @@
   font-weight: 900;
 }
 
+.hh-parent-content-modal-bar--child {
+  justify-content: flex-end;
+  min-height: 48px;
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   .hh-character-icon-button,
@@ -343,6 +348,13 @@ body {
 
   .hh-parent-content-modal-bar {
     padding-top: max(58px, calc(env(safe-area-inset-top, 0px) + 34px));
+  }
+
+  .hh-parent-content-modal-bar--child {
+    min-height: 48px;
+    padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 16px));
+    padding-bottom: 8px;
+    margin-bottom: 8px;
   }
 
   .hh-toast {

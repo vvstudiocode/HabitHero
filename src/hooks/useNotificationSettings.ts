@@ -3,7 +3,6 @@ import { useAuthSession } from '../auth';
 import { getSupabaseClient } from '../lib/supabase';
 import {
   addPushListeners,
-  disablePushDevicesForProfile,
   getIosPushPermission,
   isIosPushSupported,
   readNotificationPreference,
@@ -30,16 +29,6 @@ export function useNotificationSettings({ familyId, childProfileId, onForeground
   const registeredContext = useRef<string | null>(null);
   const foregroundNotificationRef = useRef(onForegroundNotification);
   const supported = isIosPushSupported();
-
-  useEffect(() => {
-    if (!profileId) return undefined;
-    const client = getSupabaseClient();
-    return () => {
-      // A single device can switch between parent and child sessions. Disable
-      // the previous profile's device rows before another profile can use it.
-      void disablePushDevicesForProfile(client, profileId);
-    };
-  }, [profileId]);
 
   useEffect(() => {
     foregroundNotificationRef.current = onForegroundNotification;

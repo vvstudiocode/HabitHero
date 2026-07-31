@@ -36,14 +36,17 @@ test('character catalog provides category-based options independent of gender', 
   assert.ok(CHARACTER_CATALOG.every(character => ['adventure', 'nature', 'fantasy'].includes(character.category)));
 });
 
-test('dashboard hero uses a complete scene image instead of composing a background and character layer', () => {
+test('dashboard hero supports a muted mobile video while keeping the image fallback', () => {
   const source = read('../src/components/DashboardCharacterHero.tsx');
 
   assert.match(source, /sceneImage: string/);
   assert.match(source, /sceneImageDesktop\?: string/);
+  assert.match(source, /mobileSceneVideo\?: string/);
   assert.match(source, /media="\(min-width: 760px\)"/);
   assert.match(source, /<img/);
-  assert.doesNotMatch(source, /<video/);
+  assert.match(source, /<video/);
+  assert.match(source, /autoPlay[\s\S]*muted[\s\S]*playsInline/);
+  assert.match(source, /loop/);
 });
 
 test('parent and child dashboards provide their own complete scene images', () => {
@@ -55,6 +58,7 @@ test('parent and child dashboards provide their own complete scene images', () =
   assert.match(childSource, /getCharacterById\(activeChild\?\.characterId\)/);
   assert.match(childSource, /sceneImage=\{activeCharacter\.imageUrl\}/);
   assert.match(childSource, /sceneImageDesktop=\{activeCharacter\.desktopImageUrl\}/);
+  assert.match(childSource, /mobileSceneVideo=\{activeCharacter\.id === 'pink-catgirl-room' \? '\/videos\/habithero-dashboard\.mp4' : activeCharacter\.id === 'black-catboy-room' \? '\/videos\/habithero-black-catboy\.mp4' : activeCharacter\.id === 'blue-catboy-room' \? '\/videos\/habithero-blue-catboy\.mp4' : activeCharacter\.id === 'white-catgirl-room' \? '\/videos\/habithero-white-catgirl\.mp4' : undefined\}/);
 });
 
 test('family child picker uses each child character scene thumbnail', () => {
