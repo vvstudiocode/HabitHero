@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 type ModalVariant = 'bottom' | 'center';
@@ -21,21 +21,27 @@ export function ModalShell({
   onClose,
   panelClassName = '',
 }: ModalShellProps) {
+  const titleId = useId();
   const backdropClassName = variant === 'bottom'
-    ? 'fixed inset-0 bg-black/40 flex items-end justify-center z-[70]'
-    : 'hh-safe-modal-shell fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]';
+    ? 'hh-modal-overlay fixed inset-0 bg-black/40 flex items-end justify-center z-[70]'
+    : 'hh-modal-overlay hh-safe-modal-shell fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]';
   const defaultPanelClassName = variant === 'bottom'
     ? 'hh-form-modal-panel bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-xl animate-slide-up'
     : 'hh-parent-confirm-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-slide-up';
 
   return (
     <div className={backdropClassName}>
-      <div className={`${defaultPanelClassName} ${panelClassName}`.trim()}>
+      <div
+        className={`${defaultPanelClassName} ${panelClassName}`.trim()}
+        role={title ? 'dialog' : undefined}
+        aria-modal={title ? 'true' : undefined}
+        aria-labelledby={title ? titleId : undefined}
+      >
         {title && (
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold">{title}</h3>
+            <h3 id={titleId} className="text-xl font-bold">{title}</h3>
             {onClose && closeLabel && (
-              <button onClick={onClose} className="p-2 text-gray-400 bg-gray-100 rounded-full" aria-label={closeLabel}>
+              <button onClick={onClose} className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400" aria-label={closeLabel}>
                 <X size={20} />
               </button>
             )}

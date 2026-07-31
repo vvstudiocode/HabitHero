@@ -1,3 +1,32 @@
+.hh-modal-overlay {
+  animation: hh-modal-overlay-in 220ms ease-out both;
+}
+
+.hh-modal-overlay.is-leaving {
+  animation: hh-modal-overlay-out 180ms ease-in both;
+  pointer-events: none;
+}
+
+@keyframes hh-modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hh-modal-overlay-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
 .hh-goal-proposal-overlay {
   position: fixed;
   z-index: 70;
@@ -5,6 +34,12 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  animation: hh-goal-overlay-enter 220ms ease-out both;
+}
+
+.hh-goal-proposal-overlay.hh-modal-exit {
+  animation: hh-goal-overlay-exit 220ms ease-in both;
+  pointer-events: none;
 }
 
 .hh-goal-proposal-backdrop {
@@ -22,23 +57,29 @@
   width: min(100%, 620px);
   max-height: min(86dvh, 760px);
   overflow-y: auto;
-  padding: 16px 16px max(20px, env(safe-area-inset-bottom));
+  scrollbar-width: none;
+  padding: 64px 16px max(20px, env(safe-area-inset-bottom));
   background: #ffffff;
   border-radius: 28px 28px 0 0;
   box-shadow: 0 -18px 44px rgba(34, 86, 91, .2);
   animation: hh-goal-sheet-enter 280ms cubic-bezier(.16, 1, .3, 1) both;
 }
 
-.hh-goal-proposal-sheet.hh-modal-exit {
+.hh-goal-proposal-sheet::-webkit-scrollbar {
+  display: none;
+}
+
+.hh-goal-proposal-overlay.hh-modal-exit .hh-goal-proposal-sheet {
   animation: hh-goal-sheet-exit 280ms cubic-bezier(.4, 0, 1, 1) both;
-  pointer-events: none;
 }
 
 .hh-goal-proposal-sheet-bar {
+  position: absolute;
+  top: 12px;
+  left: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin: 0 0 10px;
+  margin: 0;
   color: #183d55;
   font-size: 20px;
 }
@@ -58,6 +99,26 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes hh-goal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hh-goal-overlay-exit {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
   }
 }
 
@@ -242,7 +303,7 @@
   height: 0;
 }
 
-.hh-parent-content-modal>*:not(.hh-parent-content-modal-bar) {
+.hh-parent-content-modal>*:not(.hh-parent-content-modal-bar):not(.hh-modal-overlay) {
   position: relative;
   z-index: 0;
 }
@@ -252,7 +313,7 @@
 .hh-sprite-theme .hh-parent-content-modal h3,
 .hh-sprite-theme .hh-parent-content-modal h4,
 .hh-sprite-theme .hh-parent-content-modal p,
-.hh-sprite-theme .hh-parent-content-modal span,
+.hh-sprite-theme .hh-parent-content-modal span:not(.hh-adventure-calendar-today):not(.hh-adventure-calendar-count),
 .hh-sprite-theme .hh-parent-content-modal strong {
   color: #1a1a1a;
 }
@@ -306,6 +367,242 @@
   min-height: 48px;
 }
 
+.hh-adventure-detail-overlay {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+  opacity: 1;
+  animation: hh-adventure-detail-fade-in var(--hh-adventure-enter-duration) ease-out backwards;
+  transition: opacity var(--hh-adventure-exit-duration) ease-in;
+}
+
+.hh-adventure-detail-overlay.is-leaving {
+  animation: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hh-adventure-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+}
+
+.hh-adventure-detail {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 520px);
+  max-height: min(86dvh, 760px);
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 24px;
+  transform: translateY(0);
+  transition: transform var(--hh-adventure-exit-duration) ease-in;
+}
+
+.hh-adventure-detail-overlay.is-leaving .hh-adventure-detail {
+  transform: translateY(4px);
+}
+
+.hh-adventure-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hh-adventure-detail-header p,
+.hh-adventure-detail-header h2 {
+  margin: 0;
+}
+
+.hh-adventure-detail-header p {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.hh-adventure-detail-header h2 {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-family: Fredoka, sans-serif;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.hh-adventure-detail-close {
+  display: grid;
+  min-width: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.hh-adventure-detail-description {
+  margin: 20px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.hh-adventure-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0 0;
+}
+
+.hh-adventure-detail-meta > div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.hh-adventure-detail-meta dt {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hh-adventure-detail-meta dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.hh-adventure-detail-notice,
+.hh-adventure-readonly-state {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.hh-adventure-readonly-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hh-adventure-readonly-state p {
+  margin: 0;
+}
+
+.hh-adventure-timer {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 16px;
+}
+
+.hh-adventure-timer strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hh-adventure-timer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  font-weight: 900;
+}
+
+.hh-adventure-completion {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+  padding-bottom: 0;
+}
+
+.hh-adventure-choice-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.hh-adventure-choice-group legend,
+.hh-adventure-reflection > span {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.hh-adventure-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hh-adventure-choice-grid button {
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.hh-adventure-reflection {
+  display: grid;
+}
+
+.hh-adventure-reflection textarea {
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  padding: 12px;
+  border-radius: 14px;
+  font: inherit;
+}
+
+.hh-adventure-form-error {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.hh-adventure-complete-button {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 18px;
+  border-radius: 16px;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.hh-adventure-completion-actions {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@keyframes hh-adventure-detail-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   .hh-character-icon-button,
@@ -316,10 +613,14 @@
   }
 
   .hh-goal-proposal-sheet,
+  .hh-goal-proposal-overlay,
   .hh-parent-feature-backdrop,
   .hh-parent-feature-modal,
-  .hh-parent-content-modal {
+  .hh-parent-content-modal,
+  .hh-adventure-detail-overlay,
+  .hh-adventure-detail {
     animation-duration: .01ms;
+    transition-duration: .01ms;
   }
 }
 
@@ -359,5 +660,34 @@ body {
 
   .hh-toast {
     top: max(36px, calc(env(safe-area-inset-top, 0px) + 36px));
+  }
+
+  .hh-adventure-detail-overlay {
+    padding: 0;
+  }
+
+  .hh-adventure-detail {
+    width: 100%;
+    max-height: min(90dvh, 760px);
+    padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .hh-adventure-completion {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .hh-adventure-completion-actions {
+    position: fixed;
+    z-index: 2;
+    right: 18px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 18px;
+    width: auto;
+    padding: 8px;
+    background: rgba(255, 255, 255, .94);
+    border-radius: 20px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .18);
+    backdrop-filter: blur(14px) saturate(150%);
   }
 }

@@ -62,7 +62,7 @@ export function DashboardCharacterHero({
 }: DashboardCharacterHeroProps) {
   const rootActions = rootMenuActions ?? menuActions ?? [];
   const subActions = rootMenuActions && activeMenuId ? (menuActions ?? []) : [];
-  const hasMenu = rootActions.length > 0;
+  const hasMenu = rootActions.length > 0 || subActions.length > 0;
   const character = getCharacterByImageUrl(sceneImage);
   const themeColor = theme?.accentColor ?? character?.accentColor ?? (menuVariant === 'parent' ? '#d99a24' : '#f472b6');
   const resolvedSceneImage = theme?.mobileBackgroundImageUrl ?? sceneImage;
@@ -108,21 +108,23 @@ export function DashboardCharacterHero({
             data-active-menu={activeMenuId ?? undefined}
             data-menu-variant={menuVariant}
           >
-            <div className="hh-character-menu-root" aria-label={`${menuVariant === 'child' ? '孩子' : '家長'}功能主選單`}>
-              {rootActions.map((action) => (
-                <button
-                  key={action.id}
-                  data-tour={action.tour}
-                  type="button"
-                  className={`hh-character-menu-action ${activeMenuId === action.id ? 'is-selected' : ''}`}
-                  onClick={action.onSelect}
-                >
-                  {action.icon && <span aria-hidden="true">{action.icon}</span>}
-                  {action.hasNotification && <span className="hh-character-menu-notification" aria-label="有新項目" />}
-                  <strong>{action.title}</strong>
-                </button>
-              ))}
-            </div>
+            {rootActions.length > 0 && (
+              <div className="hh-character-menu-root" aria-label={`${menuVariant === 'child' ? '孩子' : '家長'}功能主選單`}>
+                {rootActions.map((action) => (
+                  <button
+                    key={action.id}
+                    data-tour={action.tour}
+                    type="button"
+                    className={`hh-character-menu-action ${activeMenuId === action.id ? 'is-selected' : ''}`}
+                    onClick={action.onSelect}
+                  >
+                    {action.icon && <span aria-hidden="true">{action.icon}</span>}
+                    {action.hasNotification && <span className="hh-character-menu-notification" aria-label="有新項目" />}
+                    <strong>{action.title}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
             {subActions.length > 0 && (
               <div className="hh-character-menu-submenu" aria-label={`${menuVariant === 'child' ? '孩子' : '家長'}功能子選單`} aria-hidden={menuOpen === false}>
                 {subActions.map((action, index) => (

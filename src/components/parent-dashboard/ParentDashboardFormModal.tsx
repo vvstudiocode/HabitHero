@@ -6,11 +6,26 @@ interface ParentDashboardFormModalProps {
   closeLabel: string;
   onClose: () => void;
   children: ReactNode;
+  variant?: 'bottom' | 'center';
+  panelClassName?: string;
 }
 
-export function ParentDashboardFormModal({ title, closeLabel, onClose, children }: ParentDashboardFormModalProps) {
+export function ParentDashboardFormModal({
+  title,
+  closeLabel,
+  onClose,
+  children,
+  variant = 'bottom',
+  panelClassName,
+}: ParentDashboardFormModalProps) {
   return (
-    <ModalShell title={title} closeLabel={closeLabel} onClose={onClose}>
+    <ModalShell
+      title={title}
+      closeLabel={closeLabel}
+      onClose={onClose}
+      variant={variant}
+      panelClassName={panelClassName}
+    >
       {children}
     </ModalShell>
   );

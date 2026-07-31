@@ -1,4 +1,6 @@
 import {
+  AdventureGroup,
+  AdventureGroupRow,
   ChildProfileRow,
   ChildGender,
   ChildViewModel,
@@ -17,7 +19,12 @@ import {
   TaskRow,
   TaskCategory,
   TaskOrigin,
+  Task,
   TaskViewModel,
+  TaskSchedule,
+  TaskScheduleRow,
+  TaskTimerSession,
+  TaskTimerSessionRow,
   Timestamp,
   ThemeSettings,
   UnixMilliseconds,
@@ -144,7 +151,84 @@ export const taskRowToViewModel = (row: TaskRow): TaskViewModel => ({
   completedAt: row.completed_at,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  ...(row.description !== undefined ? { description: row.description } : {}),
+  ...(row.adventure_type !== undefined ? { adventureType: row.adventure_type } : {}),
+  ...(row.adventure_group_id !== undefined ? { adventureGroupId: row.adventure_group_id } : {}),
+  ...(row.schedule_id !== undefined ? { scheduleId: row.schedule_id } : {}),
+  ...(row.occurrence_date !== undefined ? { occurrenceDate: row.occurrence_date } : {}),
+  ...(row.completion_report_mode !== undefined ? { completionReportMode: row.completion_report_mode } : {}),
+  ...(row.quick_report !== undefined ? { quickReport: row.quick_report } : {}),
+  ...(row.requires_timer !== undefined ? { requiresTimer: row.requires_timer } : {}),
 });
+
+export const adventureGroupRowToViewModel = (row: AdventureGroupRow): AdventureGroup => ({
+  id: row.id,
+  familyId: row.family_id,
+  childProfileId: row.child_profile_id,
+  type: row.type,
+  title: row.title,
+  status: row.status,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  archivedAt: row.archived_at,
+});
+
+export const taskScheduleRowToViewModel = (row: TaskScheduleRow): TaskSchedule => ({
+  id: row.id,
+  familyId: row.family_id,
+  childProfileId: row.child_profile_id,
+  name: row.name,
+  description: row.description,
+  points: row.points,
+  icon: row.icon,
+  category: row.category,
+  durationMinutes: row.duration_minutes,
+  startTime: row.start_time,
+  endTime: row.end_time,
+  weekdays: row.weekdays,
+  timezone: row.timezone,
+  requiresTimer: row.requires_timer,
+  requiresReviewBeforeNextTask: row.requires_review_before_next_task,
+  activeFrom: row.active_from,
+  activeUntil: row.active_until,
+  isActive: row.is_active,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+export const taskTimerSessionRowToViewModel = (row: TaskTimerSessionRow): TaskTimerSession => ({
+  id: row.id,
+  familyId: row.family_id,
+  childProfileId: row.child_profile_id,
+  taskId: row.task_id,
+  status: row.status,
+  accumulatedSeconds: row.accumulated_seconds,
+  startedAt: row.started_at,
+  lastResumedAt: row.last_resumed_at,
+  pausedAt: row.paused_at,
+  completedAt: row.completed_at,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+export const applyServerTimerSession = (
+  task: Task,
+  session: TaskTimerSession,
+  now = Date.now(),
+): Task => {
+  const runningSeconds = session.status === 'running' && session.lastResumedAt
+    ? Math.max(0, Math.floor((now - Date.parse(session.lastResumedAt)) / 1_000))
+    : 0;
+  const elapsedSeconds = session.accumulatedSeconds + runningSeconds;
+  const remainingMs = Math.max(0, (task.duration ?? 0) * 60_000 - elapsedSeconds * 1_000);
+  const isRunning = session.status === 'running' && remainingMs > 0;
+  return {
+    ...task,
+    timerIsRunning: isRunning,
+    timerEndTime: isRunning ? now + remainingMs : null,
+    timerRemainingMs: isRunning ? null : remainingMs,
+  };
+};
 
 export const taskTemplateRowToViewModel = (
   row: TaskTemplateRow,

@@ -21,6 +21,11 @@ export type TaskOrigin = 'child_proposed' | 'parent_suggested' | 'parent_assigne
 export type FeedbackTone = 'encouraging' | 'coaching' | 'corrective' | 'correction' | 'celebrating' | 'celebration' | 'celebratory';
 export type RedemptionStatus = 'pending' | 'fulfilled' | 'cancelled';
 export type PointLedgerEntryType = 'task_approved' | 'reward_redemption' | 'manual_adjustment';
+export type AdventureType = 'daily' | 'general';
+export type CompletionReportMode = 'none' | 'quick' | 'reflection';
+export type AdventureQuickReport = 'smooth' | 'hard' | 'help';
+export type AdventureGroupStatus = 'active' | 'archived';
+export type TaskTimerStatus = 'running' | 'paused' | 'completed';
 
 export interface ProfileRow {
   id: Id;
@@ -116,6 +121,64 @@ export interface TaskRow {
   parent_correction_text: string | null;
   feedback_tone: FeedbackTone | null;
   revision_note: string | null;
+  completed_at: Timestamp | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  description?: string | null;
+  adventure_type?: AdventureType;
+  adventure_group_id?: Id | null;
+  schedule_id?: Id | null;
+  occurrence_date?: string | null;
+  completion_report_mode?: CompletionReportMode;
+  quick_report?: AdventureQuickReport | null;
+  requires_timer?: boolean;
+}
+
+export interface AdventureGroupRow {
+  id: Id;
+  family_id: Id;
+  child_profile_id: Id;
+  type: 'general';
+  title: string;
+  status: AdventureGroupStatus;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  archived_at: Timestamp | null;
+}
+
+export interface TaskScheduleRow {
+  id: Id;
+  family_id: Id;
+  child_profile_id: Id;
+  name: string;
+  description: string | null;
+  points: Points;
+  icon: string;
+  category: TaskCategory;
+  duration_minutes: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  weekdays: number[];
+  timezone: string;
+  requires_timer: boolean;
+  requires_review_before_next_task: boolean;
+  active_from: string;
+  active_until: string | null;
+  is_active: boolean;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface TaskTimerSessionRow {
+  id: Id;
+  family_id: Id;
+  child_profile_id: Id;
+  task_id: Id;
+  status: TaskTimerStatus;
+  accumulated_seconds: number;
+  started_at: Timestamp;
+  last_resumed_at: Timestamp | null;
+  paused_at: Timestamp | null;
   completed_at: Timestamp | null;
   created_at: Timestamp;
   updated_at: Timestamp;
@@ -407,6 +470,66 @@ export interface TaskViewModel {
   completedAt: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  description?: string | null;
+  adventureType?: AdventureType;
+  adventureGroupId?: Id | null;
+  scheduleId?: Id | null;
+  occurrenceDate?: string | null;
+  completionReportMode?: CompletionReportMode;
+  quickReport?: AdventureQuickReport | null;
+  requiresTimer?: boolean;
+  /** True only while an offline completion is queued for server validation. */
+  pendingSync?: boolean;
+}
+
+export interface AdventureGroup {
+  id: Id;
+  familyId: Id;
+  childProfileId: Id;
+  type: 'general';
+  title: string;
+  status: AdventureGroupStatus;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  archivedAt: Timestamp | null;
+}
+
+export interface TaskSchedule {
+  id: Id;
+  familyId: Id;
+  childProfileId: Id;
+  name: string;
+  description: string | null;
+  points: Points;
+  icon: string;
+  category: TaskCategory;
+  durationMinutes: number | null;
+  startTime: string | null;
+  endTime: string | null;
+  weekdays: number[];
+  timezone: string;
+  requiresTimer: boolean;
+  requiresReviewBeforeNextTask: boolean;
+  activeFrom: string;
+  activeUntil: string | null;
+  isActive: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface TaskTimerSession {
+  id: Id;
+  familyId: Id;
+  childProfileId: Id;
+  taskId: Id;
+  status: TaskTimerStatus;
+  accumulatedSeconds: number;
+  startedAt: Timestamp;
+  lastResumedAt: Timestamp | null;
+  pausedAt: Timestamp | null;
+  completedAt: Timestamp | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 export interface RewardViewModel {
@@ -543,4 +666,7 @@ export interface AppState {
   ledger: PointLedgerViewModel[];
   lastResetDate: string | null;
   familyTheme: ThemeSettings;
+  adventureGroups?: AdventureGroup[];
+  taskSchedules?: TaskSchedule[];
+  timerSessions?: TaskTimerSession[];
 }

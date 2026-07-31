@@ -19,11 +19,15 @@ import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCha
 import { getCharacterById } from '../features/characters/catalog';
 import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
+import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
+import { getTaipeiDateKey, isLegacyGrowthTask } from '../features/adventures/adventure-progress';
+import type { AdventureCompletionInput, AdventureTask } from '../features/adventures/types';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
   proposeChildGoal?: (childId: string, input: GoalProposalInput & { icon: string }) => Promise<void>;
   submitTaskReflection?: (taskId: string, input: { reflection: string; mood?: string | null; difficulty?: number | null }) => Promise<void>;
+  submitAdventureCompletion?: (taskId: string, input: AdventureCompletionInput) => Promise<void>;
 }
 
 interface ChildDashboardProps {
@@ -33,7 +37,7 @@ interface ChildDashboardProps {
 
 type ChildTab = 'goals' | 'growth' | 'wishlist' | 'history';
 type ChildMenuGroup = ChildTab | 'backpack';
-const HERO_MENU_EXIT_MS = 900;
+const HERO_MENU_EXIT_MS = 1200;
 
 function formatTaskTime(dueTime?: string | null) {
   return dueTime ? dueTime.slice(0, 5) : '全天';
@@ -46,7 +50,28 @@ function formatTaskWindow(task: { dueTime?: string | null; endTime?: string | nu
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
-  const { state, familyId, updateTaskStatus, updateTask, addTask, redeemReward, addWishlist, deleteWishlist, startTaskTimer, pauseTaskTimer, loading, error, retry, role, hasSession, isOffline } = appStore;
+  const {
+    state,
+    familyId,
+    updateTaskStatus,
+    updateTask,
+    addTask,
+    redeemReward,
+    addWishlist,
+    deleteWishlist,
+    startTaskTimer,
+    pauseTaskTimer,
+    ensureDailyAdventureOccurrences,
+    startAdventureTimer,
+    pauseAdventureTimer,
+    resumeAdventureTimer,
+    loading,
+    error,
+    retry,
+    role,
+    hasSession,
+    isOffline,
+  } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<ChildTab>('goals');
   const [heroFeature, setHeroFeature] = useState<ChildTab | null>(null);
@@ -66,6 +91,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     ? state.children.find(c => c.id === activeChildId)
     : undefined;
   const activeCharacter = getCharacterById(activeChild?.characterId) ?? getCharacterById('pink-catgirl-room')!;
+  const activeGeneralAdventureGroup = state.adventureGroups?.find(
+    (group) => group.childProfileId === activeChildId && group.status === 'active',
+  );
 
   const tasks = (activeChild?.tasks || []) as GrowthTask[];
   const rewards = activeChild?.rewards || [];
@@ -77,6 +105,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   // Wishlist Form
   const [showWishlistForm, setShowWishlistForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [adventureOpenRequest, setAdventureOpenRequest] = useState<{ name: string; requestId: number } | null>(null);
   const [wishName, setWishName] = useState('');
   const [wishlistToCancel, setWishlistToCancel] = useState<import('../types').WishlistItem | null>(null);
   const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
@@ -112,14 +141,18 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     if (toastTimer.current) clearTimeout(toastTimer.current);
   }, []);
 
-  const proposedTasks = tasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested');
-  const todoTasks = tasks
+  // Adventure tasks are completed exclusively from ChildAdventureBoard. Keeping
+  // them out of the legacy goal workflow prevents two completion entry points
+  // for the same database task.
+  const legacyGrowthTasks = tasks.filter(isLegacyGrowthTask);
+  const proposedTasks = legacyGrowthTasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested');
+  const todoTasks = legacyGrowthTasks
     .filter(t => t.status === 'todo')
     .sort((a, b) => (a.dueTime ?? '99:99').localeCompare(b.dueTime ?? '99:99'));
   const childGoalTasks = todoTasks.filter(task => task.origin === 'child_proposed');
   const parentGoalTasks = todoTasks.filter(task => task.origin !== 'child_proposed');
-  const pendingTasks = tasks.filter(t => t.status === 'pending');
-  const revisionTasks = tasks.filter(t => t.status === 'revision_requested');
+  const pendingTasks = legacyGrowthTasks.filter(t => t.status === 'pending');
+  const revisionTasks = legacyGrowthTasks.filter(t => t.status === 'revision_requested');
   const completedTasks = tasks.filter(t => t.status === 'completed');
   const completedTasksWithChild = activeChild ? completedTasks.map((task) => ({ ...task, childId: activeChild.id, childName: activeChild.name })) : [];
   const growthSummary = activeChild ? getChildGrowthSummary({ ...activeChild, tasks } as typeof activeChild, state.ledger) : null;
@@ -157,6 +190,15 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     return () => clearInterval(interval);
   }, []);
 
+  const adventureDate = getTaipeiDateKey(new Date(now));
+
+  useEffect(() => {
+    if (!activeChildId || isOffline) return;
+    void ensureDailyAdventureOccurrences(activeChildId, adventureDate).catch(() => {
+      showToast('每日冒險同步失敗，請稍後重試。');
+    });
+  }, [activeChildId, adventureDate, isOffline]);
+
   const allTasks = state.children.flatMap(c => c.tasks);
 
   useEffect(() => {
@@ -171,11 +213,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }
   }, [now, allTasks, beepedTaskId]);
 
-  const toggleTimer = (task: import('../types').Task) => {
+  const toggleTimer = async (task: import('../types').Task) => {
     if (!activeChild) return;
     
     if (task.timerIsRunning) {
-      pauseTaskTimer(activeChild.id, task.id);
+      if (task.adventureType || task.requiresTimer) await pauseAdventureTimer(task.id);
+      else pauseTaskTimer(activeChild.id, task.id);
     } else {
       if (!canStartTask(tasks, task.id)) {
         showToast('請先等待家長審核上一個任務。');
@@ -192,7 +235,15 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         showToast("一次只能執行一個任務喔！請先暫停其他任務。");
         return;
       }
-      startTaskTimer(activeChild.id, task.id);
+      if (task.adventureType || task.requiresTimer) {
+        if (task.timerRemainingMs !== undefined && task.timerRemainingMs !== null) {
+          await resumeAdventureTimer(task.id);
+        } else {
+          await startAdventureTimer(task.id);
+        }
+      } else {
+        startTaskTimer(activeChild.id, task.id);
+      }
     }
   };
 
@@ -222,7 +273,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       } else {
         await addTask(activeChild.id, { name: input.name, points: input.points, icon: 'Star', category: input.category, dueTime: input.dueTime, endTime: input.endTime, duration: input.duration, origin: 'child_proposed' } as never);
       }
-      showToast('目標已建立，可以先開始做。');
+      showToast('一般冒險已建立，現在就可以開始。');
     } finally {
       setActionPending(false);
     }
@@ -230,7 +281,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const handleSubmitGoalProposal = async (input: GoalProposalInput) => {
     await handleProposeGoal(input);
-    dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-sheet');
+    setAdventureOpenRequest({ name: input.name.trim(), requestId: Date.now() });
+    dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-overlay');
   };
 
   const handleSubmitReflection = async (taskId: string, input: GoalReflectionInput) => {
@@ -253,6 +305,20 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       }
       dismissWithAnimation(() => setSubmittingTask(null));
       showToast('心得已送出，等待爸媽審核。');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleAdventureCompletion = async (task: AdventureTask, input: AdventureCompletionInput) => {
+    if (!activeChild) return;
+    setActionPending(true);
+    try {
+      if (!appStore.submitAdventureCompletion) {
+        throw new Error('目前無法安全送出冒險，請重新整理後再試。');
+      }
+      await appStore.submitAdventureCompletion(task.id, input);
+      showToast('冒險已送出，等待爸媽確認。');
     } finally {
       setActionPending(false);
     }
@@ -357,12 +423,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     });
   };
 
-  const heroRootMenuActions: CharacterMenuAction[] = [
-    { id: 'goals', title: '今日目標', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
-  ];
+  const heroRootMenuActions: CharacterMenuAction[] = [];
 
   const heroSubMenuActions: Record<ChildMenuGroup, CharacterMenuAction[]> = {
     backpack: [
+      { id: 'goals', title: '今日目標', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
       { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
       { id: 'wishlist', title: '許願', icon: <Plus size={17} />, hasNotification: childMenuNotifications.wishlist, onSelect: () => openChildFeature('wishlist') },
       { id: 'history', title: '兌換', icon: <History size={17} />, hasNotification: childMenuNotifications.rewards, onSelect: () => openChildFeature('history') },
@@ -413,7 +478,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   }
 
   return (
-    <div className="hh-dashboard-screen hh-dashboard-screen--child flex flex-col min-h-[100dvh] bg-blue-50 pb-24">
+    <div
+      className="hh-dashboard-screen hh-dashboard-screen--child flex flex-col min-h-[100dvh] bg-blue-50 pb-24"
+      style={{ '--hh-character-theme-color': activeChild.theme.accentColor ?? activeCharacter.accentColor } as React.CSSProperties}
+    >
       <DashboardCharacterHero
         sceneImage={activeCharacter.imageUrl}
         sceneImageDesktop={activeCharacter.desktopImageUrl}
@@ -449,6 +517,29 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             </button>
           </>
         )}
+      />
+      <ChildAdventureBoard
+        tasks={tasks as AdventureTask[]}
+        generalGroupId={activeGeneralAdventureGroup?.id}
+        generalTitle={activeGeneralAdventureGroup?.title}
+        now={now}
+        loading={actionPending}
+        requestedTask={adventureOpenRequest}
+        isTaskExecutable={(task) => {
+          if (task.status === 'proposed') return { allowed: false, reason: '等待爸媽確認後，就能開始這個冒險。' };
+          if (task.status === 'proposal_revision_requested') return { allowed: false, reason: '請先補充冒險內容，再交給爸媽確認。' };
+          if (task.status === 'pending' || task.status === 'completed') return { allowed: false };
+          if (!canStartTask(tasks, task.id)) return { allowed: false, reason: '請先等待爸媽審核上一個冒險。' };
+          const executionState = getTaskExecutionState(task.dueTime, task.endTime);
+          if (executionState === 'not_started') return { allowed: false, reason: `還沒到可開始時間：${formatTaskTime(task.dueTime)}。` };
+          if (executionState === 'expired') return { allowed: false, reason: `這次冒險已截止：${formatTaskWindow(task)}。` };
+          return { allowed: true };
+        }}
+        onCreateGeneral={() => setShowGoalForm(true)}
+        onTimerToggle={(task) => {
+          void toggleTimer(task).catch(() => showToast('計時狀態更新失敗，請再試一次。'));
+        }}
+        onComplete={handleAdventureCompletion}
       />
 
       {/* Main Content */}
@@ -811,12 +902,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
       {/* Overlays */}
       {showGoalForm && (
-        <div className="hh-goal-proposal-overlay" role="dialog" aria-modal="true" aria-label="新增今日目標">
-          <button type="button" className="hh-goal-proposal-backdrop" aria-label="關閉新增目標" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} />
+        <div className="hh-goal-proposal-overlay" role="dialog" aria-modal="true" aria-label="新增一般冒險">
+          <button type="button" className="hh-goal-proposal-backdrop" aria-label="關閉新增一般冒險" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-overlay')} />
           <div className="hh-goal-proposal-sheet">
             <div className="hh-goal-proposal-sheet-bar">
-              <strong>新增今日目標</strong>
-              <button type="button" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-sheet')} aria-label="關閉新增目標" className="hh-character-icon-button"><X size={18} /></button>
+              <button type="button" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-overlay')} aria-label="關閉新增一般冒險" className="hh-character-icon-button"><X size={18} /></button>
             </div>
             <GoalProposalForm templates={taskTemplates} loading={actionPending || loading} onSubmit={handleSubmitGoalProposal} />
           </div>

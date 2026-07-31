@@ -1,14 +1,34 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
-import { AppState, ChildGender, FeedbackTone, Task, Reward, TaskCategory, TaskStatus, TaskTemplate } from './types';
+import {
+  AppState,
+  ChildGender,
+  FeedbackTone,
+  Task,
+  Reward,
+  TaskCategory,
+  TaskStatus,
+  TaskTemplate,
+} from './types';
 import { useAuthSession } from './auth';
-import { createDataRepository, DataRepository } from './lib/data-access';
+import {
+  createDataRepository,
+  DataRepository,
+  type AdventureCompletionInput,
+  type AdventureScheduleInput,
+  type AdventureScheduleUpdateInput,
+  type BatchAdventureReviewResult,
+  type GeneralAdventureInput,
+  type ReviewTaskCompletionInput,
+} from './lib/data-access';
 import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
 import { subscribeToAppData } from './lib/realtime';
 import { resolveActiveChildId } from './lib/family-switch';
 import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
 import { notifyTaskCreated } from './lib/push-notifications';
+import { createAdventureStoreActions } from './lib/adventure-store-actions';
+import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
 
-interface AppContextType {
+export interface AppContextType {
   state: AppState;
   familyId: string | null;
   loading: boolean;
@@ -67,6 +87,20 @@ interface AppContextType {
     tone?: FeedbackTone | null;
     revisionNote?: string | null;
   }) => Promise<void>;
+  ensureDailyAdventureOccurrences: (childId: string, date?: string) => Promise<void>;
+  submitAdventureCompletion: (taskId: string, submission: AdventureCompletionInput) => Promise<void>;
+  reviewAdventureCompletion: (taskId: string, review: ReviewTaskCompletionInput) => Promise<void>;
+  createAdventureSchedule: (input: AdventureScheduleInput) => Promise<void>;
+  updateAdventureSchedule: (scheduleId: string, updates: AdventureScheduleUpdateInput) => Promise<void>;
+  disableAdventureSchedule: (scheduleId: string) => Promise<void>;
+  createGeneralAdventure: (input: GeneralAdventureInput) => Promise<void>;
+  updateGeneralAdventureTitle: (childId: string, title: string) => Promise<void>;
+  archiveAdventureGroup: (groupId: string) => Promise<void>;
+  startAdventureTimer: (taskId: string) => Promise<void>;
+  pauseAdventureTimer: (taskId: string) => Promise<void>;
+  resumeAdventureTimer: (taskId: string) => Promise<void>;
+  batchReviewDailyAdventures: (taskIds: string[]) => Promise<BatchAdventureReviewResult>;
+  flushAdventureCompletionQueue: () => Promise<void>;
   startTaskTimer: (childId: string, taskId: string) => void;
   pauseTaskTimer: (childId: string, taskId: string) => void;
   addReward: (childId: string, reward: Omit<Reward, 'id'>) => Promise<void>;
@@ -108,6 +142,9 @@ const emptyState: AppState = {
   ledger: [],
   lastResetDate: null,
   familyTheme: { accentColor: 'amber', mobileBackgroundImageUrl: null, desktopBackgroundImageUrl: null },
+  adventureGroups: [],
+  taskSchedules: [],
+  timerSessions: [],
 };
 
 function timerStorageKey(userId: string) {
@@ -199,7 +236,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const currentSnapshots = stateRef.current.children.flatMap((child) => child.tasks
           .filter((task) => task.timerIsRunning || task.timerRemainingMs !== undefined && task.timerRemainingMs !== null)
           .map((task) => toTimerSnapshot(child.id, task)));
-        const restoredState = mergeTimerSnapshots(loaded.state, [...readTimerSnapshots(session.user.id), ...currentSnapshots]);
+        const timerRestoredState = mergeTimerSnapshots(loaded.state, [...readTimerSnapshots(session.user.id), ...currentSnapshots]);
+        const restoredState = restoreQueuedAdventureCompletions(timerRestoredState, session.user.id);
         if (JSON.stringify(stateRef.current) !== JSON.stringify(restoredState)) {
           stateRef.current = restoredState;
           setState(restoredState);
@@ -394,7 +432,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     proposeChildGoal: async (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => {
       const localId = createLocalId();
       const now = new Date().toISOString();
-      const taskId = await mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...goal, id: localId, icon: goal.icon, status: 'todo', origin: 'child_proposed', duration: goal.duration ?? undefined, dueOn: goal.dueOn ?? null, createdAt: now, updatedAt: now, completedAt: null, confirmedAt: null } as Task] })));
+      const taskId = await mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...goal, id: localId, icon: goal.icon, status: 'todo', origin: 'child_proposed', adventureType: 'general', completionReportMode: 'quick', duration: goal.duration ?? undefined, dueOn: goal.dueOn ?? null, createdAt: now, updatedAt: now, completedAt: null, confirmedAt: now } as Task] })));
       void notifyTaskCreated(getSupabaseClient(), taskId).catch(() => undefined);
     },
     confirmChildGoal: (taskId: string, confirmation: Parameters<AppContextType['confirmChildGoal']>[1]) => mutate((repo) => repo.confirmChildGoal(taskId, confirmation), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...confirmation, confirmedAt: new Date().toISOString() }))),
@@ -421,6 +459,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
             : child.points,
         })),
       };
+    }),
+    ...createAdventureStoreActions({
+      mutate,
+      familyId,
+      getState: () => stateRef.current,
+      setState: (updater) => setState((current) => {
+        const next = updater(current);
+        stateRef.current = next;
+        return next;
+      }),
+      createLocalId,
+      authenticatedUserId: session?.user.id ?? null,
+      isOnline: () => typeof navigator === 'undefined' || navigator.onLine,
+      setError: setDataError,
     }),
     addReward: (childId: string, reward: Omit<Reward, 'id'>) => {
       const localId = createLocalId();
@@ -451,6 +503,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dataReady: dataReadyForSession,
   });
   const initialLoading = !initialLoadDone;
+
+  useEffect(() => {
+    if (!session || !dataReadyForSession || isOffline) return;
+    void actions.flushAdventureCompletionQueue();
+  // The queue is idempotent and internally coalesces overlapping drains.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataReadyForSession, isOffline, session?.user.id]);
 
   return <AppContext.Provider value={{
     state, familyId, loading, initialLoading, dataReady: dataReadyForSession, mutationPending, stale, isOffline, error: sessionError || dataError,

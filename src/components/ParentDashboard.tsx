@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { dismissWithAnimation } from '../lib/utils';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
-import { Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Baby } from 'lucide-react';
+import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Baby } from 'lucide-react';
 import { TaskStatus, Task, Reward, type ChildGender } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -27,6 +27,12 @@ import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
 import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
+import { getTodayInTaipei, type ParentCalendarAdventureTask } from '../features/adventures/components/ParentAdventureCalendar';
+import {
+  ParentAdventureWorkspace,
+  type CreateAdventureScheduleInput,
+  type CreateGeneralAdventureInput,
+} from '../features/adventures/components/ParentAdventureWorkspace';
 
 interface ParentDashboardProps {
   onSwitchToChild: (childId?: string) => void;
@@ -69,6 +75,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       tone?: string | null;
       revisionNote?: string | null;
     }) => Promise<void>;
+    createAdventureSchedule: (input: CreateAdventureScheduleInput) => Promise<void>;
+    createGeneralAdventure: (input: CreateGeneralAdventureInput) => Promise<void>;
+    updateGeneralAdventureTitle: (childId: string, title: string) => Promise<void>;
+    batchReviewDailyAdventures: (taskIds: string[]) => Promise<{ failedTaskIds: string[] }>;
+    disableAdventureSchedule: (scheduleId: string) => Promise<void>;
+    archiveAdventureGroup: (groupId: string) => Promise<void>;
   };
   const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
   const [activeTab, setActiveTab] = useState<ParentTab>('review');
@@ -76,6 +88,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [heroMenuGroup, setHeroMenuGroup] = useState<ParentTab | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
   const [heroFormReturnGroup, setHeroFormReturnGroup] = useState<ParentTab | null>(null);
+  const [adventureFormRequest, setAdventureFormRequest] = useState<{ type: 'daily' | 'general'; requestId: number } | null>(null);
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
 
   useEffect(() => {
@@ -107,6 +120,21 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const todoTasks = allTasks.filter(t => t.status === 'todo');
   const completedTasks = allTasks.filter(t => t.status === 'completed');
   const growthSummaries = buildGrowthStats(state.children, state.ledger);
+  const todayDateKey = getTodayInTaipei();
+  const calendarTasks: ParentCalendarAdventureTask[] = allTasks.map(task => ({
+    id: task.id,
+    childId: task.childId,
+    childName: task.childName,
+    name: task.name,
+    occurrenceDate: task.occurrenceDate
+      ?? task.dueOn
+      ?? (task.isDaily ? todayDateKey : String(task.createdAt).slice(0, 10)),
+    adventureType: task.adventureType ?? (task.isDaily ? 'daily' : 'general'),
+    adventureGroupId: task.adventureGroupId,
+    status: task.status,
+  }));
+  const activeGeneralGroups = state.adventureGroups?.filter(group => group.status === 'active') ?? [];
+  const generalAdventureTitle = activeGeneralGroups[0]?.title ?? '一般冒險';
 
   const groupedTodoTasks = Object.values(todoTasks.reduce((acc, task) => {
     const key = `${task.name}-${task.points}-${task.duration || ''}-${task.dueTime || ''}-${task.endTime || ''}-${task.category || DEFAULT_TASK_CATEGORY}-${task.isDaily ? 'daily' : 'once'}-${task.requiresReviewBeforeNextTask ? 'review-gated' : 'free'}`;
@@ -424,7 +452,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       return;
     }
     if (nextStep === 6) {
-      openHeroForm('tasks', () => openTaskForm(undefined, true));
+      openHeroFeature('tasks');
+      setAdventureFormRequest({ type: 'daily', requestId: Date.now() });
       return;
     }
     if (nextStep === 7) {
@@ -670,6 +699,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     setHeroMenuVisible(false);
   };
 
+  const openAdventureForm = (type: 'daily' | 'general') => {
+    openHeroFeature('tasks');
+    setAdventureFormRequest({ type, requestId: Date.now() });
+  };
+
   const closeHeroFeature = () => {
     dismissWithAnimation(() => setHeroFeature(null), '.hh-parent-content-modal', 260);
     setHeroMenuGroup(null);
@@ -710,19 +744,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     review: [
       { id: 'review-goals', title: '審核項目', icon: <Eye size={17} />, onSelect: () => openHeroFeature('review') },
       { id: 'review-tickets', title: '待兌換獎勵', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
     ],
     tasks: [
-      { id: 'task-form', title: '任務表單', icon: <Circle size={17} />, onSelect: () => openHeroFeature('tasks') },
-      { id: 'add-task', title: '新增任務', tour: 'add-task-menu', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTaskForm()) },
-      { id: 'add-template', title: '新增模板', icon: <Plus size={17} />, onSelect: () => openHeroForm('tasks', () => openTemplateForm()) },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
+      { id: 'task-form', title: '冒險管理', tour: 'add-task-menu', icon: <CalendarDays size={17} />, onSelect: () => openHeroFeature('tasks') },
+      { id: 'add-daily-adventure', title: '每日冒險', icon: <Plus size={17} />, onSelect: () => openAdventureForm('daily') },
+      { id: 'add-general-adventure', title: '一般冒險', icon: <Plus size={17} />, onSelect: () => openAdventureForm('general') },
     ],
     growth: [],
     rewards: [
       { id: 'reward-list', title: '獎勵清單', icon: <Gift size={17} />, onSelect: () => openHeroFeature('rewards') },
       { id: 'add-reward', title: '新增獎勵', icon: <Plus size={17} />, onSelect: () => openHeroForm('rewards', () => openRewardForm()) },
-      { id: 'back', title: '返回', closeOnSelect: false, onSelect: () => setHeroMenuGroup(null) },
     ],
     wishlist: [],
   };
@@ -784,7 +815,25 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         )}
 
         {activeTab === 'tasks' && (
-          <div className="space-y-6">
+          <ParentAdventureWorkspace
+            children={state.children.map(child => ({ id: child.id, name: child.name }))}
+            tasks={calendarTasks}
+            schedules={state.taskSchedules ?? []}
+            groups={state.adventureGroups ?? []}
+            generalTitle={generalAdventureTitle}
+            activeFrom={todayDateKey}
+            loading={loading || mutationPending}
+            onOpenReview={() => openHeroFeature('review')}
+            onCreateSchedule={appStore.createAdventureSchedule}
+            onCreateGeneral={appStore.createGeneralAdventure}
+            onUpdateGeneralTitle={appStore.updateGeneralAdventureTitle}
+            onBatchReviewDaily={appStore.batchReviewDailyAdventures}
+            onUpdateSchedule={appStore.updateAdventureSchedule}
+            onDisableSchedule={appStore.disableAdventureSchedule}
+            onArchiveGroup={appStore.archiveAdventureGroup}
+            requestedForm={adventureFormRequest}
+            legacyTaskList={(
+              <>
             {/* Todo Tasks */}
             <section>
               <div className="flex justify-between items-center mb-3">
@@ -890,7 +939,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 )}
               </div>
             </section>
-          </div>
+              </>
+            )}
+          />
         )}
 
         {activeTab === 'growth' && (

@@ -14,5 +14,6 @@ export function dismissWithAnimation(onDismiss: () => void, selector = '.hh-form
   }
 
   panel.classList.add('hh-modal-exit');
+  panel.closest<HTMLElement>('.hh-modal-overlay')?.classList.add('is-leaving');
   window.setTimeout(onDismiss, duration);
 }

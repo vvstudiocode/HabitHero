@@ -131,8 +131,8 @@ Deno.serve(async request => {
         .eq('family_id', task.family_id)
         .eq('role', 'parent');
       targetProfileIds = (parents ?? []).map(parent => parent.profile_id);
-      title = '有新的目標提案';
-      message = `${child.display_name} 提出了一個新目標：「${task.name}」`;
+      title = '孩子建立了新冒險';
+      message = `${child.display_name} 建立了「${task.name}」，完成後會請你確認點數。`;
     } else if (origin === 'parent_assigned' || origin === 'parent_suggested' || origin === 'system_template') {
       const { data: parentMember } = await adminClient
         .from('family_members')

@@ -19,8 +19,9 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
   const difficulty = task.difficulty ?? task.childDifficulty;
   const parentFeedback = task.parentFeedback ?? task.parentFeedbackText;
   const parentCorrection = task.parentCorrection ?? task.parentCorrectionText;
-  const isAwaitingParentConfirmation = task.origin === 'child_proposed' && task.status === 'todo' && !task.confirmedAt;
-  const displayStatus = isAwaitingParentConfirmation ? '可先開始，待家長確認點數' : getTaskStatusLabel(task.status);
+  const isAwaitingParentConfirmation = task.origin === 'child_proposed'
+    && (task.status === 'proposed' || (task.status === 'todo' && !task.confirmedAt));
+  const displayStatus = isAwaitingParentConfirmation ? '等待家長確認' : getTaskStatusLabel(task.status);
   const dueTime = task.dueTime ? task.dueTime.slice(0, 5) : null;
   const endTime = task.endTime ? task.endTime.slice(0, 5) : null;
 

@@ -72,6 +72,8 @@ test('child feature pages do not create horizontal overflow from the sticky head
 
   assert.match(characterStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
   assert.match(overlayStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
+  assert.match(characterStyles, />\*:not\(\.hh-parent-content-modal-bar\):not\(\.hh-modal-overlay\)/);
+  assert.match(overlayStyles, />\*:not\(\.hh-parent-content-modal-bar\):not\(\.hh-modal-overlay\)/);
   assert.match(overlayStyles, /\.hh-parent-content-modal\s*\{[\s\S]*?scrollbar-width:\s*none/);
   assert.match(overlayStyles, /\.hh-parent-content-modal::\-webkit-scrollbar[\s\S]*?display:\s*none/);
   assert.match(neutralTheme, /\.hh-parent-content-modal-bar[\s\S]*?margin-top:\s*-24px\s*!important/);
@@ -122,6 +124,8 @@ test('parent review items are removed immediately after a successful action', ()
 test('child goals are separated into self-created and parent-given sections', () => {
   const source = read('../src/components/ChildDashboard.tsx');
 
+  assert.match(source, /const legacyGrowthTasks = tasks\.filter\(isLegacyGrowthTask\)/);
+  assert.match(source, /const todoTasks = legacyGrowthTasks/);
   assert.match(source, /const childGoalTasks = todoTasks\.filter\(task => task\.origin === 'child_proposed'\)/);
   assert.match(source, /const parentGoalTasks = todoTasks\.filter\(task => task\.origin !== 'child_proposed'\)/);
   assert.match(source, /goalCopy\.child\.parentTitle/);
@@ -182,7 +186,7 @@ test('first-use guide covers the complete parent and child workflow', () => {
 
   assert.match(guide, /建立小孩/);
   assert.match(guide, /小孩登入/);
-  assert.match(guide, /任務/);
+  assert.match(guide, /冒險/);
   assert.match(guide, /心得/);
   assert.match(guide, /審核/);
   assert.match(guide, /獎勵/);
@@ -220,8 +224,9 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*tour: 'growth-menu'/);
   assert.match(dashboard, /id: 'rewards', title: '獎勵',[\s\S]*tour: 'rewards-menu'/);
   assert.match(dashboard, /id: 'wishlist', title: '許願',[\s\S]*tour: 'wishlist-menu'/);
-  assert.match(dashboard, /id: 'add-task', title: '新增任務',[\s\S]*tour: 'add-task-menu'/);
-  assert.match(dashboard, /openHeroForm\('tasks'/);
+  assert.match(dashboard, /id: 'task-form', title: '冒險管理',[\s\S]*tour: 'add-task-menu'/);
+  assert.match(dashboard, /openAdventureForm\('daily'\)/);
+  assert.match(dashboard, /openAdventureForm\('general'\)/);
   assert.match(dashboard, /showNewChildForm/);
   assert.match(guide, /target: 'add-child'/);
   assert.match(guide, /target: 'growth-menu'/);
@@ -242,7 +247,10 @@ test('parent hero menu avoids duplicate destinations', () => {
   assert.doesNotMatch(dashboard, /id: 'review-completions'/);
   assert.doesNotMatch(dashboard, /id: 'growth-record'|id: 'completed-tasks'/);
   assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*openHeroFeature\('growth'\)/);
-  assert.match(dashboard, /id: 'task-form', title: '任務表單'/);
+  assert.match(dashboard, /id: 'task-form', title: '冒險管理'/);
+  assert.match(dashboard, /id: 'add-daily-adventure', title: '每日冒險'/);
+  assert.match(dashboard, /id: 'add-general-adventure', title: '一般冒險'/);
+  assert.doesNotMatch(dashboard, /id: 'add-template'|id: 'back', title: '返回'/);
   assert.doesNotMatch(dashboard, /id: 'today-tasks'|id: 'task-templates'/);
   assert.doesNotMatch(dashboard, /id: 'pending-rewards'/);
   assert.match(dashboard, /id: 'reward-list', title: '獎勵清單'/);
@@ -250,10 +258,12 @@ test('parent hero menu avoids duplicate destinations', () => {
 
 test('child growth menu opens the growth feature directly', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
+  const hero = read('../src/components/DashboardCharacterHero.tsx');
 
-  assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*onSelect: \(\) => openChildFeature\('growth'\)/);
+  assert.match(dashboard, /backpack: \[[\s\S]*?id: 'goals', title: '今日目標',[\s\S]*?id: 'growth', title: '成長'/);
+  assert.match(dashboard, /const heroRootMenuActions: CharacterMenuAction\[\] = \[\]/);
+  assert.match(hero, /const hasMenu = rootActions\.length > 0 \|\| subActions\.length > 0/);
   assert.match(dashboard, /toggleHeroMenuGroup\('backpack'\)/);
-  assert.match(dashboard, /title: '今日目標'/);
   assert.match(dashboard, /<Backpack size=\{18\}/);
   assert.match(dashboard, /id: 'wishlist', title: '許願'/);
   assert.match(dashboard, /id: 'history', title: '兌換'/);
@@ -266,8 +276,8 @@ test('child submenu keeps settings immediately above logout and animates every a
   const characterStyles = read('../src/styles/character.css');
 
   assert.match(dashboard, /id: 'switch-child',[\s\S]*id: 'settings',[\s\S]*id: 'logout'/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?nth-child\(6\)[\s\S]*?transition-delay: 750ms/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?is-collapsed[\s\S]*?nth-child\(6\)[\s\S]*?transition-delay: 0ms/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?nth-child\(7\)[\s\S]*?transition-delay: 900ms/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?is-collapsed[\s\S]*?nth-child\(7\)[\s\S]*?transition-delay: 0ms/);
 });
 
 test('switching child views does not disable the saved notification preference', () => {
@@ -282,7 +292,7 @@ test('child feature menu keeps the submenu mounted while it animates closed', ()
   const characterStyles = read('../src/styles/character.css');
 
   assert.match(hero, /menuOpen === false \? 'is-collapsed' : ''/);
-  assert.match(dashboard, /const HERO_MENU_EXIT_MS = 900/);
+  assert.match(dashboard, /const HERO_MENU_EXIT_MS = 1200/);
   assert.match(dashboard, /window\.setTimeout\(\(\) => \{[\s\S]*setHeroMenuGroup\(null\)[\s\S]*\}, HERO_MENU_EXIT_MS\)/);
   assert.match(dashboard, /requestAnimationFrame\(\(\) => \{[\s\S]*setHeroMenuVisible\(true\)/);
   assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?translateY\(-6px\)/);

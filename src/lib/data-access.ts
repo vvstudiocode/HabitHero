@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   childProfileRowToViewModel,
+  adventureGroupRowToViewModel,
   familyRowToViewModel,
   familyMemberRowToViewModel,
   profileRowToViewModel,
@@ -8,14 +9,53 @@ import {
   pointLedgerRowToViewModel,
   taskRowToViewModel,
   taskTemplateRowToViewModel,
+  taskScheduleRowToViewModel,
+  taskTimerSessionRowToViewModel,
+  applyServerTimerSession,
 } from './data-contracts';
 import type {
+  AdventureGroupRow,
   ChildProfileRow, FamilyMemberRow, ProfileRow, RewardRow,
   RewardRedemptionRow, TaskRow, TaskTemplateRow, WishlistItemRow, PointLedgerRow, FamilyRow,
+  TaskScheduleRow, TaskTimerSessionRow,
 } from '../types';
 import type { ChildProfileCreationInput } from './data-contracts';
-import type { AppState, Child, FeedbackTone, Reward, Task, TaskCategory, TaskStatus, TaskTemplate } from '../types';
+import type {
+  AdventureGroup,
+  AppState,
+  Child,
+  FeedbackTone,
+  Reward,
+  Task,
+  TaskCategory,
+  TaskSchedule,
+  TaskStatus,
+  TaskTemplate,
+  TaskTimerSession,
+} from '../types';
 import { validateRewardPoints } from './reward-validation';
+import {
+  buildAdventureCompletionPayload,
+  buildAdventureSchedulePayload,
+  buildAdventureScheduleUpdatePayload,
+  type AdventureCompletionInput,
+  type AdventureScheduleInput,
+  type AdventureScheduleUpdateInput,
+  type BatchAdventureReviewResult,
+  type GeneralAdventureInput,
+} from './adventure-data-access';
+export {
+  buildAdventureCompletionPayload,
+  buildAdventureSchedulePayload,
+  buildAdventureScheduleUpdatePayload,
+} from './adventure-data-access';
+export type {
+  AdventureCompletionInput,
+  AdventureScheduleInput,
+  AdventureScheduleUpdateInput,
+  BatchAdventureReviewResult,
+  GeneralAdventureInput,
+} from './adventure-data-access';
 
 export interface LoadedAppData {
   state: AppState;
@@ -33,6 +73,9 @@ const emptyState = (): AppState => ({
   ledger: [],
   lastResetDate: null,
   familyTheme: { accentColor: 'amber', mobileBackgroundImageUrl: null, desktopBackgroundImageUrl: null },
+  adventureGroups: [],
+  taskSchedules: [],
+  timerSessions: [],
 });
 
 // Keep enough history in the app state for the UI's 30-item pages.
@@ -234,6 +277,9 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     children = [ownChild];
     profiles = [profile];
     const childFilter = ownChild.id;
+    check(await client.rpc('ensure_daily_adventure_occurrences', {
+      target_child_profile_id: childFilter,
+    }));
     const [activeTasks, completedHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
       client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).neq('status', 'completed').order('created_at').then((result) => asRows<TaskRow>(check(result))),
       client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).eq('status', 'completed').order('completed_at', { ascending: false }).limit(CHILD_COMPLETED_TASK_HISTORY_LIMIT).then((result) => asRows<TaskRow>(check(result))),
@@ -252,6 +298,9 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     const profileIds = [...new Set(allMembers.map((member) => member.profile_id))];
     profiles = asRows<ProfileRow>(check(await client.from('profiles').select('*').in('id', profileIds)));
     children = asRows<ChildProfileRow>(check(await client.from('child_profiles').select('*').eq('family_id', familyId)));
+    await Promise.all(children.map((child) => client.rpc('ensure_daily_adventure_occurrences', {
+      target_child_profile_id: child.id,
+    }).then(check)));
     const [loadedTemplates, activeTasks, completedHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
       client.from('task_templates').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<TaskTemplateRow>(check(result)).map((row): TaskTemplate => {
         const template = taskTemplateRowToViewModel(row);
@@ -277,6 +326,22 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     return [childFromRows(child, childProfile, tasks, rewards, wishlist, tickets)];
   });
   state.ledger = ledger.map(pointLedgerRowToViewModel);
+  const [groups, schedules, timerSessions] = await Promise.all([
+    client.from('adventure_groups').select('*').eq('family_id', familyId).then((result) => asRows<AdventureGroupRow>(check(result))),
+    client.from('task_schedules').select('*').eq('family_id', familyId).then((result) => asRows<TaskScheduleRow>(check(result))),
+    client.from('adventure_timer_sessions').select('*').eq('family_id', familyId).then((result) => asRows<TaskTimerSessionRow>(check(result))),
+  ]);
+  state.adventureGroups = groups.map(adventureGroupRowToViewModel);
+  state.taskSchedules = schedules.map(taskScheduleRowToViewModel);
+  state.timerSessions = timerSessions.map(taskTimerSessionRowToViewModel);
+  const timerByTaskId = new Map(state.timerSessions.map((session) => [session.taskId, session]));
+  state.children = state.children.map((child) => ({
+    ...child,
+    tasks: child.tasks.map((task) => {
+      const timer = timerByTaskId.get(task.id);
+      return timer ? applyServerTimerSession(task, timer) : task;
+    }),
+  }));
   const ownChild = children.find((child) => child.profile_id === userId);
   state.childLoggedInId = ownChild?.id ?? null;
   state.parentActiveChildId = state.children[0]?.id ?? null;
@@ -301,6 +366,19 @@ export interface DataRepository {
   returnChildGoal(taskId: string, revisionNote: string): Promise<void>;
   submitTaskReflection(taskId: string, submission: SubmitTaskReflectionInput): Promise<void>;
   reviewTaskCompletion(taskId: string, review: ReviewTaskCompletionInput): Promise<void>;
+  ensureDailyAdventureOccurrences(childProfileId: string, date?: string): Promise<void>;
+  submitAdventureCompletion(taskId: string, submission: AdventureCompletionInput): Promise<void>;
+  reviewAdventureCompletion(taskId: string, review: ReviewTaskCompletionInput): Promise<void>;
+  createAdventureSchedule(familyId: string, schedule: AdventureScheduleInput): Promise<string[]>;
+  updateAdventureSchedule(scheduleId: string, updates: AdventureScheduleUpdateInput): Promise<TaskSchedule>;
+  disableAdventureSchedule(scheduleId: string): Promise<void>;
+  createGeneralAdventure(familyId: string, input: GeneralAdventureInput): Promise<string[]>;
+  updateGeneralAdventureTitle(familyId: string, childProfileId: string, title: string): Promise<AdventureGroup | null>;
+  archiveAdventureGroup(groupId: string): Promise<void>;
+  startAdventureTimer(taskId: string): Promise<TaskTimerSession | null>;
+  pauseAdventureTimer(taskId: string): Promise<TaskTimerSession | null>;
+  resumeAdventureTimer(taskId: string): Promise<TaskTimerSession | null>;
+  batchReviewDailyAdventures(taskIds: string[]): Promise<BatchAdventureReviewResult>;
   insertReward(familyId: string, childId: string, reward: Omit<Reward, 'id'>): Promise<void>;
   updateReward(id: string, updates: Partial<Reward>): Promise<void>;
   deleteReward(id: string): Promise<void>;
@@ -460,6 +538,94 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     },
     async reviewTaskCompletion(taskId, review) {
       check(await client.rpc('review_task_completion', buildReviewTaskCompletionPayload(taskId, review)));
+    },
+    async ensureDailyAdventureOccurrences(childProfileId, date) {
+      check(await client.rpc('ensure_daily_adventure_occurrences', removeUndefined({
+        target_child_profile_id: childProfileId,
+        target_date: date,
+      })));
+    },
+    async submitAdventureCompletion(taskId, submission) {
+      check(await client.rpc('submit_adventure_completion', buildAdventureCompletionPayload(taskId, submission)));
+    },
+    async reviewAdventureCompletion(taskId, review) {
+      check(await client.rpc('review_adventure_completion', buildReviewTaskCompletionPayload(taskId, review)));
+    },
+    async createAdventureSchedule(familyId, schedule) {
+      const ids: string[] = [];
+      for (const childProfileId of schedule.childProfileIds) {
+        const result = check(await client.rpc(
+          'create_adventure_schedule',
+          buildAdventureSchedulePayload(familyId, schedule, childProfileId),
+        )) as { id?: string } | string | null;
+        const id = typeof result === 'string' ? result : result?.id ?? '';
+        if (id) ids.push(id);
+      }
+      return ids;
+    },
+    async updateAdventureSchedule(scheduleId, updates) {
+      const currentRow = check(await client.from('task_schedules').select('*').eq('id', scheduleId).single()) as TaskScheduleRow;
+      const current = taskScheduleRowToViewModel(currentRow);
+      const result = check(await client.rpc(
+        'update_adventure_schedule',
+        buildAdventureScheduleUpdatePayload(scheduleId, current, updates),
+      )) as TaskScheduleRow;
+      return taskScheduleRowToViewModel(result);
+    },
+    async disableAdventureSchedule(scheduleId) {
+      check(await client.rpc('disable_adventure_schedule', { target_schedule_id: scheduleId }));
+    },
+    async createGeneralAdventure(familyId, input) {
+      const ids: string[] = [];
+      for (const childProfileId of input.childProfileIds) {
+        const result = check(await client.rpc('create_general_adventure', {
+          target_family_id: familyId,
+          target_child_profile_id: childProfileId,
+          adventure_name: input.name,
+          adventure_description: input.description ?? null,
+          adventure_points: input.points,
+          adventure_icon: input.icon,
+          adventure_category: input.category,
+          adventure_duration_minutes: input.durationMinutes ?? null,
+          adventure_due_on: input.dueOn ?? null,
+          adventure_start_time: input.startTime ?? null,
+          adventure_end_time: input.endTime ?? null,
+          adventure_completion_report_mode: input.reportMode,
+          adventure_requires_timer: input.requiresTimer ?? false,
+          adventure_requires_review_before_next_task: input.requiresReviewBeforeNextTask ?? false,
+        })) as TaskRow | { id?: string } | string | null;
+        const id = typeof result === 'string' ? result : result?.id ?? '';
+        if (id) ids.push(id);
+      }
+      return ids;
+    },
+    async updateGeneralAdventureTitle(_familyId, childProfileId, title) {
+      const result = check(await client.rpc('update_general_adventure_title', {
+        target_child_profile_id: childProfileId,
+        new_title: title,
+      })) as AdventureGroupRow | null;
+      return result ? adventureGroupRowToViewModel(result) : null;
+    },
+    async archiveAdventureGroup(groupId) {
+      check(await client.rpc('archive_adventure_group', { target_group_id: groupId }));
+    },
+    async startAdventureTimer(taskId) {
+      const result = check(await client.rpc('start_adventure_timer', { target_task_id: taskId })) as TaskTimerSessionRow | null;
+      return result ? taskTimerSessionRowToViewModel(result) : null;
+    },
+    async pauseAdventureTimer(taskId) {
+      const result = check(await client.rpc('pause_adventure_timer', { target_task_id: taskId })) as TaskTimerSessionRow | null;
+      return result ? taskTimerSessionRowToViewModel(result) : null;
+    },
+    async resumeAdventureTimer(taskId) {
+      const result = check(await client.rpc('resume_adventure_timer', { target_task_id: taskId })) as TaskTimerSessionRow | null;
+      return result ? taskTimerSessionRowToViewModel(result) : null;
+    },
+    async batchReviewDailyAdventures(taskIds) {
+      const result = check(await client.rpc('batch_review_daily_adventures', { target_task_ids: taskIds })) as
+        | { failed_task_ids?: string[]; failedTaskIds?: string[] }
+        | null;
+      return { failedTaskIds: result?.failedTaskIds ?? result?.failed_task_ids ?? [] };
     },
     async insertReward(familyId, childId, reward) {
       const validation = validateRewardPoints(reward.points);

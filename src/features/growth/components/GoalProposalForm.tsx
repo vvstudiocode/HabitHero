@@ -33,8 +33,8 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
   return (
     <section className="rounded-3xl border border-yellow-100 bg-white p-4 shadow-sm">
       <div className="mb-4">
-        <h2 className="text-lg font-black text-gray-900">新增今日目標</h2>
-        <p className="mt-1 text-sm leading-6 text-gray-500">目標名稱可以自由寫，分類用來幫你看到自己的成長方向。</p>
+        <h2 className="text-lg font-black text-gray-900">建立一般冒險</h2>
+        <p className="mt-1 text-sm leading-6 text-gray-500">建立後可以立即開始，完成後再由爸媽確認點數。</p>
       </div>
 
       <div className="space-y-4">

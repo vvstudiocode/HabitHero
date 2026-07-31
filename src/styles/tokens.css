@@ -35,4 +35,7 @@
   --hh-neutral-line: var(--hh-border);
   --hh-neutral-focus: var(--hh-focus);
   --hh-neutral-shadow: var(--hh-shadow);
+  --hh-adventure-enter-duration: 220ms;
+  --hh-adventure-exit-duration: 180ms;
+  --hh-adventure-board-width: 160px;
 }

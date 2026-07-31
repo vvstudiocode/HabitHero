@@ -24,10 +24,20 @@
   --hh-character-focus-ring: var(--hh-character-theme-color);
 }
 
+.hh-dashboard-screen--child {
+  --hh-character-glow: var(--hh-character-theme-color);
+  --hh-character-focus-ring: var(--hh-character-theme-color);
+}
+
 @supports (color: color-mix(in srgb, black, white)) {
   .hh-character-hero-panel {
     --hh-character-glow: color-mix(in srgb, var(--hh-character-theme-color) 68%, transparent);
     --hh-character-glow-strong: color-mix(in srgb, var(--hh-character-theme-color) 82%, transparent);
+    --hh-character-focus-ring: color-mix(in srgb, var(--hh-character-theme-color) 72%, transparent);
+  }
+
+  .hh-dashboard-screen--child {
+    --hh-character-glow: color-mix(in srgb, var(--hh-character-theme-color) 68%, transparent);
     --hh-character-focus-ring: color-mix(in srgb, var(--hh-character-theme-color) 72%, transparent);
   }
 }
@@ -132,14 +142,14 @@ body,
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):hover,
+  .hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):not(.hh-adventure-button):not(.hh-goal-proposal-backdrop):hover,
   .hh-login-screen button:hover {
     background: var(--hh-neutral-soft) !important;
     color: var(--hh-neutral-ink) !important;
   }
 }
 
-.hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):focus-visible,
+.hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):not(.hh-adventure-button):not(.hh-goal-proposal-backdrop):focus-visible,
 .hh-login-screen button:focus-visible {
   background: var(--hh-neutral-soft) !important;
   color: var(--hh-neutral-ink) !important;
@@ -151,7 +161,7 @@ body,
   box-shadow: none !important;
 }
 
-.hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):focus-visible,
+.hh-sprite-theme button:not(.hh-character-menu-action):not(.hh-character-icon-button):not(.hh-adventure-button):not(.hh-goal-proposal-backdrop):focus-visible,
 .hh-login-screen button:focus-visible,
 .hh-sprite-theme input:focus-visible,
 .hh-sprite-theme textarea:focus-visible,
@@ -232,6 +242,164 @@ body,
   color: var(--hh-neutral-ink);
 }
 
+.hh-adventure-card {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 92%, transparent);
+  border: 1px solid var(--hh-neutral-line);
+  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  box-shadow: 0 8px 22px var(--hh-neutral-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.hh-adventure-card-trigger,
+.hh-adventure-task-control {
+  color: var(--hh-neutral-ink);
+  background: transparent;
+  border: 0;
+}
+
+.hh-adventure-card-trigger:active,
+.hh-adventure-task-control:active {
+  background: var(--hh-neutral-soft);
+}
+
+.hh-adventure-button:focus-visible {
+  outline: 3px solid var(--hh-character-focus-ring);
+  outline-offset: -3px;
+}
+
+.hh-adventure-card-progress,
+.hh-adventure-empty {
+  color: var(--hh-neutral-muted);
+}
+
+.hh-adventure-sync-status {
+  color: #334155;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid var(--hh-neutral-line);
+  box-shadow: 0 6px 18px var(--hh-neutral-shadow);
+}
+
+.hh-adventure-task-row.is-submitted,
+.hh-adventure-task-row.is-completed {
+  color: var(--hh-neutral-ink);
+}
+
+.hh-adventure-task-row.is-submitted .hh-adventure-task-state,
+.hh-adventure-task-row.is-completed .hh-adventure-task-state {
+  color: var(--hh-character-theme-color);
+}
+
+.hh-adventure-task-row.is-waiting .hh-adventure-task-state {
+  color: var(--hh-neutral-muted);
+}
+
+.hh-adventure-task-row.is-syncing .hh-adventure-task-state {
+  color: #475569;
+}
+
+.hh-adventure-task-row.is-revision .hh-adventure-task-state {
+  color: #a54f12;
+}
+
+.hh-adventure-create {
+  color: var(--hh-neutral-ink);
+  color: color-mix(in srgb, var(--hh-character-theme-color) 72%, #202124);
+  border-top: 1px solid var(--hh-neutral-line);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hh-adventure-card-trigger:hover,
+  .hh-adventure-task-control:hover {
+    background: var(--hh-neutral-soft);
+  }
+}
+
+.hh-adventure-detail-backdrop {
+  background: rgba(15, 23, 42, .52);
+}
+
+.hh-adventure-detail {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, .2);
+}
+
+.hh-adventure-detail-header p,
+.hh-adventure-detail-meta dt {
+  color: var(--hh-neutral-muted);
+}
+
+.hh-adventure-detail-close,
+.hh-adventure-detail-meta > div,
+.hh-adventure-timer {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-soft);
+  border: 0;
+}
+
+.hh-adventure-detail-notice {
+  color: #7a3c0d;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.hh-adventure-readonly-state {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-soft);
+}
+
+.hh-adventure-readonly-state.is-submitted,
+.hh-adventure-readonly-state.is-completed {
+  border: 1px solid var(--hh-character-theme-color);
+}
+
+.hh-adventure-timer button,
+.hh-adventure-choice-grid button {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  border: 1px solid var(--hh-neutral-line);
+}
+
+.hh-adventure-choice-grid button.is-selected {
+  background: var(--hh-neutral-soft);
+  border-color: var(--hh-character-theme-color);
+  box-shadow: inset 0 0 0 1px var(--hh-character-theme-color);
+}
+
+.hh-adventure-reflection textarea {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  border: 1px solid var(--hh-neutral-line);
+}
+
+.hh-adventure-form-error {
+  color: #9f1239;
+}
+
+.hh-adventure-complete-button {
+  color: #ffffff;
+  background: var(--hh-neutral-ink);
+  border: 0;
+  box-shadow: 0 8px 20px rgba(32, 33, 36, .2), 0 0 18px var(--hh-character-glow);
+}
+
+.hh-adventure-complete-button:disabled,
+.hh-adventure-choice-grid button:disabled,
+.hh-adventure-timer button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hh-adventure-detail-close:hover,
+  .hh-adventure-timer button:hover,
+  .hh-adventure-choice-grid button:hover {
+    background: var(--hh-neutral-soft);
+  }
+}
+
 .hh-parent-content-modal,
 .hh-parent-content-modal-bar,
 .hh-settings-drawer,
@@ -256,7 +424,7 @@ body,
 .hh-parent-content-modal h3,
 .hh-parent-content-modal h4,
 .hh-parent-content-modal p,
-.hh-parent-content-modal span,
+.hh-parent-content-modal span:not(.hh-adventure-calendar-today):not(.hh-adventure-calendar-count),
 .hh-parent-content-modal strong,
 .hh-settings-drawer h1,
 .hh-settings-drawer h2,
@@ -291,9 +459,30 @@ body,
   background: rgba(32, 33, 36, 0.28) !important;
 }
 
+.hh-goal-proposal-backdrop:hover,
+.hh-goal-proposal-backdrop:focus-visible {
+  background: rgba(32, 33, 36, 0.28) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hh-sprite-theme button,
   .hh-login-screen button {
     transition: none !important;
   }
+}
+.hh-sprite-theme .hh-parent-content-modal .hh-adventure-calendar-today {
+  color: var(--hh-neutral-surface);
+  background: var(--hh-neutral-ink);
+}
+
+.hh-sprite-theme .hh-parent-content-modal .hh-adventure-calendar-count {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-soft);
+  border: 1px solid var(--hh-neutral-line);
+}
+
+.hh-sprite-theme .hh-parent-content-modal .hh-adventure-calendar-count.is-pending {
+  color: var(--hh-neutral-surface);
+  background: var(--hh-neutral-ink);
+  border-color: var(--hh-neutral-ink);
 }

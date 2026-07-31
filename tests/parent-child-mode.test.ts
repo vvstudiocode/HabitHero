@@ -48,3 +48,15 @@ test('latest child goal RPC keeps parent child-mode authorization after executio
   assert.match(sql, /goal_end_time time/);
   assert.match(sql, /grant execute on function public\.propose_child_goal\(uuid, uuid, text, integer, text, text, integer, date, time, time\)/);
 });
+
+test('child-created general adventures can start immediately while completion still requires review', () => {
+  const sql = read('../supabase/migrations/20260731104537_child_general_adventures_start_immediately.sql');
+
+  assert.match(sql, /create or replace function private\.enforce_task_submission/);
+  assert.match(sql, /new\.status <> 'todo'[\s\S]*new\.confirmed_at is null/);
+  assert.match(sql, /create or replace function public\.propose_child_goal/);
+  assert.match(sql, /'todo'[\s\S]*timezone\('utc', now\(\)\)[\s\S]*\(select auth\.uid\(\)\)/);
+  assert.match(sql, /update public\.tasks as task[\s\S]*set status = 'todo'[\s\S]*confirmed_at = coalesce\(task\.confirmed_at, timezone\('utc', now\(\)\)\)/);
+  assert.match(sql, /task\.origin = 'child_proposed'[\s\S]*task\.adventure_type = 'general'[\s\S]*task\.status = 'proposed'/);
+  assert.doesNotMatch(sql, /approved_points\s*=/);
+});
