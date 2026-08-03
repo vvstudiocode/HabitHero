@@ -108,9 +108,10 @@ test('a newly created general adventure opens immediately after the creation lay
   const overlayStyles = read('../src/styles/overlays.css');
 
   assert.match(board, /requestedTask\?: \{ id: string; requestId: number \}/);
-  assert.match(board, /setOpenCard\('general'\)/);
+  assert.match(board, /setOpenCard\(requestedType\)/);
   assert.match(board, /task\.id === requestedTask\.id/);
   assert.match(board, /setSelectedTaskId\(requestedTask\.id\)/);
+  assert.match(board, /handledRequestId\.current === requestedTask\.requestId/);
   assert.match(dashboard, /requestedTask=\{adventureOpenRequest\}/);
   assert.match(dashboard, /setAdventureOpenRequest\(\{ id: taskId, requestId: Date\.now\(\) \}\)/);
   assert.match(dashboard, /dismissWithAnimation\([\s\S]*?\.hh-goal-proposal-overlay/);

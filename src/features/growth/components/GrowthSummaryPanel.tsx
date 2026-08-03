@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { RotateCcw, X } from 'lucide-react';
 import type { ChildGrowthSummary } from '../growth-stats';
 import { TASK_CATEGORIES, getMoodLabel, getTaskCategoryMeta } from '../constants';
 import { CategoryBadge } from './CategoryBadge';
 import type { GrowthTaskWithChild, TaskCategory } from '../types';
 import { filterAndPaginateCompletedTasks } from '../growth-history';
+import { PointValue } from '../../../components/shared/PointValue';
 
 interface GrowthSummaryPanelProps {
   summaries: ChildGrowthSummary[];
@@ -55,7 +56,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
         <SummaryTile label="自主目標" value={totals.childProposedGoals} tone="text-amber-700 bg-amber-50 border-amber-100" />
         <SummaryTile label="已完成" value={totals.completedGoals} tone="text-emerald-700 bg-emerald-50 border-emerald-100" />
         <SummaryTile label="家長回饋" value={totals.feedbackCount} tone="text-blue-700 bg-blue-50 border-blue-100" />
-        <SummaryTile label="成長點數" value={totals.earnedPoints} tone="text-yellow-700 bg-yellow-50 border-yellow-100" suffix="pt" />
+        <SummaryTile label="成長點數" value={totals.earnedPoints} tone="text-yellow-700 bg-yellow-50 border-yellow-100" icon={<PointValue value={totals.earnedPoints} />} />
       </div>
 
       <div className="space-y-3">
@@ -152,7 +153,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
                   <span>{formatDate(task.completedAt ?? task.updatedAt ?? task.createdAt)}</span>
                   <span className="flex shrink-0 items-center gap-1.5">
                     <CategoryBadge category={task.category} compact />
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">{task.approvedPoints ?? task.points} pt</span>
+                    <PointValue value={task.approvedPoints ?? task.points} className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700" />
                   </span>
                 </div>
               </button>
@@ -186,7 +187,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
             </div>
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <DetailItem label="完成時間" value={formatDate(selectedTask.completedAt ?? selectedTask.updatedAt ?? selectedTask.createdAt)} />
-              <DetailItem label="獲得點數" value={`${selectedTask.approvedPoints ?? selectedTask.points} pt`} />
+              <DetailItem label="獲得點數" value={<PointValue value={selectedTask.approvedPoints ?? selectedTask.points} />} />
               <DetailItem label="心情" value={getMoodLabel(selectedTask.mood ?? selectedTask.childMood)} />
               <DetailItem label="難度" value={`${selectedTask.difficulty ?? selectedTask.childDifficulty ?? '-'} / 5`} />
             </dl>
@@ -204,19 +205,19 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', complete
   );
 }
 
-function SummaryTile({ label, value, suffix, tone }: { label: string; value: number; suffix?: string; tone: string }) {
+function SummaryTile({ label, value, suffix, icon, tone }: { label: string; value: number; suffix?: string; icon?: ReactNode; tone: string }) {
   return (
     <div className={`rounded-2xl border p-4 ${tone}`}>
       <div className="text-2xl font-black">
-        {value}
-        {suffix && <span className="ml-1 text-sm">{suffix}</span>}
+        {icon ?? value}
+        {!icon && suffix && <span className="ml-1 text-sm">{suffix}</span>}
       </div>
       <div className="text-xs font-bold opacity-80">{label}</div>
     </div>
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
+function DetailItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-2xl bg-gray-50 p-3">
       <dt className="text-xs font-bold text-gray-400">{label}</dt>

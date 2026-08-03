@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getAdventureStatusLabel, getAdventureTaskState, getAdventureType } from '../adventure-progress';
 import type { AdventureCompletionInput, AdventureTask } from '../types';
 import { AdventureCompletionForm } from './AdventureCompletionForm';
+import { PointValue } from '../../../components/shared/PointValue';
 
 interface AdventureTaskDetailProps {
   task: AdventureTask;
@@ -120,7 +121,7 @@ export function AdventureTaskDetail({
           </div>
           <div>
             <dt>點數</dt>
-            <dd>{task.points} pt</dd>
+            <dd><PointValue value={task.points} /></dd>
           </div>
         </dl>
 

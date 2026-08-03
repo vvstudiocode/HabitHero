@@ -121,15 +121,14 @@ test('parent review items are removed immediately after a successful action', ()
   assert.match(source, /setResolvedCompletionIds/);
 });
 
-test('child goals are separated into self-created and parent-given sections', () => {
+test('child today goals show the new adventure summary instead of legacy goal sections', () => {
   const source = read('../src/components/ChildDashboard.tsx');
 
-  assert.match(source, /const legacyGrowthTasks = tasks\.filter\(isLegacyGrowthTask\)/);
-  assert.match(source, /const todoTasks = legacyGrowthTasks/);
-  assert.match(source, /const childGoalTasks = todoTasks\.filter\(task => task\.origin === 'child_proposed'\)/);
-  assert.match(source, /const parentGoalTasks = todoTasks\.filter\(task => task\.origin !== 'child_proposed'\)/);
-  assert.match(source, /goalCopy\.child\.parentTitle/);
-  assert.match(source, /parentGoalTasks\.map/);
+  assert.match(source, /const adventureTasks = tasks\.filter\(\(task\) => !isLegacyGrowthTask\(task\)\)/);
+  assert.match(source, /const todayAdventureSummary = getTodayAdventureSummary\(adventureTasks, adventureDate\)/);
+  assert.match(source, /<TodayAdventureSummary summary=\{todayAdventureSummary\}/);
+  assert.doesNotMatch(source, /<GoalCard/);
+  assert.doesNotMatch(source, /parentGoalTasks|childGoalTasks|goalCopy\.child\.parentTitle/);
 });
 
 test('cancelling a wishlist item requires confirmation before deletion', () => {
@@ -269,7 +268,7 @@ test('child growth menu opens the growth feature directly', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
   const hero = read('../src/components/DashboardCharacterHero.tsx');
 
-  assert.match(dashboard, /backpack: \[[\s\S]*?id: 'goals', title: '今日目標',[\s\S]*?id: 'growth', title: '成長'/);
+  assert.match(dashboard, /backpack: \[[\s\S]*?id: 'goals', title: '冒險日記',[\s\S]*?id: 'growth', title: '成長'/);
   assert.match(dashboard, /const heroRootMenuActions: CharacterMenuAction\[\] = \[\]/);
   assert.match(hero, /const hasMenu = rootActions\.length > 0 \|\| subActions\.length > 0/);
   assert.match(dashboard, /toggleHeroMenuGroup\('backpack'\)/);

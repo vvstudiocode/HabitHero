@@ -33,6 +33,7 @@ export function ChildAdventureBoard({
   const boardRef = useRef<HTMLElement>(null);
   const [openCard, setOpenCard] = useState<AdventureType | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const handledRequestId = useRef<number | null>(null);
   const today = getTaipeiDateKey(new Date(now));
   const groups = useMemo(
     () => splitAdventureTasks(tasks, today, generalGroupId),
@@ -45,11 +46,17 @@ export function ChildAdventureBoard({
   }, [selectedTask, selectedTaskId]);
 
   useEffect(() => {
-    if (!requestedTask) return;
-    if (!groups.general.some((task) => task.id === requestedTask.id)) return;
-    setOpenCard('general');
+    if (!requestedTask || handledRequestId.current === requestedTask.requestId) return;
+    const requestedType: AdventureType | null = groups.daily.some((task) => task.id === requestedTask.id)
+      ? 'daily'
+      : groups.general.some((task) => task.id === requestedTask.id)
+        ? 'general'
+        : null;
+    if (!requestedType) return;
+    handledRequestId.current = requestedTask.requestId;
+    setOpenCard(requestedType);
     setSelectedTaskId(requestedTask.id);
-  }, [groups.general, requestedTask]);
+  }, [groups.daily, groups.general, requestedTask]);
 
   useEffect(() => {
     if (!openCard) return;

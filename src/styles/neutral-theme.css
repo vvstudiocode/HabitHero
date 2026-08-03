@@ -243,6 +243,25 @@ body,
   color: var(--hh-neutral-ink);
 }
 
+.hh-character-stats>div {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
+  border: 1px solid var(--hh-neutral-line);
+  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  box-shadow: 0 8px 22px var(--hh-neutral-shadow);
+}
+
+.hh-character-stat-icon .hh-character-stat-points {
+  color: #facc15;
+  fill: currentColor;
+}
+
+.hh-character-hero-panel[data-theme-color="white-catgirl-room"] .hh-character-stat-icon .hh-character-stat-days-icon {
+  color: var(--hh-neutral-ink);
+  filter: none;
+}
+
 .hh-adventure-card {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);

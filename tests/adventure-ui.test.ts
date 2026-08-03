@@ -7,6 +7,7 @@ import {
   isLegacyGrowthTask,
   splitAdventureTasks,
 } from '../src/features/adventures/adventure-progress';
+import { getTodayAdventureSummary } from '../src/features/adventures/today-adventure-summary';
 import {
   createAdventureIdempotencyKey,
   getCompletionValidationError,
@@ -80,14 +81,49 @@ test('submitted and approved adventures leave the child dashboard task list', ()
   assert.deepEqual(groups.general.map(({ id }) => id), ['available']);
 });
 
+test('today adventure summary keeps daily progress and groups completed general adventures by Taipei date', () => {
+  const summary = getTodayAdventureSummary([
+    task('daily-done', 'completed', {
+      adventureType: 'daily',
+      occurrenceDate: '2026-08-03',
+      completedAt: '2026-08-03T12:00:00.000Z',
+    }),
+    task('general-active', 'todo', { adventureType: 'general' }),
+    task('general-done-today', 'completed', {
+      adventureType: 'general',
+      completedAt: '2026-08-03T12:00:00.000Z',
+    }),
+    task('general-done-yesterday', 'completed', {
+      adventureType: 'general',
+      completedAt: '2026-08-02T12:00:00.000Z',
+    }),
+  ], '2026-08-03');
+
+  assert.deepEqual(summary.daily.map(({ id }) => id), ['daily-done']);
+  assert.deepEqual(getAdventureProgress(summary.daily), { completed: 1, total: 1 });
+  assert.deepEqual(summary.generalActive.map(({ id }) => id), ['general-active']);
+  assert.deepEqual(summary.generalCompletedByDate.map(({ dateKey, tasks: grouped }) => ({
+    dateKey,
+    ids: grouped.map(({ id }) => id),
+  })), [
+    { dateKey: '2026-08-03', ids: ['general-done-today'] },
+    { dateKey: '2026-08-02', ids: ['general-done-yesterday'] },
+  ]);
+  assert.deepEqual(getTodayAdventureSummary([
+    task('daily-done', 'completed', { adventureType: 'daily', occurrenceDate: '2026-08-03' }),
+  ], '2026-08-04').daily, []);
+});
+
 test('adventures use only the adventure board completion entry, not the legacy goal list', () => {
   assert.equal(isLegacyGrowthTask(task('general', 'todo')), false);
   assert.equal(isLegacyGrowthTask(task('daily', 'todo', { adventureType: 'daily', isDaily: true })), false);
   assert.equal(isLegacyGrowthTask(task('legacy', 'todo', { adventureType: undefined })), true);
 
   const dashboard = read('../src/components/ChildDashboard.tsx');
-  assert.match(dashboard, /const legacyGrowthTasks = tasks\.filter\(isLegacyGrowthTask\)/);
-  assert.match(dashboard, /const todoTasks = legacyGrowthTasks/);
+  assert.match(dashboard, /const adventureTasks = tasks\.filter\(\(task\) => !isLegacyGrowthTask\(task\)\)/);
+  assert.match(dashboard, /getTodayAdventureSummary/);
+  assert.match(dashboard, /<TodayAdventureSummary/);
+  assert.doesNotMatch(dashboard, /<GoalCard/);
 });
 
 test('daily adventures need no report while general adventures can never skip reporting', () => {

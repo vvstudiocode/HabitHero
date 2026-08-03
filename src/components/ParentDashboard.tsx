@@ -24,6 +24,7 @@ import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashbo
 import { ParentSettingsChildrenSection, type NewChildProfile } from './parent-dashboard/ParentSettingsChildrenSection';
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
 import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
+import { PointValue } from './shared/PointValue';
 import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
@@ -775,12 +776,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         sceneImage="/images/habithero-parent-living-room.png"
         sceneImageDesktop="/images/habithero-parent-living-room-desktop.png"
         theme={state.familyTheme}
-        eyebrow={`家庭冒險 · ${state.children.length} 位小孩`}
-        title="家長"
-        subtitle=""
         firstStatLabel="家庭總點數"
         firstStatValue={totalPoints}
-        firstStatSuffix="pt"
+        firstStatIcon={<Star className="hh-character-stat-points" size={17} strokeWidth={2.5} />}
         secondStatLabel="待審核項目"
         secondStatValue={reviewCount}
         secondStatSuffix="待審核"
@@ -883,7 +881,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                               <Clock size={12}/> {group.dueTime.slice(0, 5)}{group.endTime ? `–${group.endTime.slice(0, 5)}` : ' 起'}
                             </span>
                           )}
-                          <span className="ml-auto text-blue-500 text-sm font-black whitespace-nowrap">+{group.points} pt</span>
+                          <PointValue value={group.points} className="ml-auto text-blue-500 text-sm font-black whitespace-nowrap" />
                         </div>
                       </div>
                     </div>
@@ -927,7 +925,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                             </span>
                           )}
                         </div>
-                        <div className="text-blue-500 text-sm font-bold">+{template.points} pt</div>
+                        <PointValue value={template.points} className="text-blue-500 text-sm font-bold" />
                       </div>
                     </div>
                     <div className="flex gap-1 items-center">
@@ -992,7 +990,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                           ))}
                         </div>
                         <div className="whitespace-pre-wrap break-words font-medium text-gray-900">{group.name}</div>
-                        <div className="text-blue-500 font-bold text-sm">{group.points} pt</div>
+                        <PointValue value={group.points} className="text-blue-500 font-bold text-sm" />
                       </div>
                     </div>
                     <div className="flex gap-1">
@@ -1029,7 +1027,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                             <span className={`text-xs font-bold ${isPending ? 'text-purple-700' : 'text-green-700'}`}>{isPending ? '待兌現' : '已兌現'}</span>
                           </div>
                           <div className="break-words font-medium text-gray-900">{ticket.rewardName}</div>
-                          <div className="mt-1 text-xs text-gray-500">{ticket.pointsCost} pt · {createdDate}</div>
+                          <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                            <PointValue value={ticket.pointsCost} iconSize={13} /> · {createdDate}
+                          </div>
                         </div>
                         {isPending && (
                           <button onClick={() => void fulfillTicket(ticket.childId, ticket.id)} disabled={loading} className="shrink-0 rounded-xl bg-purple-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-purple-600 disabled:cursor-wait disabled:opacity-50">
@@ -1065,7 +1065,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <input 
                         type="number"
                         min="1"
-                        placeholder="定價 (pt)"
+                        placeholder="定價（點數）"
                         className="flex-1 p-3 rounded-xl border border-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                         value={wishlistPricing[item.id] || ''}
                         onChange={(e) => setWishlistPricing(p => ({...p, [item.id]: Number(e.target.value)}))}

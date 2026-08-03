@@ -1,9 +1,10 @@
-import { CheckCircle2, Clock, MessageSquareText, RotateCcw, Star } from 'lucide-react';
+import { CheckCircle2, Clock, MessageSquareText, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../../../lib/utils';
 import { getMoodLabel, getTaskStatusLabel } from '../constants';
 import type { GrowthTask } from '../types';
 import { CategoryBadge } from './CategoryBadge';
+import { PointValue } from '../../../components/shared/PointValue';
 
 interface GoalCardProps {
   key?: string;
@@ -40,9 +41,7 @@ export function GoalCard({ task, childName, action, compact = false }: GoalCardP
           <h3 className={cn('whitespace-pre-wrap break-words font-black text-gray-900 leading-snug', compact ? 'text-base' : 'text-lg')}>{task.name}</h3>
 
           <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-bold text-gray-500">
-            <span className="inline-flex items-center gap-1 text-yellow-600">
-              <Star size={15} className="fill-yellow-400 text-yellow-400" /> {task.approvedPoints ?? task.points} pt
-            </span>
+            <PointValue value={task.approvedPoints ?? task.points} className="text-yellow-600" />
             {task.origin === 'child_proposed' && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-700">孩子主動提出</span>}
             {task.isDaily && <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-emerald-700">每日</span>}
             {(dueTime || endTime) && <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-blue-600">{dueTime ?? '隨時'}{endTime ? `–${endTime}` : ' 起'}</span>}

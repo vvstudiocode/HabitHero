@@ -55,7 +55,9 @@ export function splitAdventureTasks(
   const activeTasks = tasks.filter(({ status }) => ADVENTURE_ACTIVE_STATUSES.includes(status));
 
   return {
-    daily: activeTasks.filter((task) => {
+    // A daily occurrence is today's checklist. Keep submitted/approved items
+    // visible until the Taipei calendar date changes so 1/1 remains visible.
+    daily: tasks.filter((task) => {
       if (getAdventureType(task) !== 'daily') return false;
       return !task.occurrenceDate || task.occurrenceDate === today;
     }),

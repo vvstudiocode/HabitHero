@@ -69,7 +69,7 @@
   border-radius: 0;
   box-shadow: none;
   overflow-x: hidden;
-  --hh-character-copy-top: max(48px, calc(env(safe-area-inset-top) + 8px));
+  --hh-character-copy-top: max(64px, calc(env(safe-area-inset-top) + 8px));
   --hh-character-top-offset: 40px;
 }
 
@@ -269,7 +269,7 @@
   touch-action: manipulation;
 }
 
-.hh-adventure-task-row > span,
+.hh-adventure-task-row>span,
 .hh-adventure-create-label {
   overflow: hidden;
   font-size: 15px;
@@ -831,7 +831,7 @@
 .hh-character-stats {
   position: absolute;
   z-index: 5;
-  top: max(2px, calc(env(safe-area-inset-top) + var(--hh-character-top-offset)));
+  top: calc(16px + var(--hh-character-top-offset));
   left: var(--hh-character-content-left);
   display: flex;
   gap: 8px;
@@ -839,13 +839,22 @@
 }
 
 .hh-character-stats>div {
-  min-width: 78px;
-  min-height: 40px;
-  padding: 7px 11px 7px 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 100px;
+  min-width: 100px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.hh-character-stats>div:has(.hh-character-stat-points) {
+  width: 150px;
+  min-width: 150px;
 }
 
 @keyframes hh-menu-float {
@@ -870,12 +879,21 @@
 }
 
 .hh-character-stats strong {
-  display: inline-block;
-  margin-top: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0;
   color: #111827;
   font-family: Fredoka, sans-serif;
-  font-size: 21px;
+  font-size: 19px;
   line-height: 1;
+}
+
+.hh-character-stat-icon {
+  display: inline-flex;
+  color: var(--hh-character-theme-color);
+  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--hh-character-theme-color) 28%, transparent));
 }
 
 .hh-character-stats em {
@@ -1315,16 +1333,22 @@
   }
 
   .hh-character-stats {
-    top: max(2px, calc(env(safe-area-inset-top) + var(--hh-character-top-offset)));
+    top: calc(16px + var(--hh-character-top-offset));
     bottom: auto;
     gap: 6px;
     max-width: 62%;
   }
 
   .hh-character-stats>div {
-    min-width: 70px;
-    padding-right: 8px;
-    padding-left: 0;
+    width: 100px;
+    min-width: 100px;
+    height: 44px;
+    padding: 0 12px;
+  }
+
+  .hh-character-stats>div:has(.hh-character-stat-points) {
+    width: 150px;
+    min-width: 150px;
   }
 }
 

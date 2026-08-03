@@ -1,31 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { Backpack, CheckCircle2, Gift, LogOut, Plus, Star, X, Clock, History, User, Settings } from 'lucide-react';
+import { Backpack, CalendarDays, CheckCircle2, Gift, LogOut, Plus, Star, X, History, User, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { Reward } from '../types';
-import { GoalCard } from '../features/growth/components/GoalCard';
 import { GoalProposalForm } from '../features/growth/components/GoalProposalForm';
-import { GoalSubmissionForm } from '../features/growth/components/GoalSubmissionForm';
 import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryPanel';
-import { goalCopy } from '../features/growth/goal-copy';
 import { getChildGrowthSummary } from '../features/growth/growth-stats';
-import type { GoalProposalInput, GoalReflectionInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
-import { getTaskExecutionState, isTaskExecutableAt } from '../lib/task-time';
+import type { GoalProposalInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
+import { getTaskExecutionState } from '../lib/task-time';
 import { getChildMenuNotifications } from '../lib/menu-notifications';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
 import { getCharacterById } from '../features/characters/catalog';
 import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
-import { getTaipeiDateKey, isLegacyGrowthTask } from '../features/adventures/adventure-progress';
+import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
+import { getAdventureTaskState, getTaipeiDateKey, isLegacyGrowthTask } from '../features/adventures/adventure-progress';
+import { getTodayAdventureSummary } from '../features/adventures/today-adventure-summary';
 import type { AdventureCompletionInput, AdventureTask } from '../features/adventures/types';
+import { PointValue } from './shared/PointValue';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
   proposeChildGoal?: (childId: string, input: GoalProposalInput & { icon: string }) => Promise<string>;
-  submitTaskReflection?: (taskId: string, input: { reflection: string; mood?: string | null; difficulty?: number | null }) => Promise<void>;
   submitAdventureCompletion?: (taskId: string, input: AdventureCompletionInput) => Promise<void>;
 }
 
@@ -52,8 +51,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const {
     state,
     familyId,
-    updateTaskStatus,
-    updateTask,
     addTask,
     redeemReward,
     addWishlist,
@@ -115,6 +112,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [actionPending, setActionPending] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [beepedTaskId, setBeepedTaskId] = useState<string | null>(null);
   
   const showToast = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -140,30 +139,19 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     if (toastTimer.current) clearTimeout(toastTimer.current);
   }, []);
 
-  // Adventure tasks are completed exclusively from ChildAdventureBoard. Keeping
-  // them out of the legacy goal workflow prevents two completion entry points
-  // for the same database task.
-  const legacyGrowthTasks = tasks.filter(isLegacyGrowthTask);
-  const proposedTasks = legacyGrowthTasks.filter(t => t.status === 'proposed' || t.status === 'proposal_revision_requested');
-  const todoTasks = legacyGrowthTasks
-    .filter(t => t.status === 'todo')
-    .sort((a, b) => (a.dueTime ?? '99:99').localeCompare(b.dueTime ?? '99:99'));
-  const childGoalTasks = todoTasks.filter(task => task.origin === 'child_proposed');
-  const parentGoalTasks = todoTasks.filter(task => task.origin !== 'child_proposed');
-  const pendingTasks = legacyGrowthTasks.filter(t => t.status === 'pending');
-  const revisionTasks = legacyGrowthTasks.filter(t => t.status === 'revision_requested');
+  // The adventure board is the only place that starts or completes an
+  // adventure. Today's Goals is a read-only progress and history summary.
+  const adventureTasks = tasks.filter((task) => !isLegacyGrowthTask(task)) as AdventureTask[];
+  const adventureDate = getTaipeiDateKey(new Date(now));
+  const todayAdventureSummary = getTodayAdventureSummary(adventureTasks, adventureDate);
   const completedTasks = tasks.filter(t => t.status === 'completed');
   const completedTasksWithChild = activeChild ? completedTasks.map((task) => ({ ...task, childId: activeChild.id, childName: activeChild.name })) : [];
   const growthSummary = activeChild ? getChildGrowthSummary({ ...activeChild, tasks } as typeof activeChild, state.ledger) : null;
   const childMenuNotifications = getChildMenuNotifications({
-    goals: proposedTasks.length + todoTasks.length + revisionTasks.length,
+    goals: todayAdventureSummary.daily.filter((task) => getAdventureTaskState(task) !== 'completed').length + todayAdventureSummary.generalActive.length,
     rewards: rewards.length + tickets.length,
     wishlist: wishlist.length,
   });
-  const [submittingTask, setSubmittingTask] = useState<GrowthTask | null>(null);
-
-  const [now, setNow] = useState(Date.now());
-  const [beepedTaskId, setBeepedTaskId] = useState<string | null>(null);
 
   const playBeep = () => {
     try {
@@ -188,8 +176,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }, 500);
     return () => clearInterval(interval);
   }, []);
-
-  const adventureDate = getTaipeiDateKey(new Date(now));
 
   useEffect(() => {
     if (!activeChildId || isOffline) return;
@@ -242,17 +228,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }
   };
 
-  const handleFinishTask = async (taskId: string) => {
-    if (!activeChild) return;
-    const task = tasks.find((item) => item.id === taskId);
-    if (task && !isTaskExecutableAt(task.dueTime, task.endTime)) {
-      const executionState = getTaskExecutionState(task.dueTime, task.endTime);
-      showToast(executionState === 'expired' ? `這次任務已截止，下次時間：${formatTaskWindow(task)}。` : `還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
-      return;
-    }
-    if (task) setSubmittingTask(task);
-  };
-
   const handleProposeGoal = async (input: GoalProposalInput): Promise<string | null> => {
     if (!activeChild) return null;
     setActionPending(true);
@@ -276,31 +251,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     const taskId = await handleProposeGoal(input);
     if (taskId) setAdventureOpenRequest({ id: taskId, requestId: Date.now() });
     dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-overlay');
-  };
-
-  const handleSubmitReflection = async (taskId: string, input: GoalReflectionInput) => {
-    if (!activeChild) return;
-    setActionPending(true);
-    try {
-      if (appStore.submitTaskReflection) {
-        await appStore.submitTaskReflection(taskId, {
-          reflection: input.reflection,
-          mood: input.mood,
-          difficulty: input.difficulty,
-        });
-      } else {
-        await updateTask(activeChild.id, taskId, {
-          reflection: input.reflection,
-          mood: input.mood,
-          difficulty: input.difficulty,
-        } as never);
-        await updateTaskStatus(activeChild.id, taskId, 'pending');
-      }
-      dismissWithAnimation(() => setSubmittingTask(null));
-      showToast('心得已送出，等待爸媽審核。');
-    } finally {
-      setActionPending(false);
-    }
   };
 
   const handleAdventureCompletion = async (task: AdventureTask, input: AdventureCompletionInput) => {
@@ -420,7 +370,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const heroSubMenuActions: Record<ChildMenuGroup, CharacterMenuAction[]> = {
     backpack: [
-      { id: 'goals', title: '今日目標', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
+      { id: 'goals', title: '冒險日記', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
       { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
       { id: 'wishlist', title: '獎勵', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
       { id: 'switch-child', title: '切換視角', icon: <User size={17} />, onSelect: onSwitchChild },
@@ -434,10 +384,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+  const handleOpenAdventureTask = (task: AdventureTask) => {
+    setAdventureOpenRequest({ id: task.id, requestId: Date.now() });
   };
 
   if (sessionLoading || loading) {
@@ -479,15 +427,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         mobileSceneVideo={activeCharacter.id === 'pink-catgirl-room' ? '/videos/habithero-dashboard.mp4' : activeCharacter.id === 'black-catboy-room' ? '/videos/habithero-black-catboy.mp4' : activeCharacter.id === 'blue-catboy-room' ? '/videos/habithero-blue-catboy.mp4' : activeCharacter.id === 'white-catgirl-room' ? '/videos/habithero-white-catgirl.mp4' : undefined}
         sceneAlt={`${activeCharacter.name}的冒險場景`}
         theme={activeChild.theme}
-        eyebrow=""
-        title={`早安，${activeChild.name}！`}
-        subtitle=""
         firstStatLabel="加入天數"
         firstStatValue={activeChild.joinedDays}
-        firstStatSuffix="天"
+        firstStatIcon={<CalendarDays className="hh-character-stat-days-icon" size={17} strokeWidth={2.5} />}
         secondStatLabel="我的點數"
         secondStatValue={childPoints}
-        secondStatSuffix="pt"
+        secondStatIcon={<Star className="hh-character-stat-points" size={17} strokeWidth={2.5} />}
         menuActions={heroMenuActions}
         rootMenuActions={heroRootMenuActions}
         activeMenuId={heroMenuGroup}
@@ -510,7 +455,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         )}
       />
       <ChildAdventureBoard
-        tasks={tasks as AdventureTask[]}
+        tasks={adventureTasks}
         generalGroupId={activeGeneralAdventureGroup?.id}
         generalTitle={activeGeneralAdventureGroup?.title}
         now={now}
@@ -569,8 +514,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               activeTab === 'goals' && "is-active"
             )}
           >
-            目標
-            {(proposedTasks.length + pendingTasks.length + revisionTasks.length) > 0 && (
+            冒險日記
+            {childMenuNotifications.goals && (
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
             )}
           </button>
@@ -597,173 +542,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         </nav>
 
         {activeTab === 'goals' && (
-          <div className="space-y-6">
-            {proposedTasks.length > 0 && (
-              <section className="space-y-3">
-                <h3 className="px-2 font-black text-gray-600">{goalCopy.child.proposedTitle}</h3>
-                {proposedTasks.map(task => <GoalCard key={task.id} task={task} />)}
-              </section>
-            )}
-
-            {revisionTasks.length > 0 && (
-              <section className="space-y-3">
-                <h3 className="px-2 font-black text-orange-700">{goalCopy.child.revisionTitle}</h3>
-                {revisionTasks.map(task => (
-                  <GoalCard
-                    key={task.id}
-                    task={task}
-                    action={(
-                      <button
-                        onClick={() => setSubmittingTask(task)}
-                        className="flex min-h-12 min-w-16 items-center justify-center rounded-full bg-orange-500 px-4 text-sm font-black text-white shadow-md"
-                      >
-                        補充
-                      </button>
-                    )}
-                  />
-                ))}
-              </section>
-            )}
-
-            <section className="space-y-3">
-              <div className="flex items-end justify-between gap-3 px-2">
-                <div>
-                <h3 className="font-black text-gray-700">{goalCopy.child.title}</h3>
-                <p className="text-sm text-gray-500">{goalCopy.child.subtitle}</p>
-                </div>
-                <button type="button" className="hh-goal-proposal-inline" onClick={() => setShowGoalForm(true)} aria-label="新增今日目標">
-                  <Plus size={18} /> 新增
-                </button>
-              </div>
-            {childGoalTasks.map(task => {
-              const hasTimer = typeof task.duration === 'number';
-              const isRunning = task.timerIsRunning;
-              const executionState = getTaskExecutionState(task.dueTime, task.endTime);
-              const isExecutable = executionState === 'available';
-              
-              let timeLeft = hasTimer ? task.duration! * 60 : 0;
-              
-              if (isRunning) {
-                if (task.timerEndTime) {
-                  timeLeft = Math.max(0, Math.ceil((task.timerEndTime - now) / 1000));
-                }
-              } else {
-                if (task.timerRemainingMs !== undefined && task.timerRemainingMs !== null) {
-                  timeLeft = Math.max(0, Math.ceil(task.timerRemainingMs / 1000));
-                }
-              }
-
-              const isFinished = hasTimer && timeLeft === 0 && (isRunning || (task.timerRemainingMs === 0));
-
-              return (
-                <GoalCard
-                  key={task.id}
-                  task={task}
-                  action={hasTimer && !isFinished ? (
-                    <button
-                      onClick={() => toggleTimer(task)}
-                      disabled={!isExecutable}
-                      className={cn(
-                        "flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
-                        isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
-                      )}
-                    >
-                      {isRunning && <Clock size={24} />}
-                      <span>{isExecutable ? (isRunning ? '暫停' : '開始') : executionState === 'expired' ? '已截止' : '未到'}</span>
-                      {hasTimer && <span className="text-xs opacity-90">{formatTime(timeLeft)}</span>}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => void handleFinishTask(task.id)}
-                      disabled={actionPending || !isExecutable}
-                      className="flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-                    >
-                      <CheckCircle2 size={28} />
-                      <span>{isExecutable ? '完成' : executionState === 'expired' ? '已截止' : '未到'}</span>
-                    </button>
-                  )}
-                />
-              );
-            })}
-
-            {childGoalTasks.length === 0 && (
-              <div className="bg-green-50 p-8 rounded-3xl text-center border border-green-100">
-                <CheckCircle2 size={64} className="mx-auto text-green-400 mb-4" />
-                <h2 className="text-xl font-bold text-green-700 mb-2">{goalCopy.child.emptyChildTitle}</h2>
-                <p className="text-green-600">{goalCopy.child.emptyChildBody}</p>
-              </div>
-            )}
-            </section>
-
-            <section className="space-y-3">
-              <div className="px-2">
-                <h3 className="font-black text-teal-800">{goalCopy.child.parentTitle}</h3>
-                <p className="text-sm text-gray-500">{goalCopy.child.parentSubtitle}</p>
-              </div>
-              {parentGoalTasks.map(task => {
-                const hasTimer = typeof task.duration === 'number';
-                const isRunning = task.timerIsRunning;
-                const executionState = getTaskExecutionState(task.dueTime, task.endTime);
-                const isExecutable = executionState === 'available';
-
-                let timeLeft = hasTimer ? task.duration! * 60 : 0;
-                if (isRunning && task.timerEndTime) {
-                  timeLeft = Math.max(0, Math.ceil((task.timerEndTime - now) / 1000));
-                } else if (!isRunning && task.timerRemainingMs !== undefined && task.timerRemainingMs !== null) {
-                  timeLeft = Math.max(0, Math.ceil(task.timerRemainingMs / 1000));
-                }
-
-                const isFinished = hasTimer && timeLeft === 0 && (isRunning || task.timerRemainingMs === 0);
-
-                return (
-                  <GoalCard
-                    key={task.id}
-                    task={task}
-                    action={hasTimer && !isFinished ? (
-                      <button
-                        onClick={() => toggleTimer(task)}
-                        disabled={!isExecutable}
-                        className={cn(
-                          "flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full text-sm font-black text-white shadow-md transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500",
-                          isRunning ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
-                        )}
-                      >
-                        {isRunning && <Clock size={24} />}
-                        <span>{isExecutable ? (isRunning ? '暫停' : '開始') : executionState === 'expired' ? '已截止' : '未到'}</span>
-                        <span className="text-xs opacity-90">{formatTime(timeLeft)}</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => void handleFinishTask(task.id)}
-                        disabled={actionPending || !isExecutable}
-                        className="flex min-h-16 min-w-[104px] max-w-[124px] px-5 py-3 flex-col items-center justify-center gap-1 rounded-full bg-green-500 text-sm font-black text-white shadow-md transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-                      >
-                        <CheckCircle2 size={28} />
-                        <span>{isExecutable ? '完成' : executionState === 'expired' ? '已截止' : '未到'}</span>
-                      </button>
-                    )}
-                  />
-                );
-              })}
-              {parentGoalTasks.length === 0 && (
-                <div className="rounded-3xl border border-teal-100 bg-teal-50 p-6 text-center">
-                  <p className="font-bold text-teal-800">{goalCopy.child.emptyParentTitle}</p>
-                </div>
-              )}
-            </section>
-
-            {pendingTasks.length > 0 && (
-              <section className="space-y-3">
-              <h3 className="text-gray-500 font-bold px-2">{goalCopy.child.pendingTitle}</h3>
-                <div className="space-y-3">
-                  {pendingTasks.map(task => (
-                    <GoalCard key={task.id} task={task} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-          </div>
+          <TodayAdventureSummary summary={todayAdventureSummary} today={adventureDate} onTaskSelect={handleOpenAdventureTask} />
         )}
 
         {activeTab === 'growth' && growthSummary && (
@@ -822,7 +601,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                     </div>
                     <div className="text-lg font-bold text-gray-800 mb-2 line-clamp-2">{reward.name}</div>
                     <div className={cn("text-lg font-black mb-4", canAfford ? "text-yellow-500" : "text-gray-400")}>
-                      {reward.points} pt
+                      <PointValue value={reward.points} iconSize={18} />
                     </div>
                     <button
                       onClick={() => setRewardToConfirm(reward)}
@@ -883,19 +662,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           </div>
         </div>
       )}
-      {submittingTask && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="hh-form-modal-panel w-full max-w-md animate-slide-up">
-            <GoalSubmissionForm
-              task={submittingTask}
-              loading={actionPending}
-              onCancel={() => dismissWithAnimation(() => setSubmittingTask(null))}
-              onSubmit={(input) => handleSubmitReflection(submittingTask.id, input)}
-            />
-          </div>
-        </div>
-      )}
-
       {showWishlistForm && (
         <div className="hh-safe-modal-shell fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-[70]">
           <div className="hh-form-modal-panel bg-white w-full max-w-sm animate-slide-up rounded-3xl p-6 shadow-xl">
@@ -921,7 +687,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xl font-black text-gray-900">確認兌換獎勵</h3>
-                <p className="mt-2 text-sm leading-6 text-gray-500">確定要用 {rewardToConfirm.points} pt 兌換「{rewardToConfirm.name}」嗎？</p>
+                <p className="mt-2 text-sm leading-6 text-gray-500">
+                  確定要用 <PointValue value={rewardToConfirm.points} /> 兌換「{rewardToConfirm.name}」嗎？
+                </p>
               </div>
               <button type="button" onClick={() => dismissWithAnimation(() => setRewardToConfirm(null), '.hh-reward-confirm-panel')} aria-label="關閉" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
                 <X size={18} />

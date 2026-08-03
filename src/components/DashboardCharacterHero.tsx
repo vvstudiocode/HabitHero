@@ -18,15 +18,17 @@ interface DashboardCharacterHeroProps {
   mobileSceneVideo?: string;
   sceneAlt?: string;
   theme?: ThemeSettings;
-  title: string;
-  eyebrow: string;
-  subtitle: string;
+  title?: string;
+  eyebrow?: string;
+  subtitle?: string;
   firstStatLabel: string;
   firstStatValue: string | number;
   firstStatSuffix?: string;
+  firstStatIcon?: React.ReactNode;
   secondStatLabel: string;
   secondStatValue: string | number;
   secondStatSuffix?: string;
+  secondStatIcon?: React.ReactNode;
   actions?: React.ReactNode;
   menuActions?: CharacterMenuAction[];
   rootMenuActions?: CharacterMenuAction[];
@@ -49,9 +51,11 @@ export function DashboardCharacterHero({
   firstStatLabel,
   firstStatValue,
   firstStatSuffix,
+  firstStatIcon,
   secondStatLabel,
   secondStatValue,
   secondStatSuffix,
+  secondStatIcon,
   actions,
   menuActions,
   rootMenuActions,
@@ -97,11 +101,13 @@ export function DashboardCharacterHero({
             aria-hidden="true"
           />
         )}
-        <div className="hh-character-hero-copy">
-          {eyebrow && <p>{eyebrow}</p>}
-          <h1>{title}</h1>
-          {subtitle && <span>{subtitle}</span>}
-        </div>
+        {(eyebrow || title || subtitle) && (
+          <div className="hh-character-hero-copy">
+            {eyebrow && <p>{eyebrow}</p>}
+            {title && <h1>{title}</h1>}
+            {subtitle && <span>{subtitle}</span>}
+          </div>
+        )}
         {hasMenu && (
           <div
             className={`hh-character-menu is-open ${activeMenuId ? 'has-submenu' : ''} ${menuOpen === false ? 'is-collapsed' : ''}`}
@@ -146,8 +152,20 @@ export function DashboardCharacterHero({
           </div>
         )}
         <div className="hh-character-stats" aria-label="儀表板統計">
-          <div aria-label={firstStatLabel}><strong>{firstStatValue} <em>{firstStatSuffix}</em></strong></div>
-          <div aria-label={secondStatLabel}><strong>{secondStatValue} <em>{secondStatSuffix}</em></strong></div>
+          <div aria-label={`${firstStatLabel}：${firstStatValue}${firstStatSuffix ?? ''}`}>
+            <strong>
+              {firstStatIcon && <span className="hh-character-stat-icon" aria-hidden="true">{firstStatIcon}</span>}
+              <span>{firstStatValue}</span>
+              {firstStatSuffix && <em>{firstStatSuffix}</em>}
+            </strong>
+          </div>
+          <div aria-label={`${secondStatLabel}：${secondStatValue}${secondStatSuffix ?? ''}`}>
+            <strong>
+              {secondStatIcon && <span className="hh-character-stat-icon" aria-hidden="true">{secondStatIcon}</span>}
+              <span>{secondStatValue}</span>
+              {secondStatSuffix && <em>{secondStatSuffix}</em>}
+            </strong>
+          </div>
         </div>
         <div className="hh-character-dashboard-actions">{actions}</div>
       </div>
