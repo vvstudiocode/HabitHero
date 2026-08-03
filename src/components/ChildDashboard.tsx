@@ -10,6 +10,11 @@ import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryP
 import { getChildGrowthSummary } from '../features/growth/growth-stats';
 import type { GoalProposalInput, GrowthTask, GrowthTaskTemplate } from '../features/growth/types';
 import { getTaskExecutionState } from '../lib/task-time';
+import {
+  startTimerCompletionMusic,
+  stopTimerCompletionMusic,
+  TIMER_COMPLETION_MUSIC_SRC,
+} from '../lib/task-completion-audio';
 import { getChildMenuNotifications } from '../lib/menu-notifications';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
 import { getCharacterById } from '../features/characters/catalog';
@@ -113,7 +118,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [actionPending, setActionPending] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [beepedTaskId, setBeepedTaskId] = useState<string | null>(null);
+  const completionMusicTaskIdRef = useRef<string | null>(null);
+  const completionAudioRef = useRef<HTMLAudioElement | null>(null);
   
   const showToast = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -153,22 +159,25 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     wishlist: wishlist.length,
   });
 
-  const playBeep = () => {
-    try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContext) {
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        osc.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 1); // 1 sec beep
-      }
-    } catch(e) {
-      console.error('Audio beep failed', e);
+  const getCompletionAudio = () => {
+    if (!completionAudioRef.current) {
+      const audio = new Audio(TIMER_COMPLETION_MUSIC_SRC);
+      audio.preload = 'auto';
+      completionAudioRef.current = audio;
     }
+    return completionAudioRef.current;
   };
+
+  const stopCompletionMusic = () => {
+    if (completionAudioRef.current) {
+      stopTimerCompletionMusic(completionAudioRef.current);
+    }
+    completionMusicTaskIdRef.current = null;
+  };
+
+  useEffect(() => () => {
+    stopCompletionMusic();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -187,16 +196,31 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const allTasks = state.children.flatMap(c => c.tasks);
 
   useEffect(() => {
-    const runningTask = allTasks.find(t => t.timerIsRunning && t.timerEndTime);
-    if (runningTask && runningTask.timerEndTime) {
-      if (now >= runningTask.timerEndTime && beepedTaskId !== runningTask.id) {
-        playBeep();
-        setBeepedTaskId(runningTask.id);
+    const completedTask = allTasks.find(
+      (task) => (task.status === 'todo' || task.status === 'revision_requested')
+        && task.timerIsRunning
+        && task.timerEndTime !== null
+        && task.timerEndTime !== undefined
+        && now >= task.timerEndTime,
+    );
+
+    if (!completedTask) {
+      if (completionMusicTaskIdRef.current !== null) {
+        stopCompletionMusic();
       }
-    } else {
-      if (beepedTaskId) setBeepedTaskId(null);
+      return;
     }
-  }, [now, allTasks, beepedTaskId]);
+
+    if (completionMusicTaskIdRef.current === completedTask.id) return;
+
+    stopCompletionMusic();
+    completionMusicTaskIdRef.current = completedTask.id;
+    void startTimerCompletionMusic(getCompletionAudio()).then((didPlay) => {
+      if (!didPlay && completionMusicTaskIdRef.current === completedTask.id) {
+        completionMusicTaskIdRef.current = null;
+      }
+    });
+  }, [now, allTasks]);
 
   const toggleTimer = async (task: import('../types').Task) => {
     if (!activeChild) return;
