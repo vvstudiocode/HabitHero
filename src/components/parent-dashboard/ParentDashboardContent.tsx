@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export type ParentDashboardTab = 'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist';
 
 interface ParentDashboardContentProps {
+  contentRef: RefObject<HTMLElement | null>;
   heroFeature: ParentDashboardTab | null;
   onCloseFeature: () => void;
   onBackFeature?: () => void;
@@ -16,6 +17,7 @@ interface ParentDashboardContentProps {
 }
 
 export function ParentDashboardContent({
+  contentRef,
   heroFeature,
   onCloseFeature,
   onBackFeature,
@@ -27,6 +29,7 @@ export function ParentDashboardContent({
 }: ParentDashboardContentProps) {
   return (
     <main
+      ref={contentRef}
       className={cn(
         "flex-1 p-6",
         heroFeature ? "hh-parent-content-modal" : "hh-parent-content-hidden"

@@ -8,6 +8,7 @@ interface AdventureCardProps {
   title: string;
   emptyMessage: string;
   tasks: AdventureTask[];
+  now: number;
   progress: AdventureProgress;
   expanded: boolean;
   allowCreate?: boolean;
@@ -21,6 +22,7 @@ export function AdventureCard({
   title,
   emptyMessage,
   tasks,
+  now,
   progress,
   expanded,
   allowCreate = false,
@@ -100,6 +102,7 @@ export function AdventureCard({
                 <AdventureTaskRow
                   key={task.id}
                   task={task}
+                  now={now}
                   tabIndex={expanded ? 0 : -1}
                   onSelect={onTaskSelect}
                 />

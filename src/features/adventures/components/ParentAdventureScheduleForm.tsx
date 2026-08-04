@@ -1,5 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { TaipeiTimeInput } from '../../../components/TaipeiTimeInput';
+import { DEFAULT_TASK_CATEGORY, TASK_CATEGORIES } from '../../growth/constants';
+import type { TaskCategory } from '../../growth/types';
 
 export interface AdventureChildOption {
   id: string;
@@ -10,6 +12,7 @@ export interface ParentAdventureScheduleInput {
   name: string;
   description: string;
   childIds: string[];
+  category: TaskCategory;
   weekdays: number[];
   startTime: string;
   endTime: string;
@@ -64,6 +67,7 @@ export function ParentAdventureScheduleForm({
   const [name, setName] = useState(initialValue?.name ?? '');
   const [description, setDescription] = useState(initialValue?.description ?? '');
   const [childIds, setChildIds] = useState(() => initialValue?.childIds ?? children.map(child => child.id));
+  const [category, setCategory] = useState<TaskCategory>(initialValue?.category ?? DEFAULT_TASK_CATEGORY);
   const [weekdays, setWeekdays] = useState<number[]>(initialValue?.weekdays ?? [1, 2, 3, 4, 5, 6, 7]);
   const [startTime, setStartTime] = useState(initialValue?.startTime ?? '');
   const [endTime, setEndTime] = useState(initialValue?.endTime ?? '');
@@ -77,6 +81,7 @@ export function ParentAdventureScheduleForm({
     name,
     description,
     childIds,
+    category,
     weekdays,
     startTime,
     endTime,
@@ -84,7 +89,7 @@ export function ParentAdventureScheduleForm({
     durationMinutes,
     points,
     ...(mode === 'edit' ? { editScope } : {}),
-  }), [childIds, description, durationMinutes, editScope, endTime, mode, name, points, requiresTimer, startTime, weekdays]);
+  }), [category, childIds, description, durationMinutes, editScope, endTime, mode, name, points, requiresTimer, startTime, weekdays]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -107,6 +112,15 @@ export function ParentAdventureScheduleForm({
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="daily-adventure-description">任務說明</label>
         <textarea id="daily-adventure-description" rows={3} className={`${fieldClass} resize-y`} value={description} onChange={event => setDescription(event.target.value)} placeholder="例如：記得刷滿兩分鐘" />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="daily-adventure-category">固定分類</label>
+        <select id="daily-adventure-category" className={fieldClass} value={category} onChange={event => setCategory(event.target.value as TaskCategory)}>
+          {TASK_CATEGORIES.map(categoryOption => (
+            <option key={categoryOption.id} value={categoryOption.id}>{categoryOption.label}</option>
+          ))}
+        </select>
       </div>
 
       <fieldset disabled={mode === 'edit'}>
@@ -168,7 +182,7 @@ export function ParentAdventureScheduleForm({
           <TaipeiTimeInput value={startTime} onChange={setStartTime} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">結束時間</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">最晚開始時間</label>
           <TaipeiTimeInput value={endTime} onChange={setEndTime} />
         </div>
       </div>

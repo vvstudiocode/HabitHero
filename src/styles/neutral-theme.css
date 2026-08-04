@@ -322,6 +322,10 @@ body,
   color: #a54f12;
 }
 
+.hh-adventure-task-countdown {
+  color: color-mix(in srgb, var(--hh-character-theme-color) 78%, var(--hh-neutral-ink));
+}
+
 .hh-adventure-create {
   color: var(--hh-neutral-ink);
   color: color-mix(in srgb, var(--hh-character-theme-color) 72%, #202124);

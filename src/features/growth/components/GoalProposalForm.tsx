@@ -76,7 +76,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             <TaipeiTimeInput value={dueTime} onChange={setDueTime} className="focus:ring-yellow-400" />
           </label>
           <label className="block min-w-0 w-full">
-            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">結束時間</span>
+            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">最晚開始時間</span>
             <TaipeiTimeInput value={endTime} onChange={setEndTime} className="focus:ring-yellow-400" />
           </label>
           <label className="block min-w-0 w-full">

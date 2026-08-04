@@ -85,9 +85,14 @@ test('child feature pages do not create horizontal overflow from the sticky head
 test('dashboard tab changes reset the page scroll position', () => {
   const parentDashboard = read('../src/components/ParentDashboard.tsx');
   const childDashboard = read('../src/components/ChildDashboard.tsx');
+  const parentContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
 
-  assert.match(parentDashboard, /useEffect\(\(\) => \{[\s\S]*window\.scrollTo\(0, 0\)[\s\S]*\}, \[activeTab\]\)/);
-  assert.match(childDashboard, /useEffect\(\(\) => \{[\s\S]*window\.scrollTo\(0, 0\)[\s\S]*\}, \[activeTab\]\)/);
+  assert.match(parentDashboard, /featureContentRef\.current\?\.scrollTo\(\{ top: 0, left: 0, behavior: 'auto' \}\)/);
+  assert.match(childDashboard, /featureContentRef\.current\?\.scrollTo\(\{ top: 0, left: 0, behavior: 'auto' \}\)/);
+  assert.match(parentDashboard, /\}, \[activeTab, heroFeature\]\)/);
+  assert.match(childDashboard, /\}, \[activeTab, heroFeature\]\)/);
+  assert.match(parentContent, /contentRef: RefObject<HTMLElement \| null>/);
+  assert.match(parentContent, /ref=\{contentRef\}/);
 });
 
 test('login and child password fields provide show-password controls', () => {
@@ -316,7 +321,11 @@ test('child feature menu keeps the submenu mounted while it animates closed', ()
 test('child feature pages omit the duplicate modal title while keeping the close control', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
   const overlays = read('../src/styles/overlays.css');
+  const characterStyles = read('../src/styles/character.css');
 
   assert.match(dashboard, /<div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">\s*<button/);
   assert.match(overlays, /\.hh-parent-content-modal-bar--child[\s\S]*?justify-content: flex-end[\s\S]*?min-height: 48px/);
+  assert.match(characterStyles, /\.hh-dashboard-screen\s*\{[\s\S]*?--hh-character-top-offset:\s*40px/);
+  assert.match(overlays, /\.hh-parent-content-modal-bar--child\s*\{[\s\S]*?top:\s*0[\s\S]*?justify-content: flex-end/);
+  assert.match(overlays, /@media \(max-width: 760px\)[\s\S]*?\.hh-parent-content-modal-bar--child[\s\S]*?padding-top:\s*calc\(16px \+ var\(--hh-character-top-offset\)\)/);
 });

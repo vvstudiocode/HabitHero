@@ -1,5 +1,5 @@
 import type { AdventureTask } from './types';
-import { getAdventureType, getTaipeiDateKey } from './adventure-progress';
+import { getAdventureType, getTaipeiDateKey, sortAdventureTasksByStartTime } from './adventure-progress';
 
 export interface AdventureDateGroup {
   dateKey: string;
@@ -48,10 +48,10 @@ export function getTodayAdventureSummary(
   }
 
   return {
-    daily,
-    generalActive,
+    daily: sortAdventureTasksByStartTime(daily),
+    generalActive: sortAdventureTasksByStartTime(generalActive),
     generalCompletedByDate: [...completedByDate.entries()]
       .sort(([left], [right]) => right.localeCompare(left))
-      .map(([dateKey, groupedTasks]) => ({ dateKey, tasks: groupedTasks })),
+      .map(([dateKey, groupedTasks]) => ({ dateKey, tasks: sortAdventureTasksByStartTime(groupedTasks) })),
   };
 }

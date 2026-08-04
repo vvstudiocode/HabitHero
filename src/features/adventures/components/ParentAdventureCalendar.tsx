@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Circle, Clock } from 'lucide-react';
+import { sortAdventureTasksByStartTime } from '../adventure-progress';
 
 export type ParentCalendarTaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed';
 
@@ -70,7 +71,7 @@ export function buildAdventureMonth(year: number, monthIndex: number, today: str
 }
 
 export const getTasksForDate = (tasks: ParentCalendarAdventureTask[], dateKey: string) =>
-  tasks.filter(task => task.occurrenceDate === dateKey);
+  sortAdventureTasksByStartTime(tasks.filter(task => task.occurrenceDate === dateKey));
 
 export const getBatchReviewableIds = (tasks: ParentCalendarAdventureTask[]) =>
   tasks.filter(task => task.adventureType === 'daily' && task.status === 'pending').map(task => task.id);

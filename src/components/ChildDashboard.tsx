@@ -22,7 +22,12 @@ import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
-import { getAdventureTaskState, getTaipeiDateKey, isLegacyGrowthTask } from '../features/adventures/adventure-progress';
+import {
+  getAdventureTaskState,
+  getTaipeiDateKey,
+  hasStartedAdventureTimer,
+  isLegacyGrowthTask,
+} from '../features/adventures/adventure-progress';
 import { getTodayAdventureSummary } from '../features/adventures/today-adventure-summary';
 import type { AdventureCompletionInput, AdventureTask } from '../features/adventures/types';
 import { PointValue } from './shared/PointValue';
@@ -80,10 +85,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
   const heroMenuOpenFrame = useRef<number | null>(null);
   const heroMenuCloseTimer = useRef<number | null>(null);
+  const featureContentRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [activeTab]);
+    featureContentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [activeTab, heroFeature]);
   
   // A direct child session uses its own child id. In parent child-mode, the
   // parent session operates on the explicitly selected family child.
@@ -120,6 +127,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [now, setNow] = useState(Date.now());
   const completionMusicTaskIdRef = useRef<string | null>(null);
   const completionAudioRef = useRef<HTMLAudioElement | null>(null);
+  const completionAlarmDismissedTaskIdsRef = useRef<Set<string>>(new Set());
   
   const showToast = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -155,7 +163,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const growthSummary = activeChild ? getChildGrowthSummary({ ...activeChild, tasks } as typeof activeChild, state.ledger) : null;
   const childMenuNotifications = getChildMenuNotifications({
     goals: todayAdventureSummary.daily.filter((task) => getAdventureTaskState(task) !== 'completed').length + todayAdventureSummary.generalActive.length,
-    rewards: rewards.length + tickets.length,
+    rewardTickets: tickets.length,
     wishlist: wishlist.length,
   });
 
@@ -173,6 +181,13 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       stopTimerCompletionMusic(completionAudioRef.current);
     }
     completionMusicTaskIdRef.current = null;
+  };
+
+  const dismissCompletionAlarm = (taskId: string) => {
+    completionAlarmDismissedTaskIdsRef.current.add(taskId);
+    if (completionMusicTaskIdRef.current === taskId) {
+      stopCompletionMusic();
+    }
   };
 
   useEffect(() => () => {
@@ -193,15 +208,24 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     });
   }, [activeChildId, adventureDate, isOffline]);
 
-  const allTasks = state.children.flatMap(c => c.tasks);
-
   useEffect(() => {
-    const completedTask = allTasks.find(
+    const completionCandidates = tasks.filter(
       (task) => (task.status === 'todo' || task.status === 'revision_requested')
         && task.timerIsRunning
         && task.timerEndTime !== null
         && task.timerEndTime !== undefined
         && now >= task.timerEndTime,
+    );
+    const activeCompletionTaskIds = new Set(completionCandidates.map((task) => task.id));
+    for (const taskId of completionAlarmDismissedTaskIdsRef.current) {
+      if (!activeCompletionTaskIds.has(taskId)) {
+        completionAlarmDismissedTaskIdsRef.current.delete(taskId);
+      }
+    }
+
+    const completedTask = tasks.find(
+      (task) => activeCompletionTaskIds.has(task.id)
+        && !completionAlarmDismissedTaskIdsRef.current.has(task.id),
     );
 
     if (!completedTask) {
@@ -220,18 +244,29 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         completionMusicTaskIdRef.current = null;
       }
     });
-  }, [now, allTasks]);
+  }, [now, tasks]);
 
   const toggleTimer = async (task: import('../types').Task) => {
     if (!activeChild) return;
+
+    const timerStarted = hasStartedAdventureTimer(task);
+    const timerComplete = task.timerIsRunning
+      && task.timerEndTime !== null
+      && task.timerEndTime !== undefined
+      && now >= task.timerEndTime;
     
     if (task.timerIsRunning) {
+      if (timerComplete) dismissCompletionAlarm(task.id);
       if (task.adventureType || task.requiresTimer) await pauseAdventureTimer(task.id);
       else pauseTaskTimer(activeChild.id, task.id);
     } else {
       const executionState = getTaskExecutionState(task.dueTime, task.endTime);
-      if (executionState !== 'available') {
+      if (!timerStarted && executionState !== 'available') {
         showToast(executionState === 'expired' ? `這次任務已截止，下次時間：${formatTaskWindow(task)}。` : `還沒到可開始時間：${formatTaskTime(task.dueTime)}。`);
+        return;
+      }
+      if (timerStarted && task.timerRemainingMs !== undefined && task.timerRemainingMs !== null && task.timerRemainingMs <= 0) {
+        showToast('計時已完成，請送出任務。');
         return;
       }
       // Check if any other task is RUNNING
@@ -489,6 +524,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           if (task.status === 'proposed') return { allowed: false, reason: '等待爸媽確認後，就能開始這個冒險。' };
           if (task.status === 'proposal_revision_requested') return { allowed: false, reason: '請先補充冒險內容，再交給爸媽確認。' };
           if (task.status === 'pending' || task.status === 'completed') return { allowed: false };
+          if (hasStartedAdventureTimer(task)) return { allowed: true };
           const executionState = getTaskExecutionState(task.dueTime, task.endTime);
           if (executionState === 'not_started') return { allowed: false, reason: `還沒到可開始時間：${formatTaskTime(task.dueTime)}。` };
           if (executionState === 'expired') return { allowed: false, reason: `這次冒險已截止：${formatTaskWindow(task)}。` };
@@ -503,6 +539,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
       {/* Main Content */}
       <main
+        ref={featureContentRef}
         className={cn(
           "flex-1 p-6 pb-28",
           heroFeature ? "hh-parent-content-modal" : "hh-parent-content-hidden"
@@ -586,7 +623,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               <div className="flex items-center justify-between px-2">
                 <div>
                   <h2 id="pending-wishlist-title" className="text-lg font-black text-gray-800">正在許願</h2>
-                  <p className="text-sm text-gray-500">送出後等爸媽核准，就會變成可以兌換的獎勵。</p>
                 </div>
                 {wishlist.length > 0 && <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-bold text-yellow-700">{wishlist.length} 個等待中</span>}
               </div>

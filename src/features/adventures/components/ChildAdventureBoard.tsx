@@ -95,6 +95,7 @@ export function ChildAdventureBoard({
           title="每日冒險"
           emptyMessage="今天沒有每日冒險"
           tasks={groups.daily}
+          now={now}
           progress={getAdventureProgress(groups.daily)}
           expanded={openCard === 'daily'}
           onToggle={() => toggle('daily')}
@@ -105,6 +106,7 @@ export function ChildAdventureBoard({
           title={generalTitle?.trim() || '一般冒險'}
           emptyMessage="目前沒有一般冒險"
           tasks={groups.general}
+          now={now}
           progress={getAdventureProgress(groups.general)}
           expanded={openCard === 'general'}
           allowCreate

@@ -1,5 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { TaipeiTimeInput } from '../../../components/TaipeiTimeInput';
+import { DEFAULT_TASK_CATEGORY, TASK_CATEGORIES } from '../../growth/constants';
+import type { TaskCategory } from '../../growth/types';
 import type { AdventureChildOption } from './ParentAdventureScheduleForm';
 
 export type GeneralAdventureReportMode = 'quick' | 'reflection';
@@ -8,6 +10,7 @@ export interface ParentGeneralAdventureInput {
   name: string;
   description: string;
   childIds: string[];
+  category: TaskCategory;
   dueOn: string;
   startTime: string;
   endTime: string;
@@ -68,6 +71,7 @@ export function ParentGeneralAdventureForm({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [childIds, setChildIds] = useState(() => children.map(child => child.id));
+  const [category, setCategory] = useState<TaskCategory>(DEFAULT_TASK_CATEGORY);
   const [dueOn, setDueOn] = useState(todayInTaipei);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -81,6 +85,7 @@ export function ParentGeneralAdventureForm({
     name,
     description,
     childIds,
+    category,
     dueOn,
     startTime,
     endTime,
@@ -88,7 +93,7 @@ export function ParentGeneralAdventureForm({
     requiresTimer,
     durationMinutes,
     points,
-  }), [childIds, description, dueOn, durationMinutes, endTime, name, points, reportMode, requiresTimer, startTime]);
+  }), [category, childIds, description, dueOn, durationMinutes, endTime, name, points, reportMode, requiresTimer, startTime]);
 
   const saveTitle = async () => {
     const validationError = validateGeneralAdventureTitle(titleDraft);
@@ -136,6 +141,15 @@ export function ParentGeneralAdventureForm({
           <textarea id="general-adventure-description" rows={3} className={`${fieldClass} resize-y`} value={description} onChange={event => setDescription(event.target.value)} placeholder="例如：完成第 18～20 頁" />
         </div>
 
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="general-adventure-category">固定分類</label>
+          <select id="general-adventure-category" className={fieldClass} value={category} onChange={event => setCategory(event.target.value as TaskCategory)}>
+            {TASK_CATEGORIES.map(categoryOption => (
+              <option key={categoryOption.id} value={categoryOption.id}>{categoryOption.label}</option>
+            ))}
+          </select>
+        </div>
+
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-gray-700">安排給</legend>
           <div className="flex flex-wrap gap-2">
@@ -162,7 +176,7 @@ export function ParentGeneralAdventureForm({
             <TaipeiTimeInput value={startTime} onChange={setStartTime} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">結束時間</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">最晚開始時間</label>
             <TaipeiTimeInput value={endTime} onChange={setEndTime} />
           </div>
         </div>

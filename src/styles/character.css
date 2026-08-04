@@ -10,6 +10,7 @@
 
 .hh-dashboard-screen {
   --hh-character-content-left: 28px;
+  --hh-character-top-offset: 40px;
 }
 
 .hh-sprite-theme .hh-dashboard-screen>.hh-character-dashboard-header {
@@ -70,7 +71,6 @@
   box-shadow: none;
   overflow-x: hidden;
   --hh-character-copy-top: max(64px, calc(env(safe-area-inset-top) + 8px));
-  --hh-character-top-offset: 40px;
 }
 
 .hh-character-hero-picture,
@@ -269,13 +269,30 @@
   touch-action: manipulation;
 }
 
-.hh-adventure-task-row>span,
+.hh-adventure-task-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  align-content: center;
+}
+
+.hh-adventure-task-name,
 .hh-adventure-create-label {
   overflow: hidden;
   font-size: 15px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hh-adventure-task-countdown {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .hh-adventure-task-state {

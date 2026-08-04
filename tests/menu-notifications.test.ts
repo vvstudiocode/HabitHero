@@ -15,13 +15,18 @@ test('parent menu notifications map pending data to the matching main buttons', 
   });
 });
 
-test('child menu notifications mark goals, rewards, and wishes with available items', () => {
-  assert.deepEqual(getChildMenuNotifications({ goals: 2, rewards: 1, wishlist: 1 }), {
+test('child menu notifications do not treat available rewards as a new-item alert', () => {
+  assert.deepEqual(getChildMenuNotifications({ goals: 2, rewardTickets: 0, wishlist: 1 }), {
     goals: true,
-    rewards: true,
+    rewards: false,
     wishlist: true,
   });
-  assert.deepEqual(getChildMenuNotifications({ goals: 0, rewards: 0, wishlist: 0 }), {
+  assert.deepEqual(getChildMenuNotifications({ rewardTickets: 1 }), {
+    goals: false,
+    rewards: true,
+    wishlist: false,
+  });
+  assert.deepEqual(getChildMenuNotifications({ goals: 0, rewardTickets: 0, wishlist: 0 }), {
     goals: false,
     rewards: false,
     wishlist: false,

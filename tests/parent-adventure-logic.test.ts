@@ -27,11 +27,13 @@ test('calendar always renders six complete weeks and marks the selected date', (
 
 test('calendar date details only include tasks belonging to that occurrence date', () => {
   const tasks = [
-    { id: 'daily-1', childId: 'c1', childName: '小宇', name: '刷牙', occurrenceDate: '2026-08-03', adventureType: 'daily' as const, status: 'pending' as const },
+    { id: 'daily-late', childId: 'c1', childName: '小宇', name: '晚間任務', occurrenceDate: '2026-08-03', adventureType: 'daily' as const, status: 'pending' as const, dueTime: '20:00' },
+    { id: 'daily-early', childId: 'c1', childName: '小宇', name: '早晨任務', occurrenceDate: '2026-08-03', adventureType: 'daily' as const, status: 'pending' as const, dueTime: '08:00' },
+    { id: 'daily-anytime', childId: 'c1', childName: '小宇', name: '彈性任務', occurrenceDate: '2026-08-03', adventureType: 'daily' as const, status: 'pending' as const, dueTime: null },
     { id: 'general-1', childId: 'c1', childName: '小宇', name: '看英文', occurrenceDate: '2026-08-04', adventureType: 'general' as const, status: 'todo' as const },
   ];
 
-  assert.deepEqual(getTasksForDate(tasks, '2026-08-03').map(task => task.id), ['daily-1']);
+  assert.deepEqual(getTasksForDate(tasks, '2026-08-03').map(task => task.id), ['daily-early', 'daily-late', 'daily-anytime']);
 });
 
 test('batch review accepts only pending daily adventures', () => {
@@ -49,6 +51,7 @@ test('daily schedule requires a child, weekday, valid time range and timer durat
     name: '刷牙',
     description: '',
     childIds: ['c1'],
+    category: 'life_habit',
     weekdays: [1, 2, 3, 4, 5],
     startTime: '07:00',
     endTime: '08:00',
@@ -69,6 +72,7 @@ test('general adventure can never use none reporting and validates its group tit
     name: '完成英文作業',
     description: '',
     childIds: ['c1'],
+    category: 'learning',
     dueOn: '2026-08-03',
     startTime: '19:00',
     endTime: '20:30',

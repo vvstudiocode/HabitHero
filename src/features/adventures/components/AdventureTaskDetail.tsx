@@ -1,6 +1,13 @@
-import { CheckCircle2, Clock3, Pause, Play, X } from 'lucide-react';
+import { BellOff, CheckCircle2, Clock3, Pause, Play, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { getAdventureStatusLabel, getAdventureTaskState, getAdventureType } from '../adventure-progress';
+import {
+  getAdventureStatusLabel,
+  getAdventureTaskRemainingSeconds,
+  getAdventureTaskState,
+  getAdventureTimerState,
+  getAdventureType,
+  canToggleAdventureTimer,
+} from '../adventure-progress';
 import type { AdventureCompletionInput, AdventureTask } from '../types';
 import { AdventureCompletionForm } from './AdventureCompletionForm';
 import { PointValue } from '../../../components/shared/PointValue';
@@ -14,16 +21,6 @@ interface AdventureTaskDetailProps {
   onTimerToggle: (task: AdventureTask) => void;
   onComplete: (task: AdventureTask, input: AdventureCompletionInput) => Promise<void>;
   onRequestClose: () => void;
-}
-
-function getRemainingSeconds(task: AdventureTask, now: number): number {
-  if (task.timerIsRunning && task.timerEndTime) {
-    return Math.max(0, Math.ceil((task.timerEndTime - now) / 1000));
-  }
-  if (task.timerRemainingMs !== undefined && task.timerRemainingMs !== null) {
-    return Math.max(0, Math.ceil(task.timerRemainingMs / 1000));
-  }
-  return typeof task.duration === 'number' ? task.duration * 60 : 0;
 }
 
 function formatSeconds(seconds: number): string {
@@ -46,10 +43,11 @@ export function AdventureTaskDetail({
   const [closing, setClosing] = useState(false);
   const visualState = getAdventureTaskState(task);
   const readOnly = visualState === 'syncing' || visualState === 'submitted' || visualState === 'completed' || visualState === 'waiting';
-  const hasTimer = task.requiresTimer ?? typeof task.duration === 'number';
-  const secondsLeft = getRemainingSeconds(task, now);
-  const timerComplete = !hasTimer || secondsLeft === 0;
+  const secondsLeft = getAdventureTaskRemainingSeconds(task, now);
+  const { hasTimer, complete: timerComplete } = getAdventureTimerState(task, secondsLeft);
   const canSubmit = !readOnly && canExecute && timerComplete;
+  const canToggleTimer = canToggleAdventureTimer(task, secondsLeft, canExecute);
+  const completionAlarmActive = task.timerIsRunning && timerComplete;
   const dueTime = task.dueTime?.slice(0, 5);
   const endTime = task.endTime?.slice(0, 5);
   const requestClose = () => setClosing(true);
@@ -116,7 +114,7 @@ export function AdventureTaskDetail({
         {task.description && <p className="hh-adventure-detail-description">{task.description}</p>}
         <dl className="hh-adventure-detail-meta">
           <div>
-            <dt>時間</dt>
+            <dt>可開始時間</dt>
             <dd>{dueTime ?? '隨時'}{endTime ? `–${endTime}` : ''}</dd>
           </div>
           <div>
@@ -138,11 +136,15 @@ export function AdventureTaskDetail({
             <button
               type="button"
               className="hh-adventure-button"
-              disabled={!canExecute || timerComplete}
+              disabled={!canToggleTimer}
               onClick={() => onTimerToggle(task)}
             >
-              {task.timerIsRunning ? <Pause size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
-              {task.timerIsRunning ? '暫停' : timerComplete ? '計時完成' : '開始計時'}
+              {completionAlarmActive
+                ? <BellOff size={18} aria-hidden="true" />
+                : task.timerIsRunning
+                  ? <Pause size={18} aria-hidden="true" />
+                  : <Play size={18} aria-hidden="true" />}
+              {completionAlarmActive ? '停止提醒' : task.timerIsRunning ? '暫停' : timerComplete ? '計時完成' : '開始計時'}
             </button>
           </div>
         )}

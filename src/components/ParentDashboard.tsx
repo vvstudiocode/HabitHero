@@ -90,10 +90,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [heroFormReturnGroup, setHeroFormReturnGroup] = useState<ParentTab | null>(null);
   const [adventureFormRequest, setAdventureFormRequest] = useState<{ type: 'daily' | 'general'; requestId: number } | null>(null);
   const [mutationKind, setMutationKind] = useState<'task' | 'template' | 'reward' | null>(null);
+  const featureContentRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [activeTab]);
+    featureContentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [activeTab, heroFeature]);
 
   const observedLoading = useRef(false);
   const consentAutoRecordAttempted = useRef(false);
@@ -802,6 +804,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       />
 
       <ParentDashboardContent
+        contentRef={featureContentRef}
         heroFeature={heroFeature}
         onCloseFeature={closeHeroFeature}
         onBackFeature={() => openHeroFeature('rewards')}

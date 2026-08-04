@@ -447,7 +447,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     proposeChildGoal: async (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => {
       const localId = createLocalId();
       const now = new Date().toISOString();
-      const taskId = await mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...goal, id: localId, icon: goal.icon, status: 'todo', origin: 'child_proposed', adventureType: 'general', completionReportMode: 'quick', duration: goal.duration ?? undefined, dueOn: goal.dueOn ?? null, createdAt: now, updatedAt: now, completedAt: null, confirmedAt: now } as Task] })));
+      const taskId = await mutate((repo, id) => repo.proposeChildGoal(id, childId, goal), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, {
+        ...goal,
+        id: localId,
+        icon: goal.icon,
+        status: 'todo',
+        origin: 'child_proposed',
+        adventureType: 'general',
+        completionReportMode: 'quick',
+        duration: goal.duration ?? undefined,
+        requiresTimer: typeof goal.duration === 'number',
+        timerEndTime: null,
+        timerRemainingMs: null,
+        timerIsRunning: false,
+        dueOn: goal.dueOn ?? null,
+        createdAt: now,
+        updatedAt: now,
+        completedAt: null,
+        confirmedAt: now,
+      } as Task] })));
       setState((current) => {
         const next = replaceOptimisticTaskId(current, childId, localId, taskId);
         stateRef.current = next;

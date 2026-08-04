@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, ChevronDown, Circle, CloudUpload, Clock3 } from 'lucide-react';
-import { getAdventureProgress, getAdventureStatusLabel, getAdventureTaskState } from '../adventure-progress';
+import { formatAdventureTaskWindow, getAdventureProgress, getAdventureStatusLabel, getAdventureTaskState } from '../adventure-progress';
 import type { AdventureTask, AdventureTaskVisualState } from '../types';
 import type { AdventureDateGroup, TodayAdventureSummary } from '../today-adventure-summary';
 import { PointValue } from '../../../components/shared/PointValue';
@@ -39,6 +39,7 @@ function AdventureSummaryTask({ task, completed = false, onSelect }: { key?: str
   const state = getAdventureTaskState(task);
   const StateIcon = getStateIcon(state);
   const statusLabel = getAdventureStatusLabel(state);
+  const taskWindow = formatAdventureTaskWindow(task);
   const completedTime = completed ? formatCompletedTime(task) : null;
   const reflection = task.reflection ?? task.childReflectionText;
   const parentFeedback = task.parentFeedback ?? task.parentFeedbackText;
@@ -50,7 +51,7 @@ function AdventureSummaryTask({ task, completed = false, onSelect }: { key?: str
         type="button"
         className="w-full rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         onClick={() => onSelect(task)}
-        aria-label={`${task.name}，${statusLabel}`}
+        aria-label={`${task.name}，${statusLabel}，時間 ${taskWindow}`}
       >
         <div className="flex min-w-0 items-start gap-3">
           <StateIcon
@@ -61,7 +62,7 @@ function AdventureSummaryTask({ task, completed = false, onSelect }: { key?: str
           <div className="min-w-0 flex-1">
             <p className="break-words font-black text-gray-900">{task.name}</p>
             <p className="mt-1 text-sm font-bold text-gray-500">
-              {statusLabel}{completedTime ? ` · ${completedTime} 完成` : ''}
+              {state === 'available' ? `時間 ${taskWindow}` : statusLabel}{completedTime ? ` · ${completedTime} 完成` : ''}
             </p>
           </div>
           <PointValue value={task.approvedPoints ?? task.points} className="shrink-0 text-sm font-black text-yellow-600" />
@@ -104,7 +105,6 @@ export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdv
         <div className="flex items-end justify-between gap-3 px-2">
           <div>
             <h2 id="today-daily-adventure-title" className="font-black text-gray-800">每日冒險</h2>
-            <p className="mt-1 text-sm text-gray-500">今天完成後會保留到隔天，再更新新的每日冒險。</p>
           </div>
           <span className="shrink-0 text-lg font-black tabular-nums text-gray-700">{dailyProgress.completed}/{dailyProgress.total}</span>
         </div>
@@ -121,7 +121,6 @@ export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdv
         <section className="space-y-3" aria-labelledby="today-general-adventure-title">
           <div className="px-2">
             <h2 id="today-general-adventure-title" className="font-black text-gray-800">一般冒險</h2>
-            <p className="mt-1 text-sm text-gray-500">進行中的冒險與已完成的日期紀錄。</p>
           </div>
 
           {summary.generalActive.length > 0 && (

@@ -74,6 +74,20 @@ test('adventure RPCs enforce occurrences, completion, review, scheduling, groups
   assert.match(sql, /if task_row\.status = 'completed' and approved then\s+return task_row/i);
 });
 
+test('started adventure timers can finish after endTime but fresh tasks still expire', () => {
+  const migration = readFileSync(
+    new URL('../supabase/migrations/20260804090000_allow_started_adventures_to_finish_after_window.sql', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(migration, /function private\.adventure_execution_day_is_current/i);
+  assert.match(migration, /function private\.adventure_timer_started_in_window/i);
+  assert.match(migration, /target_timer\.started_at/i);
+  assert.match(migration, /not private\.adventure_execution_is_open\(old\)/i);
+  assert.match(migration, /private\.adventure_timer_started_in_window\(task_row, timer\)/i);
+  assert.match(migration, /exists \([\s\S]*adventure_timer_sessions/i);
+});
+
 test('schedule updates scope changes without rewriting history or submitted work', () => {
   const sql = readAdventureMigration();
   const updateSchedule = extractFunction(sql, 'update_adventure_schedule');

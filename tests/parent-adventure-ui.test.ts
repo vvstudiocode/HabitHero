@@ -10,10 +10,25 @@ test('parent adventure forms keep daily and general completion rules separate', 
 
   assert.doesNotMatch(daily, /每日冒險不要求孩子填寫心得/);
   assert.doesNotMatch(daily, /value="quick"/);
+  assert.match(daily, /最晚開始時間/);
   assert.match(general, /value="quick"/);
   assert.match(general, /value="reflection"/);
   assert.doesNotMatch(general, /value="none"/);
+  assert.match(general, /最晚開始時間/);
   assert.doesNotMatch(daily, /先鎖住下一個冒險/);
+});
+
+test('new daily and general adventures allow the parent to choose a category', () => {
+  const daily = read('../src/features/adventures/components/ParentAdventureScheduleForm.tsx');
+  const general = read('../src/features/adventures/components/ParentGeneralAdventureForm.tsx');
+  const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
+
+  assert.match(daily, /固定分類/);
+  assert.match(daily, /TASK_CATEGORIES\.map/);
+  assert.match(general, /固定分類/);
+  assert.match(general, /TASK_CATEGORIES\.map/);
+  assert.match(workspace, /category: input\.category/);
+  assert.doesNotMatch(workspace, /category: 'life_habit'/);
 });
 
 test('daily weekday selection uses a dedicated visible selected state', () => {

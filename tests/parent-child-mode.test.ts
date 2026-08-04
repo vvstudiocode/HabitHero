@@ -60,3 +60,11 @@ test('child-created general adventures can start immediately while completion st
   assert.match(sql, /task\.origin = 'child_proposed'[\s\S]*task\.adventure_type = 'general'[\s\S]*task\.status = 'proposed'/);
   assert.doesNotMatch(sql, /approved_points\s*=/);
 });
+
+test('child goal durations enable the server timer and migrate existing timed goals', () => {
+  const sql = read('../supabase/migrations/20260803073152_child_goal_duration_requires_timer.sql');
+
+  assert.match(sql, /update public\.tasks[\s\S]*duration_minutes is not null[\s\S]*requires_timer/);
+  assert.match(sql, /create or replace function public\.propose_child_goal\(/);
+  assert.match(sql, /'quick',\s*goal_duration_minutes is not null,\s*'Asia\/Taipei'/);
+});
