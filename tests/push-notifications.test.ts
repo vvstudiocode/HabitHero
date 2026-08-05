@@ -6,6 +6,7 @@ import {
   hasEnabledPushDevice,
   shouldRegisterPushNotifications,
 } from '../src/lib/notification-preferences';
+import { setNotificationPreference } from '../src/lib/push-notifications';
 
 test('push registration only starts when the user enabled notifications and permission is granted', () => {
   assert.equal(shouldRegisterPushNotifications({ enabled: true, permission: 'granted', platform: 'ios' }), true);
@@ -31,4 +32,31 @@ test('notification preference is enabled when at least one device is active', ()
   assert.equal(hasEnabledPushDevice([{ enabled: false }, { enabled: true }]), true);
   assert.equal(hasEnabledPushDevice([{ enabled: false }]), false);
   assert.equal(hasEnabledPushDevice([]), false);
+});
+
+test('notification preference syncs the profile flag used by the sender', async () => {
+  const calls: Array<{ table: string; values: unknown; id: string }> = [];
+  const client = {
+    from(table: string) {
+      return {
+        update(values: unknown) {
+          return {
+            eq(_column: string, id: string) {
+              calls.push({ table, values, id });
+              return Promise.resolve({ error: null });
+            },
+          };
+        },
+      };
+    },
+  };
+
+  await setNotificationPreference(client as never, 'profile-1', true);
+  await setNotificationPreference(client as never, 'profile-1', false);
+
+  assert.deepEqual(calls, [
+    { table: 'profiles', values: { notifications_enabled: true }, id: 'profile-1' },
+    { table: 'profiles', values: { notifications_enabled: false }, id: 'profile-1' },
+    { table: 'push_devices', values: { enabled: false }, id: 'profile-1' },
+  ]);
 });

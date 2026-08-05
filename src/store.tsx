@@ -24,7 +24,7 @@ import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
 import { subscribeToAppData } from './lib/realtime';
 import { resolveActiveChildId } from './lib/family-switch';
 import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
-import { notifyTaskCreated } from './lib/push-notifications';
+import { notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
 
@@ -439,11 +439,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const localId = createLocalId();
       const now = new Date().toISOString();
       const taskId = await mutate((repo, id) => repo.insertTask(id, childId, task), (previous) => patchChild(previous, childId, (child) => ({ ...child, tasks: [...child.tasks, { ...task, id: localId, status: 'todo', createdAt: now, updatedAt: now, completedAt: null } as Task] })));
-      void notifyTaskCreated(getSupabaseClient(), taskId).catch(() => undefined);
+      void notifyTaskEvent(getSupabaseClient(), taskId, 'created').catch(() => undefined);
     },
     updateTask: (_childId: string, taskId: string, updates: Partial<Task>) => mutate((repo) => repo.updateTask(taskId, updates), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...updates }))),
     deleteTask: (_childId: string, taskId: string) => mutate((repo) => repo.deleteTask(taskId), (previous) => ({ ...previous, children: previous.children.map((child) => ({ ...child, tasks: child.tasks.filter((task) => task.id !== taskId) })) })),
-    updateTaskStatus: (_childId: string, taskId: string, status: TaskStatus) => mutate((repo) => repo.updateTaskStatus(taskId, status), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status, completedAt: status === 'completed' ? new Date().toISOString() : task.completedAt }))),
+    updateTaskStatus: async (_childId: string, taskId: string, status: TaskStatus) => {
+      await mutate((repo) => repo.updateTaskStatus(taskId, status), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status, completedAt: status === 'completed' ? new Date().toISOString() : task.completedAt })));
+      if (status === 'completed') void notifyTaskEvent(getSupabaseClient(), taskId, 'reviewed').catch(() => undefined);
+    },
     proposeChildGoal: async (childId: string, goal: Parameters<AppContextType['proposeChildGoal']>[1]) => {
       const localId = createLocalId();
       const now = new Date().toISOString();
@@ -471,34 +474,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
         stateRef.current = next;
         return next;
       });
-      void notifyTaskCreated(getSupabaseClient(), taskId).catch(() => undefined);
+      void notifyTaskEvent(getSupabaseClient(), taskId, 'created').catch(() => undefined);
       return taskId;
     },
     confirmChildGoal: (taskId: string, confirmation: Parameters<AppContextType['confirmChildGoal']>[1]) => mutate((repo) => repo.confirmChildGoal(taskId, confirmation), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...confirmation, confirmedAt: new Date().toISOString() }))),
     returnChildGoal: (taskId: string, revisionNote: string) => mutate((repo) => repo.returnChildGoal(taskId, revisionNote), (previous) => patchTask(previous, taskId, (task) => ({ ...task, status: 'proposal_revision_requested', revisionNote }))),
-    submitTaskReflection: (taskId: string, submission: Parameters<AppContextType['submitTaskReflection']>[1]) => mutate((repo) => repo.submitTaskReflection(taskId, submission), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...submission, status: 'pending', submittedAt: new Date().toISOString() }))),
-    reviewTaskCompletion: (taskId: string, review: Parameters<AppContextType['reviewTaskCompletion']>[1]) => mutate((repo) => repo.reviewTaskCompletion(taskId, review), (previous) => {
-      const reviewedAt = new Date().toISOString();
-      return {
-        ...previous,
-        children: previous.children.map((child) => ({
-          ...child,
-          tasks: child.tasks.map((task) => task.id !== taskId ? task : {
-            ...task,
-            status: review.approved ? 'completed' : 'revision_requested',
-            approvedPoints: review.approvedPoints,
-            parentFeedback: review.feedback ?? null,
-            parentCorrection: review.correction ?? null,
-            revisionNote: review.revisionNote ?? null,
-            reviewedAt,
-            completedAt: review.approved ? reviewedAt : task.completedAt,
-          }),
-          points: review.approved && child.tasks.some((task) => task.id === taskId && task.status !== 'completed')
-            ? child.points + review.approvedPoints
-            : child.points,
-        })),
-      };
-    }),
+    submitTaskReflection: async (taskId: string, submission: Parameters<AppContextType['submitTaskReflection']>[1]) => {
+      await mutate((repo) => repo.submitTaskReflection(taskId, submission), (previous) => patchTask(previous, taskId, (task) => ({ ...task, ...submission, status: 'pending', submittedAt: new Date().toISOString() })));
+      void notifyTaskEvent(getSupabaseClient(), taskId, 'submitted').catch(() => undefined);
+    },
+    reviewTaskCompletion: async (taskId: string, review: Parameters<AppContextType['reviewTaskCompletion']>[1]) => {
+      await mutate((repo) => repo.reviewTaskCompletion(taskId, review), (previous) => {
+        const reviewedAt = new Date().toISOString();
+        return {
+          ...previous,
+          children: previous.children.map((child) => ({
+            ...child,
+            tasks: child.tasks.map((task) => task.id !== taskId ? task : {
+              ...task,
+              status: review.approved ? 'completed' : 'revision_requested',
+              approvedPoints: review.approvedPoints,
+              parentFeedback: review.feedback ?? null,
+              parentCorrection: review.correction ?? null,
+              revisionNote: review.revisionNote ?? null,
+              reviewedAt,
+              completedAt: review.approved ? reviewedAt : task.completedAt,
+            }),
+            points: review.approved && child.tasks.some((task) => task.id === taskId && task.status !== 'completed')
+              ? child.points + review.approvedPoints
+              : child.points,
+          })),
+        };
+      });
+      void notifyTaskEvent(getSupabaseClient(), taskId, 'reviewed').catch(() => undefined);
+    },
     ...createAdventureStoreActions({
       mutate,
       familyId,
@@ -512,6 +521,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       authenticatedUserId: session?.user.id ?? null,
       isOnline: () => typeof navigator === 'undefined' || navigator.onLine,
       setError: setDataError,
+      notifyTask: (taskId, event) => notifyTaskEvent(getSupabaseClient(), taskId, event),
     }),
     addReward: (childId: string, reward: Omit<Reward, 'id'>) => {
       const localId = createLocalId();

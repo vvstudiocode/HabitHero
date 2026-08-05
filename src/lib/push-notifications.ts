@@ -4,6 +4,8 @@ import { PushNotifications, type ActionPerformed, type PushNotificationSchema } 
 import { hasEnabledPushDevice } from './notification-preferences';
 import type { NotificationPermission } from './notification-preferences';
 
+export type TaskNotificationEvent = 'created' | 'submitted' | 'reviewed';
+
 export interface PushDeviceContext {
   supabase: SupabaseClient;
   familyId: string;
@@ -96,9 +98,15 @@ export async function readNotificationPreference(supabase: SupabaseClient, profi
 }
 
 export async function setNotificationPreference(supabase: SupabaseClient, profileId: string, enabled: boolean) {
-  if (enabled) return;
-  const { error } = await supabase.from('push_devices').update({ enabled: false }).eq('profile_id', profileId);
-  if (error) throw new Error(error.message);
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ notifications_enabled: enabled })
+    .eq('id', profileId);
+  if (profileError) throw new Error(profileError.message);
+  if (!enabled) {
+    const { error } = await supabase.from('push_devices').update({ enabled: false }).eq('profile_id', profileId);
+    if (error) throw new Error(error.message);
+  }
 }
 
 export async function disablePushDevicesForProfile(supabase: SupabaseClient, profileId: string) {
@@ -106,8 +114,12 @@ export async function disablePushDevicesForProfile(supabase: SupabaseClient, pro
   if (error) throw new Error(error.message);
 }
 
-export async function notifyTaskCreated(supabase: SupabaseClient, taskId: string) {
+export async function notifyTaskEvent(supabase: SupabaseClient, taskId: string, event: TaskNotificationEvent) {
   if (!taskId) return;
-  const { error } = await supabase.functions.invoke('notify-task-created', { body: { taskId } });
+  const { error } = await supabase.functions.invoke('notify-task-created', { body: { taskId, event } });
   if (error) throw new Error(error.message);
+}
+
+export function notifyTaskCreated(supabase: SupabaseClient, taskId: string) {
+  return notifyTaskEvent(supabase, taskId, 'created');
 }

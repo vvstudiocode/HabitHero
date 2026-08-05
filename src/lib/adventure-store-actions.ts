@@ -13,6 +13,7 @@ import {
   enqueueAdventureCompletion,
   isTransientAdventureSyncError,
 } from './adventure-offline-queue';
+import type { TaskNotificationEvent } from './push-notifications';
 
 type Mutate = <T>(
   operation: (repository: DataRepository, familyId: string) => Promise<T>,
@@ -28,6 +29,7 @@ export interface AdventureStoreActionDependencies {
   authenticatedUserId: string | null;
   isOnline: () => boolean;
   setError: (message: string | null) => void;
+  notifyTask?: (taskId: string, event: TaskNotificationEvent) => Promise<void>;
 }
 
 const patchTask = (
@@ -109,7 +111,13 @@ export function createAdventureStoreActions({
   authenticatedUserId,
   isOnline,
   setError,
+  notifyTask,
 }: AdventureStoreActionDependencies) {
+  const fireTaskNotification = (taskId: string, event: TaskNotificationEvent) => {
+    if (!notifyTask) return;
+    void notifyTask(taskId, event).catch(() => undefined);
+  };
+
   const optimisticCompletion = (
     previous: AppState,
     taskId: string,
@@ -156,10 +164,12 @@ export function createAdventureStoreActions({
         setState((previous) => optimisticCompletion(previous, taskId, submission, true));
         return;
       }
-      return mutate(
+      const result = await mutate(
         (repository) => repository.submitAdventureCompletion(taskId, submission),
         (previous) => optimisticCompletion(previous, taskId, submission, false),
       );
+      fireTaskNotification(taskId, 'submitted');
+      return result;
     },
 
     flushAdventureCompletionQueue: async () => {
@@ -173,6 +183,7 @@ export function createAdventureStoreActions({
           }
           await mutate((repository) =>
             repository.submitAdventureCompletion(entry.taskId, entry.submission));
+          fireTaskNotification(entry.taskId, 'submitted');
         },
         undefined,
         isTransientAdventureSyncError,
@@ -211,8 +222,8 @@ export function createAdventureStoreActions({
       }
     },
 
-    reviewAdventureCompletion: (taskId: string, review: ReviewTaskCompletionInput) =>
-      mutate(
+    reviewAdventureCompletion: async (taskId: string, review: ReviewTaskCompletionInput) => {
+      await mutate(
         (repository) => repository.reviewAdventureCompletion(taskId, review),
         (previous) => {
           const reviewedAt = new Date().toISOString();
@@ -240,7 +251,9 @@ export function createAdventureStoreActions({
           };
           return archiveCompletedGeneralGroup(reviewed, taskId);
         },
-      ),
+      );
+      fireTaskNotification(taskId, 'reviewed');
+    },
 
     createAdventureSchedule: (input: AdventureScheduleInput) => {
       const now = new Date().toISOString();
@@ -469,6 +482,8 @@ export function createAdventureStoreActions({
           };
         },
       );
+      const failedTaskIds = new Set(result.failedTaskIds);
+      taskIds.filter((taskId) => !failedTaskIds.has(taskId)).forEach((taskId) => fireTaskNotification(taskId, 'reviewed'));
       if (result.failedTaskIds.length === 0) return result;
 
       const failed = new Set(result.failedTaskIds);

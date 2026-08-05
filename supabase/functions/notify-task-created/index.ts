@@ -6,6 +6,7 @@ const corsHeaders = {
 };
 
 type TaskOrigin = 'child_proposed' | 'parent_suggested' | 'parent_assigned' | 'system_template';
+type TaskNotificationEvent = 'created' | 'submitted' | 'reviewed';
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -37,9 +38,11 @@ function apnsPrivateKeyBytes() {
   return decodeBase64(value.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', ''));
 }
 
-async function createApnsToken() {
+async function createApnsToken(environment: 'sandbox' | 'production') {
   const keyId = Deno.env.get('APNS_KEY_ID');
-  const teamId = Deno.env.get('APNS_TEAM_ID');
+  const teamId = environment === 'production'
+    ? Deno.env.get('APNS_PRODUCTION_TEAM_ID') ?? Deno.env.get('APNS_TEAM_ID')
+    : Deno.env.get('APNS_SANDBOX_TEAM_ID') ?? Deno.env.get('APNS_TEAM_ID');
   const keyBytes = apnsPrivateKeyBytes();
   if (!keyId || !teamId || !keyBytes) return null;
 
@@ -58,9 +61,9 @@ async function createApnsToken() {
 }
 
 async function sendApns(token: string, title: string, body: string, taskId: string) {
-  const jwt = await createApnsToken();
   const bundleId = Deno.env.get('APNS_BUNDLE_ID') ?? 'com.vvstudiocode.habithero';
   const environment = Deno.env.get('APNS_ENVIRONMENT') === 'production' ? 'production' : 'sandbox';
+  const jwt = await createApnsToken(environment);
   if (!jwt) return { configured: false, status: 0 };
 
   const host = environment === 'production' ? 'api.push.apple.com' : 'api.sandbox.push.apple.com';
@@ -92,8 +95,10 @@ Deno.serve(async request => {
   if (!supabaseUrl || !serviceRoleKey || !publishableKey || !authorization) return json({ error: 'Authentication is required' }, 401);
 
   try {
-    const body = await request.json() as { taskId?: string };
+    const body = await request.json() as { taskId?: string; event?: TaskNotificationEvent };
     if (!body.taskId || !/^[0-9a-f-]{36}$/i.test(body.taskId)) return json({ error: 'Task id is invalid' }, 400);
+    const event = body.event ?? 'created';
+    if (!['created', 'submitted', 'reviewed'].includes(event)) return json({ error: 'Notification event is invalid' }, 400);
 
     const userClient = createClient(supabaseUrl, publishableKey, {
       global: { headers: { Authorization: authorization } },
@@ -107,7 +112,7 @@ Deno.serve(async request => {
 
     const { data: task, error: taskError } = await adminClient
       .from('tasks')
-      .select('id, family_id, child_profile_id, name, origin')
+      .select('id, family_id, child_profile_id, name, origin, status, points, approved_points')
       .eq('id', body.taskId)
       .single();
     if (taskError || !task) return json({ error: 'Task not found' }, 404);
@@ -116,24 +121,24 @@ Deno.serve(async request => {
     let targetProfileIds: string[] = [];
     let title = 'HabitHero';
     let message = `有新的任務：「${task.name}」`;
+    const { data: child } = await adminClient
+      .from('child_profiles')
+      .select('id, profile_id, display_name')
+      .eq('id', task.child_profile_id)
+      .eq('family_id', task.family_id)
+      .single();
+    if (!child) return json({ error: 'Child profile not found' }, 404);
 
-    if (origin === 'child_proposed') {
-      const { data: child } = await adminClient
-        .from('child_profiles')
-        .select('id, profile_id, display_name')
-        .eq('id', task.child_profile_id)
-        .eq('family_id', task.family_id)
-        .single();
-      if (!child || child.profile_id !== userData.user.id) return json({ error: 'Task is not owned by the current child' }, 403);
+    const getParents = async () => {
       const { data: parents } = await adminClient
         .from('family_members')
         .select('profile_id')
         .eq('family_id', task.family_id)
         .eq('role', 'parent');
-      targetProfileIds = (parents ?? []).map(parent => parent.profile_id);
-      title = '孩子建立了新冒險';
-      message = `${child.display_name} 建立了「${task.name}」，完成後會請你確認點數。`;
-    } else if (origin === 'parent_assigned' || origin === 'parent_suggested' || origin === 'system_template') {
+      return (parents ?? []).map(parent => parent.profile_id);
+    };
+
+    const isParent = async () => {
       const { data: parentMember } = await adminClient
         .from('family_members')
         .select('profile_id')
@@ -141,17 +146,33 @@ Deno.serve(async request => {
         .eq('profile_id', userData.user.id)
         .eq('role', 'parent')
         .maybeSingle();
-      if (!parentMember) return json({ error: 'Only a parent can send this task notification' }, 403);
-      const { data: child } = await adminClient
-        .from('child_profiles')
-        .select('profile_id, display_name')
-        .eq('id', task.child_profile_id)
-        .eq('family_id', task.family_id)
-        .single();
-      if (child?.profile_id) {
-        targetProfileIds = [child.profile_id];
-        title = '有新的任務';
-        message = `家長新增了任務：「${task.name}」`;
+      return Boolean(parentMember);
+    };
+
+    if (event === 'created' && origin === 'child_proposed') {
+      if (child.profile_id !== userData.user.id) return json({ error: 'Task is not owned by the current child' }, 403);
+      targetProfileIds = await getParents();
+      title = '孩子建立了新冒險';
+      message = `${child.display_name} 建立了「${task.name}」，完成後會請你確認點數。`;
+    } else if (event === 'created' && (origin === 'parent_assigned' || origin === 'parent_suggested' || origin === 'system_template')) {
+      if (!await isParent()) return json({ error: 'Only a parent can send this task notification' }, 403);
+      targetProfileIds = [child.profile_id];
+      title = '有新的任務';
+      message = `家長新增了任務：「${task.name}」`;
+    } else if (event === 'submitted') {
+      if (child.profile_id !== userData.user.id) return json({ error: 'Only the child can send a completion notification' }, 403);
+      targetProfileIds = await getParents();
+      title = '孩子完成了任務';
+      message = `${child.display_name} 完成了「${task.name}」，請確認完成內容。`;
+    } else if (event === 'reviewed') {
+      if (!await isParent()) return json({ error: 'Only a parent can send a review notification' }, 403);
+      targetProfileIds = [child.profile_id];
+      if (task.status === 'completed') {
+        title = '任務已完成';
+        message = `家長已確認「${task.name}」，獲得 ${task.approved_points ?? task.points} 點。`;
+      } else {
+        title = '任務需要補充';
+        message = `家長對「${task.name}」提出了補充要求，請查看回饋。`;
       }
     }
 
