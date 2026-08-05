@@ -1,11 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { ChevronDown } from 'lucide-react';
 import { ParentDashboardFormModal } from '../../../components/parent-dashboard/ParentDashboardFormModal';
 import { ModalShell } from '../../../components/shared/ParentDashboardUI';
 import type { AdventureScheduleUpdateInput } from '../../../lib/adventure-data-access';
 import { dismissWithAnimation } from '../../../lib/utils';
 import type { TaskSchedule } from '../../../types';
 import type { TaskCategory } from '../../growth/types';
+import { formatScheduleDetails, formatScheduleWeekdays, getSharedScheduleDetails, groupActiveAdventureSchedules } from '../adventure-schedule-display';
 import { ParentAdventureCalendar, type ParentCalendarAdventureTask } from './ParentAdventureCalendar';
 import { ParentAdventureScheduleForm, type ParentAdventureScheduleInput } from './ParentAdventureScheduleForm';
 import { ParentGeneralAdventureForm, type ParentGeneralAdventureInput } from './ParentGeneralAdventureForm';
@@ -87,6 +89,7 @@ export function ParentAdventureWorkspace({
   requestedForm,
 }: ParentAdventureWorkspaceProps) {
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
+  const [expandedScheduleNames, setExpandedScheduleNames] = useState<string[]>([]);
   const [form, setForm] = useState<'daily' | 'general' | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -215,13 +218,17 @@ export function ParentAdventureWorkspace({
       await onDisableSchedule(scheduleToDisable.id);
       setScheduleToDisable(null);
     } catch (caught) {
-      setFormError(toErrorMessage(caught, '刪除排程失敗，請稍後再試。'));
+      setFormError(toErrorMessage(caught, '停止每日冒險失敗，請稍後再試。'));
     } finally {
       setManagementBusyId(null);
     }
   };
 
-  const weekdayLabels: Record<number, string> = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 7: '日' };
+  const activeSchedules = schedules.filter(schedule => schedule.isActive);
+  const scheduleGroups = groupActiveAdventureSchedules(activeSchedules, children);
+  const scheduleToDisableChildName = scheduleToDisable
+    ? children.find(child => child.id === scheduleToDisable.childProfileId)?.name
+    : null;
   const toolbarButtonClass = (pressed: boolean) =>
     [
       'hh-adventure-action min-h-11 rounded-xl border bg-white px-3 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 aria-pressed:border-gray-900 aria-pressed:text-gray-900',
@@ -255,24 +262,65 @@ export function ParentAdventureWorkspace({
             />
 
             <section aria-labelledby="daily-schedules-title" className="rounded-2xl border border-gray-200 bg-white p-4">
-              <h3 id="daily-schedules-title" className="font-black text-gray-900">每日冒險排程</h3>
-              <p className="mt-1 text-sm text-gray-500">刪除只會停止未來產生的每日冒險，過去紀錄與已送出的任務不會刪除。</p>
-              <div className="mt-4 space-y-2">
-                {schedules.filter(schedule => schedule.isActive).map(schedule => (
-                  <div key={schedule.id} className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 p-3">
-                    <div className="min-w-0">
-                      <strong className="block break-words text-gray-900">{schedule.name}</strong>
-                      <span className="text-xs text-gray-500">
-                        {children.find(child => child.id === schedule.childProfileId)?.name ?? '小孩'} · {[...schedule.weekdays].sort((a, b) => a - b).map(day => weekdayLabels[day] ?? day).join('、')} · {schedule.startTime?.slice(0, 5) || '全天'}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button type="button" className="min-h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-blue-700" onClick={() => { setFormError(null); setScheduleToEdit(schedule); setForm('daily'); }}>編輯</button>
-                      <button type="button" className="min-h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-700" onClick={() => setScheduleToDisable(schedule)}>刪除排程</button>
-                    </div>
-                  </div>
-                ))}
-                {schedules.filter(schedule => schedule.isActive).length === 0 && <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-500">目前沒有啟用中的每日排程。</p>}
+              <h3 id="daily-schedules-title" className="font-black text-gray-900">每日冒險卡片</h3>
+              <div id="daily-schedules-content" className="mt-4 space-y-2">
+                {scheduleGroups.map(({ name, entries: scheduleEntries }, index) => {
+                  const isScheduleExpanded = expandedScheduleNames.includes(name);
+                  const scheduleGroupContentId = `daily-schedule-card-${index}`;
+                  const sharedScheduleDetails = getSharedScheduleDetails(scheduleEntries.map(entry => entry.schedule));
+                  return (
+                    <article key={name} className="rounded-xl bg-gray-50 p-3">
+                      <h4 className="text-base font-black text-gray-900">
+                        <button
+                          type="button"
+                          aria-expanded={isScheduleExpanded}
+                          aria-controls={scheduleGroupContentId}
+                          className="hh-adventure-schedule-trigger flex min-h-11 w-full items-center justify-between text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+                          onClick={() => setExpandedScheduleNames(current => current.includes(name) ? current.filter(currentName => currentName !== name) : [...current, name])}
+                        >
+                          <span className="min-w-0">
+                            <span className="block break-words">{name}</span>
+                            {sharedScheduleDetails ? (
+                              <span className="mt-1 block text-xs font-medium text-gray-500">{sharedScheduleDetails.join(' · ')}</span>
+                            ) : (
+                              <span className="mt-1 block text-xs font-medium text-gray-500">各孩子的設定不同，展開查看</span>
+                            )}
+                          </span>
+                          <ChevronDown aria-hidden="true" size={18} className={`shrink-0 transition-transform duration-200 ${isScheduleExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      </h4>
+                      {isScheduleExpanded && (
+                        <div id={scheduleGroupContentId} className="mt-2 space-y-2">
+                          {scheduleEntries.map(({ schedule, childName }) => (
+                            <div key={schedule.id} className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-3">
+                              <div className="min-w-0 flex-1">
+                                <strong className="block text-sm font-bold text-gray-900">給 {childName}</strong>
+                                <span className="mt-1 block text-xs text-gray-500">
+                                  {sharedScheduleDetails ? formatScheduleWeekdays(schedule.weekdays) : formatScheduleDetails(schedule).join(' · ')}
+                                </span>
+                              </div>
+                              <div className="flex shrink-0 gap-2">
+                                <button
+                                  type="button"
+                                  aria-label={`編輯${schedule.name}（${childName}）`}
+                                  className="min-h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-blue-700"
+                                  onClick={() => { setFormError(null); setScheduleToEdit(schedule); setForm('daily'); }}
+                                >編輯</button>
+                                <button
+                                  type="button"
+                                  aria-label={`停止${schedule.name}（${childName}）`}
+                                  className="min-h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold text-red-700"
+                                  onClick={() => setScheduleToDisable(schedule)}
+                                >停止</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+                {activeSchedules.length === 0 && <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-500">目前沒有啟用中的每日排程。</p>}
               </div>
             </section>
 
@@ -327,11 +375,11 @@ export function ParentAdventureWorkspace({
 
       {scheduleToDisable && renderAdventureOverlay(
         <ModalShell variant="center">
-          <h3 className="text-xl font-black text-gray-900">刪除每日排程</h3>
-          <p className="mt-2 text-sm leading-6 text-gray-600">確定刪除「{scheduleToDisable.name}」排程？刪除只會停止未來產生的每日冒險，不會刪除過去紀錄、等待審核或已完成的任務與點數。</p>
+          <h3 className="text-xl font-black text-gray-900">停止每日冒險</h3>
+          <p className="mt-2 text-sm leading-6 text-gray-600">確定停止「{scheduleToDisable.name}」{scheduleToDisableChildName ? `給 ${scheduleToDisableChildName} 的` : ''}每日冒險？停止後不會再產生新的冒險，過去紀錄、等待審核、已完成的任務與點數都會保留。</p>
           <div className="mt-6 flex gap-3">
             <button type="button" className="min-h-12 flex-1 rounded-xl bg-gray-100 px-4 font-bold text-gray-700" onClick={() => setScheduleToDisable(null)}>取消</button>
-            <button type="button" disabled={managementBusyId === scheduleToDisable.id} className="min-h-12 flex-1 rounded-xl bg-red-500 px-4 font-bold text-white disabled:cursor-wait disabled:opacity-50" onClick={() => void disableSchedule()}>{managementBusyId === scheduleToDisable.id ? '刪除中…' : '確認刪除'}</button>
+            <button type="button" disabled={managementBusyId === scheduleToDisable.id} className="min-h-12 flex-1 rounded-xl bg-red-500 px-4 font-bold text-white disabled:cursor-wait disabled:opacity-50" onClick={() => void disableSchedule()}>{managementBusyId === scheduleToDisable.id ? '停止中…' : '確認停止'}</button>
           </div>
         </ModalShell>
       )}

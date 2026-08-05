@@ -955,7 +955,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         )}
 
         {activeTab === 'growth' && (
-          <GrowthSummaryPanel summaries={growthSummaries} title="家庭成長紀錄" completedTasks={completedTasks} showChildFilter />
+          <GrowthSummaryPanel summaries={growthSummaries} title="家庭成長紀錄" tasks={allTasks} />
         )}
 
         {activeTab === 'rewards' && (

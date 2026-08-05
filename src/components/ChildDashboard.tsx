@@ -158,8 +158,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const adventureTasks = tasks.filter((task) => !isLegacyGrowthTask(task)) as AdventureTask[];
   const adventureDate = getTaipeiDateKey(new Date(now));
   const todayAdventureSummary = getTodayAdventureSummary(adventureTasks, adventureDate);
-  const completedTasks = tasks.filter(t => t.status === 'completed');
-  const completedTasksWithChild = activeChild ? completedTasks.map((task) => ({ ...task, childId: activeChild.id, childName: activeChild.name })) : [];
+  const growthTasksWithChild = activeChild ? tasks.map((task) => ({ ...task, childId: activeChild.id, childName: activeChild.name })) : [];
   const growthSummary = activeChild ? getChildGrowthSummary({ ...activeChild, tasks } as typeof activeChild, state.ledger) : null;
   const childMenuNotifications = getChildMenuNotifications({
     goals: todayAdventureSummary.daily.filter((task) => getAdventureTaskState(task) !== 'completed').length + todayAdventureSummary.generalActive.length,
@@ -607,7 +606,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         )}
 
         {activeTab === 'growth' && growthSummary && (
-          <GrowthSummaryPanel summaries={[growthSummary]} title="我的成長紀錄" completedTasks={completedTasksWithChild} />
+          <GrowthSummaryPanel summaries={[growthSummary]} title="我的成長紀錄" tasks={growthTasksWithChild} />
         )}
 
         {activeTab === 'wishlist' && (

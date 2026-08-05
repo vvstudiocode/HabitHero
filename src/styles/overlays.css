@@ -336,6 +336,20 @@
   display: none;
 }
 
+/* Day details must escape the scrollable feature page so they stay centered in
+ * the viewport instead of becoming part of the expanded child card's layer. */
+.hh-growth-day-dialog-layer {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  isolation: isolate;
+  overscroll-behavior: contain;
+}
+
 .hh-parent-content-modal-bar {
   position: sticky;
   top: -24px;

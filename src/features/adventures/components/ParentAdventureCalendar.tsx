@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertCircle, Check, ChevronLeft, ChevronRight, Circle, Clock } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, Circle, Clock } from 'lucide-react';
 import { sortAdventureTasksByStartTime } from '../adventure-progress';
 
 export type ParentCalendarTaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed';
@@ -104,6 +104,7 @@ export function ParentAdventureCalendar({
   });
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
   const [batchError, setBatchError] = useState<string | null>(null);
+  const [expandedChildIds, setExpandedChildIds] = useState<string[]>([]);
   const today = getTodayInTaipei();
   const days = useMemo(
     () => buildAdventureMonth(visibleMonth.year, visibleMonth.monthIndex, today, selectedDate),
@@ -118,6 +119,7 @@ export function ParentAdventureCalendar({
     setVisibleMonth(next);
     setSelectedDate(`${next.year}-${pad(next.monthIndex + 1)}-01`);
     setSelectedPendingIds([]);
+    setExpandedChildIds([]);
   };
 
   const runBatchReview = async () => {
@@ -160,11 +162,12 @@ export function ParentAdventureCalendar({
                 aria-label={`${day.dateKey}${day.isToday ? '，今天' : ''}，${dayTasks.length} 個冒險${hasPending ? '，有待審核' : ''}`}
                 aria-pressed={day.isSelected}
                 className={`hh-adventure-calendar-day relative border-b border-r border-gray-100 text-left ${day.isSelected ? 'bg-blue-50 ring-2 ring-inset ring-blue-500' : 'bg-white'} ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-300'}`}
-                onClick={() => {
-                  setSelectedDate(day.dateKey);
-                  setSelectedPendingIds([]);
-                  setBatchError(null);
-                }}
+                  onClick={() => {
+                    setSelectedDate(day.dateKey);
+                    setSelectedPendingIds([]);
+                    setBatchError(null);
+                    setExpandedChildIds([]);
+                  }}
               >
                 <span className="text-sm font-bold">{day.dayNumber}</span>
                 {day.isToday && <span aria-hidden="true" className="hh-adventure-calendar-today">今</span>}
@@ -194,13 +197,27 @@ export function ParentAdventureCalendar({
 
         {batchError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">{batchError}</p>}
 
-        <div className="mt-4 space-y-5">
-          {Array.from(new Set(selectedTasks.map(task => task.childId))).map(childId => {
-            const childTasks = selectedTasks.filter(task => task.childId === childId);
-            return (
-              <div key={childId}>
-                <h4 className="mb-2 text-sm font-black text-gray-900">{childTasks[0]?.childName}</h4>
-                <div className="space-y-2">
+          <div className="mt-4 space-y-5">
+            {Array.from(new Set(selectedTasks.map(task => task.childId))).map(childId => {
+              const childTasks = selectedTasks.filter(task => task.childId === childId);
+              const isExpanded = expandedChildIds.includes(childId);
+              const childTasksId = `adventure-child-tasks-${childId}`;
+              return (
+              <div key={childId} className="space-y-2">
+                <h4 className="text-sm font-black text-gray-900">
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
+                    aria-controls={childTasksId}
+                    className="flex min-h-11 w-full items-center justify-between rounded-xl bg-gray-50 px-3 text-left transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+                    onClick={() => setExpandedChildIds(current => current.includes(childId) ? current.filter(id => id !== childId) : [...current, childId])}
+                  >
+                    <span>{childTasks[0]?.childName}</span>
+                    <ChevronDown aria-hidden="true" size={18} className={`shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                </h4>
+                {expandedChildIds.includes(childId) && (
+                <div id={childTasksId} className="space-y-2">
                   {childTasks.map(task => {
                     const view = statusView[task.status];
                     const StatusIcon = view.icon;
@@ -231,8 +248,9 @@ export function ParentAdventureCalendar({
                     );
                   })}
                 </div>
+                )}
               </div>
-            );
+              );
           })}
           {selectedTasks.length === 0 && <p className="rounded-xl bg-gray-50 p-4 text-center text-sm text-gray-500">這一天沒有安排冒險。</p>}
         </div>

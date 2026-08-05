@@ -133,6 +133,18 @@ body,
   box-shadow: 0 6px 18px var(--hh-neutral-shadow) !important;
 }
 
+/* Keep the growth period selection visible after the neutral theme's generic
+ * button rules normalize utility colors. The extra specificity and !important
+ * are intentional because those existing theme rules also use !important. */
+.hh-sprite-theme .hh-growth-period-control.is-selected,
+.hh-sprite-theme .hh-growth-period-control.is-selected:hover,
+.hh-sprite-theme .hh-growth-period-control.is-selected:focus-visible {
+  background: var(--hh-neutral-ink) !important;
+  border-color: var(--hh-neutral-ink) !important;
+  color: var(--hh-neutral-surface) !important;
+  box-shadow: 0 8px 20px var(--hh-neutral-shadow) !important;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .hh-sprite-theme .hh-goal-proposal-trigger:hover,
   .hh-sprite-theme .hh-goal-proposal-inline:hover {
@@ -272,7 +284,8 @@ body,
 }
 
 .hh-adventure-card-trigger,
-.hh-adventure-task-control {
+.hh-adventure-task-control,
+.hh-adventure-schedule-trigger {
   color: var(--hh-neutral-ink);
   background: transparent;
   border: 0;
