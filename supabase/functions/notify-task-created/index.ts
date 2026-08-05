@@ -160,7 +160,12 @@ Deno.serve(async request => {
       title = '有新的任務';
       message = `家長新增了任務：「${task.name}」`;
     } else if (event === 'submitted') {
-      if (child.profile_id !== userData.user.id) return json({ error: 'Only the child can send a completion notification' }, 403);
+      // The completion RPC permits either the child or a family parent to
+      // submit on the child's behalf. Keep notification authorization aligned
+      // with that rule so parent-side child previews do not fail with 403.
+      if (child.profile_id !== userData.user.id && !await isParent()) {
+        return json({ error: 'Only the child or a family parent can send a completion notification' }, 403);
+      }
       targetProfileIds = await getParents();
       title = '孩子完成了任務';
       message = `${child.display_name} 完成了「${task.name}」，請確認完成內容。`;

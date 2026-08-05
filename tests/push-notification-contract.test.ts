@@ -9,6 +9,7 @@ test('task notification sender supports creation, submission, and review events'
 
   assert.match(source, /type TaskNotificationEvent = 'created' \| 'submitted' \| 'reviewed'/);
   assert.match(source, /event === 'submitted'/);
+  assert.match(source, /child\.profile_id !== userData\.user\.id && !await isParent\(\)/);
   assert.match(source, /event === 'reviewed'/);
   assert.match(source, /body\.event/);
 });
