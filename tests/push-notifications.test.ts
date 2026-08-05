@@ -6,7 +6,7 @@ import {
   hasEnabledPushDevice,
   shouldRegisterPushNotifications,
 } from '../src/lib/notification-preferences';
-import { setNotificationPreference } from '../src/lib/push-notifications';
+import { notifyTaskEvent, setNotificationPreference } from '../src/lib/push-notifications';
 
 test('push registration only starts when the user enabled notifications and permission is granted', () => {
   assert.equal(shouldRegisterPushNotifications({ enabled: true, permission: 'granted', platform: 'ios' }), true);
@@ -59,4 +59,47 @@ test('notification preference syncs the profile flag used by the sender', async 
     { table: 'profiles', values: { notifications_enabled: false }, id: 'profile-1' },
     { table: 'push_devices', values: { enabled: false }, id: 'profile-1' },
   ]);
+});
+
+test('task notification sends the current session token to the Edge Function', async () => {
+  let invocation: { name: string; options: { body: unknown; headers: Record<string, string> } } | null = null;
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: { access_token: 'session-token' } }, error: null }),
+    },
+    functions: {
+      invoke: async (name: string, options: { body: unknown; headers: Record<string, string> }) => {
+        invocation = { name, options };
+        return { error: null };
+      },
+    },
+  };
+
+  await notifyTaskEvent(client as never, 'task-1', 'submitted');
+
+  assert.deepEqual(invocation, {
+    name: 'notify-task-created',
+    options: {
+      body: { taskId: 'task-1', event: 'submitted' },
+      headers: { Authorization: 'Bearer session-token' },
+    },
+  });
+});
+
+test('task notification does not invoke an Edge Function without a session', async () => {
+  let invoked = false;
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+    },
+    functions: {
+      invoke: async () => {
+        invoked = true;
+        return { error: null };
+      },
+    },
+  };
+
+  await assert.rejects(() => notifyTaskEvent(client as never, 'task-1', 'submitted'), /登入狀態已失效/);
+  assert.equal(invoked, false);
 });

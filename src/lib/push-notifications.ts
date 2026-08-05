@@ -116,7 +116,14 @@ export async function disablePushDevicesForProfile(supabase: SupabaseClient, pro
 
 export async function notifyTaskEvent(supabase: SupabaseClient, taskId: string, event: TaskNotificationEvent) {
   if (!taskId) return;
-  const { error } = await supabase.functions.invoke('notify-task-created', { body: { taskId, event } });
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw new Error(sessionError.message);
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('登入狀態已失效，無法發送通知。');
+  const { error } = await supabase.functions.invoke('notify-task-created', {
+    body: { taskId, event },
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
   if (error) throw new Error(error.message);
 }
 

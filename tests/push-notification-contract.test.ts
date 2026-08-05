@@ -31,3 +31,10 @@ test('task completion paths invoke push notification events after successful mut
   assert.match(adventureActions, /fireTaskNotification\(taskId, 'submitted'\)/);
   assert.match(adventureActions, /fireTaskNotification\(taskId, 'reviewed'\)/);
 });
+
+test('task notification requests carry an authenticated session header', () => {
+  const source = read('../src/lib/push-notifications.ts');
+
+  assert.match(source, /supabase\.auth\.getSession\(\)/);
+  assert.match(source, /Authorization: `Bearer \$\{accessToken\}`/);
+});
