@@ -150,7 +150,11 @@ Deno.serve(async request => {
     };
 
     if (event === 'created' && origin === 'child_proposed') {
-      if (child.profile_id !== userData.user.id) return json({ error: 'Task is not owned by the current child' }, 403);
+      // The proposal RPC permits a family parent to create a proposal while
+      // viewing a child account. Keep this authorization aligned with it.
+      if (child.profile_id !== userData.user.id && !await isParent()) {
+        return json({ error: 'Only the child or a family parent can create this task' }, 403);
+      }
       targetProfileIds = await getParents();
       title = '孩子建立了新冒險';
       message = `${child.display_name} 建立了「${task.name}」，完成後會請你確認點數。`;
@@ -167,7 +171,7 @@ Deno.serve(async request => {
         return json({ error: 'Only the child or a family parent can send a completion notification' }, 403);
       }
       targetProfileIds = await getParents();
-      title = '孩子完成了任務';
+      title = 'HabitHero 習慣小英雄';
       message = `${child.display_name} 完成了「${task.name}」，請確認完成內容。`;
     } else if (event === 'reviewed') {
       if (!await isParent()) return json({ error: 'Only a parent can send a review notification' }, 403);

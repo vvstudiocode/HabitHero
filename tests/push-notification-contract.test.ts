@@ -8,8 +8,10 @@ test('task notification sender supports creation, submission, and review events'
   const source = read('../supabase/functions/notify-task-created/index.ts');
 
   assert.match(source, /type TaskNotificationEvent = 'created' \| 'submitted' \| 'reviewed'/);
+  assert.match(source, /event === 'created' && origin === 'child_proposed'/);
+  assert.match(source, /event === 'created' && origin === 'child_proposed'[\s\S]{0,300}child\.profile_id !== userData\.user\.id && !await isParent\(\)/);
   assert.match(source, /event === 'submitted'/);
-  assert.match(source, /child\.profile_id !== userData\.user\.id && !await isParent\(\)/);
+  assert.match(source, /title = 'HabitHero 習慣小英雄'/);
   assert.match(source, /event === 'reviewed'/);
   assert.match(source, /body\.event/);
 });
