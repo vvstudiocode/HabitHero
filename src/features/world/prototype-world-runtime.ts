@@ -50,7 +50,9 @@ export const PROTOTYPE_WORLD_CONFIG = {
   cameraDistanceMin: 1.45,
   cameraDistanceMax: 6.5,
   cameraPitchMin: 0.12,
-  cameraPitchMax: 1.16,
+  // Let the portrait camera tilt further down so the ground immediately
+  // around the character remains visible during exploration.
+  cameraPitchMax: 1.3,
   initialCameraYaw: Math.PI / 2,
   initialCameraPitch: 0.18,
 } as const;
