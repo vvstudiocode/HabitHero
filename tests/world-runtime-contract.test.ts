@@ -44,8 +44,8 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /zone: event\.pointerType === 'mouse' \? 'camera' : getWorldInputZone/);
     assert.match(worldLayerSource, /data-world-input-layout="portrait-control-band"/);
     assert.match(worldLayerSource, /下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放/);
-    assert.match(runtimeSource, /cameraPitchMax:\s*1\.3/);
-    assert.match(read('../terrain-prototype/index.html'), /CAMERA_PITCH_MAX = 1\.3/);
+    assert.match(runtimeSource, /cameraPitchMax:\s*Math\.PI\s*\/\s*2/);
+    assert.match(read('../terrain-prototype/index.html'), /CAMERA_PITCH_MAX = Math\.PI\s*\/\s*2/);
   });
 
   it('lets passive statistics pass world pointer events through while keeping menu controls interactive', () => {
