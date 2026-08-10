@@ -19,6 +19,22 @@ export function applySinglePointerCameraDrag(
   };
 }
 
+export function getGroundedCameraTargetHeight({
+  pitch,
+  pitchMin,
+  pitchMax,
+  normalHeight,
+  groundHeight = 0.04,
+}) {
+  // Start lowering the look target after a 60-degree tilt. At the limit the
+  // camera looks at the character's feet/ground instead of the torso.
+  const groundingStart = Math.PI / 3;
+  const groundingRange = Math.max(pitchMax - groundingStart, Number.EPSILON);
+  const progress = clamp((pitch - groundingStart) / groundingRange, 0, 1);
+  const safeProgress = pitchMax > pitchMin ? progress : 0;
+  return normalHeight + (groundHeight - normalHeight) * safeProgress;
+}
+
 export function getPinchCameraDistance({
   startDistance,
   startCameraDistance,

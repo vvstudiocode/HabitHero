@@ -130,6 +130,7 @@
     <script type="module">
       import {
         applySinglePointerCameraDrag,
+        getGroundedCameraTargetHeight,
         getPinchCameraDistance,
       } from './terrain-controls.js';
       import { updateGrassInteractionState } from './procedural-grass-field.js';
@@ -226,7 +227,9 @@
       let cameraYaw = Math.PI / 2;
       let cameraPitch = 0.18;
       const CAMERA_PITCH_MIN = 0.12;
-      const CAMERA_PITCH_MAX = Math.PI / 2;
+      // Slightly beyond vertical, with the look target lowered to the ground
+      // at the limit so a full upward drag feels like it reaches the grass.
+      const CAMERA_PITCH_MAX = Math.PI * 0.56;
       let cameraDistance = CAMERA_DISTANCE_DEFAULT;
       let pointerDrag = null;
       let pinchGesture = null;
@@ -473,7 +476,13 @@
           0,
           1,
         );
-        const targetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
+        const normalTargetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
+        const targetHeight = getGroundedCameraTargetHeight({
+          pitch: cameraPitch,
+          pitchMin: CAMERA_PITCH_MIN,
+          pitchMax: CAMERA_PITCH_MAX,
+          normalHeight: normalTargetHeight,
+        });
         reusableTarget.set(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
         const horizontal = Math.cos(cameraPitch) * cameraDistance;
         reusableVector.set(

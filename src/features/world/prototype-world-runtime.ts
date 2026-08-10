@@ -18,6 +18,7 @@ import { PointerInputController } from './input/pointer-input-controller';
 import { getWorldInputZone } from './input/world-input-types';
 import {
   applySinglePointerCameraDrag,
+  getGroundedCameraTargetHeight,
 } from '../../../terrain-prototype/terrain-controls.js';
 import { updateGrassInteractionState } from '../../../terrain-prototype/procedural-grass-field.js';
 import { getProceduralGrassCount } from '../../../terrain-prototype/procedural-grass-field.js';
@@ -50,9 +51,9 @@ export const PROTOTYPE_WORLD_CONFIG = {
   cameraDistanceMin: 1.45,
   cameraDistanceMax: 6.5,
   cameraPitchMin: 0.12,
-  // Allow the portrait camera to reach a full 90-degree downward tilt while
-  // keeping the ground immediately around the character visible.
-  cameraPitchMax: Math.PI / 2,
+  // Let the portrait camera pass slightly beyond vertical and aim at the
+  // character's feet so an upward drag has a true ground-facing finish.
+  cameraPitchMax: Math.PI * 0.56,
   initialCameraYaw: Math.PI / 2,
   initialCameraPitch: 0.18,
 } as const;
@@ -710,7 +711,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         });
         if (mixer) mixer.update(delta);
         const zoomProgress = THREE.MathUtils.clamp((PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - cameraDistance) / (PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - PROTOTYPE_WORLD_CONFIG.cameraDistanceMin), 0, 1);
-        const targetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
+        const normalTargetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
+        const targetHeight = getGroundedCameraTargetHeight({
+          pitch: cameraPitch,
+          pitchMin: PROTOTYPE_WORLD_CONFIG.cameraPitchMin,
+          pitchMax: PROTOTYPE_WORLD_CONFIG.cameraPitchMax,
+          normalHeight: normalTargetHeight,
+        });
         const horizontal = Math.cos(cameraPitch) * cameraDistance;
         const target = new THREE.Vector3(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
         const cameraOffset = new THREE.Vector3(Math.sin(cameraYaw) * horizontal, Math.sin(cameraPitch) * cameraDistance + 0.16, Math.cos(cameraYaw) * horizontal);
