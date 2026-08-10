@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Crown, Flower2, PawPrint } from 'lucide-react';
 import type { GameCatalogItem, GameItemType } from '../contracts';
 
 interface ParentGamePricePanelProps {
@@ -15,6 +16,14 @@ const typeLabels: Record<GameItemType, string> = {
   pet: '寵物',
   decoration: '裝飾',
 };
+
+function GameItemThumbnail({ item }: { item: GameCatalogItem }) {
+  if (item.thumbnailUrl) {
+    return <img src={item.thumbnailUrl} alt={`${item.name} 預覽`} className="hh-game-item-preview" />;
+  }
+  const Icon = item.itemType === 'character' ? Crown : item.itemType === 'pet' ? PawPrint : Flower2;
+  return <Icon size={24} aria-hidden="true" />;
+}
 
 export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave, onReset }: ParentGamePricePanelProps) {
   const items = useMemo(
@@ -36,17 +45,17 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
   return (
     <section className="hh-world-price-panel space-y-3" aria-labelledby="game-price-heading">
       <div>
-        <h2 id="game-price-heading" className="text-xl font-black text-gray-900">世界商品</h2>
+        <h2 id="game-price-heading" className="text-xl font-black text-gray-900">商店</h2>
         <p className="mt-1 text-xs leading-5 text-gray-500">調整這個家庭看到的任務捲價格；商品內容與初始角色由系統維護。</p>
       </div>
       {catalog.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-700" role="status">
-          <p>世界商品資料目前還沒同步完成，商品頁仍可稍後重試。</p>
+          <p>商店資料目前還沒同步完成，商品頁仍可稍後重試。</p>
           {onRetry && <button type="button" onClick={onRetry} disabled={loading} className="mt-4 min-h-11 rounded-xl bg-gray-900 px-5 py-3 font-bold text-white disabled:cursor-wait disabled:opacity-50">{loading ? '同步中…' : '重試'}</button>}
         </div>
       ) : (
         <>
-          <div className="hh-game-tabs" role="tablist" aria-label="世界商品分類">
+          <div className="hh-game-tabs" role="tablist" aria-label="商店分類">
             {(['character', 'pet', 'decoration'] as const).map((type) => (
               <button key={type} type="button" role="tab" aria-selected={activeType === type} className={activeType === type ? 'is-selected' : ''} onClick={() => setActiveType(type)}>
                 {typeLabels[type]}
@@ -60,7 +69,10 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
               const isCustomized = familyPrice !== undefined;
               const value = drafts[item.id] ?? String(familyPrice ?? defaultPrice);
               return (
-                <div key={item.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
+                <div key={item.id} className="hh-game-price-card rounded-2xl border border-gray-100 bg-gray-50 p-3">
+                  <div className="hh-game-item-icon hh-game-item-icon--thumbnail" aria-hidden={item.thumbnailUrl ? undefined : true}>
+                    <GameItemThumbnail item={item} />
+                  </div>
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <strong className="block truncate text-sm text-gray-900">{item.name}</strong>
@@ -68,7 +80,7 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
                     </div>
                     {isCustomized && <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-[11px] font-bold text-blue-700">家庭自訂</span>}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="hh-game-price-controls flex items-center gap-2">
                     <label className="sr-only" htmlFor={`game-price-${item.id}`}>{item.name} 任務捲價格</label>
                     <input
                       id={`game-price-${item.id}`}

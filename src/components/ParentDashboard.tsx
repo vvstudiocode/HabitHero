@@ -765,7 +765,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
     { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
     { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards || parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('rewards') },
-    { id: 'world-shop', title: '世界商品', tour: 'world-shop-menu', icon: <ShoppingBag size={17} />, onSelect: () => openHeroFeature('world-shop') },
+    { id: 'world-shop', title: '商店', tour: 'world-shop-menu', icon: <ShoppingBag size={17} />, onSelect: () => openHeroFeature('world-shop') },
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
@@ -1136,7 +1136,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 await resetFamilyGameItemPrice(catalogItemId);
               }}
             />
-          ) : <EmptyState>先到設定新增小孩，才能管理世界商品。</EmptyState>
+          ) : <EmptyState>先到設定新增小孩，才能管理商店。</EmptyState>
         )}
       </ParentDashboardContent>
 

@@ -23,13 +23,13 @@ describe('world dashboard navigation contract', () => {
     const content = await read('src/components/parent-dashboard/ParentDashboardContent.tsx');
     const panel = await read('src/features/world/components/ParentGamePricePanel.tsx');
 
-    assert.match(dashboard, /id: 'world-shop', title: '世界商品'/);
+    assert.match(dashboard, /id: 'world-shop', title: '商店'/);
     assert.match(dashboard, /activeTab === 'world-shop'/);
     assert.equal((dashboard.match(/<ParentGamePricePanel/g) ?? []).length, 1);
     assert.doesNotMatch(dashboard, /data-tour="child-view"/);
     assert.match(dashboard, /切換小孩視角/);
     assert.match(content, /ParentDashboardTab = [^\n]*world-shop/);
-    assert.match(panel, /世界商品分類/);
+    assert.match(panel, /商店/);
     assert.match(panel, /role="tab"/);
   });
 
