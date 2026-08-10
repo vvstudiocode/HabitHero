@@ -49,36 +49,34 @@ test('dashboard hero supports a muted mobile video while keeping the image fallb
   assert.match(source, /loop/);
 });
 
-test('parent and child dashboards provide their own complete scene images', () => {
+test('parent dashboard keeps its scene image while child dashboard owns the terrain world', () => {
   const parentSource = read('../src/components/ParentDashboard.tsx');
   const childSource = read('../src/components/ChildDashboard.tsx');
 
   assert.match(parentSource, /sceneImage="\/images\/habithero-parent-living-room\.png"/);
   assert.match(parentSource, /sceneImageDesktop="\/images\/habithero-parent-living-room-desktop\.png"/);
-  assert.match(childSource, /getCharacterById\(activeChild\?\.characterId\)/);
-  assert.match(childSource, /sceneImage=\{activeCharacter\.imageUrl\}/);
-  assert.match(childSource, /sceneImageDesktop=\{activeCharacter\.desktopImageUrl\}/);
-  assert.match(childSource, /mobileSceneVideo=\{activeCharacter\.id === 'pink-catgirl-room' \? '\/videos\/habithero-dashboard\.mp4' : activeCharacter\.id === 'black-catboy-room' \? '\/videos\/habithero-black-catboy\.mp4' : activeCharacter\.id === 'blue-catboy-room' \? '\/videos\/habithero-blue-catboy\.mp4' : activeCharacter\.id === 'white-catgirl-room' \? '\/videos\/habithero-white-catgirl\.mp4' : undefined\}/);
+  assert.match(childSource, /sceneImage=""/);
+  assert.doesNotMatch(childSource, /mobileSceneVideo=/);
+  assert.match(childSource, /TerrainWorldLayer/);
 });
 
-test('family child picker uses each child character scene thumbnail', () => {
+test('family child picker uses neutral child icons during a world transition', () => {
   const source = read('../src/components/FamilyChildPicker.tsx');
 
-  assert.match(source, /getCharacterById\(child\.characterId\)/);
-  assert.match(source, /character\.imageUrl/);
-  assert.match(source, /<img/);
+  assert.match(source, /<User size=\{20\}/);
+  assert.doesNotMatch(source, /getCharacterById|character\.imageUrl|<img/);
 });
 
-test('new child flow requires gender and character before creation', () => {
+test('new child flow requires gender and uses the current GLB without a legacy picker', () => {
   const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
 
   assert.match(source, /newChildGender/);
   assert.match(source, /newChildCharacterId/);
-  assert.match(source, /getCharactersForCategory/);
-  assert.match(source, /CHARACTER_CATEGORIES/);
-  assert.match(source, /hh-character-preview-modal/);
+  assert.match(source, /CURRENT_WORLD_CHARACTER_ID/);
+  assert.match(source, /固定使用 3D 人物/);
+  assert.doesNotMatch(source, /getCharactersForCategory|CHARACTER_CATEGORIES|hh-character-preview-modal/);
   assert.match(source, /aria-required="true"/);
-  assert.match(source, /disabled=\{[^}]*!selectedGender[^}]*!selectedCharacterId/);
+  assert.match(source, /disabled=\{[^}]*!selectedGender/);
 });
 
 test('new child drawer closes only after the creation request succeeds', () => {
@@ -90,7 +88,7 @@ test('new child drawer closes only after the creation request succeeds', () => {
   assert.match(source, /if \(created\) closeNewChildForm\(\)/);
 });
 
-test('gender and character controls are keyboard and touch accessible', () => {
+test('gender controls are keyboard and touch accessible', () => {
   const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
 
   assert.match(source, /role="radiogroup"/);
@@ -98,8 +96,7 @@ test('gender and character controls are keyboard and touch accessible', () => {
   assert.match(source, /aria-checked=\{selectedGender === gender/);
   assert.match(source, /type="button"/);
   assert.match(source, /hh-gender-option/);
-  assert.match(source, /hh-character-selection-trigger/);
-  assert.match(source, /aria-haspopup="dialog"/);
+  assert.doesNotMatch(source, /hh-character-selection-trigger|aria-haspopup="dialog"/);
 });
 
 test('child account provisioning sends the selected identity to the RPC', () => {

@@ -7,4 +7,6 @@
 @import './login.css';
 @import './dashboard.css';
 @import './character.css';
+@import './world.css';
+@import './world-controls.css';
 @import './overlays.css';

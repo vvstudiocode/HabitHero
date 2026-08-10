@@ -44,6 +44,13 @@ import {
   type BatchAdventureReviewResult,
   type GeneralAdventureInput,
 } from './adventure-data-access';
+import { loadChildGameData } from '../features/world/game-data';
+import type {
+  GamePurchaseResult,
+  WorldMutationResult,
+  WorldMutationPayload,
+  WorldTransformMutationPayload,
+} from '../features/world/contracts';
 export {
   buildAdventureCompletionPayload,
   buildAdventureSchedulePayload,
@@ -76,6 +83,7 @@ const emptyState = (): AppState => ({
   adventureGroups: [],
   taskSchedules: [],
   timerSessions: [],
+  gameDataByChildId: {},
 });
 
 // Keep enough history in the app state for the UI's 30-item pages.
@@ -334,6 +342,12 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
   state.adventureGroups = groups.map(adventureGroupRowToViewModel);
   state.taskSchedules = schedules.map(taskScheduleRowToViewModel);
   state.timerSessions = timerSessions.map(taskTimerSessionRowToViewModel);
+  state.gameDataByChildId = await loadChildGameData(
+    client,
+    familyId,
+    children.map((child) => child.id),
+    role === 'parent',
+  );
   const timerByTaskId = new Map(state.timerSessions.map((session) => [session.taskId, session]));
   state.children = state.children.map((child) => ({
     ...child,
@@ -387,6 +401,41 @@ export interface DataRepository {
   redeemReward(rewardId: string): Promise<void>;
   fulfillTicket(ticketId: string): Promise<void>;
   recordParentConsent(familyId: string, consentVersion: string): Promise<void>;
+  purchaseGameItem(childId: string, catalogItemId: string, quantity: number, idempotencyKey: string): Promise<GamePurchaseResult>;
+  equipGameCharacter(childId: string, inventoryItemId: string): Promise<void>;
+  setFollowingPet(childId: string, inventoryItemId: string | null): Promise<WorldMutationResult>;
+  setRoamingPets(childId: string, inventoryItemIds: string[]): Promise<WorldMutationResult>;
+  placeWorldEntity(childId: string, payload: WorldMutationPayload): Promise<WorldMutationResult>;
+  updateWorldEntityTransform(childId: string, payload: WorldTransformMutationPayload): Promise<WorldMutationResult>;
+  removeWorldEntity(childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>): Promise<WorldMutationResult>;
+  collectAllWorldDecorations(childId: string, expectedRevision: number): Promise<WorldMutationResult>;
+  setFamilyGameItemPrice(catalogItemId: string, scrollPrice: number): Promise<void>;
+  resetFamilyGameItemPrice(catalogItemId: string): Promise<void>;
+  revokeTaskApproval(taskId: string): Promise<void>;
+}
+
+export function toWorldTransformRpcArgs(payload: WorldMutationPayload): Record<string, unknown> {
+  if (!payload.transform) throw new Error('世界物件變更缺少座標。');
+  return {
+    target_inventory_item_id: payload.inventoryItemId,
+    ...(payload.entityId ? { target_entity_id: payload.entityId } : {}),
+    expected_revision: payload.expectedRevision,
+    position_x: payload.transform.x,
+    position_y: payload.transform.y,
+    position_z: payload.transform.z,
+    rotation_x: payload.transform.rotationX,
+    rotation_y: payload.transform.rotationY,
+    rotation_z: payload.transform.rotationZ,
+    target_scale: payload.transform.scale,
+  };
+}
+
+export function toWorldPlacementRpcArgs(payload: WorldMutationPayload): Record<string, unknown> {
+  return {
+    ...toWorldTransformRpcArgs(payload),
+    ...(payload.behaviorMode ? { target_behavior_mode: payload.behaviorMode } : {}),
+    ...(payload.roamingSlot !== undefined ? { target_roaming_slot: payload.roamingSlot } : {}),
+  };
 }
 
 async function functionErrorMessage(error: unknown): Promise<string> {
@@ -653,6 +702,83 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     async fulfillTicket(ticketId) { check(await client.from('reward_redemptions').update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() }).eq('id', ticketId)); },
     async recordParentConsent(familyId, consentVersion) {
       check(await client.rpc('record_parent_consent', { target_family_id: familyId, consent_version: consentVersion }));
+    },
+    async purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey) {
+      const result = check(await client.rpc('purchase_game_item', {
+        target_child_profile_id: childId,
+        target_catalog_item_id: catalogItemId,
+        target_quantity: quantity,
+        purchase_idempotency_key: idempotencyKey,
+      })) as {
+        purchase_id: string;
+        inventory_item_id: string;
+        wallet_balance: number;
+        quantity: number;
+      };
+      return {
+        purchaseId: result.purchase_id,
+        inventoryItemId: result.inventory_item_id,
+        walletBalance: Number(result.wallet_balance),
+        quantity: Number(result.quantity),
+      };
+    },
+    async equipGameCharacter(childId, inventoryItemId) {
+      check(await client.rpc('equip_game_character', {
+        target_child_profile_id: childId,
+        target_inventory_item_id: inventoryItemId,
+      }));
+    },
+    async setFollowingPet(childId, inventoryItemId) {
+      const result = check(await client.rpc('set_following_pet', {
+        target_child_profile_id: childId,
+        target_inventory_item_id: inventoryItemId,
+      })) as WorldMutationResult;
+      return { revision: Number(result.revision) };
+    },
+    async setRoamingPets(childId, inventoryItemIds) {
+      const result = check(await client.rpc('set_roaming_pets', {
+        target_child_profile_id: childId,
+        target_inventory_item_ids: inventoryItemIds,
+      })) as WorldMutationResult;
+      return { revision: Number(result.revision) };
+    },
+    async placeWorldEntity(childId, payload) {
+      return check(await client.rpc('place_world_entity', {
+        ...toWorldPlacementRpcArgs(payload),
+        target_child_profile_id: childId,
+      })) as WorldMutationResult;
+    },
+    async updateWorldEntityTransform(childId, payload) {
+      return check(await client.rpc('update_world_entity_transform', {
+        ...toWorldTransformRpcArgs(payload),
+        target_child_profile_id: childId,
+      })) as WorldMutationResult;
+    },
+    async removeWorldEntity(childId, payload) {
+      return check(await client.rpc('remove_world_entity', {
+        target_child_profile_id: childId,
+        target_inventory_item_id: payload.inventoryItemId,
+        ...(payload.entityId ? { target_entity_id: payload.entityId } : {}),
+        expected_revision: payload.expectedRevision,
+      })) as WorldMutationResult;
+    },
+    async collectAllWorldDecorations(childId, expectedRevision) {
+      return check(await client.rpc('collect_all_world_decorations', {
+        target_child_profile_id: childId,
+        expected_revision: expectedRevision,
+      })) as WorldMutationResult;
+    },
+    async setFamilyGameItemPrice(catalogItemId, scrollPrice) {
+      check(await client.rpc('set_family_game_item_price', {
+        target_catalog_item_id: catalogItemId,
+        target_scroll_price: scrollPrice,
+      }));
+    },
+    async resetFamilyGameItemPrice(catalogItemId) {
+      check(await client.rpc('reset_family_game_item_price', { target_catalog_item_id: catalogItemId }));
+    },
+    async revokeTaskApproval(taskId) {
+      check(await client.rpc('revoke_task_approval', { target_task_id: taskId }));
     },
   };
 }

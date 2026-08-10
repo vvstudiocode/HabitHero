@@ -16,6 +16,7 @@ import { SpriteLoginScene } from './components/SpriteLoginScene';
 import { isPublicAuthView, PARENT_IDLE_LOCK_MS } from './lib/view-access';
 import { canOpenFamilyPicker, resolveActiveChildId } from './lib/family-switch';
 import { PasswordRecovery } from './components/PasswordRecovery';
+import { WorldPreparingScreen } from './components/WorldPreparingScreen';
 
 function MainApp() {
   const { state, clearProtectedState, hasSession, loading, initialLoading, dataReady, role, error, retry, setChildLoggedIn, setParentActiveChild } = useAppStore();
@@ -161,7 +162,31 @@ function MainApp() {
     </div>
   );
 
+  const childWorldTransition = pendingView === 'childDashboard'
+    || currentView === 'childDashboard'
+    || role === 'child'
+    || loginMode === 'child';
+
+  const renderChildLoadError = () => (
+    <main className="hh-world-preparing-screen" role="alert" aria-live="assertive">
+      <div className="hh-world-preparing-card flex flex-col items-center gap-4 text-center">
+        <span className="hh-world-preparing-mark" aria-hidden="true" />
+        <strong>地圖資料載入失敗</strong>
+        <p className="max-w-sm text-sm text-gray-700">{error || '目前無法載入孩子的冒險資料，請重試。'}</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <button type="button" onClick={() => void retry()} disabled={loading} className="min-h-11 rounded-xl bg-gray-900 px-5 py-3 font-bold text-white disabled:cursor-wait disabled:opacity-50">
+            {loading ? '重試中…' : '重試'}
+          </button>
+          <button type="button" onClick={handleLogout} className="min-h-11 rounded-xl bg-white px-5 py-3 font-bold text-gray-900 ring-1 ring-inset ring-gray-300">
+            登出並返回登入
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+
   if (initialLoading) {
+    if (childWorldTransition) return <WorldPreparingScreen detail="正在載入孩子的冒險世界…" />;
     return renderLoginBackgroundScreen(
       <div className="flex flex-col items-center text-center">
         <p className="text-lg font-bold text-white drop-shadow-lg">HabitHero 習慣小英雄</p>
@@ -170,8 +195,12 @@ function MainApp() {
     );
   }
 
-  if (loading && !error) return renderLoginBackgroundScreen(<p className="font-bold text-white drop-shadow-lg">正在更新資料…</p>);
+  if (loading && !error) {
+    if (childWorldTransition) return <WorldPreparingScreen detail="正在同步孩子的世界資料…" />;
+    return renderLoginBackgroundScreen(<p className="font-bold text-white drop-shadow-lg">正在更新資料…</p>);
+  }
   if (error && hasSession && !dataReady) {
+    if (childWorldTransition) return renderChildLoadError();
     return renderLoginBackgroundScreen(<div className="flex flex-col items-center gap-4 p-6 text-center"><p role="alert" className="font-bold text-white drop-shadow-lg">{error}</p><button onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 text-white shadow-lg">重試</button></div>);
   }
 

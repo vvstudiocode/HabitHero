@@ -34,6 +34,14 @@ requireText('invite RPC execution excludes public and anon', migrations, /revoke
 requireText('child loading filters by authenticated profile', source, /from\('child_profiles'\)[\s\S]*?\.eq\('profile_id', userId\)/);
 requireText('logout clears protected provider state', source, /clearProtectedState[\s\S]*?setState\(emptyState\)/);
 requireText('wishlist approval uses atomic RPC', source, /rpc\('approve_wishlist_item'/);
+for (const table of ['game_catalog_items', 'child_game_wallets', 'game_currency_ledger', 'child_inventory_items', 'child_world_entities']) {
+  requireText(`${table} enables RLS`, migrations, new RegExp(`alter table public\\.${table} enable row level security`));
+}
+requireText('game economy tables default to read-only authenticated grants', migrations, /revoke all on table public\.game_catalog_items[\s\S]*from public, anon, authenticated[\s\S]*grant select on table public\.game_catalog_items/);
+requireText('game purchase RPC uses idempotency key and server price', migrations, /purchase_game_item\([\s\S]*purchase_idempotency_key uuid[\s\S]*select scroll_price into family_override/);
+requireText('world writes require optimistic revision', migrations, /expected_revision bigint[\s\S]*world revision conflict/);
+requireText('task scroll grants are idempotent', migrations, /game_currency_task_grant_unique/);
+requireText('task approval correction is auditable', migrations, /revoke_task_approval[\s\S]*task_approval_corrections/);
 
 if (failures.length) {
   console.error(`Security checks failed (${failures.length}):`);

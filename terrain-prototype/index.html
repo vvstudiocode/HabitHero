@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#74c99a" />
+    <title>HabitHero · 3D 草地原型</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Nunito:wght@700;800;900&display=swap');
+
+      :root {
+        --ink: #153d2b;
+        --muted: #d7f5df;
+        --module-green: #70c998;
+        --module-green-deep: #23794f;
+        --module-green-dark: #195e43;
+        --module-mint: #b7e8c2;
+        --module-shadow: 0 14px 28px rgba(16, 82, 52, 0.22);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { width: 100%; height: 100%; min-height: 100%; }
+
+      body {
+        margin: 0;
+        overflow: hidden;
+        color: var(--ink);
+        background: var(--module-green);
+        font-family: 'DM Sans', system-ui, sans-serif;
+      }
+
+      button { font: inherit; }
+
+      .app-shell {
+        width: 100%;
+        height: 100dvh;
+        min-height: 100svh;
+      }
+
+      .scene-shell {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100dvh;
+        min-height: 100svh;
+        overflow: hidden;
+        background: var(--module-green);
+        isolation: isolate;
+      }
+
+      #scene-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        cursor: grab;
+        touch-action: none;
+      }
+
+      #scene-canvas:active { cursor: grabbing; }
+
+      .loading {
+        position: absolute;
+        z-index: 3;
+        inset: 50% auto auto 50%;
+        width: min(320px, calc(100% - 40px));
+        padding: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 24px;
+        background: rgba(35, 121, 79, 0.94);
+        color: #f5fff4;
+        box-shadow: var(--module-shadow);
+        text-align: center;
+        transform: translate(-50%, -50%);
+        transition: opacity 240ms ease, visibility 240ms ease;
+      }
+
+      .loading.is-hidden { visibility: hidden; opacity: 0; }
+      .loading strong { display: block; font-family: 'Nunito', system-ui, sans-serif; font-size: 18px; }
+      .loading p { margin: 8px 0 0; color: #d7f5df; font-size: 13px; line-height: 1.5; }
+
+      .progress-track {
+        height: 8px;
+        margin-top: 16px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(11, 76, 49, 0.3);
+      }
+
+      .progress-bar {
+        width: 16%;
+        height: 100%;
+        border-radius: inherit;
+        background: #c9f3b9;
+        transition: width 180ms ease;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="app-shell" aria-label="HabitHero 第三人稱草地場景">
+      <section class="scene-shell" aria-label="可操作的 HabitHero 第三人稱草地場景">
+        <canvas id="scene-canvas" aria-label="第三人稱 3D 草地場景，可使用 WASD 或方向鍵移動角色位置；單指拖曳調整視角，雙指捏合縮放"></canvas>
+        <div class="loading" id="loading-panel">
+          <strong id="loading-title">正在準備冒險地圖</strong>
+          <p id="loading-detail">讀取草地與大樹模型…</p>
+          <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progress-bar"></div></div>
+        </div>
+      </section>
+
+    </main>
+
+    <script type="module">
+      import {
+        applySinglePointerCameraDrag,
+        getPinchCameraDistance,
+      } from './terrain-controls.js';
+      import { updateGrassInteractionState } from './procedural-grass-field.js';
+      import { createProceduralGrassField } from './procedural-grass-scene.js';
+      import { createProceduralFlowerField } from './procedural-flowers.js';
+      import { createProceduralForest } from './procedural-trees.js';
+
+      async function main() {
+        const [THREE, { GLTFLoader }] = await Promise.all([
+          import('https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js'),
+          import('https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js'),
+        ]);
+
+      const ASSETS = {
+        tree: './assets/big-tree.glb',
+        character: './assets/anime-maiden.glb',
+        skybox: './assets/sky-equirectangular-day.png',
+      };
+      const GRID_SIZE = 9;
+      const TERRAIN_STEP = 1.1;
+      // Keep a wide non-walkable grass field around the playable grid so edge views stay covered.
+      const SCENE_PADDING = 8;
+      // Enlarge only the central tree while keeping its root on the center tile.
+      const TREE_FIT_TO_TILE = 2.40 * 2;
+      const TREE_HEIGHT_SCALE = 1;
+      const TREE_ROOT_SINK = 0.03;
+
+      const canvas = document.querySelector('#scene-canvas');
+      const loadingPanel = document.querySelector('#loading-panel');
+      const loadingTitle = document.querySelector('#loading-title');
+      const loadingDetail = document.querySelector('#loading-detail');
+      const progressBar = document.querySelector('#progress-bar');
+
+      const scene = new THREE.Scene();
+      const skyBlue = new THREE.Color(0x2d9fe3);
+      const skyboxHorizon = new THREE.Color(0x9cd3ee);
+      scene.background = skyBlue;
+      scene.fog = new THREE.Fog(skyboxHorizon, 9, 23);
+
+      const skyboxTexture = new THREE.TextureLoader().load(
+        ASSETS.skybox,
+        texture => {
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.mapping = THREE.EquirectangularReflectionMapping;
+          texture.needsUpdate = true;
+          scene.background = texture;
+        },
+        undefined,
+        error => console.error('Unable to load the equirectangular daytime skybox.', error),
+      );
+
+      const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      scene.add(new THREE.HemisphereLight(0xdffbff, 0x456d42, 2.1));
+      const sunPosition = new THREE.Vector3(-4, 2.9, -14);
+      const sun = new THREE.DirectionalLight(0xffdda0, 3.2);
+      sun.position.copy(sunPosition);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.camera.left = -10;
+      sun.shadow.camera.right = 10;
+      sun.shadow.camera.top = 10;
+      sun.shadow.camera.bottom = -10;
+      sun.shadow.camera.near = 0.1;
+      sun.shadow.camera.far = 40;
+      scene.add(sun);
+
+      // The equirectangular skybox stays world-locked while the camera changes
+      // direction, so turning reveals a different part of the same sky.
+
+      const loader = new GLTFLoader();
+      const clock = new THREE.Clock();
+      const keys = new Set();
+      const playerRoot = new THREE.Group();
+      const reusableVector = new THREE.Vector3();
+      const reusableTarget = new THREE.Vector3();
+      let terrainStep = TERRAIN_STEP;
+      let terrainLimit = 4;
+      let groundHeight = 0;
+      const CAMERA_DISTANCE_DEFAULT = 4.1;
+      const CAMERA_DISTANCE_MIN = 1.45;
+      const CAMERA_DISTANCE_MAX = 6.5;
+      // Keep the player at two-thirds of the previous prototype height.
+      const CHARACTER_TARGET_HEIGHT = 0.76 * (2 / 3);
+      const CHARACTER_MOVE_SPEED = 1.1;
+      const CHARACTER_MODEL_YAW_OFFSET = 0;
+      let cameraYaw = Math.PI / 2;
+      let cameraPitch = 0.18;
+      const CAMERA_PITCH_MIN = 0.12;
+      const CAMERA_PITCH_MAX = 1.16;
+      let cameraDistance = CAMERA_DISTANCE_DEFAULT;
+      let pointerDrag = null;
+      let pinchGesture = null;
+      const activePointers = new Map();
+      let isReady = false;
+      let characterMixer = null;
+      let characterRoot = null;
+      let activeCharacterAction = null;
+      const characterActions = new Map();
+      let proceduralGrass = null;
+      let sceneElapsedTime = 0;
+      const previousPlayerPosition = new THREE.Vector3();
+      let playerGrassInteraction = {
+        direction: { x: 0, z: 1 },
+        strength: 0,
+      };
+      const grassInteractors = [{
+        position: playerRoot.position,
+        direction: playerGrassInteraction.direction,
+        strength: 0,
+      }];
+      const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      let grassMotionScale = reducedMotionQuery.matches ? 0.18 : 1;
+      reducedMotionQuery.addEventListener('change', event => {
+        grassMotionScale = event.matches ? 0.18 : 1;
+      });
+
+      function updateProgress(value, detail) {
+        progressBar.style.width = `${Math.max(16, Math.min(value, 100))}%`;
+        loadingDetail.textContent = detail;
+      }
+
+      function loadModel(url, label, progressStart, progressEnd) {
+        return new Promise((resolve, reject) => {
+          loader.load(
+            url,
+            gltf => resolve(gltf.scene),
+            event => {
+              const ratio = event.total ? event.loaded / event.total : 0.35;
+              const progress = progressStart + (progressEnd - progressStart) * ratio;
+              updateProgress(progress, `讀取${label}…`);
+            },
+            reject,
+          );
+        });
+      }
+
+      function loadCharacter(url, label, progressStart, progressEnd) {
+        return new Promise((resolve, reject) => {
+          loader.load(
+            url,
+            resolve,
+            event => {
+              const ratio = event.total ? event.loaded / event.total : 0.35;
+              const progress = progressStart + (progressEnd - progressStart) * ratio;
+              updateProgress(progress, `讀取${label}…`);
+            },
+            reject,
+          );
+        });
+      }
+
+      function defineAsset(source) {
+        source.updateMatrixWorld(true);
+        const bounds = new THREE.Box3().setFromObject(source);
+        const center = bounds.getCenter(new THREE.Vector3());
+        const size = bounds.getSize(new THREE.Vector3());
+        const offset = new THREE.Vector3(-center.x, -bounds.min.y, -center.z);
+
+        source.traverse(object => {
+          if (!object.isMesh) return;
+          object.castShadow = true;
+          object.receiveShadow = true;
+        });
+
+        return { source, size, offset };
+      }
+
+      function applyCentralTreeMaterialFallback(source) {
+        source.traverse(object => {
+          if (!object.isMesh) return;
+
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach(material => {
+            const textureImage = material.map?.image;
+            const textureReady = textureImage && textureImage.width > 0 && textureImage.height > 0;
+            if (!textureReady) {
+              material.color.set(0x9bd58d);
+              material.roughness = 0.86;
+              material.metalness = 0;
+              material.needsUpdate = true;
+            }
+            if (material.map) {
+              material.map.colorSpace = THREE.SRGBColorSpace;
+              material.map.needsUpdate = true;
+            }
+          });
+        });
+      }
+
+      function placeAsset(definition, position, scale = 1) {
+        const wrapper = new THREE.Group();
+        const model = definition.source.clone(true);
+        model.position.copy(definition.offset);
+        wrapper.position.copy(position);
+        wrapper.scale.setScalar(scale);
+        wrapper.add(model);
+        return wrapper;
+      }
+
+      function addPlayerMarker() {
+        const marker = new THREE.Group();
+        marker.name = 'player-ground-shadow';
+
+        const shadow = new THREE.Mesh(
+          new THREE.CircleGeometry(0.16, 32),
+          new THREE.MeshBasicMaterial({ color: 0x1d665b, transparent: true, opacity: 0.24 }),
+        );
+        shadow.rotation.x = -Math.PI / 2;
+        shadow.position.y = 0.006;
+
+        marker.add(shadow);
+        playerRoot.add(marker);
+      }
+
+      function playCharacterAction(name) {
+        const nextAction = characterActions.get(name);
+        if (!nextAction || nextAction === activeCharacterAction) return;
+
+        nextAction.reset().fadeIn(0.16).play();
+        if (activeCharacterAction) activeCharacterAction.fadeOut(0.16);
+        activeCharacterAction = nextAction;
+      }
+
+      function addPlayerCharacter(characterGltf) {
+        const definition = defineAsset(characterGltf.scene);
+        const characterScale = CHARACTER_TARGET_HEIGHT / Math.max(definition.size.y, 0.001);
+        characterRoot = new THREE.Group();
+        characterRoot.name = 'player-character';
+        characterRoot.scale.setScalar(characterScale);
+
+        const model = characterGltf.scene;
+        model.position.copy(definition.offset);
+        characterRoot.add(model);
+        playerRoot.add(characterRoot);
+
+        characterMixer = new THREE.AnimationMixer(model);
+        characterGltf.animations.forEach(clip => {
+          const actionName = clip.name.toLowerCase();
+          if (actionName.includes('walk')) characterActions.set('walk', characterMixer.clipAction(clip));
+          if (actionName.includes('idle')) characterActions.set('idle', characterMixer.clipAction(clip));
+        });
+        characterActions.forEach(action => action.setLoop(THREE.LoopRepeat, Infinity));
+        playCharacterAction('idle');
+      }
+
+      function addTerrain(treeDefinition) {
+        terrainStep = TERRAIN_STEP;
+        terrainLimit = terrainStep * ((GRID_SIZE - 1) / 2 + 0.42);
+        groundHeight = 0;
+
+        const terrain = new THREE.Group();
+        terrain.name = `${GRID_SIZE}x${GRID_SIZE}-terrain`;
+
+        const walkableWidth = terrainStep * GRID_SIZE;
+        const terrainWidth = terrainStep * (GRID_SIZE + SCENE_PADDING * 2);
+
+        proceduralGrass = createProceduralGrassField(THREE, {
+          fieldSize: terrainWidth * 0.98,
+          walkableSize: walkableWidth,
+          baseHeight: groundHeight + 0.004,
+          viewportWidth: window.innerWidth,
+          pixelRatio: window.devicePixelRatio || 1,
+          outerDensityMultiplier: 5,
+        });
+        terrain.add(proceduralGrass.ground, proceduralGrass.mesh);
+
+        terrain.add(createProceduralFlowerField(THREE, {
+          walkableSize: walkableWidth,
+          baseHeight: groundHeight + 0.006,
+          viewportWidth: window.innerWidth,
+        }));
+
+        const treeScale = (terrainStep * TREE_FIT_TO_TILE) / Math.max(treeDefinition.size.x, treeDefinition.size.z);
+        const tree = placeAsset(
+          treeDefinition,
+          new THREE.Vector3(0, groundHeight - TREE_ROOT_SINK, 0),
+          treeScale,
+        );
+        tree.scale.y *= TREE_HEIGHT_SCALE;
+        terrain.add(tree);
+
+        const centralTreeHeight = treeDefinition.size.y * treeScale * TREE_HEIGHT_SCALE;
+        terrain.add(createProceduralForest(THREE, {
+          terrainLimit,
+          groundHeight,
+          heightLimit: centralTreeHeight * 0.5,
+          layers: 7,
+        }));
+        scene.add(terrain);
+      }
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(rect.width, 1);
+        const height = Math.max(rect.height, 1);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+      }
+
+      function updatePlayer(delta) {
+        if (!isReady) return;
+        const forwardInput = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
+        const sideInput = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
+        if (!forwardInput && !sideInput) {
+          playCharacterAction('idle');
+          return;
+        }
+
+        const direction = new THREE.Vector3(-Math.sin(cameraYaw) * forwardInput, 0, -Math.cos(cameraYaw) * forwardInput);
+        const right = new THREE.Vector3(Math.cos(cameraYaw) * sideInput, 0, -Math.sin(cameraYaw) * sideInput);
+        direction.add(right);
+        direction.normalize().multiplyScalar(delta * CHARACTER_MOVE_SPEED);
+        playerRoot.position.add(direction);
+        playerRoot.position.x = THREE.MathUtils.clamp(playerRoot.position.x, -terrainLimit, terrainLimit);
+        playerRoot.position.z = THREE.MathUtils.clamp(playerRoot.position.z, -terrainLimit, terrainLimit);
+
+        if (characterRoot) {
+          const targetYaw = Math.atan2(direction.x, direction.z) + CHARACTER_MODEL_YAW_OFFSET;
+          const yawDelta = Math.atan2(
+            Math.sin(targetYaw - characterRoot.rotation.y),
+            Math.cos(targetYaw - characterRoot.rotation.y),
+          );
+          characterRoot.rotation.y += yawDelta * Math.min(1, delta * 12);
+        }
+        playCharacterAction('walk');
+      }
+
+      function updateThirdPersonCamera(delta) {
+        const smooth = 1 - Math.pow(0.001, Math.min(delta, 0.05));
+        const zoomProgress = THREE.MathUtils.clamp(
+          (CAMERA_DISTANCE_DEFAULT - cameraDistance) / (CAMERA_DISTANCE_DEFAULT - CAMERA_DISTANCE_MIN),
+          0,
+          1,
+        );
+        const targetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
+        reusableTarget.set(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
+        const horizontal = Math.cos(cameraPitch) * cameraDistance;
+        reusableVector.set(
+          Math.sin(cameraYaw) * horizontal,
+          Math.sin(cameraPitch) * cameraDistance + 0.16,
+          Math.cos(cameraYaw) * horizontal,
+        );
+        reusableVector.add(reusableTarget);
+        camera.position.lerp(reusableVector, smooth);
+        camera.lookAt(reusableTarget);
+      }
+
+      function animate() {
+        const delta = Math.min(clock.getDelta(), 0.05);
+        sceneElapsedTime += delta;
+        previousPlayerPosition.copy(playerRoot.position);
+        updatePlayer(delta);
+        playerGrassInteraction = updateGrassInteractionState({
+          previousPosition: previousPlayerPosition,
+          currentPosition: playerRoot.position,
+          previousStrength: playerGrassInteraction.strength,
+          previousDirection: playerGrassInteraction.direction,
+          delta,
+        });
+        grassInteractors[0].direction = playerGrassInteraction.direction;
+        grassInteractors[0].strength = playerGrassInteraction.strength;
+        proceduralGrass?.update({
+          time: sceneElapsedTime,
+          motionScale: grassMotionScale,
+          interactors: grassInteractors,
+        });
+        updateThirdPersonCamera(delta);
+        if (characterMixer) characterMixer.update(delta);
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      function beginPinchGesture() {
+        const pointerIds = [...activePointers.keys()].slice(0, 2);
+        if (pointerIds.length < 2) return;
+
+        const first = activePointers.get(pointerIds[0]);
+        const second = activePointers.get(pointerIds[1]);
+        if (!first || !second) return;
+        pinchGesture = {
+          pointerIds,
+          startDistance: Math.hypot(second.x - first.x, second.y - first.y),
+          startCameraDistance: cameraDistance,
+        };
+        pointerDrag = null;
+      }
+
+      function resumeSinglePointerDrag() {
+        const [entry] = activePointers.entries();
+        if (!entry) {
+          pointerDrag = null;
+          return;
+        }
+
+        const [id, point] = entry;
+        pointerDrag = { id, x: point.x, y: point.y };
+      }
+
+      function releasePointer(event) {
+        activePointers.delete(event.pointerId);
+        if (pinchGesture?.pointerIds.includes(event.pointerId)) pinchGesture = null;
+
+        if (activePointers.size >= 2) {
+          if (!pinchGesture) beginPinchGesture();
+        } else if (activePointers.size === 1) {
+          resumeSinglePointerDrag();
+        } else {
+          pointerDrag = null;
+        }
+      }
+
+      canvas.addEventListener('pointerdown', event => {
+        activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        canvas.setPointerCapture(event.pointerId);
+        if (activePointers.size >= 2) {
+          if (!pinchGesture) beginPinchGesture();
+          return;
+        }
+        pointerDrag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      });
+
+      canvas.addEventListener('pointermove', event => {
+        if (!activePointers.has(event.pointerId)) return;
+        activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (pinchGesture) {
+          const first = activePointers.get(pinchGesture.pointerIds[0]);
+          const second = activePointers.get(pinchGesture.pointerIds[1]);
+          if (!first || !second) return;
+
+          const currentDistance = Math.hypot(second.x - first.x, second.y - first.y);
+          cameraDistance = getPinchCameraDistance({
+            startDistance: pinchGesture.startDistance,
+            startCameraDistance: pinchGesture.startCameraDistance,
+            currentDistance,
+            minDistance: CAMERA_DISTANCE_MIN,
+            maxDistance: CAMERA_DISTANCE_MAX,
+          });
+          return;
+        }
+
+        if (!pointerDrag || pointerDrag.id !== event.pointerId) return;
+        const dx = event.clientX - pointerDrag.x;
+        const dy = event.clientY - pointerDrag.y;
+        pointerDrag.x = event.clientX;
+        pointerDrag.y = event.clientY;
+        const nextCamera = applySinglePointerCameraDrag(
+          { yaw: cameraYaw, pitch: cameraPitch },
+          { dx, dy },
+          { pitchMin: CAMERA_PITCH_MIN, pitchMax: CAMERA_PITCH_MAX },
+        );
+        cameraYaw = nextCamera.yaw;
+        cameraPitch = nextCamera.pitch;
+      });
+
+      canvas.addEventListener('pointerup', releasePointer);
+      canvas.addEventListener('pointercancel', releasePointer);
+
+      window.addEventListener('keydown', event => {
+        const key = event.key.toLowerCase();
+        if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+          event.preventDefault();
+          keys.add(key);
+        }
+      });
+
+      window.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()));
+      window.addEventListener('blur', () => {
+        keys.clear();
+        activePointers.clear();
+        pointerDrag = null;
+        pinchGesture = null;
+      });
+      window.addEventListener('resize', resize);
+
+      async function boot() {
+        try {
+          updateProgress(12, '生成茂密草地…');
+          const treeSource = await loadModel(ASSETS.tree, '中央大樹模型', 12, 58);
+          updateProgress(58, '生成森林邊界…');
+          const characterGltf = await loadCharacter(ASSETS.character, '主角模型', 58, 100);
+          const treeDefinition = defineAsset(treeSource);
+          applyCentralTreeMaterialFallback(treeDefinition.source);
+          addTerrain(treeDefinition);
+
+          playerRoot.position.set(0, groundHeight, terrainStep * 2.08);
+          previousPlayerPosition.copy(playerRoot.position);
+          addPlayerCharacter(characterGltf);
+          scene.add(playerRoot);
+          addPlayerMarker();
+          isReady = true;
+          loadingTitle.textContent = '冒險地圖準備完成';
+          loadingDetail.textContent = '可以開始移動角色位置';
+          progressBar.style.width = '100%';
+          loadingPanel.classList.add('is-hidden');
+        } catch (error) {
+          console.error(error);
+          loadingTitle.textContent = '無法載入 3D 模型';
+          loadingDetail.textContent = '請使用 Vite 或其他本機 HTTP 伺服器開啟此頁面。';
+        }
+      }
+
+      resize();
+      animate();
+      boot();
+      }
+
+      main();
+    </script>
+  </body>
+</html>

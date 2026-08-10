@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { dismissWithAnimation } from '../lib/utils';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
-import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, Star, X, Trash2, Edit2, PlayCircle, Settings, Baby } from 'lucide-react';
+import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, ShoppingBag, Star, Users, X, Trash2, Edit2, PlayCircle, Settings } from 'lucide-react';
 import { TaskStatus, Task, Reward, type ChildGender } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -34,6 +34,8 @@ import {
   type CreateAdventureScheduleInput,
   type CreateGeneralAdventureInput,
 } from '../features/adventures/components/ParentAdventureWorkspace';
+import { ParentGamePricePanel } from '../features/world/components/ParentGamePricePanel';
+import { CURRENT_WORLD_CHARACTER_ID } from '../features/characters/catalog';
 
 interface ParentDashboardProps {
   onSwitchToChild: (childId?: string) => void;
@@ -81,8 +83,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     updateGeneralAdventureTitle: (childId: string, title: string) => Promise<void>;
     batchReviewDailyAdventures: (taskIds: string[]) => Promise<{ failedTaskIds: string[] }>;
     disableAdventureSchedule: (scheduleId: string) => Promise<void>;
+    revokeTaskApproval?: (taskId: string) => Promise<void>;
   };
-  const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent } = appStore;
+  const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent, revokeTaskApproval, setFamilyGameItemPrice, resetFamilyGameItemPrice } = appStore;
   const [activeTab, setActiveTab] = useState<ParentTab>('review');
   const [heroFeature, setHeroFeature] = useState<ParentTab | null>(null);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ParentTab | null>(null);
@@ -171,6 +174,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
   const allWishlist = state.children.flatMap(c => c.wishlist.map(w => ({ ...w, childId: c.id, childName: c.name })));
   const totalPoints = state.children.reduce((acc, c) => acc + c.points, 0);
+  const priceChildId = state.parentActiveChildId ?? state.children[0]?.id ?? null;
+  const priceGameData = priceChildId ? state.gameDataByChildId[priceChildId] : undefined;
   const reviewCount = proposedTasks.length + pendingTasks.length + pendingTickets.length;
   const parentMenuNotifications = getParentMenuNotifications({
     review: proposedTasks.length + pendingTasks.length,
@@ -217,7 +222,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [showNewChildPasswordConfirmation, setShowNewChildPasswordConfirmation] = useState(false);
   const [newChildError, setNewChildError] = useState('');
   const [newChildGender, setNewChildGender] = useState<ChildGender | ''>('');
-  const [newChildCharacterId, setNewChildCharacterId] = useState('');
+  const [newChildCharacterId, setNewChildCharacterId] = useState(CURRENT_WORLD_CHARACTER_ID);
   const [accountSetupChildId, setAccountSetupChildId] = useState<string | null>(null);
   const [accountSetupUsername, setAccountSetupUsername] = useState('');
   const [accountSetupPassword, setAccountSetupPassword] = useState('');
@@ -535,6 +540,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     await updateTaskStatus(childId, taskId, input.approved ? 'completed' : 'revision_requested' as unknown as TaskStatus);
   };
 
+  const handleRevokeTaskApproval = async (task: GrowthTaskWithChild) => {
+    if (!revokeTaskApproval) return;
+    if (typeof window !== 'undefined' && !window.confirm(`確定要撤銷「${task.name}」的核准嗎？系統會依孩子目前餘額追回仍可追回的獎勵。`)) return;
+    await revokeTaskApproval(task.id);
+  };
+
   const handleDeleteTaskGroup = (group: GroupedTask) => {
     group.children.forEach(c => deleteTask(c.childId, c.taskId));
   };
@@ -629,7 +640,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       return false;
     }
     const selectedGender = profile?.gender ?? newChildGender;
-    const selectedCharacterId = profile?.characterId ?? newChildCharacterId;
+    const selectedCharacterId = profile?.characterId ?? (newChildCharacterId || CURRENT_WORLD_CHARACTER_ID);
     if (!selectedGender || !selectedCharacterId) {
       setNewChildError('請選擇性別與人物。');
       return false;
@@ -664,7 +675,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewChildPassword('');
       setNewChildPasswordConfirmation('');
       setNewChildGender('');
-      setNewChildCharacterId('');
+      setNewChildCharacterId(CURRENT_WORLD_CHARACTER_ID);
       return true;
     } catch (error) {
       setNewChildError(toAuthErrorMessage(error));
@@ -754,6 +765,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
     { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
     { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards || parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('rewards') },
+    { id: 'world-shop', title: '世界商品', tour: 'world-shop-menu', icon: <ShoppingBag size={17} />, onSelect: () => openHeroFeature('world-shop') },
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
@@ -768,6 +780,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     growth: [],
     rewards: [],
     wishlist: [],
+    'world-shop': [],
   };
 
   const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
@@ -792,14 +805,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         menuOpen={heroMenuVisible}
         onMenuOpenChange={setHeroMenuVisible}
         actions={(
-          <>
-            <button data-tour="settings" onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="hh-character-icon-button">
-              <Settings size={19} />
-            </button>
-            <button data-tour="child-view" onClick={() => state.children.length > 1 ? setShowChildPicker(true) : onSwitchToChild()} aria-label="切換到小孩視角" title="切換到小孩視角" className="hh-character-icon-button">
-              <Baby size={18} />
-            </button>
-          </>
+          <button data-tour="settings" onClick={() => setShowSettings(true)} aria-label="設定" title="設定" className="hh-character-icon-button">
+            <Settings size={19} />
+          </button>
         )}
       />
 
@@ -903,6 +911,32 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 )}
               </div>
             </section>
+
+            {completedTasks.length > 0 && (
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900">最近已核准</h2>
+                  <span className="text-xs font-bold text-gray-500">可撤銷一次</span>
+                </div>
+                <div className="space-y-3">
+                  {completedTasks.slice(0, 12).map((task) => (
+                    <div key={task.id} className="flex items-center justify-between gap-3 rounded-2xl border border-green-100 bg-green-50 p-4">
+                      <div className="min-w-0">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <span className="rounded-lg bg-white px-2 py-1 text-xs font-black text-green-800">{task.childName}</span>
+                          <span className="text-xs font-bold text-green-700">已核准</span>
+                        </div>
+                        <div className="break-words font-bold text-gray-900">{task.name}</div>
+                        <PointValue value={task.approvedPoints ?? task.points} className="text-sm font-black text-green-700" />
+                      </div>
+                      <button type="button" onClick={() => void handleRevokeTaskApproval(task)} disabled={loading || mutationPending || !revokeTaskApproval} className="min-h-11 shrink-0 rounded-xl border border-red-200 bg-white px-3 text-xs font-black text-red-700 transition-colors hover:bg-red-50 disabled:cursor-wait disabled:opacity-50">
+                        撤銷核准
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section>
               <div className="flex justify-between items-center mb-3">
@@ -1087,6 +1121,23 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             )}
           </div>
         )}
+
+        {activeTab === 'world-shop' && (
+          state.children[0] ? (
+            <ParentGamePricePanel
+              catalog={priceGameData?.catalog ?? []}
+              prices={priceGameData?.prices ?? {}}
+              loading={loading || mutationPending}
+              onRetry={() => void retry()}
+              onSave={async (catalogItemId, scrollPrice) => {
+                await setFamilyGameItemPrice(catalogItemId, scrollPrice);
+              }}
+              onReset={async (catalogItemId) => {
+                await resetFamilyGameItemPrice(catalogItemId);
+              }}
+            />
+          ) : <EmptyState>先到設定新增小孩，才能管理世界商品。</EmptyState>
+        )}
       </ParentDashboardContent>
 
       {/* Settings Modal */}
@@ -1125,7 +1176,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 newChildGender={newChildGender}
                 newChildCharacterId={newChildCharacterId}
                 onNewChildGenderChange={setNewChildGender}
-                onNewChildCharacterChange={setNewChildCharacterId}
                 onAddChild={handleAddChild}
                 showNewChildForm={showNewChildForm}
                 onNewChildFormChange={setShowNewChildForm}
@@ -1185,6 +1235,18 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
               {/* System */}
               <section className="pt-4 pb-8">
+                <button
+                  type="button"
+                  onClick={() => dismissWithAnimation(() => {
+                    setShowSettings(false);
+                    if (state.children.length > 1) setShowChildPicker(true);
+                    else onSwitchToChild();
+                  }, '.hh-settings-drawer')}
+                  disabled={state.children.length === 0}
+                  className="mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-bold text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Users size={18} /> 切換小孩視角
+                </button>
                 <PushNotificationSettings settings={notificationSettings} />
                 <button type="button" onClick={() => { setShowSettings(false); setShowFirstUseGuide(true); }} className="mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-3 font-bold text-blue-700 transition-colors hover:bg-blue-100">
                   重新觀看新手指引

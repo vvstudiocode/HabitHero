@@ -11,6 +11,8 @@
 | `src/styles/tokens.css` | 顏色、間距、尺寸、陰影等變數 | 元件 selector、響應式覆蓋 |
 | `src/styles/base.css` | reset、body、全域基礎排版與共用 utility | 特定頁面或元件的定位 |
 | `src/styles/character.css` | 家庭冒險角色首頁、主按鈕、展開選單、icon button 的尺寸與位置 | 全域主題覆蓋、modal 規則 |
+| `src/styles/world.css` | 3D terrain scene canvas、世界載入狀態、遊戲背包／商店／設定內容 | 角色首頁選單幾何、全域 modal 遮罩 |
+| `src/styles/world-controls.css` | 動態搖桿與世界觸控控制的 overlay 幾何 | 3D scene、遊戲面板與角色首頁選單 |
 | `src/styles/neutral-theme.css` | 中性主題的表面色、文字色、邊框與陰影 | 角色首頁的幾何位置與 responsive layout |
 | `src/styles/overlays.css` | overlay、drawer、modal 遮罩與層級 | hero、主按鈕、展開選單 |
 | `src/styles/forms.css` | 共用表單欄位、label、錯誤狀態 | 角色首頁按鈕 |

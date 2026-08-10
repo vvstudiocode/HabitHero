@@ -204,6 +204,7 @@ describe('offline adventure completion queue', () => {
     const actions = createAdventureStoreActions({
       mutate: (async (_operation, optimisticUpdate) => {
         if (optimisticUpdate) state = optimisticUpdate(state);
+        return ['schedule-1'];
       }) as never,
       familyId: 'family-1',
       getState: () => state,
@@ -230,5 +231,64 @@ describe('offline adventure completion queue', () => {
     assert.equal(state.children[0].tasks.length, 1);
     assert.equal(state.children[0].tasks[0].adventureType, 'daily');
     assert.equal(state.children[0].tasks[0].name, '刷牙');
+  });
+
+  it('notifies the child after a parent creates a general adventure', async () => {
+    const notifications: Array<[string, string]> = [];
+    const repository = {
+      createGeneralAdventure: async () => ['task-general-1'],
+    };
+    const actions = createAdventureStoreActions({
+      mutate: (async (operation) => operation(repository as never, 'family-1')) as never,
+      familyId: 'family-1',
+      getState: () => ({ children: [] } as never),
+      setState: () => undefined,
+      createLocalId: () => 'local-1',
+      authenticatedUserId: 'parent-1',
+      isOnline: () => true,
+      setError: () => undefined,
+      notifyTask: async (taskId, event) => { notifications.push([taskId, event]); },
+    });
+
+    await actions.createGeneralAdventure({
+      childProfileIds: ['child-1'],
+      name: '整理書桌',
+      points: 5,
+      icon: 'Star',
+      category: 'life_habit',
+      reportMode: 'quick',
+    });
+
+    assert.deepEqual(notifications, [['task-general-1', 'created']]);
+  });
+
+  it('notifies the child once after a parent creates a daily adventure schedule', async () => {
+    const notifications: string[] = [];
+    const repository = {
+      createAdventureSchedule: async () => ['schedule-daily-1'],
+    };
+    const actions = createAdventureStoreActions({
+      mutate: (async (operation) => operation(repository as never, 'family-1')) as never,
+      familyId: 'family-1',
+      getState: () => ({ children: [] } as never),
+      setState: () => undefined,
+      createLocalId: () => 'local-1',
+      authenticatedUserId: 'parent-1',
+      isOnline: () => true,
+      setError: () => undefined,
+      notifyAdventure: async scheduleId => { notifications.push(scheduleId); },
+    });
+
+    await actions.createAdventureSchedule({
+      childProfileIds: ['child-1'],
+      name: '睡前閱讀',
+      points: 5,
+      icon: 'Star',
+      category: 'learning',
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+      activeFrom: '2000-01-01',
+    });
+
+    assert.deepEqual(notifications, ['schedule-daily-1']);
   });
 });

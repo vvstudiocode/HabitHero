@@ -11,9 +11,11 @@ test('task notification sender supports creation, submission, and review events'
   assert.match(source, /event === 'created' && origin === 'child_proposed'/);
   assert.match(source, /event === 'created' && origin === 'child_proposed'[\s\S]{0,300}child\.profile_id !== userData\.user\.id && !await isParent\(\)/);
   assert.match(source, /event === 'submitted'/);
-  assert.match(source, /title = 'HabitHero 習慣小英雄'/);
+  assert.equal(source.match(/title = 'HabitHero 習慣小英雄'/g)?.length, 4);
   assert.match(source, /event === 'reviewed'/);
   assert.match(source, /body\.event/);
+  assert.match(source, /body\.scheduleId/);
+  assert.match(source, /daily adventure/);
 });
 
 test('APNs sender selects the Team ID for the active environment', () => {
@@ -39,4 +41,5 @@ test('task notification requests carry an authenticated session header', () => {
 
   assert.match(source, /supabase\.auth\.getSession\(\)/);
   assert.match(source, /Authorization: `Bearer \$\{accessToken\}`/);
+  assert.match(source, /notifyAdventureCreated/);
 });

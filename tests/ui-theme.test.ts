@@ -31,6 +31,9 @@ test('shared hero exposes one theme color for all dashboard controls', () => {
   assert.match(neutralTheme, /box-shadow:[^;]*var\(--hh-character-glow\)/);
   assert.match(neutralTheme, /\.hh-character-icon-button:hover[\s\S]*?var\(--hh-character-glow\)/);
   assert.match(neutralTheme, /\.hh-character-menu-action:focus-visible[\s\S]*?var\(--hh-character-glow\)/);
+  assert.match(neutralTheme, /\.hh-character-hero-panel > \.hh-character-dashboard-actions \.hh-character-icon-button,[\s\S]*?box-shadow:\s*none/);
+  assert.match(neutralTheme, /\.hh-parent-content-modal-bar \.hh-character-icon-button,[\s\S]*?box-shadow:\s*none/);
+  assert.match(neutralTheme, /\.hh-character-menu\.is-open \.hh-character-menu-action,[\s\S]*?box-shadow:\s*none/);
   assert.doesNotMatch(neutralTheme, /rgba\(255, 177, 205, 0\.68\)/);
 });
 

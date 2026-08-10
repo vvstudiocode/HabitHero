@@ -6,6 +6,12 @@ import type { NotificationPermission } from './notification-preferences';
 
 export type TaskNotificationEvent = 'created' | 'submitted' | 'reviewed';
 
+type NotificationRequest = {
+  taskId?: string;
+  scheduleId?: string;
+  event: TaskNotificationEvent;
+};
+
 export interface PushDeviceContext {
   supabase: SupabaseClient;
   familyId: string;
@@ -114,17 +120,26 @@ export async function disablePushDevicesForProfile(supabase: SupabaseClient, pro
   if (error) throw new Error(error.message);
 }
 
-export async function notifyTaskEvent(supabase: SupabaseClient, taskId: string, event: TaskNotificationEvent) {
-  if (!taskId) return;
+async function invokeNotification(supabase: SupabaseClient, body: NotificationRequest) {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) throw new Error(sessionError.message);
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error('登入狀態已失效，無法發送通知。');
   const { error } = await supabase.functions.invoke('notify-task-created', {
-    body: { taskId, event },
+    body,
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (error) throw new Error(error.message);
+}
+
+export async function notifyTaskEvent(supabase: SupabaseClient, taskId: string, event: TaskNotificationEvent) {
+  if (!taskId) return;
+  await invokeNotification(supabase, { taskId, event });
+}
+
+export async function notifyAdventureCreated(supabase: SupabaseClient, scheduleId: string) {
+  if (!scheduleId) return;
+  await invokeNotification(supabase, { scheduleId, event: 'created' });
 }
 
 export function notifyTaskCreated(supabase: SupabaseClient, taskId: string) {

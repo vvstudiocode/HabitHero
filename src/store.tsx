@@ -24,9 +24,12 @@ import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
 import { subscribeToAppData } from './lib/realtime';
 import { resolveActiveChildId } from './lib/family-switch';
 import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
-import { notifyTaskEvent } from './lib/push-notifications';
+import { notifyAdventureCreated, notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
+import type { WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from './features/world/contracts';
+import { emptyChildGameData } from './features/world/contracts';
+import { patchEquippedCharacter } from './features/world/game-loadout';
 
 export interface AppContextType {
   state: AppState;
@@ -112,6 +115,17 @@ export interface AppContextType {
   fulfillTicket: (childId: string, ticketId: string) => Promise<void>;
   resetData: () => Promise<void>;
   recordParentConsent: (consentVersion: string) => Promise<void>;
+  purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<Awaited<ReturnType<DataRepository['purchaseGameItem']>>>;
+  equipGameCharacter: (childId: string, inventoryItemId: string) => Promise<void>;
+  setFollowingPet: (childId: string, inventoryItemId: string | null) => Promise<WorldMutationResult>;
+  setRoamingPets: (childId: string, inventoryItemIds: string[]) => Promise<WorldMutationResult>;
+  placeWorldEntity: (childId: string, payload: WorldMutationPayload) => Promise<WorldMutationResult>;
+  updateWorldEntityTransform: (childId: string, payload: WorldTransformMutationPayload) => Promise<WorldMutationResult>;
+  removeWorldEntity: (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => Promise<WorldMutationResult>;
+  collectAllWorldDecorations: (childId: string, expectedRevision: number) => Promise<WorldMutationResult>;
+  setFamilyGameItemPrice: (catalogItemId: string, scrollPrice: number) => Promise<void>;
+  resetFamilyGameItemPrice: (catalogItemId: string) => Promise<void>;
+  revokeTaskApproval: (taskId: string) => Promise<void>;
 }
 
 interface AppLoadingGateInput {
@@ -160,6 +174,7 @@ const emptyState: AppState = {
   adventureGroups: [],
   taskSchedules: [],
   timerSessions: [],
+  gameDataByChildId: {},
 };
 
 function timerStorageKey(userId: string) {
@@ -424,6 +439,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const actions = {
     recordParentConsent: (consentVersion: string) => mutate((repo, id) => repo.recordParentConsent(id, consentVersion), (previous) => ({ ...previous, parentConsentVersion: consentVersion })),
+    purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => mutate((repo) => repo.purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey)),
+    equipGameCharacter: (childId: string, inventoryItemId: string) => mutate(
+      (repo) => repo.equipGameCharacter(childId, inventoryItemId),
+      (previous) => {
+        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...previous,
+          gameDataByChildId: {
+            ...previous.gameDataByChildId,
+            [childId]: patchEquippedCharacter(currentGameData, inventoryItemId),
+          },
+        };
+      },
+    ),
+    setFollowingPet: (childId: string, inventoryItemId: string | null) => mutate((repo) => repo.setFollowingPet(childId, inventoryItemId)),
+    setRoamingPets: (childId: string, inventoryItemIds: string[]) => mutate((repo) => repo.setRoamingPets(childId, inventoryItemIds)),
+    placeWorldEntity: (childId: string, payload: WorldMutationPayload) => mutate((repo) => repo.placeWorldEntity(childId, payload)),
+    updateWorldEntityTransform: (childId: string, payload: WorldTransformMutationPayload) => mutate((repo) => repo.updateWorldEntityTransform(childId, payload)),
+    removeWorldEntity: (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => mutate((repo) => repo.removeWorldEntity(childId, payload)),
+    collectAllWorldDecorations: (childId: string, expectedRevision: number) => mutate((repo) => repo.collectAllWorldDecorations(childId, expectedRevision)),
+    setFamilyGameItemPrice: (catalogItemId: string, scrollPrice: number) => mutate((repo) => repo.setFamilyGameItemPrice(catalogItemId, scrollPrice)),
+    resetFamilyGameItemPrice: (catalogItemId: string) => mutate((repo) => repo.resetFamilyGameItemPrice(catalogItemId)),
+    revokeTaskApproval: (taskId: string) => mutate((repo) => repo.revokeTaskApproval(taskId)),
     addChild: (name: string, loginName: string, password: string, childProfileId?: string, identity?: { gender: ChildGender; characterId: string }) => mutate((repo, id) => repo.insertChild(id, name, loginName, password, childProfileId, identity)),
     updateChildPassword: (childId: string, password: string) => mutate((repo, id) => repo.updateChildPassword(id, childId, password)),
     updateChildCode: async () => { setDataError('孩子登入代碼需由尚未提供的 invite/join token 流程建立。'); },
@@ -522,6 +560,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isOnline: () => typeof navigator === 'undefined' || navigator.onLine,
       setError: setDataError,
       notifyTask: (taskId, event) => notifyTaskEvent(getSupabaseClient(), taskId, event),
+      notifyAdventure: scheduleId => notifyAdventureCreated(getSupabaseClient(), scheduleId),
     }),
     addReward: (childId: string, reward: Omit<Reward, 'id'>) => {
       const localId = createLocalId();

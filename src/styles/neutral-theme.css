@@ -243,6 +243,25 @@ body,
   box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 28px var(--hh-character-glow-strong);
 }
 
+.hh-character-icon-button.is-expanded,
+.hh-character-icon-button.is-expanded:hover,
+.hh-character-icon-button.is-expanded:active {
+  box-shadow: none;
+}
+
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button,
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:hover,
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:active,
+.hh-parent-content-modal-bar .hh-character-icon-button,
+.hh-parent-content-modal-bar .hh-character-icon-button:hover,
+.hh-parent-content-modal-bar .hh-character-icon-button:active,
+.hh-character-menu.is-open .hh-character-menu-action,
+.hh-character-menu.is-open .hh-character-menu-action:hover,
+.hh-character-menu.is-open .hh-character-menu-action:active,
+.hh-character-menu.is-open .hh-character-menu-action.is-selected {
+  box-shadow: none;
+}
+
 .hh-character-icon-button:focus-visible,
 .hh-character-menu-action:focus-visible {
   outline: 3px solid var(--hh-character-focus-ring);
@@ -264,8 +283,13 @@ body,
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
+.hh-character-stat-icon {
+  color: var(--hh-neutral-ink) !important;
+  filter: none;
+}
+
 .hh-character-stat-icon .hh-character-stat-points {
-  color: #facc15;
+  color: var(--hh-neutral-ink);
   fill: currentColor;
 }
 

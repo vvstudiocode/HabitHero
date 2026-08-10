@@ -1,6 +1,11 @@
 export type ChildGender = 'boy' | 'girl';
 export type CharacterCategory = 'adventure' | 'nature' | 'fantasy';
 
+// New children enter the terrain world with the currently shipped GLB. The
+// legacy character catalog remains available for existing profile metadata
+// until a future identity migration replaces it.
+export const CURRENT_WORLD_CHARACTER_ID = 'character.anime-maiden';
+
 export interface CharacterOption {
   id: string;
   name: string;

@@ -1,5 +1,7 @@
 /** Shared domain contract. These types are transport-agnostic and contain no Supabase runtime imports. */
 
+import type { ChildGameData } from './features/world/contracts';
+
 export type Id = string;
 export type Timestamp = string;
 export interface ThemeSettings {
@@ -669,4 +671,5 @@ export interface AppState {
   adventureGroups?: AdventureGroup[];
   taskSchedules?: TaskSchedule[];
   timerSessions?: TaskTimerSession[];
+  gameDataByChildId: Record<Id, ChildGameData>;
 }

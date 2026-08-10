@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { Backpack, CalendarDays, CheckCircle2, Gift, LogOut, Plus, Star, X, History, User, Settings } from 'lucide-react';
+import { Backpack, CalendarDays, CheckCircle2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { Reward } from '../types';
@@ -17,9 +17,10 @@ import {
 } from '../lib/task-completion-audio';
 import { getChildMenuNotifications } from '../lib/menu-notifications';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
-import { getCharacterById } from '../features/characters/catalog';
-import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
+import { WorldPreparingScreen } from './WorldPreparingScreen';
+import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
+import { emptyChildGameData, type WorldMutationResult } from '../features/world/contracts';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
 import {
@@ -44,8 +45,11 @@ interface ChildDashboardProps {
 }
 
 type ChildTab = 'goals' | 'growth' | 'wishlist';
-type ChildMenuGroup = ChildTab | 'backpack';
+type ChildFeature = ChildTab | ChildGamePanelKind;
+type ChildMenuGroup = ChildFeature | 'backpack';
 const HERO_MENU_EXIT_MS = 1200;
+const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
+const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
 
 function formatTaskTime(dueTime?: string | null) {
   return dueTime ? dueTime.slice(0, 5) : '全天';
@@ -77,10 +81,19 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     role,
     hasSession,
     isOffline,
+    mutationPending,
+    purchaseGameItem,
+    equipGameCharacter,
+    setFollowingPet,
+    setRoamingPets,
+    placeWorldEntity,
+    updateWorldEntityTransform,
+    removeWorldEntity,
+    collectAllWorldDecorations,
   } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<ChildTab>('goals');
-  const [heroFeature, setHeroFeature] = useState<ChildTab | null>(null);
+  const [heroFeature, setHeroFeature] = useState<ChildFeature | null>(null);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
   const heroMenuOpenFrame = useRef<number | null>(null);
@@ -98,7 +111,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const activeChild = activeChildId
     ? state.children.find(c => c.id === activeChildId)
     : undefined;
-  const activeCharacter = getCharacterById(activeChild?.characterId) ?? getCharacterById('pink-catgirl-room')!;
+  const gameData = activeChildId ? state.gameDataByChildId[activeChildId] ?? emptyChildGameData() : emptyChildGameData();
   const activeGeneralAdventureGroup = state.adventureGroups?.find(
     (group) => group.childProfileId === activeChildId && group.status === 'active',
   );
@@ -123,7 +136,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [toastLeaving, setToastLeaving] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [actionPending, setActionPending] = useState(false);
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [now, setNow] = useState(Date.now());
   const completionMusicTaskIdRef = useRef<string | null>(null);
   const completionAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -364,9 +376,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }
   };
 
-  const openChildFeature = (tab: ChildTab) => {
-    setActiveTab(tab);
-    setHeroFeature(tab);
+  const openChildFeature = (feature: ChildFeature) => {
+    if (feature === 'goals' || feature === 'growth' || feature === 'wishlist') setActiveTab(feature);
+    setHeroFeature(feature);
     setHeroMenuGroup(null);
     setHeroMenuVisible(false);
   };
@@ -429,25 +441,29 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const heroSubMenuActions: Record<ChildMenuGroup, CharacterMenuAction[]> = {
     backpack: [
       { id: 'goals', title: '冒險日記', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
-      { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
+      { id: 'inventory', title: '背包', icon: <Backpack size={17} />, onSelect: () => openChildFeature('inventory') },
+      { id: 'shop', title: '商店', icon: <ShoppingBagIcon size={17} />, onSelect: () => openChildFeature('shop') },
       { id: 'wishlist', title: '獎勵', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
-      { id: 'switch-child', title: '切換視角', icon: <User size={17} />, onSelect: onSwitchChild },
-      { id: 'settings', title: '設定', icon: <Settings size={17} />, onSelect: () => setShowNotificationSettings(true) },
-      { id: 'logout', title: '登出', icon: <LogOut size={17} />, onSelect: onLogout },
+      { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
+      { id: 'settings', title: '設定', icon: <Settings size={17} />, onSelect: () => openChildFeature('settings') },
     ],
     goals: [],
     growth: [],
     wishlist: [],
+    inventory: [],
+    shop: [],
+    settings: [],
   };
 
   const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
+  const isGameFeature = heroFeature === 'inventory' || heroFeature === 'shop' || heroFeature === 'settings';
 
   const handleOpenAdventureTask = (task: AdventureTask) => {
     setAdventureOpenRequest({ id: task.id, requestId: Date.now() });
   };
 
   if (sessionLoading || loading) {
-    return <div className="flex min-h-[100dvh] items-center justify-center bg-blue-50 p-6 text-center text-blue-700">正在載入我的任務…</div>;
+    return <WorldPreparingScreen detail="正在同步孩子的世界資料…" />;
   }
 
   if (!hasSession || !session || (role !== 'child' && role !== 'parent')) {
@@ -477,20 +493,21 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   return (
     <div
       className="hh-dashboard-screen hh-dashboard-screen--child flex flex-col min-h-[100dvh] bg-blue-50 pb-24"
-      style={{ '--hh-character-theme-color': activeChild.theme.accentColor ?? activeCharacter.accentColor } as React.CSSProperties}
+      style={{ '--hh-character-theme-color': '#202124' } as React.CSSProperties}
     >
       <DashboardCharacterHero
-        sceneImage={activeCharacter.imageUrl}
-        sceneImageDesktop={activeCharacter.desktopImageUrl}
-        mobileSceneVideo={activeCharacter.id === 'pink-catgirl-room' ? '/videos/habithero-dashboard.mp4' : activeCharacter.id === 'black-catboy-room' ? '/videos/habithero-black-catboy.mp4' : activeCharacter.id === 'blue-catboy-room' ? '/videos/habithero-blue-catboy.mp4' : activeCharacter.id === 'white-catgirl-room' ? '/videos/habithero-white-catgirl.mp4' : undefined}
-        sceneAlt={`${activeCharacter.name}的冒險場景`}
-        theme={activeChild.theme}
-        firstStatLabel="加入天數"
-        firstStatValue={activeChild.joinedDays}
-        firstStatIcon={<CalendarDays className="hh-character-stat-days-icon" size={17} strokeWidth={2.5} />}
-        secondStatLabel="我的點數"
-        secondStatValue={childPoints}
-        secondStatIcon={<Star className="hh-character-stat-points" size={17} strokeWidth={2.5} />}
+        sceneImage=""
+        theme={{ ...activeChild.theme, accentColor: '#202124', mobileBackgroundImageUrl: undefined, desktopBackgroundImageUrl: undefined }}
+        stats={[
+          { label: '加入天數', value: activeChild.joinedDays, icon: <CalendarDays className="hh-character-stat-days-icon" size={17} strokeWidth={2.5} /> },
+          { label: '我的點數', value: childPoints, icon: <Star className="hh-character-stat-points" size={17} strokeWidth={2.5} /> },
+          { label: '我的卷軸', value: gameData.walletBalance, icon: <ScrollText size={17} strokeWidth={2.5} /> },
+        ]}
+        sceneLayer={(
+          <Suspense fallback={<WorldPreparingScreen detail="正在載入 3D 世界…" />}>
+            <TerrainWorldLayer key={activeChild.id} childId={activeChild.id} gameData={gameData} paused={Boolean(heroFeature)} />
+          </Suspense>
+        )}
         menuActions={heroMenuActions}
         rootMenuActions={heroRootMenuActions}
         activeMenuId={heroMenuGroup}
@@ -504,7 +521,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onClick={() => toggleHeroMenuGroup('backpack')}
               aria-label={heroMenuGroup === 'backpack' && heroMenuVisible ? '收合功能選單' : '開啟功能選單'}
               title="功能選單"
-              className="hh-character-icon-button"
+              className={`hh-character-icon-button${heroMenuGroup === 'backpack' && heroMenuVisible ? ' is-expanded' : ''}`}
               aria-expanded={heroMenuGroup === 'backpack' && heroMenuVisible}
             >
               <Backpack size={18} />
@@ -560,6 +577,31 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
           </div>
         )}
+        {isGameFeature && (
+          <Suspense fallback={<div className="hh-game-panel-loading" role="status">正在打開世界功能…</div>}>
+            <ChildGamePanel
+              kind={heroFeature}
+              gameData={gameData}
+              mutationPending={actionPending || mutationPending}
+              notificationSettings={notificationSettings}
+              onPurchase={async (catalogItemId, quantity, idempotencyKey) => {
+                await purchaseGameItem(activeChild.id, catalogItemId, quantity, idempotencyKey);
+              }}
+              onEquipCharacter={async (inventoryItemId) => {
+                await equipGameCharacter(activeChild.id, inventoryItemId);
+                closeChildFeature();
+              }}
+              onSetFollowingPet={(inventoryItemId): Promise<WorldMutationResult> => setFollowingPet(activeChild.id, inventoryItemId)}
+              onSetRoamingPets={(inventoryItemIds): Promise<WorldMutationResult> => setRoamingPets(activeChild.id, inventoryItemIds)}
+              onPlaceDecoration={(payload) => placeWorldEntity(activeChild.id, payload)}
+              onUpdateDecoration={(payload) => updateWorldEntityTransform(activeChild.id, payload)}
+              onRemoveDecoration={(entityId, inventoryItemId, expectedRevision) => removeWorldEntity(activeChild.id, { entityId, inventoryItemId, expectedRevision })}
+              onCollectAllDecorations={(expectedRevision) => collectAllWorldDecorations(activeChild.id, expectedRevision)}
+              onSwitchChild={onSwitchChild}
+              onLogout={onLogout}
+            />
+          </Suspense>
+        )}
         {/* Fixed Bottom Oval Capsule Tabs Bar */}
         <nav
           aria-label="選單分頁"
@@ -601,15 +643,15 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           </button>
         </nav>
 
-        {activeTab === 'goals' && (
+        {!isGameFeature && activeTab === 'goals' && (
           <TodayAdventureSummary summary={todayAdventureSummary} today={adventureDate} onTaskSelect={handleOpenAdventureTask} />
         )}
 
-        {activeTab === 'growth' && growthSummary && (
+        {!isGameFeature && activeTab === 'growth' && growthSummary && (
           <GrowthSummaryPanel summaries={[growthSummary]} title="我的成長紀錄" tasks={growthTasksWithChild} />
         )}
 
-        {activeTab === 'wishlist' && (
+        {!isGameFeature && activeTab === 'wishlist' && (
           <div className="space-y-6">
             <button
               onClick={() => setShowWishlistForm(true)}
@@ -789,23 +831,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 確認取消
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showNotificationSettings && (
-        <div className="hh-safe-modal-shell fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm animate-slide-up rounded-3xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="child-notification-settings-title">
-            <div className="mb-5 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-wider text-blue-500">背包設定</p>
-                <h3 id="child-notification-settings-title" className="mt-1 text-xl font-black text-gray-900">通知設定</h3>
-              </div>
-              <button type="button" onClick={() => setShowNotificationSettings(false)} aria-label="關閉通知設定" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
-                <X size={18} />
-              </button>
-            </div>
-            <PushNotificationSettings settings={notificationSettings} />
           </div>
         </div>
       )}

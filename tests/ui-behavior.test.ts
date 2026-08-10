@@ -281,15 +281,20 @@ test('child growth menu opens the growth feature directly', () => {
   assert.match(dashboard, /id: 'wishlist', title: '獎勵'/);
   assert.doesNotMatch(dashboard, /id: 'history'/);
   assert.match(dashboard, /child-redemption-history-title/);
-  assert.match(dashboard, /id: 'switch-child', title: '切換視角'/);
-  assert.match(dashboard, /id: 'logout', title: '登出'/);
+  assert.match(dashboard, /id: 'inventory', title: '背包'/);
+  assert.match(dashboard, /id: 'shop', title: '商店'/);
+  assert.match(dashboard, /id: 'settings', title: '設定'/);
+  assert.doesNotMatch(dashboard, /id: 'switch-child', title: '切換視角'/);
+  assert.doesNotMatch(dashboard, /id: 'logout', title: '登出'/);
 });
 
-test('child submenu keeps settings immediately above logout and animates every action', () => {
+test('child submenu keeps settings as the account entry point and animates every action', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
   const characterStyles = read('../src/styles/character.css');
 
-  assert.match(dashboard, /id: 'switch-child',[\s\S]*id: 'settings',[\s\S]*id: 'logout'/);
+  assert.match(dashboard, /id: 'wishlist',[\s\S]*id: 'growth',[\s\S]*id: 'settings'/);
+  assert.match(dashboard, /onSwitchChild=\{onSwitchChild\}/);
+  assert.match(dashboard, /onLogout=\{onLogout\}/);
   assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?nth-child\(7\)[\s\S]*?transition-delay: 900ms/);
   assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?is-collapsed[\s\S]*?nth-child\(7\)[\s\S]*?transition-delay: 0ms/);
 });
@@ -310,7 +315,7 @@ test('child feature menu keeps the submenu mounted while it animates closed', ()
   assert.match(dashboard, /window\.setTimeout\(\(\) => \{[\s\S]*setHeroMenuGroup\(null\)[\s\S]*\}, HERO_MENU_EXIT_MS\)/);
   assert.match(dashboard, /requestAnimationFrame\(\(\) => \{[\s\S]*setHeroMenuVisible\(true\)/);
   assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?translateY\(-6px\)/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?top: calc\(9px \+ var\(--hh-menu-submenu-offset\)\)/);
+  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?top: calc\(17px \+ var\(--hh-menu-submenu-offset\)\)/);
   assert.match(characterStyles, /nth-child\(2\)[\s\S]*?transition-delay: 150ms/);
   assert.match(characterStyles, /nth-child\(3\)[\s\S]*?transition-delay: 300ms/);
   assert.match(characterStyles, /nth-child\(5\)[\s\S]*?transition-delay: 0ms/);
@@ -325,7 +330,7 @@ test('child feature pages omit the duplicate modal title while keeping the close
 
   assert.match(dashboard, /<div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">\s*<button/);
   assert.match(overlays, /\.hh-parent-content-modal-bar--child[\s\S]*?justify-content: flex-end[\s\S]*?min-height: 48px/);
-  assert.match(characterStyles, /\.hh-dashboard-screen\s*\{[\s\S]*?--hh-character-top-offset:\s*40px/);
+  assert.match(characterStyles, /\.hh-dashboard-screen\s*\{[\s\S]*?--hh-character-top-offset:\s*44px/);
   assert.match(overlays, /\.hh-parent-content-modal-bar--child\s*\{[\s\S]*?top:\s*0[\s\S]*?justify-content: flex-end/);
   assert.match(overlays, /@media \(max-width: 760px\)[\s\S]*?\.hh-parent-content-modal-bar--child[\s\S]*?padding-top:\s*calc\(16px \+ var\(--hh-character-top-offset\)\)/);
 });

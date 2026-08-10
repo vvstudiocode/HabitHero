@@ -2,7 +2,7 @@ import type { ReactNode, RefObject } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-export type ParentDashboardTab = 'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist';
+export type ParentDashboardTab = 'review' | 'tasks' | 'growth' | 'rewards' | 'wishlist' | 'world-shop';
 
 interface ParentDashboardContentProps {
   contentRef: RefObject<HTMLElement | null>;

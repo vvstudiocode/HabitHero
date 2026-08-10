@@ -21,12 +21,14 @@ interface DashboardCharacterHeroProps {
   title?: string;
   eyebrow?: string;
   subtitle?: string;
-  firstStatLabel: string;
-  firstStatValue: string | number;
+  stats?: Array<{ label: string; value: string | number; suffix?: string; icon?: React.ReactNode }>;
+  sceneLayer?: React.ReactNode;
+  firstStatLabel?: string;
+  firstStatValue?: string | number;
   firstStatSuffix?: string;
   firstStatIcon?: React.ReactNode;
-  secondStatLabel: string;
-  secondStatValue: string | number;
+  secondStatLabel?: string;
+  secondStatValue?: string | number;
   secondStatSuffix?: string;
   secondStatIcon?: React.ReactNode;
   actions?: React.ReactNode;
@@ -48,6 +50,8 @@ export function DashboardCharacterHero({
   title,
   eyebrow,
   subtitle,
+  stats,
+  sceneLayer,
   firstStatLabel,
   firstStatValue,
   firstStatSuffix,
@@ -71,6 +75,11 @@ export function DashboardCharacterHero({
   const themeColor = theme?.accentColor ?? character?.accentColor ?? (menuVariant === 'parent' ? '#d99a24' : '#f472b6');
   const resolvedSceneImage = theme?.mobileBackgroundImageUrl ?? sceneImage;
   const resolvedSceneImageDesktop = theme?.desktopBackgroundImageUrl ?? sceneImageDesktop;
+  const hasSceneLayer = Boolean(sceneLayer);
+  const resolvedStats = stats ?? [
+    firstStatLabel ? { label: firstStatLabel, value: firstStatValue ?? '', suffix: firstStatSuffix, icon: firstStatIcon } : null,
+    secondStatLabel ? { label: secondStatLabel, value: secondStatValue ?? '', suffix: secondStatSuffix, icon: secondStatIcon } : null,
+  ].filter((stat): stat is NonNullable<typeof stat> => Boolean(stat));
 
   return (
     <header className="hh-character-dashboard-header">
@@ -85,11 +94,14 @@ export function DashboardCharacterHero({
           onMenuClose();
         }}
       >
-        <picture className={`hh-character-hero-picture${mobileSceneVideo ? ' has-mobile-video' : ''}`}>
-          {resolvedSceneImageDesktop && <source media="(min-width: 760px)" srcSet={resolvedSceneImageDesktop} />}
-          <img className="hh-character-hero-image" src={resolvedSceneImage} alt={sceneAlt} aria-hidden={sceneAlt ? undefined : true} />
-        </picture>
-        {mobileSceneVideo && (
+        {sceneLayer && <div className="hh-character-scene-layer">{sceneLayer}</div>}
+        {!hasSceneLayer && (
+          <picture className={`hh-character-hero-picture${mobileSceneVideo ? ' has-mobile-video' : ''}`}>
+            {resolvedSceneImageDesktop && <source media="(min-width: 760px)" srcSet={resolvedSceneImageDesktop} />}
+            {resolvedSceneImage && <img className="hh-character-hero-image" src={resolvedSceneImage} alt={sceneAlt} aria-hidden={sceneAlt ? undefined : true} />}
+          </picture>
+        )}
+        {!hasSceneLayer && mobileSceneVideo && (
           <video
             className="hh-character-hero-video"
             src={mobileSceneVideo}
@@ -151,21 +163,16 @@ export function DashboardCharacterHero({
             )}
           </div>
         )}
-        <div className="hh-character-stats" aria-label="儀表板統計">
-          <div aria-label={`${firstStatLabel}：${firstStatValue}${firstStatSuffix ?? ''}`}>
-            <strong>
-              {firstStatIcon && <span className="hh-character-stat-icon" aria-hidden="true">{firstStatIcon}</span>}
-              <span>{firstStatValue}</span>
-              {firstStatSuffix && <em>{firstStatSuffix}</em>}
-            </strong>
-          </div>
-          <div aria-label={`${secondStatLabel}：${secondStatValue}${secondStatSuffix ?? ''}`}>
-            <strong>
-              {secondStatIcon && <span className="hh-character-stat-icon" aria-hidden="true">{secondStatIcon}</span>}
-              <span>{secondStatValue}</span>
-              {secondStatSuffix && <em>{secondStatSuffix}</em>}
-            </strong>
-          </div>
+        <div className="hh-character-stats" data-stat-count={resolvedStats.length} aria-label="儀表板統計">
+          {resolvedStats.map((stat) => (
+            <div key={stat.label} aria-label={`${stat.label}：${stat.value}${stat.suffix ?? ''}`}>
+              <strong>
+                {stat.icon && <span className="hh-character-stat-icon" aria-hidden="true">{stat.icon}</span>}
+                <span>{stat.value}</span>
+                {stat.suffix && <em>{stat.suffix}</em>}
+              </strong>
+            </div>
+          ))}
         </div>
         <div className="hh-character-dashboard-actions">{actions}</div>
       </div>
