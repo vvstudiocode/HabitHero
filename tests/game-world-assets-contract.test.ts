@@ -38,14 +38,18 @@ describe('production terrain asset contract', () => {
     assert.match(prototypeRuntimeSource, /rendererInstance\.shadowMap\.type = THREE\.PCFSoftShadowMap/);
   });
 
-  it('loads only the licensed Anime Maiden GLB and renders other catalog characters procedurally', () => {
+  it('loads the Anime Maiden fallback and selectable ChibiCharacters as animated GLBs', () => {
     assert.match(terrainWorldLayerSource, /getCharacterRenderMode/);
     assert.match(terrainWorldLayerSource, /createProceduralCharacter/);
     assert.match(terrainWorldLayerSource, /item\.assetKey === 'character\.anime-maiden'/);
+    assert.match(terrainWorldLayerSource, /getWorldCharacterModelUrl/);
+    assert.match(terrainWorldLayerSource, /'world-glb'/);
     assert.match(prototypeRuntimeSource, /characterRenderMode === 'anime-maiden'/);
+    assert.match(prototypeRuntimeSource, /characterRenderMode === 'world-glb'/);
+    assert.match(prototypeRuntimeSource, /characterModelUrl/);
     assert.match(prototypeRuntimeSource, /characterRenderMode === 'procedural'/);
     assert.match(prototypeRuntimeSource, /createProceduralCharacter\(THREE, options\.equippedCatalogItem\)/);
-    assert.match(prototypeRuntimeSource, /loadGltfSafely[^\n]+PROTOTYPE_WORLD_ASSETS\.character/);
+    assert.match(prototypeRuntimeSource, /const characterUrl = options\.characterModelUrl \?\? PROTOTYPE_WORLD_ASSETS\.character/);
     assert.match(prototypeRuntimeSource, /new THREE\.AnimationMixer\(characterSource\)/);
     assert.match(prototypeRuntimeSource, /mixer\.update\(delta\)/);
     assert.match(prototypeRuntimeSource, /walk|run/);

@@ -36,6 +36,7 @@ import {
 } from '../features/adventures/components/ParentAdventureWorkspace';
 import { ParentGamePricePanel } from '../features/world/components/ParentGamePricePanel';
 import { CURRENT_WORLD_CHARACTER_ID } from '../features/characters/catalog';
+import { WORLD_CHARACTER_CATALOG } from '../features/characters/world-character-catalog';
 
 interface ParentDashboardProps {
   onSwitchToChild: (childId?: string) => void;
@@ -222,7 +223,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [showNewChildPasswordConfirmation, setShowNewChildPasswordConfirmation] = useState(false);
   const [newChildError, setNewChildError] = useState('');
   const [newChildGender, setNewChildGender] = useState<ChildGender | ''>('');
-  const [newChildCharacterId, setNewChildCharacterId] = useState(CURRENT_WORLD_CHARACTER_ID);
+  const [newChildCharacterId, setNewChildCharacterId] = useState(WORLD_CHARACTER_CATALOG[0]?.id ?? CURRENT_WORLD_CHARACTER_ID);
   const [accountSetupChildId, setAccountSetupChildId] = useState<string | null>(null);
   const [accountSetupUsername, setAccountSetupUsername] = useState('');
   const [accountSetupPassword, setAccountSetupPassword] = useState('');
@@ -675,7 +676,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewChildPassword('');
       setNewChildPasswordConfirmation('');
       setNewChildGender('');
-      setNewChildCharacterId(CURRENT_WORLD_CHARACTER_ID);
+      setNewChildCharacterId(WORLD_CHARACTER_CATALOG[0]?.id ?? CURRENT_WORLD_CHARACTER_ID);
       return true;
     } catch (error) {
       setNewChildError(toAuthErrorMessage(error));
@@ -1176,6 +1177,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 newChildGender={newChildGender}
                 newChildCharacterId={newChildCharacterId}
                 onNewChildGenderChange={setNewChildGender}
+                onNewChildCharacterChange={setNewChildCharacterId}
                 onAddChild={handleAddChild}
                 showNewChildForm={showNewChildForm}
                 onNewChildFormChange={setShowNewChildForm}

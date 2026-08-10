@@ -6,16 +6,18 @@ const root = new URL('..', import.meta.url);
 const read = (path: string) => readFile(new URL(path, root), 'utf8');
 
 describe('world dashboard navigation contract', () => {
-  it('uses the current anime maiden GLB as the only new-child character', async () => {
+  it('uses the five selectable ChibiCharacters for new children', async () => {
     const catalog = await read('src/features/characters/catalog.ts');
+    const worldCatalog = await read('src/features/characters/world-character-catalog.ts');
     const settings = await read('src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
     const dashboard = await read('src/components/ParentDashboard.tsx');
 
     assert.match(catalog, /CURRENT_WORLD_CHARACTER_ID\s*=\s*'character\.anime-maiden'/);
-    assert.match(settings, /CURRENT_WORLD_CHARACTER_ID/);
-    assert.match(settings, /固定使用 3D 人物/);
+    assert.match(worldCatalog, /WORLD_CHARACTER_CATALOG/);
+    assert.match(settings, /WORLD_CHARACTER_CATALOG/);
+    assert.match(settings, /onNewChildCharacterChange/);
     assert.doesNotMatch(settings, /CHARACTER_CATEGORIES|getCharactersForCategory|hh-character-preview-backdrop/);
-    assert.match(dashboard, /useState\(CURRENT_WORLD_CHARACTER_ID\)/);
+    assert.match(dashboard, /useState\(WORLD_CHARACTER_CATALOG\[0\]/);
   });
 
   it('puts categorized world prices on the parent hero fifth action', async () => {

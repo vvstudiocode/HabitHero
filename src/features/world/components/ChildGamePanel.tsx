@@ -3,6 +3,7 @@ import { Check, Coins, Compass, Crown, Flower2, PawPrint, Settings, ShoppingBag,
 import type { ChildGameData, GameCatalogItem, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
 import { getActiveDecorationEntities, getWorldRevisionAfterMutation, toDecorationDraft, type DecorationDraft } from './decoration-editing';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot, MAX_ROAMING_PETS } from './roaming-pet-state';
+import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
 import type { useNotificationSettings } from '../../../hooks/useNotificationSettings';
 
@@ -41,17 +42,6 @@ const itemTypeLabels: Record<GameCatalogItem['itemType'], string> = {
   decoration: '裝飾',
 };
 
-function GameItemPreview({ item }: { item: GameCatalogItem }) {
-  if (item.thumbnailUrl) {
-    return <img src={item.thumbnailUrl} alt={`${item.name} 預覽`} className="hh-game-item-preview" />;
-  }
-  return item.itemType === 'character'
-    ? <Crown size={24} aria-hidden="true" />
-    : item.itemType === 'pet'
-      ? <PawPrint size={24} aria-hidden="true" />
-      : <Flower2 size={24} aria-hidden="true" />;
-}
-
 export function ChildGamePanel({
   kind,
   gameData,
@@ -73,6 +63,7 @@ export function ChildGamePanel({
   const [roamingPets, setRoamingPets] = useState<string[]>(initialRoamingPetSnapshot);
   const [inventorySection, setInventorySection] = useState<'character' | 'pet' | 'decoration'>('character');
   const [shopSection, setShopSection] = useState<'character' | 'pet' | 'decoration'>('character');
+  const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
   const [decorationDrafts, setDecorationDrafts] = useState<Record<string, DecorationDraft>>({});
   const [decorationMutationErrors, setDecorationMutationErrors] = useState<Record<string, DecorationMutationKind>>({});
   const [roamingMutationPending, setRoamingMutationPending] = useState(false);
@@ -240,7 +231,7 @@ export function ChildGamePanel({
                 const hasRoom = item.isStackable ? entities.length < inventory.quantity : entities.length === 0;
                 return (
                   <article className="hh-game-item-card hh-game-decoration-card" key={inventory.id}>
-                    <div className="hh-game-item-icon"><GameItemPreview item={item} /></div>
+                    <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
                     <div className="hh-game-item-copy"><strong>{item.name}</strong><span>{entities.length}/{item.isStackable ? inventory.quantity : 1} 件已放置</span></div>
                     {entities.map((entity, entityIndex) => {
                       const draft = decorationDrafts[entity.id] ?? toDecorationDraft(entity);
@@ -307,7 +298,7 @@ export function ChildGamePanel({
               const roamingLimitReached = !isRoaming && roamingPets.length >= MAX_ROAMING_PETS;
               return (
                 <article className="hh-game-item-card" key={inventory.id}>
-                  <div className="hh-game-item-icon" aria-hidden="true"><GameItemPreview item={item} /></div>
+                  <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
                   <div className="hh-game-item-copy">
                     <strong>{item.name}</strong>
                     <span>{item.description}</span>
@@ -353,7 +344,7 @@ export function ChildGamePanel({
               const owned = ownedCatalogIds.has(item.id) && !item.isStackable;
               return (
                 <article className="hh-game-item-card" key={item.id}>
-                  <div className="hh-game-item-icon"><GameItemPreview item={item} /></div>
+                  <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
                   <div className="hh-game-item-copy"><strong>{item.name}</strong><span>{itemTypeLabels[item.itemType]} · {item.description}</span></div>
                   <div className="hh-game-price"><Coins size={15} /> {price}</div>
                   <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending || owned || gameData.walletBalance < price} onClick={() => void run(() => onPurchase(item.id, 1, createIdempotencyKey()), '已加入背包。')}>
@@ -378,6 +369,7 @@ export function ChildGamePanel({
       )}
 
       {feedback && <p className="hh-game-feedback" role="status">{feedback}</p>}
+      <GameItemLightbox item={previewItem} onClose={() => setPreviewItem(null)} />
     </section>
   );
 }

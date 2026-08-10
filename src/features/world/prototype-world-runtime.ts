@@ -64,7 +64,8 @@ export interface PrototypeWorldRuntimeOptions {
   canvas: HTMLCanvasElement;
   gameData: ChildGameData;
   equippedCatalogItem?: GameCatalogItem;
-  characterRenderMode: 'anime-maiden' | 'procedural';
+  characterRenderMode: 'anime-maiden' | 'world-glb' | 'procedural';
+  characterModelUrl?: string;
   createProceduralCharacter: (THREE: ThreeNamespace, item?: GameCatalogItem) => Object3D;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
@@ -235,7 +236,7 @@ function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineA
 }
 
 function getAnimationClip(clips: readonly AnimationClip[], state: 'idle' | 'walk') {
-  const pattern = state === 'walk' ? /walk|run/i : /idle|stand|rest/i;
+  const pattern = state === 'walk' ? /walk|run/i : /idle|iddle|stand|rest/i;
   return clips.find((clip) => pattern.test(clip.name)) ?? clips[0];
 }
 
@@ -388,8 +389,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       options.onProgress(54, '生成森林邊界…');
       let characterSource: Object3D;
       let characterAnimations: AnimationClip[] = [];
-      if (options.characterRenderMode === 'anime-maiden') {
-        const characterResult = await loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, PROTOTYPE_WORLD_ASSETS.character, signal);
+      if (options.characterRenderMode === 'anime-maiden' || options.characterRenderMode === 'world-glb') {
+        const characterUrl = options.characterModelUrl ?? PROTOTYPE_WORLD_ASSETS.character;
+        const characterResult = await loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, characterUrl, signal);
         characterSource = characterResult.scene;
         if (!trackResourceRoot(characterSource)) return;
         characterAnimations = characterResult.animations;
@@ -475,7 +477,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       characterAnimations.forEach((clip) => {
         const name = clip.name.toLowerCase();
         if (name.includes('walk') || name.includes('run')) characterActions.set('walk', mixer!.clipAction(clip));
-        if (name.includes('idle') || name.includes('stand') || name.includes('rest')) characterActions.set('idle', mixer!.clipAction(clip));
+        if (name.includes('idle') || name.includes('iddle') || name.includes('stand') || name.includes('rest')) characterActions.set('idle', mixer!.clipAction(clip));
       });
       characterActions.forEach((action) => action.setLoop(THREE.LoopRepeat, Infinity));
       let activeCharacterAction: import('three').AnimationAction | undefined;

@@ -12,6 +12,7 @@ import type { WorldInputState } from './input/world-input-types';
 import { DynamicJoystick } from './components/DynamicJoystick';
 import { mountPrototypeWorld } from './prototype-world-runtime';
 import { getWorldQuality, type WorldQuality } from './world-quality';
+import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
 
 export {
   WORLD_QUALITY_SETTINGS,
@@ -26,7 +27,7 @@ interface TerrainWorldLayerProps {
 }
 
 type ThreeNamespace = typeof import('three');
-type CharacterRenderMode = 'anime-maiden' | 'procedural';
+type CharacterRenderMode = 'anime-maiden' | 'world-glb' | 'procedural';
 
 const DEFAULT_WORLD_CHARACTER: GameCatalogItem = {
   id: 'character.anime-maiden',
@@ -47,7 +48,7 @@ const DEFAULT_WORLD_CHARACTER: GameCatalogItem = {
 };
 
 export function getAnimationClipName(clipNames: readonly string[], state: 'idle' | 'walk'): string | undefined {
-  const statePattern = state === 'walk' ? /walk|run/i : /idle|stand|rest/i;
+  const statePattern = state === 'walk' ? /walk|run/i : /idle|iddle|stand|rest/i;
   return clipNames.find((name) => statePattern.test(name)) ?? clipNames[0];
 }
 
@@ -76,7 +77,13 @@ export function chooseWanderTarget(
 }
 
 export function getCharacterRenderMode(item: GameCatalogItem | undefined): CharacterRenderMode {
-  return item?.itemType === 'character' && item.assetKey === 'character.anime-maiden' ? 'anime-maiden' : 'procedural';
+  if (item?.itemType !== 'character') return 'procedural';
+  if (item.assetKey === 'character.anime-maiden') return 'anime-maiden';
+  return getWorldCharacterByAssetKey(item.assetKey) ? 'world-glb' : 'procedural';
+}
+
+export function getWorldCharacterModelUrl(item: GameCatalogItem | undefined): string | undefined {
+  return item?.itemType === 'character' ? getWorldCharacterByAssetKey(item.assetKey)?.modelUrl : undefined;
 }
 
 function getProceduralCharacterColors(item: GameCatalogItem | undefined) {
@@ -257,6 +264,7 @@ export function TerrainWorldLayer({ childId, gameData, paused = false }: Terrain
       gameData: createSceneGameDataSnapshot(gameData),
       equippedCatalogItem,
       characterRenderMode: getCharacterRenderMode(equippedCatalogItem),
+      characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
     };
   // The key intentionally excludes wallet, price, and unrelated inventory/catalog identities.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -299,6 +307,7 @@ export function TerrainWorldLayer({ childId, gameData, paused = false }: Terrain
       gameData: sceneInput.gameData,
       equippedCatalogItem: sceneInput.equippedCatalogItem,
       characterRenderMode: sceneInput.characterRenderMode,
+      characterModelUrl: sceneInput.characterModelUrl,
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,

@@ -14,8 +14,18 @@ describe('terrain prototype camera touch controls', () => {
     );
 
     assert.ok(Math.abs(next.yaw - 0.24) < Number.EPSILON);
-    assert.ok(Math.abs(next.pitch - 0.26) < Number.EPSILON);
+    assert.ok(Math.abs(next.pitch - 0.74) < Number.EPSILON);
     assert.equal('distance' in next, false);
+  });
+
+  it('reaches the full 90-degree downward pitch', () => {
+    const next = applySinglePointerCameraDrag(
+      { yaw: 0, pitch: 1.4 },
+      { dx: 0, dy: -1000 },
+      { pitchMin: 0.12, pitchMax: Math.PI / 2 },
+    );
+
+    assert.equal(next.pitch, Math.PI / 2);
   });
 
   it('clamps pinch zoom to the supported camera distance range', () => {

@@ -67,14 +67,22 @@ test('family child picker uses neutral child icons during a world transition', (
   assert.doesNotMatch(source, /getCharacterById|character\.imageUrl|<img/);
 });
 
-test('new child flow requires gender and uses the current GLB without a legacy picker', () => {
+test('new child flow exposes the five walkable GLB characters', () => {
   const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
+  const catalogSource = read('../src/features/characters/world-character-catalog.ts');
 
   assert.match(source, /newChildGender/);
   assert.match(source, /newChildCharacterId/);
-  assert.match(source, /CURRENT_WORLD_CHARACTER_ID/);
-  assert.match(source, /固定使用 3D 人物/);
+  assert.match(source, /WORLD_CHARACTER_CATALOG/);
+  assert.match(source, /onNewChildCharacterChange/);
+  assert.match(source, /role="radiogroup" aria-label="冒險人物"/);
+  assert.doesNotMatch(source, /固定使用 3D 人物/);
   assert.doesNotMatch(source, /getCharactersForCategory|CHARACTER_CATEGORIES|hh-character-preview-modal/);
+  assert.match(catalogSource, /character\.chibi-archer/);
+  assert.match(catalogSource, /character\.chibi-knight/);
+  assert.match(catalogSource, /character\.chibi-merchant/);
+  assert.match(catalogSource, /character\.chibi-ninja/);
+  assert.match(catalogSource, /character\.chibi-student/);
   assert.match(source, /aria-required="true"/);
   assert.match(source, /disabled=\{[^}]*!selectedGender/);
 });
@@ -96,6 +104,7 @@ test('gender controls are keyboard and touch accessible', () => {
   assert.match(source, /aria-checked=\{selectedGender === gender/);
   assert.match(source, /type="button"/);
   assert.match(source, /hh-gender-option/);
+  assert.match(source, /hh-world-character-option/);
   assert.doesNotMatch(source, /hh-character-selection-trigger|aria-haspopup="dialog"/);
 });
 

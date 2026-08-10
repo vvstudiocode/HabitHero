@@ -346,6 +346,24 @@
   object-fit: cover;
 }
 
+.hh-game-item-thumbnail-button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+  cursor: zoom-in;
+}
+
+.hh-game-item-thumbnail-button:focus-visible {
+  outline: 3px solid #202124;
+  outline-offset: -3px;
+}
+
 .hh-game-price-card {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);

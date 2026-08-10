@@ -14,7 +14,8 @@ export function applySinglePointerCameraDrag(
 ) {
   return {
     yaw: camera.yaw - dx * yawSensitivity,
-    pitch: clamp(camera.pitch + dy * pitchSensitivity, pitchMin, pitchMax),
+    // A bottom-to-top drag has a negative dy and should look farther down.
+    pitch: clamp(camera.pitch - dy * pitchSensitivity, pitchMin, pitchMax),
   };
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Crown, Flower2, PawPrint } from 'lucide-react';
 import type { GameCatalogItem, GameItemType } from '../contracts';
+import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
 
 interface ParentGamePricePanelProps {
   catalog: GameCatalogItem[];
@@ -17,14 +17,6 @@ const typeLabels: Record<GameItemType, string> = {
   decoration: '裝飾',
 };
 
-function GameItemThumbnail({ item }: { item: GameCatalogItem }) {
-  if (item.thumbnailUrl) {
-    return <img src={item.thumbnailUrl} alt={`${item.name} 預覽`} className="hh-game-item-preview" />;
-  }
-  const Icon = item.itemType === 'character' ? Crown : item.itemType === 'pet' ? PawPrint : Flower2;
-  return <Icon size={24} aria-hidden="true" />;
-}
-
 export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave, onReset }: ParentGamePricePanelProps) {
   const items = useMemo(
     () => catalog.filter((item) => item.isActive && !item.isStarter).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -32,6 +24,7 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
   );
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [activeType, setActiveType] = useState<GameItemType>('character');
+  const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
 
   const visibleItems = useMemo(
     () => items.filter((item) => item.itemType === activeType),
@@ -71,7 +64,7 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
               return (
                 <div key={item.id} className="hh-game-price-card rounded-2xl border border-gray-100 bg-gray-50 p-3">
                   <div className="hh-game-item-icon hh-game-item-icon--thumbnail" aria-hidden={item.thumbnailUrl ? undefined : true}>
-                    <GameItemThumbnail item={item} />
+                    <GameItemPreview item={item} onOpen={setPreviewItem} />
                   </div>
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -118,6 +111,7 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
           </div>
         </>
       )}
+      <GameItemLightbox item={previewItem} onClose={() => setPreviewItem(null)} />
     </section>
   );
 }

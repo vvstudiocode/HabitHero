@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff, KeyRound, Plus, Trash2, Users, X } from 'lucide-react';
 import { CURRENT_WORLD_CHARACTER_ID, type ChildGender } from '../../features/characters/catalog';
+import { WORLD_CHARACTER_CATALOG } from '../../features/characters/world-character-catalog';
 import { dismissWithAnimation } from '../../lib/utils';
 
 export interface NewChildProfile {
@@ -41,14 +42,15 @@ interface ParentSettingsChildrenSectionProps {
   newChildGender?: ChildGender | '';
   newChildCharacterId?: string;
   onNewChildGenderChange?: (gender: ChildGender) => void;
+  onNewChildCharacterChange?: (characterId: string) => void;
   showNewChildForm: boolean;
   onNewChildFormChange: (show: boolean) => void;
 }
 
-export function ParentSettingsChildrenSection({ children, childNameDrafts, onChildNameDraftChange, onChildNameBlur, onDeleteChild, onResetPassword, onSetupAccount, newChildName, newChildUsername, newChildPassword, newChildPasswordConfirmation, showNewChildPassword, showNewChildPasswordConfirmation, newChildError, loading, childAccountSubmitting, onNewChildNameChange, onNewChildUsernameChange, onNewChildPasswordChange, onNewChildPasswordConfirmationChange, onToggleNewChildPassword, onToggleNewChildPasswordConfirmation, onAddChild, newChildGender, newChildCharacterId, onNewChildGenderChange, showNewChildForm, onNewChildFormChange }: ParentSettingsChildrenSectionProps) {
+export function ParentSettingsChildrenSection({ children, childNameDrafts, onChildNameDraftChange, onChildNameBlur, onDeleteChild, onResetPassword, onSetupAccount, newChildName, newChildUsername, newChildPassword, newChildPasswordConfirmation, showNewChildPassword, showNewChildPasswordConfirmation, newChildError, loading, childAccountSubmitting, onNewChildNameChange, onNewChildUsernameChange, onNewChildPasswordChange, onNewChildPasswordConfirmationChange, onToggleNewChildPassword, onToggleNewChildPasswordConfirmation, onAddChild, newChildGender, newChildCharacterId, onNewChildGenderChange, onNewChildCharacterChange, showNewChildForm, onNewChildFormChange }: ParentSettingsChildrenSectionProps) {
   const [localGender, setLocalGender] = useState<ChildGender | ''>('');
   const selectedGender = newChildGender ?? localGender;
-  const selectedCharacterId = newChildCharacterId || CURRENT_WORLD_CHARACTER_ID;
+  const selectedCharacterId = newChildCharacterId || WORLD_CHARACTER_CATALOG[0].id || CURRENT_WORLD_CHARACTER_ID;
 
   const closeNewChildForm = () => {
     dismissWithAnimation(() => onNewChildFormChange(false), '.hh-new-child-drawer', 300);
@@ -71,6 +73,10 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
   const selectGender = (gender: ChildGender) => {
     setLocalGender(gender);
     onNewChildGenderChange?.(gender);
+  };
+
+  const selectCharacter = (characterId: string) => {
+    onNewChildCharacterChange?.(characterId);
   };
 
   const handleAddChild = async () => {
@@ -117,9 +123,25 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
             ))}
           </div>
         </fieldset>
-        <p className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm font-bold leading-5 text-gray-800">
-          目前固定使用 3D 人物：動漫少女（GLB）。其他人物之後再補充。
-        </p>
+        <fieldset className="mb-3" aria-required="true">
+          <legend className="mb-2 text-sm font-bold text-blue-900">選擇冒險人物</legend>
+          <div role="radiogroup" aria-label="冒險人物" className="hh-world-character-options">
+            {WORLD_CHARACTER_CATALOG.map((character) => (
+              <button
+                key={character.id}
+                type="button"
+                role="radio"
+                aria-checked={selectedCharacterId === character.id}
+                aria-label={character.name}
+                onClick={() => selectCharacter(character.id)}
+                className="hh-world-character-option"
+              >
+                <span className="hh-world-character-option-image"><img src={character.thumbnailUrl} alt="" /></span>
+                <span className="hh-world-character-option-copy"><strong>{character.name}</strong><small>{character.description}</small></span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
         <input type="text" autoComplete="username" placeholder="小孩帳號名稱，例如 leo123" value={newChildUsername} onChange={e => onNewChildUsernameChange(e.target.value)} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
         <div className="relative mb-2"><input type={showNewChildPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="小孩密碼（至少 6 碼英數）" value={newChildPassword} onChange={e => onNewChildPasswordChange(e.target.value)} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" /><button type="button" onClick={onToggleNewChildPassword} aria-label={showNewChildPassword ? '隱藏小孩密碼' : '顯示小孩密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">{showNewChildPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
         <div className="relative mb-2"><input type={showNewChildPasswordConfirmation ? 'text' : 'password'} autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => onNewChildPasswordConfirmationChange(e.target.value)} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" /><button type="button" onClick={onToggleNewChildPasswordConfirmation} aria-label={showNewChildPasswordConfirmation ? '隱藏確認密碼' : '顯示確認密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">{showNewChildPasswordConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
