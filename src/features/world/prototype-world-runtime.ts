@@ -51,9 +51,9 @@ export const PROTOTYPE_WORLD_CONFIG = {
   cameraDistanceMin: 1.45,
   cameraDistanceMax: 6.5,
   cameraPitchMin: 0.12,
-  // Let the portrait camera pass slightly beyond vertical and aim at the
-  // character's feet so an upward drag has a true ground-facing finish.
-  cameraPitchMax: Math.PI * 0.56,
+  // Keep the top-of-head view at 90 degrees. A downward drag at that limit
+  // grounds the view instead of orbiting the camera over the character.
+  cameraPitchMax: Math.PI / 2,
   initialCameraYaw: Math.PI / 2,
   initialCameraPitch: 0.18,
 } as const;
@@ -531,6 +531,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let cameraYaw = PROTOTYPE_WORLD_CONFIG.initialCameraYaw;
       let cameraPitch: number = PROTOTYPE_WORLD_CONFIG.initialCameraPitch;
       let cameraDistance: number = PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault;
+      let cameraGrounding = 0;
       let sceneElapsedTime = 0;
       const previousPlayerPosition = new THREE.Vector3().copy(playerRoot.position);
       let playerGrassInteraction = { direction: { x: 0, z: 1 }, strength: 0 };
@@ -628,9 +629,14 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (currentInput && !options.pausedRef.current) {
           const cameraDelta = controller?.consumeCameraDeltas();
           if (cameraDelta && (cameraDelta.cameraDelta.x !== 0 || cameraDelta.cameraDelta.y !== 0)) {
-            const nextCamera = applySinglePointerCameraDrag({ yaw: cameraYaw, pitch: cameraPitch }, { dx: cameraDelta.cameraDelta.x, dy: cameraDelta.cameraDelta.y }, { pitchMin: PROTOTYPE_WORLD_CONFIG.cameraPitchMin, pitchMax: PROTOTYPE_WORLD_CONFIG.cameraPitchMax });
+            const nextCamera = applySinglePointerCameraDrag(
+              { yaw: cameraYaw, pitch: cameraPitch, grounding: cameraGrounding },
+              { dx: cameraDelta.cameraDelta.x, dy: cameraDelta.cameraDelta.y },
+              { pitchMin: PROTOTYPE_WORLD_CONFIG.cameraPitchMin, pitchMax: PROTOTYPE_WORLD_CONFIG.cameraPitchMax },
+            );
             cameraYaw = nextCamera.yaw;
             cameraPitch = nextCamera.pitch;
+            cameraGrounding = nextCamera.grounding;
           }
           if (cameraDelta?.zoomDelta) cameraDistance = Math.min(PROTOTYPE_WORLD_CONFIG.cameraDistanceMax, Math.max(PROTOTYPE_WORLD_CONFIG.cameraDistanceMin, cameraDistance - cameraDelta.zoomDelta * 0.012));
           const keyboardCamera = getKeyboardCameraInput(keys);
@@ -640,6 +646,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               PROTOTYPE_WORLD_CONFIG.cameraPitchMax,
               Math.max(PROTOTYPE_WORLD_CONFIG.cameraPitchMin, cameraPitch + keyboardCamera.pitch * delta * 1.2),
             );
+            cameraGrounding = 0;
           }
           if (keyboardCamera.zoom) {
             cameraDistance = Math.min(
@@ -712,16 +719,16 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (mixer) mixer.update(delta);
         const zoomProgress = THREE.MathUtils.clamp((PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - cameraDistance) / (PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - PROTOTYPE_WORLD_CONFIG.cameraDistanceMin), 0, 1);
         const normalTargetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
-        const targetHeight = getGroundedCameraTargetHeight({
-          pitch: cameraPitch,
-          pitchMin: PROTOTYPE_WORLD_CONFIG.cameraPitchMin,
-          pitchMax: PROTOTYPE_WORLD_CONFIG.cameraPitchMax,
-          normalHeight: normalTargetHeight,
-        });
+        const targetHeight = getGroundedCameraTargetHeight({ grounding: cameraGrounding, normalHeight: normalTargetHeight });
         const horizontal = Math.cos(cameraPitch) * cameraDistance;
-        const target = new THREE.Vector3(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
+        const target = new THREE.Vector3(
+          playerRoot.position.x - Math.sin(cameraYaw) * cameraGrounding * 1.8,
+          playerRoot.position.y + targetHeight,
+          playerRoot.position.z - Math.cos(cameraYaw) * cameraGrounding * 1.8,
+        );
+        const cameraAnchor = new THREE.Vector3(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
         const cameraOffset = new THREE.Vector3(Math.sin(cameraYaw) * horizontal, Math.sin(cameraPitch) * cameraDistance + 0.16, Math.cos(cameraYaw) * horizontal);
-        const cameraPosition = target.clone().add(cameraOffset);
+        const cameraPosition = cameraAnchor.add(cameraOffset);
         camera.position.lerp(cameraPosition, 1 - Math.pow(0.001, Math.min(delta, 0.05)));
         camera.lookAt(target);
         rendererInstance.render(worldScene, camera);

@@ -227,10 +227,11 @@
       let cameraYaw = Math.PI / 2;
       let cameraPitch = 0.18;
       const CAMERA_PITCH_MIN = 0.12;
-      // Slightly beyond vertical, with the look target lowered to the ground
-      // at the limit so a full upward drag feels like it reaches the grass.
-      const CAMERA_PITCH_MAX = Math.PI * 0.56;
+      // Keep the top-of-head view at 90 degrees. Downward drag grounds the
+      // look target instead of orbiting the camera over the character.
+      const CAMERA_PITCH_MAX = Math.PI / 2;
       let cameraDistance = CAMERA_DISTANCE_DEFAULT;
+      let cameraGrounding = 0;
       let pointerDrag = null;
       let pinchGesture = null;
       const activePointers = new Map();
@@ -477,20 +478,21 @@
           1,
         );
         const normalTargetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
-        const targetHeight = getGroundedCameraTargetHeight({
-          pitch: cameraPitch,
-          pitchMin: CAMERA_PITCH_MIN,
-          pitchMax: CAMERA_PITCH_MAX,
-          normalHeight: normalTargetHeight,
-        });
-        reusableTarget.set(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
+        const targetHeight = getGroundedCameraTargetHeight({ grounding: cameraGrounding, normalHeight: normalTargetHeight });
+        reusableTarget.set(
+          playerRoot.position.x - Math.sin(cameraYaw) * cameraGrounding * 1.8,
+          playerRoot.position.y + targetHeight,
+          playerRoot.position.z - Math.cos(cameraYaw) * cameraGrounding * 1.8,
+        );
         const horizontal = Math.cos(cameraPitch) * cameraDistance;
         reusableVector.set(
           Math.sin(cameraYaw) * horizontal,
           Math.sin(cameraPitch) * cameraDistance + 0.16,
           Math.cos(cameraYaw) * horizontal,
         );
-        reusableVector.add(reusableTarget);
+        reusableVector.x += playerRoot.position.x;
+        reusableVector.y += playerRoot.position.y + targetHeight;
+        reusableVector.z += playerRoot.position.z;
         camera.position.lerp(reusableVector, smooth);
         camera.lookAt(reusableTarget);
       }
@@ -595,12 +597,13 @@
         pointerDrag.x = event.clientX;
         pointerDrag.y = event.clientY;
         const nextCamera = applySinglePointerCameraDrag(
-          { yaw: cameraYaw, pitch: cameraPitch },
+          { yaw: cameraYaw, pitch: cameraPitch, grounding: cameraGrounding },
           { dx, dy },
           { pitchMin: CAMERA_PITCH_MIN, pitchMax: CAMERA_PITCH_MAX },
         );
         cameraYaw = nextCamera.yaw;
         cameraPitch = nextCamera.pitch;
+        cameraGrounding = nextCamera.grounding;
       });
 
       canvas.addEventListener('pointerup', releasePointer);

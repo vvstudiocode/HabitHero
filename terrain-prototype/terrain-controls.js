@@ -10,29 +10,37 @@ export function applySinglePointerCameraDrag(
     pitchMax,
     yawSensitivity = 0.008,
     pitchSensitivity = 0.006,
+    groundingSensitivity = 0.006,
   },
 ) {
+  const verticalLimit = Math.min(Math.PI / 2, pitchMax);
+  const currentGrounding = clamp(camera.grounding ?? 0, 0, 1);
+  let nextPitch = clamp(camera.pitch - dy * pitchSensitivity, pitchMin, verticalLimit);
+  let nextGrounding = currentGrounding;
+
+  // Once the camera is directly above the character, a downward drag should
+  // lower the view toward the grass without crossing the vertical limit.
+  if (dy > 0 && camera.pitch >= verticalLimit - Number.EPSILON) {
+    nextPitch = verticalLimit;
+    nextGrounding = clamp(currentGrounding + dy * groundingSensitivity, 0, 1);
+  } else if (dy < 0) {
+    nextGrounding = clamp(currentGrounding + dy * groundingSensitivity, 0, 1);
+  }
+
   return {
     yaw: camera.yaw - dx * yawSensitivity,
-    // A bottom-to-top drag has a negative dy and should look farther down.
-    pitch: clamp(camera.pitch - dy * pitchSensitivity, pitchMin, pitchMax),
+    pitch: nextPitch,
+    grounding: nextGrounding,
   };
 }
 
 export function getGroundedCameraTargetHeight({
-  pitch,
-  pitchMin,
-  pitchMax,
+  grounding = 0,
   normalHeight,
   groundHeight = 0.04,
 }) {
-  // Start lowering the look target after a 60-degree tilt. At the limit the
-  // camera looks at the character's feet/ground instead of the torso.
-  const groundingStart = Math.PI / 3;
-  const groundingRange = Math.max(pitchMax - groundingStart, Number.EPSILON);
-  const progress = clamp((pitch - groundingStart) / groundingRange, 0, 1);
-  const safeProgress = pitchMax > pitchMin ? progress : 0;
-  return normalHeight + (groundHeight - normalHeight) * safeProgress;
+  const progress = clamp(grounding, 0, 1);
+  return normalHeight + (groundHeight - normalHeight) * progress;
 }
 
 export function getPinchCameraDistance({
