@@ -30,6 +30,7 @@ function createGameData(overrides: Partial<ChildGameData> = {}): ChildGameData {
     loadout: { equippedCharacterInventoryId: null, followingPetInventoryId: 'inventory-dog' },
     worldEntities: [],
     worldRevision: 7,
+    lootDrops: [],
     ...overrides,
   };
 }
@@ -59,10 +60,30 @@ describe('roaming pet state', () => {
     assert.deepEqual(getNextRoamingPets(fullRoamablePetIds.slice(0, MAX_ROAMING_PETS), 'inventory-fox', fullRoamablePetIds), fullRoamablePetIds.slice(0, MAX_ROAMING_PETS));
   });
 
+  it('does not expose retired pet catalog rows to roaming', () => {
+    const data = createGameData({
+      catalog: [
+        ...createGameData().catalog,
+        { id: 'pet-retired', itemType: 'pet', name: '舊寵物', description: '', scrollPrice: 0, assetKey: 'retired', thumbnailUrl: null, isActive: false, isStarter: false, isStackable: false, collisionRadius: 0.3, minScale: 1, maxScale: 1, sortOrder: 4, metadata: {} },
+      ],
+      inventory: [
+        ...createGameData().inventory,
+        { id: 'inventory-retired', catalogItemId: 'pet-retired', quantity: 1, acquiredVia: 'purchase', acquiredAt: '' },
+      ],
+      loadout: { equippedCharacterInventoryId: null, followingPetInventoryId: null },
+    });
+
+    assert.deepEqual(getRoamablePetInventoryIds(data), ['inventory-cat', 'inventory-dog']);
+    assert.equal(getRoamablePetInventoryIds(data).includes('inventory-retired'), false);
+  });
+
   it('keeps the panel synchronized with refreshed game data and restores its server snapshot after RPC failure', () => {
     assert.match(childGamePanelSource, /useEffect\(\(\) => \{[\s\S]*?getRoamingPetSnapshot\(gameData\)[\s\S]*?setRoamingPets\(/);
     assert.match(childGamePanelSource, /roamingPetsServerSnapshotRef/);
     assert.match(childGamePanelSource, /巡遊夥伴更新失敗，已恢復上次同步狀態/);
-    assert.match(childGamePanelSource, /disabled=\{mutationPending \|\| isFollowing/);
+    assert.match(childGamePanelSource, /onSetFollowingPet\(isFollowing \? null : inventory\.id\)/);
+    assert.match(childGamePanelSource, /取消跟隨/);
+    assert.match(childGamePanelSource, /disabled=\{mutationPending\}/);
+    assert.match(childGamePanelSource, /disabled=\{mutationPending \|\| isFollowing \|\| roamingMutationPending/);
   });
 });

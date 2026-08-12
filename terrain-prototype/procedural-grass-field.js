@@ -1,5 +1,8 @@
 export const GRASS_WIND_STRENGTH = 1.4;
 export const MAX_GRASS_INTERACTORS = 2;
+// Keep a broad, staggered grass envelope just beyond the playable area so the
+// air-wall reads as a soft meadow edge instead of a hard scene boundary.
+export const GRASS_BOUNDARY_BAND_RATIO = 0.16;
 
 function createRandom(seed) {
   let state = seed >>> 0;
@@ -23,13 +26,97 @@ function finiteOr(value, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
+function getStaggeredOuterPosition({
+  blade,
+  copyIndex,
+  random,
+  walkableHalf,
+  halfField,
+}) {
+  const distanceFromCenter = Math.max(Math.hypot(blade.x, blade.z), 0.001);
+  const radialX = blade.x / distanceFromCenter;
+  const radialZ = blade.z / distanceFromCenter;
+  const tangentX = -radialZ;
+  const tangentZ = radialX;
+  const outwardOffset = 0.16 + copyIndex * 0.055 + random() * 0.06;
+  const radialJitter = (random() - 0.5) * 0.06;
+  const lateralOffset = (random() - 0.5) * (0.26 + Math.min(copyIndex, 8) * 0.04);
+
+  let x = clamp(
+    blade.x + radialX * (outwardOffset + radialJitter) + tangentX * lateralOffset,
+    -halfField,
+    halfField,
+  );
+  let z = clamp(
+    blade.z + radialZ * (outwardOffset + radialJitter) + tangentZ * lateralOffset,
+    -halfField,
+    halfField,
+  );
+
+  function keepOutsideWalkableArea() {
+    if (Math.abs(x) > walkableHalf || Math.abs(z) > walkableHalf) return;
+
+    const outerRange = Math.max(halfField - walkableHalf - 0.08, 0.08);
+    if (Math.abs(blade.x) >= Math.abs(blade.z)) {
+      x = Math.sign(blade.x || 1) * (walkableHalf + 0.08 + random() * outerRange);
+    } else {
+      z = Math.sign(blade.z || 1) * (walkableHalf + 0.08 + random() * outerRange);
+    }
+  }
+
+  keepOutsideWalkableArea();
+
+  if (Math.hypot(x - blade.x, z - blade.z) < 0.08) {
+    const fallbackOffset = 0.14 + random() * 0.12;
+    x = clamp(x + tangentX * fallbackOffset, -halfField, halfField);
+    z = clamp(z + tangentZ * fallbackOffset, -halfField, halfField);
+    keepOutsideWalkableArea();
+  }
+
+  return { x, z };
+}
+
+function getBoundaryStaggeredPosition({
+  blade,
+  copyIndex,
+  random,
+  walkableHalf,
+  halfField,
+  boundaryBand,
+}) {
+  const position = getStaggeredOuterPosition({
+    blade,
+    copyIndex,
+    random,
+    walkableHalf,
+    halfField,
+  });
+  const boundaryInner = walkableHalf + 0.04;
+  const boundaryOuter = Math.min(walkableHalf + boundaryBand, halfField);
+  const boundaryDepth = Math.max(boundaryOuter - boundaryInner, 0.08);
+  const tangentLimit = Math.max(boundaryOuter - 0.04, 0.04);
+
+  if (Math.abs(blade.x) >= Math.abs(blade.z)) {
+    position.x = Math.sign(blade.x || 1) * (boundaryInner + random() * boundaryDepth);
+    position.z = clamp(position.z + (random() - 0.5) * 0.22, -tangentLimit, tangentLimit);
+  } else {
+    position.z = Math.sign(blade.z || 1) * (boundaryInner + random() * boundaryDepth);
+    position.x = clamp(position.x + (random() - 0.5) * 0.22, -tangentLimit, tangentLimit);
+  }
+  return position;
+}
+
 export function getProceduralGrassCount({ width, pixelRatio }) {
   const safeWidth = finiteOr(width, 375);
   const safePixelRatio = finiteOr(pixelRatio, 1);
 
-  if (safeWidth <= 480) return 43200;
-  if (safeWidth <= 900 || safePixelRatio >= 2.5) return 75600;
-  return 129600;
+  if (safeWidth <= 480) return 54000;
+  if (safeWidth <= 900 || safePixelRatio >= 2.5) return 94500;
+  return 162000;
 }
 
 export function createProceduralGrassLayout({
@@ -40,6 +127,7 @@ export function createProceduralGrassLayout({
   clumpCount = 64,
   seed = 20260809,
   outerDensityMultiplier = 1,
+  boundaryDensityMultiplier = 1,
 } = {}) {
   if (!Number.isInteger(count) || count <= 0) {
     throw new Error('count must be a positive integer');
@@ -51,6 +139,9 @@ export function createProceduralGrassLayout({
   }
   if (!Number.isInteger(outerDensityMultiplier) || outerDensityMultiplier <= 0) {
     throw new Error('outerDensityMultiplier must be a positive integer');
+  }
+  if (!Number.isInteger(boundaryDensityMultiplier) || boundaryDensityMultiplier <= 0) {
+    throw new Error('boundaryDensityMultiplier must be a positive integer');
   }
 
   const random = createRandom(seed);
@@ -65,9 +156,9 @@ export function createProceduralGrassLayout({
 
   const layout = Array.from({ length: count }, (_, index) => {
     const clump = centers[index % centers.length];
-    // Rebalance the existing blade budget toward the tree line instead of
-    // increasing total geometry; distant blades are softened by scene fog.
-    const useWalkableArea = random() < (5 / 6);
+    // Keep a substantial base population in the large outer field before
+    // density multipliers are applied, so distant ground never reads empty.
+    const useWalkableArea = random() < 0.64;
     const useScatter = random() < 0.74;
     const angle = random() * Math.PI * 2;
     const radius = Math.sqrt(random()) * clump.radius;
@@ -87,8 +178,8 @@ export function createProceduralGrassLayout({
       x,
       y: baseHeight,
       z,
-      height: Math.min(0.173, 0.067 + random() * 0.1 * clump.lushness),
-      width: 0.01 + random() * 0.018,
+      height: Math.min(0.19, 0.07 + random() * 0.112 * clump.lushness),
+      width: 0.012 + random() * 0.022,
       rotation: random() * Math.PI * 2,
       phase: random() * Math.PI * 2,
       color: random(),
@@ -96,23 +187,33 @@ export function createProceduralGrassLayout({
     };
   });
 
-  if (outerDensityMultiplier === 1) return layout;
+  if (outerDensityMultiplier === 1 && boundaryDensityMultiplier === 1) return layout;
 
   const walkableHalf = Math.min(walkableSize, fieldSize) * 0.5;
   const outerBlades = layout.filter(blade => (
     Math.abs(blade.x) > walkableHalf || Math.abs(blade.z) > walkableHalf
   ));
+  const boundaryBand = Math.min(walkableSize * GRASS_BOUNDARY_BAND_RATIO, 1.6);
+  const boundaryBlades = layout.filter(blade => (
+    Math.max(Math.abs(blade.x), Math.abs(blade.z)) > walkableHalf
+    && Math.max(Math.abs(blade.x), Math.abs(blade.z)) <= walkableHalf + boundaryBand
+  ));
   const extraOuterBlades = [];
   for (let copyIndex = 1; copyIndex < outerDensityMultiplier; copyIndex += 1) {
-    const outwardOffset = copyIndex * 0.018;
     outerBlades.forEach((blade, bladeIndex) => {
-      const distance = Math.max(Math.hypot(blade.x, blade.z), 0.001);
+      const staggeredPosition = getStaggeredOuterPosition({
+        blade,
+        copyIndex,
+        random,
+        walkableHalf,
+        halfField,
+      });
       const heightVariation = bladeIndex % 2 === 0 ? 0.96 : 1.04;
       extraOuterBlades.push({
         ...blade,
-        x: Math.min(Math.max(blade.x + (blade.x / distance) * outwardOffset, -halfField), halfField),
-        z: Math.min(Math.max(blade.z + (blade.z / distance) * outwardOffset, -halfField), halfField),
-        height: Math.min(0.173, blade.height * heightVariation),
+        x: staggeredPosition.x,
+        z: staggeredPosition.z,
+        height: Math.min(0.19, blade.height * heightVariation),
         width: blade.width * (copyIndex % 2 === 0 ? 0.94 : 1.06),
         rotation: (blade.rotation + copyIndex * 0.83) % (Math.PI * 2),
         phase: (blade.phase + copyIndex * 1.17) % (Math.PI * 2),
@@ -120,7 +221,32 @@ export function createProceduralGrassLayout({
     });
   }
 
-  return [...layout, ...extraOuterBlades];
+  const extraBoundaryBlades = [];
+  for (let boundaryCopyIndex = 1; boundaryCopyIndex < boundaryDensityMultiplier; boundaryCopyIndex += 1) {
+    const copyIndex = outerDensityMultiplier + boundaryCopyIndex;
+    boundaryBlades.forEach((blade, bladeIndex) => {
+      const staggeredPosition = getBoundaryStaggeredPosition({
+        blade,
+        copyIndex,
+        random,
+        walkableHalf,
+        halfField,
+        boundaryBand,
+      });
+      const heightVariation = bladeIndex % 2 === 0 ? 0.98 : 1.02;
+      extraBoundaryBlades.push({
+        ...blade,
+        x: staggeredPosition.x,
+        z: staggeredPosition.z,
+        height: Math.min(0.19, blade.height * heightVariation),
+        width: blade.width * (copyIndex % 2 === 0 ? 0.96 : 1.04),
+        rotation: (blade.rotation + copyIndex * 0.71) % (Math.PI * 2),
+        phase: (blade.phase + copyIndex * 0.93) % (Math.PI * 2),
+      });
+    });
+  }
+
+  return [...layout, ...extraOuterBlades, ...extraBoundaryBlades];
 }
 
 export function updateGrassInteractionState({

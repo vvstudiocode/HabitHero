@@ -22,7 +22,9 @@ export interface WorldPoint2D {
 export const WORLD_LAYOUT_VERSION = 1;
 export const WORLD_BOUNDARY = 4.8;
 export const CHARACTER_SPAWN = { x: 0, z: 2.2, radius: 0.8 };
-export const CENTRAL_TREE_KEEP_OUT = { x: 0, z: 0, radius: 1.15 };
+// The scaled tree root is about one world unit wide. Keep the character's
+// own radius and WORLD_EPSILON outside it, without adding an oversized buffer.
+export const CENTRAL_TREE_KEEP_OUT = { x: 1.1, z: -1.65, radius: 1 };
 export const WORLD_EPSILON = 0.02;
 export const CHARACTER_COLLISION_RADIUS = 0.35;
 

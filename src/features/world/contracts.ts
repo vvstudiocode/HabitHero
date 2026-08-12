@@ -3,6 +3,7 @@ import type { WorldTransform } from './world-collision';
 export type GameItemType = 'character' | 'pet' | 'decoration';
 export type GameEntityKind = 'pet' | 'decoration';
 export type PetBehaviorMode = 'static' | 'idle' | 'wander';
+export type GameLootDropKind = 'star' | 'scroll';
 
 export interface GameCatalogItem {
   id: string;
@@ -44,6 +45,17 @@ export interface ChildWorldEntity extends WorldTransform {
   name?: string;
 }
 
+export interface GameLootDrop {
+  id: string;
+  sourceTaskId: string;
+  kind: GameLootDropKind;
+  amount: number;
+  x: number;
+  y: number;
+  z: number;
+  createdAt: string;
+}
+
 export interface ChildGameData {
   walletBalance: number;
   catalog: GameCatalogItem[];
@@ -52,6 +64,7 @@ export interface ChildGameData {
   loadout: { equippedCharacterInventoryId: string | null; followingPetInventoryId: string | null } | null;
   worldEntities: ChildWorldEntity[];
   worldRevision: number;
+  lootDrops: GameLootDrop[];
 }
 
 export interface GamePurchaseResult {
@@ -59,6 +72,24 @@ export interface GamePurchaseResult {
   inventoryItemId: string;
   walletBalance: number;
   quantity: number;
+}
+
+export interface GameLootCollectionResult {
+  dropId: string;
+  kind: GameLootDropKind;
+  amount: number;
+  pointsBalance: number;
+  walletBalance: number;
+  idempotentReplay: boolean;
+}
+
+export interface GameLootBatchCollectionResult {
+  dropIds: string[];
+  starAmount: number;
+  scrollAmount: number;
+  pointsBalance: number;
+  walletBalance: number;
+  idempotentReplay: boolean;
 }
 
 export interface WorldMutationResult {
@@ -73,6 +104,7 @@ export const emptyChildGameData = (): ChildGameData => ({
   loadout: null,
   worldEntities: [],
   worldRevision: 0,
+  lootDrops: [],
 });
 
 export interface WorldMutationPayload {

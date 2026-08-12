@@ -48,7 +48,7 @@ export function getForestBoundaryTreeSpecs({
   const trees = [];
   for (let layer = 0; layer < layers; layer += 1) {
     const extent = terrainLimit + 0.16 + layer * 0.62;
-    const spacing = 0.74 + layer * 0.09;
+    const spacing = 1.12 + layer * 0.12;
     const sideCount = Math.max(8, Math.ceil((extent * 2) / spacing));
 
     for (let sideIndex = 0; sideIndex < sideCount; sideIndex += 1) {

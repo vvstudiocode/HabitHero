@@ -5,6 +5,30 @@ import {
   getProceduralGrassCount,
 } from './procedural-grass-field.js';
 
+export const GRASS_COLOR_LAYER_THRESHOLDS = Object.freeze({
+  edgeEnd: 0.24,
+  distantStart: 0.58,
+  distantEnd: 0.92,
+});
+
+export function getGrassColorLayer({ distanceFromCenter, walkableHalf, fieldHalf }) {
+  const safeDistance = Number.isFinite(distanceFromCenter) ? distanceFromCenter : 0;
+  const safeWalkableHalf = Number.isFinite(walkableHalf) ? Math.max(walkableHalf, 0) : 0;
+  const safeFieldHalf = Number.isFinite(fieldHalf)
+    ? Math.max(fieldHalf, safeWalkableHalf + 0.001)
+    : safeWalkableHalf + 0.001;
+  const outerProgress = Math.min(
+    Math.max((safeDistance - safeWalkableHalf) / (safeFieldHalf - safeWalkableHalf), 0),
+    1,
+  );
+
+  if (safeDistance > safeWalkableHalf && outerProgress <= GRASS_COLOR_LAYER_THRESHOLDS.edgeEnd) {
+    return 'edge';
+  }
+  if (outerProgress >= GRASS_COLOR_LAYER_THRESHOLDS.distantStart) return 'distant';
+  return 'middle';
+}
+
 function createCrossedBladeGeometry(THREE) {
   const positions = [];
   const indices = [];
@@ -40,7 +64,94 @@ function createCrossedBladeGeometry(THREE) {
   return geometry;
 }
 
-function createGrassMaterial(THREE) {
+function createNaturalGroundMaterial(THREE, { walkableSize = 1, fieldSize = 1 } = {}) {
+  const walkableHalf = Math.min(walkableSize, fieldSize) * 0.5;
+  const fieldHalf = fieldSize * 0.5;
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x2d6938,
+    roughness: 1,
+    metalness: 0,
+  });
+
+  material.onBeforeCompile = shader => {
+    shader.uniforms.uGroundWalkableHalf = { value: walkableHalf };
+    shader.uniforms.uGroundFieldHalf = { value: fieldHalf };
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+         varying vec2 vHabitHeroGroundUv;
+         varying float vHabitHeroGroundEdgeFactor;
+         varying float vHabitHeroGroundDistantFactor;
+         uniform float uGroundWalkableHalf;
+         uniform float uGroundFieldHalf;`,
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+         vHabitHeroGroundUv = uv;
+         float groundDistance = max(abs(position.x), abs(position.y));
+         float groundOuterProgress = clamp(
+           (groundDistance - uGroundWalkableHalf) / max(uGroundFieldHalf - uGroundWalkableHalf, 0.001),
+           0.0,
+           1.0
+         );
+         vHabitHeroGroundEdgeFactor = smoothstep(0.0, 0.08, groundOuterProgress)
+           * (1.0 - smoothstep(0.20, 0.30, groundOuterProgress));
+         vHabitHeroGroundDistantFactor = smoothstep(0.58, 0.92, groundOuterProgress);`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+         varying vec2 vHabitHeroGroundUv;
+         varying float vHabitHeroGroundEdgeFactor;
+         varying float vHabitHeroGroundDistantFactor;
+
+         float habitHeroGroundHash(vec2 point) {
+           return fract(sin(dot(point, vec2(12.9898, 78.233))) * 43758.5453);
+         }`,
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+         vec2 groundCell = floor(vHabitHeroGroundUv * 34.0);
+         float broadVariation = habitHeroGroundHash(floor(vHabitHeroGroundUv * 8.0));
+         float fineVariation = habitHeroGroundHash(groundCell);
+         float naturalVariation = 0.9 + broadVariation * 0.13 + fineVariation * 0.045;
+         diffuseColor.rgb *= naturalVariation;
+         diffuseColor.rgb += vec3(0.002, 0.008, 0.001) * broadVariation;`,
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+         vec3 groundEdgeColor = vec3(0.16, 0.43, 0.12);
+         vec3 groundMiddleColor = vec3(0.16, 0.43, 0.12);
+         vec3 groundDistantColor = vec3(0.28, 0.36, 0.24);
+         vec3 groundLayerColor = mix(groundMiddleColor, groundEdgeColor, vHabitHeroGroundEdgeFactor);
+         groundLayerColor = mix(groundLayerColor, groundDistantColor, vHabitHeroGroundDistantFactor);
+         float groundMiddleFactor = clamp(
+           1.0 - vHabitHeroGroundEdgeFactor - vHabitHeroGroundDistantFactor,
+           0.0,
+           1.0
+         );
+         diffuseColor.rgb = mix(diffuseColor.rgb, groundLayerColor, 0.34);
+         diffuseColor.rgb *= 1.0 + groundMiddleFactor * 0.08;`,
+      );
+  };
+  material.customProgramCacheKey = () => 'habit-hero-natural-ground-v2';
+  return material;
+}
+
+function createGrassMaterial(THREE, {
+  fieldSize = 1,
+  walkableSize = 1,
+  sunDirection = [-0.52, 0.78, -0.36],
+  sunColor = 0xffe2b0,
+  ambientColor = 0xc1dfc4,
+} = {}) {
+  const walkableHalf = Math.min(walkableSize, fieldSize) * 0.5;
+  const fieldHalf = fieldSize * 0.5;
   const uniforms = THREE.UniformsUtils.merge([
     THREE.UniformsLib.fog,
     {
@@ -53,6 +164,11 @@ function createGrassMaterial(THREE) {
       uInteractorDirectionB: { value: new THREE.Vector2(0, 1) },
       uInteractorStrengthA: { value: 0 },
       uInteractorStrengthB: { value: 0 },
+      uSunDirection: { value: new THREE.Vector3(...sunDirection).normalize() },
+      uSunColor: { value: new THREE.Color(sunColor) },
+      uAmbientColor: { value: new THREE.Color(ambientColor) },
+      uWalkableHalf: { value: walkableHalf },
+      uFieldHalf: { value: fieldHalf },
     },
   ]);
 
@@ -78,10 +194,14 @@ function createGrassMaterial(THREE) {
       uniform vec2 uInteractorDirectionB;
       uniform float uInteractorStrengthA;
       uniform float uInteractorStrengthB;
+      uniform float uWalkableHalf;
+      uniform float uFieldHalf;
 
       varying float vBladeHeight;
       varying float vVariation;
       varying float vWaveLight;
+      varying float vGrassEdgeFactor;
+      varying float vGrassDistantFactor;
 
       #include <fog_pars_vertex>
 
@@ -153,6 +273,15 @@ function createGrassMaterial(THREE) {
         vBladeHeight = bladeHeight;
         vVariation = instanceVariation;
         vWaveLight = gust;
+        float grassDistance = max(abs(instanceOffset.x), abs(instanceOffset.z));
+        float grassOuterProgress = clamp(
+          (grassDistance - uWalkableHalf) / max(uFieldHalf - uWalkableHalf, 0.001),
+          0.0,
+          1.0
+        );
+        vGrassEdgeFactor = smoothstep(0.0, 0.08, grassOuterProgress)
+          * (1.0 - smoothstep(0.20, 0.30, grassOuterProgress));
+        vGrassDistantFactor = smoothstep(0.58, 0.92, grassOuterProgress);
 
         #include <fog_vertex>
       }
@@ -163,6 +292,12 @@ function createGrassMaterial(THREE) {
       varying float vBladeHeight;
       varying float vVariation;
       varying float vWaveLight;
+      varying float vGrassEdgeFactor;
+      varying float vGrassDistantFactor;
+
+      uniform vec3 uSunDirection;
+      uniform vec3 uSunColor;
+      uniform vec3 uAmbientColor;
 
       #include <fog_pars_fragment>
 
@@ -172,7 +307,24 @@ function createGrassMaterial(THREE) {
         vec3 tipColor = vec3(0.24, 0.52, 0.16);
         vec3 color = mix(rootColor, meadowColor, smoothstep(0.0, 0.7, vBladeHeight));
         color = mix(color, tipColor, smoothstep(0.64, 1.0, vBladeHeight));
-        color *= 0.9 + vVariation * 0.18 + vWaveLight * 0.02;
+        vec3 edgeLayerColor = vec3(0.15, 0.47, 0.12);
+        vec3 middleLayerColor = vec3(0.15, 0.47, 0.12);
+        vec3 distantLayerColor = vec3(0.27, 0.37, 0.23);
+        vec3 distanceLayerColor = mix(middleLayerColor, edgeLayerColor, vGrassEdgeFactor);
+        distanceLayerColor = mix(distanceLayerColor, distantLayerColor, vGrassDistantFactor);
+        float middleLayerFactor = clamp(
+          1.0 - vGrassEdgeFactor - vGrassDistantFactor,
+          0.0,
+          1.0
+        );
+        color = mix(color, distanceLayerColor, 0.30);
+        color *= 1.0 + middleLayerFactor * 0.10;
+        float variation = 0.92 + (vVariation - 0.5) * 0.16;
+        vec3 bladeNormal = normalize(vec3(-vWaveLight * 0.12, 0.86, 0.28));
+        float sunAmount = 0.58 + 0.42 * max(dot(bladeNormal, normalize(uSunDirection)), 0.0);
+        vec3 naturalLight = mix(uAmbientColor, uSunColor, sunAmount);
+        color *= variation * naturalLight;
+        color += uSunColor * smoothstep(0.72, 1.0, vBladeHeight) * 0.018;
 
         gl_FragColor = vec4(color, 1.0);
 
@@ -195,6 +347,10 @@ export function createProceduralGrassField(THREE, {
   count,
   seed = 20260809,
   outerDensityMultiplier = 1,
+  boundaryDensityMultiplier = 1,
+  sunDirection,
+  sunColor,
+  ambientColor,
 }) {
   const baseCount = count ?? getProceduralGrassCount({ width: viewportWidth, pixelRatio });
   const layout = createProceduralGrassLayout({
@@ -205,6 +361,7 @@ export function createProceduralGrassField(THREE, {
     clumpCount: 72,
     seed,
     outerDensityMultiplier,
+    boundaryDensityMultiplier,
   });
   const instanceCount = layout.length;
   const geometry = createCrossedBladeGeometry(THREE);
@@ -232,14 +389,16 @@ export function createProceduralGrassField(THREE, {
   geometry.setAttribute('instanceVariation', new THREE.InstancedBufferAttribute(variations, 1));
   geometry.instanceCount = instanceCount;
 
-  const { material, uniforms } = createGrassMaterial(THREE);
+  const { material, uniforms } = createGrassMaterial(THREE, {
+    fieldSize,
+    walkableSize,
+    sunDirection,
+    sunColor,
+    ambientColor,
+  });
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(fieldSize, fieldSize),
-    new THREE.MeshStandardMaterial({
-      color: 0x2d6938,
-      roughness: 1,
-      metalness: 0,
-    }),
+    createNaturalGroundMaterial(THREE, { walkableSize, fieldSize }),
   );
   ground.name = 'procedural-meadow-ground';
   ground.rotation.x = -Math.PI / 2;

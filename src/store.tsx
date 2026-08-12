@@ -27,7 +27,7 @@ import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/t
 import { notifyAdventureCreated, notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
-import type { WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from './features/world/contracts';
+import type { GameLootBatchCollectionResult, GameLootCollectionResult, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData } from './features/world/contracts';
 import { patchEquippedCharacter } from './features/world/game-loadout';
 
@@ -116,6 +116,8 @@ export interface AppContextType {
   resetData: () => Promise<void>;
   recordParentConsent: (consentVersion: string) => Promise<void>;
   purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<Awaited<ReturnType<DataRepository['purchaseGameItem']>>>;
+  collectGameLoot: (childId: string, dropId: string, pickupIdempotencyKey: string) => Promise<GameLootCollectionResult>;
+  collectGameLootBatch: (childId: string, dropIds: string[], pickupIdempotencyKey: string) => Promise<GameLootBatchCollectionResult>;
   equipGameCharacter: (childId: string, inventoryItemId: string) => Promise<void>;
   setFollowingPet: (childId: string, inventoryItemId: string | null) => Promise<WorldMutationResult>;
   setRoamingPets: (childId: string, inventoryItemIds: string[]) => Promise<WorldMutationResult>;
@@ -440,6 +442,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const actions = {
     recordParentConsent: (consentVersion: string) => mutate((repo, id) => repo.recordParentConsent(id, consentVersion), (previous) => ({ ...previous, parentConsentVersion: consentVersion })),
     purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => mutate((repo) => repo.purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey)),
+    collectGameLoot: (childId: string, dropId: string, pickupIdempotencyKey: string) => mutate((repo) => repo.collectGameLoot(childId, dropId, pickupIdempotencyKey)),
+    collectGameLootBatch: (childId: string, dropIds: string[], pickupIdempotencyKey: string) => mutate((repo) => repo.collectGameLootBatch(childId, dropIds, pickupIdempotencyKey)),
     equipGameCharacter: (childId: string, inventoryItemId: string) => mutate(
       (repo) => repo.equipGameCharacter(childId, inventoryItemId),
       (previous) => {

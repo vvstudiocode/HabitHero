@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Coins, Compass, Crown, Flower2, PawPrint, Settings, ShoppingBag, Sparkles } from 'lucide-react';
+import { Check, Coins, Compass, Crown, Flower2, PawPrint, Settings, ShoppingBag, Sparkles, X } from 'lucide-react';
 import type { ChildGameData, GameCatalogItem, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
 import { getActiveDecorationEntities, getWorldRevisionAfterMutation, toDecorationDraft, type DecorationDraft } from './decoration-editing';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot, MAX_ROAMING_PETS } from './roaming-pet-state';
@@ -220,7 +220,10 @@ export function ChildGamePanel({
             )}
           </div>
           <div className="hh-game-card-grid">
-            {gameData.inventory.filter((inventory) => gameData.catalog.find((item) => item.id === inventory.catalogItemId)?.itemType === inventorySection).map((inventory, index) => {
+            {gameData.inventory.filter((inventory) => {
+              const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
+              return item?.itemType === inventorySection && (inventorySection !== 'pet' || item.isActive);
+            }).map((inventory, index) => {
               const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
               if (!item) return null;
               const isCharacter = item.itemType === 'character';
@@ -309,8 +312,8 @@ export function ChildGamePanel({
                     </button>
                   ) : (
                     <div className="hh-game-item-actions">
-                      <button type="button" className="hh-game-action-button" disabled={mutationPending || isFollowing} onClick={() => void commitWorldMutation(() => onSetFollowingPet(inventory.id), '跟隨夥伴已更新。')}>
-                        {isFollowing ? <><Check size={16} /> 跟隨中</> : '跟隨'}
+                      <button type="button" className={`hh-game-action-button${isFollowing ? ' hh-game-action-button--danger' : ''}`} disabled={mutationPending} onClick={() => void commitWorldMutation(() => onSetFollowingPet(isFollowing ? null : inventory.id), isFollowing ? '已取消跟隨夥伴。' : '跟隨夥伴已更新。')}>
+                        {isFollowing ? <><X size={16} /> 取消跟隨</> : '跟隨'}
                       </button>
                       <button type="button" className={`hh-game-action-button${isRoaming ? ' is-selected' : ''}`} disabled={mutationPending || isFollowing || roamingMutationPending || !canRoam || roamingLimitReached} onClick={() => toggleRoamingPet(inventory.id)}>
                         <Sparkles size={16} /> {isFollowing ? '跟隨中（不可巡遊）' : isRoaming ? '巡遊中' : roamingLimitReached ? '巡遊已滿' : '巡遊'}
@@ -321,7 +324,10 @@ export function ChildGamePanel({
               );
             })}
           </div>
-          {gameData.inventory.filter((inventory) => gameData.catalog.find((item) => item.id === inventory.catalogItemId)?.itemType === inventorySection).length === 0 && (
+          {gameData.inventory.filter((inventory) => {
+            const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
+            return item?.itemType === inventorySection && (inventorySection !== 'pet' || item.isActive);
+          }).length === 0 && (
             <p className="hh-game-empty">這個分類目前還沒有物品，完成冒險後來商店看看吧。</p>
           )}
         </div>

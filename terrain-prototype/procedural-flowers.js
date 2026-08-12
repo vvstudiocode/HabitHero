@@ -45,34 +45,64 @@ export function createProceduralFlowerField(THREE, {
   stems.instanceMatrix.setUsage(THREE.StaticDrawUsage);
   field.add(stems);
 
+  const centerMesh = new THREE.InstancedMesh(
+    new THREE.CircleGeometry(1, 12),
+    new THREE.MeshStandardMaterial({
+      color: 0xffc45c,
+      roughness: 0.84,
+      side: THREE.DoubleSide,
+    }),
+    flowers.length,
+  );
+  centerMesh.name = 'wildflower-centers';
+
   FLOWER_COLORS.forEach(color => {
     const colorFlowers = flowers.filter(flower => flower.color === color);
-    const heads = new THREE.InstancedMesh(
-      new THREE.CircleGeometry(1, 5),
+    const petals = new THREE.InstancedMesh(
+      new THREE.CircleGeometry(1, 10),
       new THREE.MeshStandardMaterial({
         color: colorFlowers[0]?.colorValue ?? 0xffffff,
-        roughness: 0.9,
+        roughness: 0.86,
         side: THREE.DoubleSide,
       }),
-      colorFlowers.length,
+      colorFlowers.length * 5,
     );
-    heads.name = `wildflower-${color}-heads`;
+    petals.name = `wildflower-${color}-petals`;
     colorFlowers.forEach((flower, index) => {
-      const quaternion = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(-Math.PI / 2 + 0.14, flower.rotation, 0),
-      );
+      for (let petalIndex = 0; petalIndex < 5; petalIndex += 1) {
+        const petalAngle = flower.rotation + (petalIndex / 5) * Math.PI * 2;
+        const petalRadius = flower.size * 0.48;
+        const petalIndexInMesh = index * 5 + petalIndex;
+        setMatrix(
+          THREE,
+          petals,
+          petalIndexInMesh,
+          new THREE.Vector3(
+            flower.x + Math.cos(petalAngle) * petalRadius,
+            flower.y + flower.height,
+            flower.z + Math.sin(petalAngle) * petalRadius,
+          ),
+          new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(-Math.PI / 2 + 0.12, 0, petalAngle),
+          ),
+          new THREE.Vector3(flower.size * 0.72, flower.size * 0.48, flower.size),
+        );
+      }
       setMatrix(
         THREE,
-        heads,
-        index,
-        new THREE.Vector3(flower.x, flower.y + flower.height, flower.z),
-        quaternion,
-        new THREE.Vector3(flower.size, flower.size, flower.size),
+        centerMesh,
+        flowers.indexOf(flower),
+        new THREE.Vector3(flower.x, flower.y + flower.height + 0.004, flower.z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)),
+        new THREE.Vector3(flower.size * 0.36, flower.size * 0.36, flower.size),
       );
     });
-    heads.instanceMatrix.setUsage(THREE.StaticDrawUsage);
-    field.add(heads);
+    petals.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    field.add(petals);
   });
+
+  centerMesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+  field.add(centerMesh);
 
   return field;
 }

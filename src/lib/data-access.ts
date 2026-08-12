@@ -46,6 +46,8 @@ import {
 } from './adventure-data-access';
 import { loadChildGameData } from '../features/world/game-data';
 import type {
+  GameLootCollectionResult,
+  GameLootBatchCollectionResult,
   GamePurchaseResult,
   WorldMutationResult,
   WorldMutationPayload,
@@ -402,6 +404,8 @@ export interface DataRepository {
   fulfillTicket(ticketId: string): Promise<void>;
   recordParentConsent(familyId: string, consentVersion: string): Promise<void>;
   purchaseGameItem(childId: string, catalogItemId: string, quantity: number, idempotencyKey: string): Promise<GamePurchaseResult>;
+  collectGameLoot(childId: string, dropId: string, pickupIdempotencyKey: string): Promise<GameLootCollectionResult>;
+  collectGameLootBatch(childId: string, dropIds: string[], pickupIdempotencyKey: string): Promise<GameLootBatchCollectionResult>;
   equipGameCharacter(childId: string, inventoryItemId: string): Promise<void>;
   setFollowingPet(childId: string, inventoryItemId: string | null): Promise<WorldMutationResult>;
   setRoamingPets(childId: string, inventoryItemIds: string[]): Promise<WorldMutationResult>;
@@ -720,6 +724,50 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         inventoryItemId: result.inventory_item_id,
         walletBalance: Number(result.wallet_balance),
         quantity: Number(result.quantity),
+      };
+    },
+    async collectGameLoot(childId, dropId, pickupIdempotencyKey) {
+      const result = check(await client.rpc('collect_game_loot', {
+        target_child_profile_id: childId,
+        target_drop_id: dropId,
+        pickup_idempotency_key: pickupIdempotencyKey,
+      })) as {
+        drop_id: string;
+        kind: GameLootCollectionResult['kind'];
+        amount: number;
+        points_balance: number;
+        wallet_balance: number;
+        idempotent_replay?: boolean;
+      };
+      return {
+        dropId: result.drop_id,
+        kind: result.kind,
+        amount: Number(result.amount),
+        pointsBalance: Number(result.points_balance),
+        walletBalance: Number(result.wallet_balance),
+        idempotentReplay: Boolean(result.idempotent_replay),
+      };
+    },
+    async collectGameLootBatch(childId, dropIds, pickupIdempotencyKey) {
+      const result = check(await client.rpc('collect_game_loot_batch', {
+        target_child_profile_id: childId,
+        target_drop_ids: dropIds,
+        pickup_idempotency_key: pickupIdempotencyKey,
+      })) as {
+        drop_ids?: string[];
+        star_amount: number;
+        scroll_amount: number;
+        points_balance: number;
+        wallet_balance: number;
+        idempotent_replay?: boolean;
+      };
+      return {
+        dropIds: Array.isArray(result.drop_ids) ? result.drop_ids : [],
+        starAmount: Number(result.star_amount),
+        scrollAmount: Number(result.scroll_amount),
+        pointsBalance: Number(result.points_balance),
+        walletBalance: Number(result.wallet_balance),
+        idempotentReplay: Boolean(result.idempotent_replay),
       };
     },
     async equipGameCharacter(childId, inventoryItemId) {

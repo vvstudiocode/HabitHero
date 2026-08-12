@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Object3D } from 'three';
-import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
+import type { ChildGameData, GameCatalogItem, GameLootDrop, PetBehaviorMode } from './contracts';
+import type { LootAnimationEvent } from './game-loot';
 import {
   CENTRAL_TREE_KEEP_OUT,
   circlesOverlap,
@@ -24,6 +25,10 @@ interface TerrainWorldLayerProps {
   childId: string;
   gameData: ChildGameData;
   paused?: boolean;
+  onLootPickup?: (dropId: string) => Promise<boolean>;
+  onLootPickupBatch?: (dropIds: string[]) => Promise<string[]>;
+  onLootAnimation?: (event: LootAnimationEvent) => void;
+  onLootAnimationBatch?: (events: LootAnimationEvent[]) => void;
 }
 
 type ThreeNamespace = typeof import('three');
@@ -243,13 +248,19 @@ function createSceneGameDataSnapshot(gameData: ChildGameData): ChildGameData {
     loadout: { equippedCharacterInventoryId: null, followingPetInventoryId },
     worldEntities: gameData.worldEntities,
     worldRevision: gameData.worldRevision,
+    lootDrops: gameData.lootDrops,
   };
 }
 
-export function TerrainWorldLayer({ childId, gameData, paused = false }: TerrainWorldLayerProps) {
+export function TerrainWorldLayer({ childId, gameData, paused = false, onLootPickup, onLootPickupBatch, onLootAnimation, onLootAnimationBatch }: TerrainWorldLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<PointerInputController | null>(null);
   const pausedRef = useRef(paused);
+  const lootDropsRef = useRef<GameLootDrop[]>(gameData.lootDrops);
+  const onLootPickupRef = useRef(onLootPickup);
+  const onLootPickupBatchRef = useRef(onLootPickupBatch);
+  const onLootAnimationRef = useRef(onLootAnimation);
+  const onLootAnimationBatchRef = useRef(onLootAnimationBatch);
   const [input, setInput] = useState<WorldInputState>(() => new PointerInputController().getSnapshot());
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [loadingProgress, setLoadingProgress] = useState(12);
@@ -270,6 +281,11 @@ export function TerrainWorldLayer({ childId, gameData, paused = false }: Terrain
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneKey]);
   pausedRef.current = paused;
+  lootDropsRef.current = gameData.lootDrops;
+  onLootPickupRef.current = onLootPickup;
+  onLootPickupBatchRef.current = onLootPickupBatch;
+  onLootAnimationRef.current = onLootAnimation;
+  onLootAnimationBatchRef.current = onLootAnimationBatch;
 
   useEffect(() => {
     const controller = new PointerInputController();
@@ -311,6 +327,11 @@ export function TerrainWorldLayer({ childId, gameData, paused = false }: Terrain
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,
+      lootDropsRef,
+      onLootPickupRef,
+      onLootPickupBatchRef,
+      onLootAnimationRef,
+      onLootAnimationBatchRef,
       onStatus: setStatus,
       onProgress: (value, detail) => {
         setLoadingProgress(value);

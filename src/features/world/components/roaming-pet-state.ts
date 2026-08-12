@@ -5,7 +5,7 @@ export const MAX_ROAMING_PETS = 3;
 export function getRoamablePetInventoryIds(gameData: ChildGameData): string[] {
   const followingPetInventoryId = gameData.loadout?.followingPetInventoryId ?? null;
   const petCatalogIds = new Set(
-    gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => item.id),
+    gameData.catalog.filter((item) => item.itemType === 'pet' && item.isActive).map((item) => item.id),
   );
 
   return gameData.inventory

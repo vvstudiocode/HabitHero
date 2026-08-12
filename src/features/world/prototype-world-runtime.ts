@@ -1,10 +1,21 @@
 import type { AnimationClip, Object3D } from 'three';
-import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
+import type { ChildGameData, GameCatalogItem, GameLootDrop, PetBehaviorMode } from './contracts';
+import {
+  GAME_LOOT_STAR_GLOW_RADIUS,
+  GAME_LOOT_SCROLL_VISUAL_SCALE,
+  GAME_LOOT_STAR_VISUAL_SCALE,
+  getLootAnimationDuration,
+  getLootAnimationDelay,
+  getLootTargetStat,
+  isLootDropInPickupRange,
+  type LootAnimationEvent,
+} from './game-loot';
 import {
   buildCollisionCircles,
   CENTRAL_TREE_KEEP_OUT,
   CHARACTER_COLLISION_RADIUS,
   circlesOverlap,
+  WORLD_BOUNDARY,
   moveWorldCharacter,
   type CollisionCircle,
 } from './world-collision';
@@ -26,15 +37,36 @@ import { getProceduralFlowerCount } from '../../../terrain-prototype/procedural-
 import { createProceduralGrassField } from '../../../terrain-prototype/procedural-grass-scene.js';
 import { createProceduralFlowerField } from '../../../terrain-prototype/procedural-flowers.js';
 import { createProceduralForest } from '../../../terrain-prototype/procedural-trees.js';
+import { createAmbientPollenField, createSunlightPatchField } from '../../../terrain-prototype/natural-world-atmosphere.js';
+import { createButterflyField } from '../../../terrain-prototype/natural-world-creatures.js';
+import { createNaturalBoundaryScenery } from '../../../terrain-prototype/natural-boundary-scenery.js';
+import { createEastFairytaleScenery } from '../../../terrain-prototype/east-fairytale-scenery.js';
+import { getNaturalWorldVisualSettings } from '../../../terrain-prototype/natural-world-visuals.js';
 import {
   getWorldQuality,
   scaleWorldBudget,
   WORLD_QUALITY_SETTINGS,
 } from './world-quality';
+import {
+  chooseRoamingTarget,
+  getRoamingStep,
+  HABITHERO_ROAMING_CHARACTER_ASSET_KEY,
+  HABITHERO_ROAMING_CHARACTER_MODEL_URL,
+  HABITHERO_ROAMING_CHARACTER_PAUSE,
+  HABITHERO_ROAMING_CHARACTER_RADIUS,
+  HABITHERO_ROAMING_CHARACTER_SPEED,
+  HABITHERO_ROAMING_CHARACTER_VISUAL_SCALE,
+} from './world-roaming';
+import {
+  getFollowingStep,
+  PET_FOLLOW_DISTANCE,
+  PET_FOLLOW_SPEED,
+} from './pet-following';
 
 export const PROTOTYPE_WORLD_ASSETS = {
   tree: new URL('../../../terrain-prototype/assets/big-tree.glb', import.meta.url).href,
   character: new URL('../../../terrain-prototype/assets/anime-maiden.glb', import.meta.url).href,
+  roamingCharacter: HABITHERO_ROAMING_CHARACTER_MODEL_URL,
   skybox: new URL('../../../terrain-prototype/assets/sky-equirectangular-day.png', import.meta.url).href,
 } as const;
 
@@ -42,21 +74,80 @@ export const PROTOTYPE_WORLD_CONFIG = {
   gridSize: 9,
   terrainStep: 1.1,
   scenePadding: 8,
-  treeFitToTile: 4.8,
+  treeFitToTile: 3.6,
   treeHeightScale: 1,
   treeRootSink: 0.03,
+  treePosition: { x: 1.1, z: -1.65 },
   characterTargetHeight: 0.76 * (2 / 3),
   characterMoveSpeed: 1.1,
   cameraDistanceDefault: 4.1,
   cameraDistanceMin: 1.45,
   cameraDistanceMax: 6.5,
   cameraPitchMin: 0.12,
-  // Keep the top-of-head view at 90 degrees. A downward drag at that limit
-  // grounds the view instead of orbiting the camera over the character.
-  cameraPitchMax: Math.PI / 2,
+  // Stop one degree before vertical so a downward drag can reach the grass
+  // without moving the camera to the opposite side of the character.
+  cameraPitchMax: Math.PI * (89 / 180),
   initialCameraYaw: Math.PI / 2,
   initialCameraPitch: 0.18,
 } as const;
+
+export const PET_MAX_HEIGHT_RATIO = 0.5;
+export const PET_MAX_DIMENSION_RATIO = 0.42;
+
+export function getPetWorldScale({
+  requestedScale,
+  petHeight,
+  petSize,
+  characterHeight,
+}: {
+  requestedScale: number;
+  petHeight: number;
+  petSize?: { x: number; y: number; z: number };
+  characterHeight: number;
+}): number {
+  const safeRequestedScale = Number.isFinite(requestedScale) ? Math.max(requestedScale, 0.01) : 0.01;
+  const safePetHeight = Number.isFinite(petHeight) ? Math.max(petHeight, 0.001) : 0.001;
+  const safeCharacterHeight = Number.isFinite(characterHeight) ? Math.max(characterHeight, 0.001) : 0.001;
+  const heightScale = (safeCharacterHeight * PET_MAX_HEIGHT_RATIO) / safePetHeight;
+  const maxPetDimension = petSize
+    ? Math.max(
+      Number.isFinite(petSize.x) ? Math.abs(petSize.x) : 0,
+      Number.isFinite(petSize.y) ? Math.abs(petSize.y) : 0,
+      Number.isFinite(petSize.z) ? Math.abs(petSize.z) : 0,
+    )
+    : 0;
+  const dimensionScale = maxPetDimension > 0
+    ? (safeCharacterHeight * PET_MAX_DIMENSION_RATIO) / maxPetDimension
+    : Number.POSITIVE_INFINITY;
+  return Math.min(safeRequestedScale, heightScale, dimensionScale);
+}
+
+export const PET_MODEL_URL = '/assets/starlight-sprout-pet.glb';
+export const PET_WORLD_SCALE_MULTIPLIER = 1.3;
+export const PET_WANDER_SPEED = 0.5;
+const PET_WANDER_RETRY_DELAY = 0.22;
+const PET_WANDER_PAUSE = 0.42;
+
+export function getPetModelScale({
+  requestedScale,
+  petHeight,
+  petSize,
+  characterHeight,
+}: {
+  requestedScale: number;
+  petHeight: number;
+  petSize?: { x: number; y: number; z: number };
+  characterHeight: number;
+}): number {
+  const normalizationScale = getPetWorldScale({
+    requestedScale: Number.MAX_SAFE_INTEGER,
+    petHeight,
+    petSize,
+    characterHeight,
+  });
+  const safeRequestedScale = Number.isFinite(requestedScale) ? Math.max(requestedScale, 0.01) : 0.01;
+  return normalizationScale * safeRequestedScale;
+}
 
 type ThreeNamespace = typeof import('three');
 type RuntimeStatus = 'loading' | 'ready' | 'failed';
@@ -70,6 +161,11 @@ export interface PrototypeWorldRuntimeOptions {
   createProceduralCharacter: (THREE: ThreeNamespace, item?: GameCatalogItem) => Object3D;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
+  lootDropsRef: { current: GameLootDrop[] };
+  onLootPickupRef: { current: ((dropId: string) => Promise<boolean>) | undefined };
+  onLootPickupBatchRef: { current: ((dropIds: string[]) => Promise<string[]>) | undefined };
+  onLootAnimationRef: { current: ((event: LootAnimationEvent) => void) | undefined };
+  onLootAnimationBatchRef: { current: ((events: LootAnimationEvent[]) => void) | undefined };
   onStatus: (status: RuntimeStatus) => void;
   onProgress: (value: number, detail: string) => void;
   onReady: () => void;
@@ -206,7 +302,7 @@ function applyCentralTreeMaterialFallback(THREE: ThreeNamespace, source: Object3
   source.traverse((object) => {
     const mesh = object as {
       isMesh?: boolean;
-      material?: { map?: { image?: { width?: number; height?: number }; colorSpace?: string; needsUpdate?: boolean }; color?: { set: (value: number) => void }; roughness?: number; metalness?: number; needsUpdate?: boolean } | Array<{ map?: { image?: { width?: number; height?: number }; colorSpace?: string; needsUpdate?: boolean }; color?: { set: (value: number) => void }; roughness?: number; metalness?: number; needsUpdate?: boolean }>;
+      material?: { map?: { image?: { width?: number; height?: number }; colorSpace?: string; needsUpdate?: boolean }; color?: { set: (value: number) => void }; roughness?: number; metalness?: number; envMapIntensity?: number; flatShading?: boolean; needsUpdate?: boolean } | Array<{ map?: { image?: { width?: number; height?: number }; colorSpace?: string; needsUpdate?: boolean }; color?: { set: (value: number) => void }; roughness?: number; metalness?: number; envMapIntensity?: number; flatShading?: boolean; needsUpdate?: boolean }>;
     };
     if (!mesh.isMesh || !mesh.material) return;
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -214,16 +310,138 @@ function applyCentralTreeMaterialFallback(THREE: ThreeNamespace, source: Object3
       const image = material.map?.image;
       if (!image?.width || !image.height) {
         material.color?.set(0x9bd58d);
-        material.roughness = 0.86;
+        material.roughness = 0.88;
         material.metalness = 0;
-        material.needsUpdate = true;
       }
+      material.roughness = 0.88;
+      material.metalness = 0;
+      material.envMapIntensity = 0.26;
+      material.flatShading = true;
       if (material.map) {
         material.map.colorSpace = 'srgb';
         material.map.needsUpdate = true;
       }
+      material.needsUpdate = true;
     });
   });
+}
+
+function createPlayerGroundShadowMaterial(THREE: ThreeNamespace) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: {},
+    vertexShader: `
+      varying vec2 vShadowUv;
+      void main() {
+        vShadowUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      precision highp float;
+      varying vec2 vShadowUv;
+      void main() {
+        float distanceFromCenter = length(vShadowUv - vec2(0.5)) * 2.0;
+        float alpha = smoothstep(1.0, 0.12, distanceFromCenter) * 0.28;
+        gl_FragColor = vec4(0.02, 0.09, 0.06, alpha);
+      }
+    `,
+  });
+}
+
+type LootVisualAssets = {
+  starGeometry: InstanceType<ThreeNamespace['ExtrudeGeometry']>;
+  starMaterial: InstanceType<ThreeNamespace['MeshStandardMaterial']>;
+  glowGeometry: InstanceType<ThreeNamespace['SphereGeometry']>;
+  glowMaterial: InstanceType<ThreeNamespace['MeshBasicMaterial']>;
+  starShadowGeometry: InstanceType<ThreeNamespace['CircleGeometry']>;
+  scrollPaperGeometry: InstanceType<ThreeNamespace['BoxGeometry']>;
+  scrollPaperMaterial: InstanceType<ThreeNamespace['MeshStandardMaterial']>;
+  scrollRollGeometry: InstanceType<ThreeNamespace['CylinderGeometry']>;
+  scrollRollMaterial: InstanceType<ThreeNamespace['MeshStandardMaterial']>;
+  scrollShadowGeometry: InstanceType<ThreeNamespace['CircleGeometry']>;
+  shadowMaterial: InstanceType<ThreeNamespace['MeshBasicMaterial']>;
+};
+
+const lootVisualAssetsCache = new WeakMap<object, LootVisualAssets>();
+
+function getLootVisualAssets(THREE: ThreeNamespace): LootVisualAssets {
+  const cacheKey = THREE as unknown as object;
+  const cached = lootVisualAssetsCache.get(cacheKey);
+  if (cached) return cached;
+  const shape = new THREE.Shape();
+  const points = 10;
+  for (let index = 0; index < points; index += 1) {
+    const angle = (index / points) * Math.PI * 2 - Math.PI / 2;
+    const radius = index % 2 === 0 ? 0.17 : 0.075;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (index === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  const assets: LootVisualAssets = {
+    starGeometry: new THREE.ExtrudeGeometry(shape, { depth: 0.055, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.012, bevelThickness: 0.012 }),
+    starMaterial: new THREE.MeshStandardMaterial({ color: 0xffc928, emissive: 0xffa400, emissiveIntensity: 0.34, roughness: 0.55, metalness: 0.08 }),
+    glowGeometry: new THREE.SphereGeometry(GAME_LOOT_STAR_GLOW_RADIUS, 10, 6),
+    glowMaterial: new THREE.MeshBasicMaterial({ color: 0xffd75a, transparent: true, opacity: 0.13, depthWrite: false }),
+    starShadowGeometry: new THREE.CircleGeometry(0.14, 16),
+    scrollPaperGeometry: new THREE.BoxGeometry(0.24, 0.16, 0.045),
+    scrollPaperMaterial: new THREE.MeshStandardMaterial({ color: 0xffedb0, emissive: 0x7a4e18, emissiveIntensity: 0.08, roughness: 0.72 }),
+    scrollRollGeometry: new THREE.CylinderGeometry(0.045, 0.045, 0.19, 10),
+    scrollRollMaterial: new THREE.MeshStandardMaterial({ color: 0xd58c32, roughness: 0.62, metalness: 0.08 }),
+    scrollShadowGeometry: new THREE.CircleGeometry(0.09, 16),
+    shadowMaterial: new THREE.MeshBasicMaterial({ color: 0x173226, transparent: true, opacity: 0.18, depthWrite: false }),
+  };
+  lootVisualAssetsCache.set(cacheKey, assets);
+  return assets;
+}
+
+function createLootDropObject(THREE: ThreeNamespace, drop: GameLootDrop): Object3D {
+  const assets = getLootVisualAssets(THREE);
+  const root = new THREE.Group();
+  root.name = `loot-drop-${drop.id}`;
+  root.userData.lootDropId = drop.id;
+  root.position.set(drop.x, drop.y, drop.z);
+
+  const shadow = new THREE.Mesh(
+    drop.kind === 'star' ? assets.starShadowGeometry : assets.scrollShadowGeometry,
+    assets.shadowMaterial,
+  );
+  shadow.name = 'loot-drop-shadow';
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = -drop.y + 0.008;
+  shadow.scale.set(1, 0.58, 1);
+  root.add(shadow);
+  const visualRoot = new THREE.Group();
+  visualRoot.scale.setScalar(drop.kind === 'scroll' ? GAME_LOOT_SCROLL_VISUAL_SCALE : 1);
+  root.add(visualRoot);
+
+  if (drop.kind === 'star') {
+    const star = new THREE.Mesh(assets.starGeometry, assets.starMaterial);
+    star.name = 'loot-drop-star';
+    star.scale.setScalar(GAME_LOOT_STAR_VISUAL_SCALE);
+    star.rotation.x = -0.12;
+    star.position.z = -0.028;
+    visualRoot.add(star);
+    const glow = new THREE.Mesh(assets.glowGeometry, assets.glowMaterial);
+    glow.name = 'loot-drop-star-glow';
+    visualRoot.add(glow);
+  } else {
+    const paper = new THREE.Mesh(assets.scrollPaperGeometry, assets.scrollPaperMaterial);
+    paper.name = 'loot-drop-scroll-paper';
+    paper.position.y = 0.02;
+    visualRoot.add(paper);
+    for (const x of [-0.13, 0.13]) {
+      const roll = new THREE.Mesh(assets.scrollRollGeometry, assets.scrollRollMaterial);
+      roll.name = 'loot-drop-scroll-roll';
+      roll.rotation.z = Math.PI / 2;
+      roll.position.set(x, 0.02, 0);
+      visualRoot.add(roll);
+    }
+  }
+  return root;
 }
 
 function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineAsset>, position: { x: number; y: number; z: number }, scale: number) {
@@ -234,6 +452,80 @@ function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineA
   wrapper.scale.setScalar(scale);
   wrapper.add(model);
   return wrapper;
+}
+
+function getPetModelUrl(item: GameCatalogItem | undefined): string {
+  const metadataModel = item?.metadata.model;
+  return typeof metadataModel === 'string'
+    && metadataModel.startsWith('/assets/')
+    && metadataModel.toLowerCase().endsWith('.glb')
+    ? metadataModel
+    : PET_MODEL_URL;
+}
+
+interface PetModelInstance {
+  root: Object3D;
+  model: Object3D;
+  mixer?: import('three').AnimationMixer;
+  walkAction?: import('three').AnimationAction;
+}
+
+function createPetModel(
+  THREE: ThreeNamespace,
+  cloneSkinnedObject: (source: Object3D) => Object3D,
+  source: Object3D,
+  animations: readonly AnimationClip[],
+  characterWorldHeight: number,
+  requestedScale: number,
+): PetModelInstance {
+  const definition = defineAsset(THREE, source);
+  const model = cloneSkinnedObject(source);
+  const modelScale = getPetModelScale({
+    requestedScale,
+    petHeight: definition.size.y,
+    petSize: definition.size,
+    characterHeight: characterWorldHeight,
+  });
+  const root = new THREE.Group();
+  root.name = 'starlight-sprout-pet';
+  root.scale.setScalar(modelScale);
+  model.position.copy(definition.offset);
+
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 24),
+    new THREE.MeshBasicMaterial({ color: 0x173226, transparent: true, opacity: 0.2, depthWrite: false }),
+  );
+  shadow.name = 'starlight-sprout-pet-shadow';
+  shadow.rotation.x = -Math.PI / 2;
+  const footprint = Math.max(definition.size.x, definition.size.z, 0.08);
+  shadow.scale.set(footprint * 0.62, footprint * 0.32, 1);
+  shadow.position.y = 0.006;
+  root.add(shadow, model);
+
+  let mixer: import('three').AnimationMixer | undefined;
+  let walkAction: import('three').AnimationAction | undefined;
+  if (animations.length > 0) {
+    mixer = new THREE.AnimationMixer(model);
+    walkAction = mixer.clipAction(getAnimationClip(animations, 'walk'));
+    walkAction.setLoop(THREE.LoopRepeat, Infinity);
+    walkAction.play();
+    walkAction.paused = true;
+  }
+  return { root, model, mixer, walkAction };
+}
+
+function updatePetAnimation(
+  actor: { model: Object3D; mixer?: import('three').AnimationMixer; walkAction?: import('three').AnimationAction; animationTime: number },
+  isWalking: boolean,
+  delta: number,
+  prefersReducedMotion: boolean,
+) {
+  actor.animationTime += delta * (isWalking ? 8 : 2.4);
+  if (actor.walkAction) actor.walkAction.paused = !isWalking;
+  if (actor.mixer) actor.mixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
+  actor.model.rotation.z = prefersReducedMotion
+    ? 0
+    : Math.sin(actor.animationTime) * (isWalking ? 0.035 : 0.012);
 }
 
 function getAnimationClip(clips: readonly AnimationClip[], state: 'idle' | 'walk') {
@@ -250,16 +542,28 @@ function getPetActorState(behaviorMode: PetBehaviorMode, following: boolean) {
   return behaviorMode === 'wander' ? 'wandering' as const : 'idle' as const;
 }
 
-function chooseWanderTarget(current: { x: number; z: number }, radius: number, obstacles: readonly CollisionCircle[]) {
-  const limit = 4.8 - radius - 0.08;
-  const minimumDistance = Math.max(0.45, radius * 1.75);
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const candidate = { x: (Math.random() * 2 - 1) * limit, z: (Math.random() * 2 - 1) * limit };
-    if (Math.hypot(candidate.x - current.x, candidate.z - current.z) < minimumDistance) continue;
-    if (obstacles.some((obstacle) => circlesOverlap({ ...candidate, radius }, obstacle))) continue;
-    return candidate;
-  }
-  return undefined;
+function isWalkablePetPosition(position: { x: number; z: number }, radius: number, obstacles: readonly CollisionCircle[]) {
+  return Math.abs(position.x) + radius <= WORLD_BOUNDARY
+    && Math.abs(position.z) + radius <= WORLD_BOUNDARY
+    && !obstacles.some((obstacle) => circlesOverlap({ ...position, radius }, obstacle));
+}
+
+function getSafePetSpawnPosition(
+  current: { x: number; z: number },
+  radius: number,
+  obstacles: readonly CollisionCircle[],
+) {
+  if (isWalkablePetPosition(current, radius, obstacles)) return current;
+  const candidates = [
+    { x: -3.4, z: -3.2 },
+    { x: 0, z: -3.2 },
+    { x: 3.4, z: -3.2 },
+    { x: -3.4, z: 3.2 },
+    { x: 3.4, z: 3.2 },
+  ];
+  return candidates.find((candidate) => isWalkablePetPosition(candidate, radius, obstacles))
+    ?? chooseRoamingTarget({ x: 0, z: -3.2 }, radius, obstacles)
+    ?? { x: 0, z: -3.2 };
 }
 
 export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): PrototypeWorldRuntime {
@@ -272,6 +576,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let loadingAbortController: AbortController | undefined;
   let removeListeners: (() => void) | undefined;
   let removeContextLostListener: (() => void) | undefined;
+  let threeNamespace: ThreeNamespace | undefined;
+  let dracoDecoderLoader: { setDecoderPath: (path: string) => unknown; dispose: () => void } | undefined;
   const disposalTracker = createDisposalTracker();
   const resourceRoots: DisposableScene[] = [];
 
@@ -295,17 +601,23 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     resourceRoots.forEach((root) => disposeObject3D(root, disposalTracker));
     if (scene && renderer) disposeScene(scene, renderer, disposalTracker);
     else if (scene) disposeObject3D(scene, disposalTracker);
+    dracoDecoderLoader?.dispose();
+    dracoDecoderLoader = undefined;
     disposeTexture(skyboxTexture, disposalTracker);
+    if (threeNamespace) lootVisualAssetsCache.delete(threeNamespace as unknown as object);
     renderer = undefined;
     scene = undefined;
   };
 
   const setup = async () => {
     let mixer: import('three').AnimationMixer | undefined;
+    let roamingMixer: import('three').AnimationMixer | undefined;
+    let roamingWalkAction: import('three').AnimationAction | undefined;
     try {
       options.onStatus('loading');
       options.onProgress(10, '讀取草地與大樹模型…');
       const THREE = await import('three');
+      threeNamespace = THREE;
       if (disposed) return;
 
       // The world is mounted inside the dashboard hero. Wait for that layer's
@@ -322,6 +634,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         hardwareConcurrency: deviceNavigator.hardwareConcurrency,
       });
       const qualitySettings = WORLD_QUALITY_SETTINGS[quality];
+      const visualSettings = getNaturalWorldVisualSettings(quality);
       const contextAttributes = { antialias: true, alpha: false };
       const webglContext = options.canvas.getContext('webgl2', contextAttributes)
         ?? options.canvas.getContext('webgl', contextAttributes);
@@ -331,7 +644,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       rendererInstance.setPixelRatio(Math.min(window.devicePixelRatio || 1, qualitySettings.maxPixelRatio));
       rendererInstance.outputColorSpace = THREE.SRGBColorSpace;
       rendererInstance.toneMapping = THREE.ACESFilmicToneMapping;
-      rendererInstance.toneMappingExposure = 1.15;
+      rendererInstance.toneMappingExposure = visualSettings.exposure;
       rendererInstance.shadowMap.enabled = qualitySettings.shadows;
       rendererInstance.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -348,8 +661,12 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
       const worldScene = new THREE.Scene();
       scene = worldScene;
-      worldScene.background = new THREE.Color(0x2d9fe3);
-      worldScene.fog = new THREE.Fog(new THREE.Color(0x9cd3ee), 9, 23);
+      worldScene.background = new THREE.Color(visualSettings.backgroundColor);
+      worldScene.fog = new THREE.Fog(
+        new THREE.Color(visualSettings.fogColor),
+        visualSettings.fogNear,
+        visualSettings.fogFar,
+      );
       const texture = new THREE.TextureLoader().load(
         PROTOTYPE_WORLD_ASSETS.skybox,
         (loadedTexture) => {
@@ -361,15 +678,25 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           loadedTexture.mapping = THREE.EquirectangularReflectionMapping;
           loadedTexture.needsUpdate = true;
           worldScene.background = loadedTexture;
+          worldScene.environment = loadedTexture;
+          worldScene.environmentIntensity = visualSettings.environmentIntensity;
         },
       );
       skyboxTexture = texture;
 
       const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-      worldScene.add(new THREE.HemisphereLight(0xdffbff, 0x456d42, 2.1));
-      const sun = new THREE.DirectionalLight(0xffdda0, 3.2);
-      sun.position.set(-4, 2.9, -14);
+      worldScene.add(new THREE.HemisphereLight(
+        visualSettings.hemisphereSkyColor,
+        visualSettings.hemisphereGroundColor,
+        visualSettings.hemisphereIntensity,
+      ));
+      const sun = new THREE.DirectionalLight(visualSettings.sunColor, visualSettings.sunIntensity);
+      sun.position.set(...visualSettings.sunPosition);
+      sun.target.position.set(0, 0, 0);
+      worldScene.add(sun.target);
       sun.castShadow = qualitySettings.shadows;
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.018;
       sun.shadow.mapSize.set(qualitySettings.shadowMapSize, qualitySettings.shadowMapSize);
       sun.shadow.camera.left = -10;
       sun.shadow.camera.right = 10;
@@ -382,7 +709,12 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       loadingAbortController = new AbortController();
       const signal = loadingAbortController.signal;
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+      const { DRACOLoader } = await import('three/examples/jsm/loaders/DRACOLoader.js');
+      const { clone: cloneSkinnedObject } = await import('three/examples/jsm/utils/SkeletonUtils.js');
       const loader = new GLTFLoader();
+      dracoDecoderLoader = new DRACOLoader();
+      dracoDecoderLoader.setDecoderPath('/draco/');
+      loader.setDRACOLoader(dracoDecoderLoader);
       const treeResult = await loadGltfSafely<{ scene: Object3D }>(loader, PROTOTYPE_WORLD_ASSETS.tree, signal);
       const treeSource = treeResult.scene;
       if (!trackResourceRoot(treeSource)) return;
@@ -390,6 +722,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       options.onProgress(54, '生成森林邊界…');
       let characterSource: Object3D;
       let characterAnimations: AnimationClip[] = [];
+      let roamingCharacterAnimations: AnimationClip[] = [];
       if (options.characterRenderMode === 'anime-maiden' || options.characterRenderMode === 'world-glb') {
         const characterUrl = options.characterModelUrl ?? PROTOTYPE_WORLD_ASSETS.character;
         const characterResult = await loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, characterUrl, signal);
@@ -401,6 +734,47 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (!trackResourceRoot(characterSource)) return;
       } else {
         throw new Error(`Unsupported character render mode: ${options.characterRenderMode}`);
+      }
+      let roamingCharacterSource: Object3D | undefined;
+      options.onProgress(58, '邀請芽芽旅行者進入世界…');
+      try {
+        const roamingResult = await loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, PROTOTYPE_WORLD_ASSETS.roamingCharacter, signal);
+        if (trackResourceRoot(roamingResult.scene)) roamingCharacterSource = roamingResult.scene;
+        roamingCharacterAnimations = roamingResult.animations;
+      } catch (error) {
+        if (!disposed && !signal.aborted) console.warn(`Unable to load roaming character ${HABITHERO_ROAMING_CHARACTER_ASSET_KEY}; keeping the world playable.`, error);
+      }
+      if (disposed) return;
+
+      const followingPetInventoryId = options.gameData.loadout?.followingPetInventoryId;
+      const followingPetInventory = followingPetInventoryId
+        ? options.gameData.inventory.find((inventory) => inventory.id === followingPetInventoryId)
+        : undefined;
+      const followingPet = followingPetInventory
+        ? options.gameData.catalog.find((item) => item.id === followingPetInventory.catalogItemId && item.itemType === 'pet')
+        : undefined;
+      const petCatalogById = new Map(options.gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => [item.id, item]));
+      const petModelEntries = new Map<string, string>();
+      const registerPetModel = (item: GameCatalogItem | undefined, assetKey?: string) => {
+        const resolvedAssetKey = item?.assetKey ?? assetKey;
+        if (resolvedAssetKey) petModelEntries.set(resolvedAssetKey, getPetModelUrl(item));
+      };
+      registerPetModel(followingPet);
+      options.gameData.worldEntities
+        .filter((entity) => entity.entityKind === 'pet')
+        .forEach((entity) => registerPetModel(entity.catalogItemId ? petCatalogById.get(entity.catalogItemId) : undefined, entity.assetKey));
+      const petModelSources = new Map<string, { scene: Object3D; animations: AnimationClip[] }>();
+      const petModelUrls = [...new Set(petModelEntries.values())];
+      if (petModelUrls.length > 0) {
+        options.onProgress(64, '讀取星芽獸木偶模型…');
+        await Promise.all(petModelUrls.map(async (modelUrl) => {
+          try {
+            const petResult = await loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, modelUrl, signal);
+            if (trackResourceRoot(petResult.scene)) petModelSources.set(modelUrl, petResult);
+          } catch (error) {
+            if (!disposed && !signal.aborted) console.warn(`Unable to load pet model ${modelUrl}; skipping that pet.`, error);
+          }
+        }));
       }
       if (disposed) return;
 
@@ -424,6 +798,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           'grass',
         ),
         outerDensityMultiplier: qualitySettings.outerDensityMultiplier,
+        boundaryDensityMultiplier: qualitySettings.boundaryDensityMultiplier,
+        sunDirection: visualSettings.sunDirection,
+        sunColor: visualSettings.sunColor,
+        ambientColor: visualSettings.grassAmbientColor,
       });
       terrain.add(proceduralGrass.ground, proceduralGrass.mesh);
       terrain.add(createProceduralFlowerField(THREE, {
@@ -436,8 +814,24 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           'flower',
         ),
       }));
+      const ambientPollen = createAmbientPollenField(THREE, {
+        fieldSize: terrainWidth * 0.9,
+        count: visualSettings.pollenCount,
+        opacity: visualSettings.pollenOpacity,
+      });
+      terrain.add(ambientPollen.points);
+      const sunlightPatches = createSunlightPatchField(THREE, {
+        color: visualSettings.sunlightPatchColor,
+        opacity: visualSettings.sunlightPatchOpacity,
+        count: visualSettings.sunlightPatchCount,
+      });
+      terrain.add(sunlightPatches.group);
       const treeScale = (terrainStep * PROTOTYPE_WORLD_CONFIG.treeFitToTile) / Math.max(treeDefinition.size.x, treeDefinition.size.z);
-      const tree = placeAsset(THREE, treeDefinition, { x: 0, y: -PROTOTYPE_WORLD_CONFIG.treeRootSink, z: 0 }, treeScale);
+      const tree = placeAsset(THREE, treeDefinition, {
+        x: PROTOTYPE_WORLD_CONFIG.treePosition.x,
+        y: -PROTOTYPE_WORLD_CONFIG.treeRootSink,
+        z: PROTOTYPE_WORLD_CONFIG.treePosition.z,
+      }, treeScale);
       tree.scale.y *= PROTOTYPE_WORLD_CONFIG.treeHeightScale;
       terrain.add(tree);
       const centralTreeHeight = treeDefinition.size.y * treeScale * PROTOTYPE_WORLD_CONFIG.treeHeightScale;
@@ -447,6 +841,23 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         heightLimit: centralTreeHeight * 0.5,
         layers: qualitySettings.forestLayers,
       }));
+      terrain.add(createNaturalBoundaryScenery(THREE, {
+        boundary: terrainLimit,
+        quality,
+      }).group);
+      const eastFairytaleScenery = createEastFairytaleScenery(THREE, { quality });
+      terrain.add(eastFairytaleScenery.group);
+      const butterflies = createButterflyField(THREE, {
+        count: visualSettings.butterflyCount,
+        center: {
+          x: PROTOTYPE_WORLD_CONFIG.treePosition.x,
+          z: PROTOTYPE_WORLD_CONFIG.treePosition.z,
+        },
+        radius: 0.9,
+        minHeight: 0.78,
+        maxHeight: 1.35,
+      });
+      terrain.add(butterflies.group);
       worldScene.add(terrain);
 
       const playerRoot = new THREE.Group();
@@ -463,13 +874,69 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       worldScene.add(playerRoot);
 
       const playerMarker = new THREE.Mesh(
-        new THREE.CircleGeometry(0.16, 32),
-        new THREE.MeshBasicMaterial({ color: 0x1d665b, transparent: true, opacity: 0.24 }),
+        new THREE.CircleGeometry(0.2, 32),
+        createPlayerGroundShadowMaterial(THREE),
       );
       playerMarker.name = 'player-ground-shadow';
       playerMarker.rotation.x = -Math.PI / 2;
+      playerMarker.scale.set(1.2, 0.74, 1);
       playerMarker.position.y = 0.006;
       playerRoot.add(playerMarker);
+
+      let roamingActor: {
+        object: import('three').Group;
+        model: Object3D;
+        baseModelY: number;
+        target: { x: number; z: number } | null;
+        nextDecisionAt: number;
+        animationTime: number;
+        facing: { x: number; z: number };
+      } | undefined;
+      if (roamingCharacterSource) {
+        const roamingDefinition = defineAsset(THREE, roamingCharacterSource);
+        // Object3D.clone(true) leaves SkinnedMesh.skeleton pointing at the
+        // source rig, so the mixer can advance while the visible mesh stays in
+        // its bind pose. SkeletonUtils.clone remaps every bone to this actor.
+        const roamingModel = cloneSkinnedObject(roamingCharacterSource);
+        const roamingRoot = new THREE.Group();
+        roamingRoot.name = 'habithero-roaming-character';
+        roamingRoot.position.set(-2.4, 0, 0.1);
+        roamingRoot.scale.setScalar(
+          (PROTOTYPE_WORLD_CONFIG.characterTargetHeight / Math.max(roamingDefinition.size.y, 0.001))
+          * HABITHERO_ROAMING_CHARACTER_VISUAL_SCALE,
+        );
+        roamingModel.position.copy(roamingDefinition.offset);
+        roamingRoot.add(roamingModel);
+        if (roamingCharacterAnimations.length > 0) {
+          roamingMixer = new THREE.AnimationMixer(roamingModel);
+          const walkClip = getAnimationClip(roamingCharacterAnimations, 'walk');
+          if (walkClip) {
+            roamingWalkAction = roamingMixer.clipAction(walkClip);
+            roamingWalkAction.setLoop(THREE.LoopRepeat, Infinity);
+            roamingWalkAction.play();
+            roamingWalkAction.paused = false;
+          }
+        }
+        const roamingMarker = new THREE.Mesh(
+          new THREE.CircleGeometry(0.2, 32),
+          createPlayerGroundShadowMaterial(THREE),
+        );
+        roamingMarker.name = 'habithero-roaming-character-shadow';
+        roamingMarker.rotation.x = -Math.PI / 2;
+        roamingMarker.scale.set(1.08, 0.7, 1);
+        roamingMarker.position.y = 0.006;
+        roamingRoot.add(roamingMarker);
+        worldScene.add(roamingRoot);
+        roamingActor = {
+          object: roamingRoot,
+          model: roamingModel,
+          baseModelY: roamingModel.position.y,
+          target: null,
+          nextDecisionAt: 0,
+          animationTime: 0,
+          facing: { x: 0, z: 1 },
+        };
+      }
 
       if (characterAnimations.length > 0) {
         mixer = new THREE.AnimationMixer(characterSource);
@@ -496,42 +963,103 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         .filter((entity) => entity.entityKind === 'decoration')
         .map((entity) => ({ positionX: entity.x, positionZ: entity.z, collisionRadius: entity.collisionRadius ?? 0.3, scale: entity.scale })));
       const wanderObstacles = [CENTRAL_TREE_KEEP_OUT, ...decorationCollisions];
-      const followingPetInventoryId = options.gameData.loadout?.followingPetInventoryId;
-      const followingPetInventory = followingPetInventoryId
-        ? options.gameData.inventory.find((inventory) => inventory.id === followingPetInventoryId)
-        : undefined;
-      const followingPet = followingPetInventory
-        ? options.gameData.catalog.find((item) => item.id === followingPetInventory.catalogItemId && item.itemType === 'pet')
-        : undefined;
-      const petActors: Array<{ mesh: import('three').Mesh; behaviorMode: PetBehaviorMode; follow: boolean; radius: number; state: 'following' | 'wandering' | 'idle'; target: { x: number; z: number } | null; nextDecisionAt: number }> = [];
-      options.gameData.worldEntities.forEach((entity) => {
+      const characterWorldHeight = characterDefinition.size.y * characterScale;
+      const petActors: Array<{
+        object: import('three').Object3D;
+        model: Object3D;
+        mixer?: import('three').AnimationMixer;
+        walkAction?: import('three').AnimationAction;
+        behaviorMode: PetBehaviorMode;
+        follow: boolean;
+        radius: number;
+        baseY: number;
+        animationTime: number;
+        facing: { x: number; z: number };
+        state: 'following' | 'wandering' | 'idle';
+        target: { x: number; z: number } | null;
+        nextDecisionAt: number;
+      }> = [];
+      options.gameData.worldEntities.filter((entity) => entity.isActive).forEach((entity) => {
         const isPet = entity.entityKind === 'pet';
-        const mesh = new THREE.Mesh(
-          isPet ? new THREE.SphereGeometry(0.26, 12, 8) : new THREE.CylinderGeometry(0.22, 0.3, 0.55, 8),
-          new THREE.MeshStandardMaterial({ color: isPet ? 0xf5b75a : 0xe87972, roughness: 0.9 }),
-        );
-        mesh.position.set(entity.x, entity.y + (isPet ? 0.28 : 0.3), entity.z);
-        mesh.rotation.y = entity.rotationY;
-        mesh.scale.setScalar(entity.scale);
-        mesh.castShadow = true;
-        worldScene.add(mesh);
+        const catalogItem = entity.catalogItemId ? petCatalogById.get(entity.catalogItemId) : undefined;
+        const petModelSource = isPet ? petModelSources.get(getPetModelUrl(catalogItem)) : undefined;
+        const petWorldScale = Math.max(entity.scale, 0.01) * PET_WORLD_SCALE_MULTIPLIER;
+        const petRadius = Math.max(entity.collisionRadius ?? 0.28, 0.08) * petWorldScale;
+        const petModel = isPet && petModelSource
+          ? createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, petWorldScale)
+          : undefined;
+        if (isPet && !petModel) return;
+        const object = isPet
+          ? petModel!.root
+          : new THREE.Mesh(
+            new THREE.CylinderGeometry(0.22, 0.3, 0.55, 8),
+            new THREE.MeshStandardMaterial({ color: 0xe87972, roughness: 0.9 }),
+          );
+        if (!isPet) {
+          object.position.set(entity.x, entity.y + 0.3, entity.z);
+          object.rotation.y = entity.rotationY;
+          object.scale.setScalar(entity.scale);
+        } else {
+          const spawn = getSafePetSpawnPosition({ x: entity.x, z: entity.z }, petRadius, wanderObstacles);
+          object.position.set(spawn.x, entity.y, spawn.z);
+          object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
+        }
+        if (!isPet) (object as Object3D & { castShadow?: boolean }).castShadow = true;
+        worldScene.add(object);
         if (isPet) {
           const follow = entity.inventoryItemId === followingPetInventoryId;
-          petActors.push({ mesh, behaviorMode: entity.behaviorMode, follow, radius: entity.collisionRadius ?? 0.28, state: getPetActorState(entity.behaviorMode, follow), target: null, nextDecisionAt: 0 });
+          petActors.push({ object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, behaviorMode: entity.behaviorMode, follow, radius: petRadius, baseY: entity.y, animationTime: 0, facing: { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) }, state: getPetActorState(entity.behaviorMode, follow), target: null, nextDecisionAt: 0 });
         }
       });
       if (followingPet && !petActors.some((actor) => actor.follow)) {
-        const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 8), new THREE.MeshStandardMaterial({ color: 0x8ec5ff, roughness: 0.9 }));
-        mesh.position.set(playerRoot.position.x - 0.7, 0.28, playerRoot.position.z + 0.7);
-        mesh.castShadow = true;
-        worldScene.add(mesh);
-        petActors.push({ mesh, behaviorMode: 'idle', follow: true, radius: followingPet.collisionRadius, state: 'following', target: null, nextDecisionAt: 0 });
+        const petModelSource = petModelSources.get(getPetModelUrl(followingPet));
+        if (petModelSource) {
+          const petModel = createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, followingPet.maxScale * PET_WORLD_SCALE_MULTIPLIER);
+          const object = petModel.root;
+          const initialFacing = { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) };
+          const initialFollowDistance = Math.max(
+            PET_FOLLOW_DISTANCE,
+            CHARACTER_COLLISION_RADIUS + followingPet.collisionRadius * PET_WORLD_SCALE_MULTIPLIER + 0.12,
+          );
+          object.position.set(
+            playerRoot.position.x - initialFacing.x * initialFollowDistance,
+            0,
+            playerRoot.position.z - initialFacing.z * initialFollowDistance,
+          );
+          worldScene.add(object);
+          petActors.push({ object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, behaviorMode: 'idle', follow: true, radius: followingPet.collisionRadius * PET_WORLD_SCALE_MULTIPLIER, baseY: 0, animationTime: 0, facing: { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) }, state: 'following', target: null, nextDecisionAt: 0 });
+        }
       }
+
+      const lootDropObjects = new Map<string, Object3D>();
+      const collectingLootIds = new Set<string>();
+      const claimedLootIds = new Set<string>();
+      const syncLootDrops = () => {
+        const currentDrops = options.lootDropsRef.current;
+        const liveIds = new Set(currentDrops.map((drop) => drop.id));
+        for (const [dropId, object] of lootDropObjects) {
+          if (!liveIds.has(dropId) || claimedLootIds.has(dropId) || collectingLootIds.has(dropId)) {
+            object.visible = false;
+            continue;
+          }
+          const drop = currentDrops.find((candidate) => candidate.id === dropId);
+          if (drop) {
+            object.position.set(drop.x, drop.y, drop.z);
+            object.visible = true;
+          }
+        }
+        for (const drop of currentDrops) {
+          if (claimedLootIds.has(drop.id) || collectingLootIds.has(drop.id) || lootDropObjects.has(drop.id)) continue;
+          const object = createLootDropObject(THREE, drop);
+          worldScene.add(object);
+          lootDropObjects.set(drop.id, object);
+        }
+      };
+      syncLootDrops();
 
       let cameraYaw = PROTOTYPE_WORLD_CONFIG.initialCameraYaw;
       let cameraPitch: number = PROTOTYPE_WORLD_CONFIG.initialCameraPitch;
       let cameraDistance: number = PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault;
-      let cameraGrounding = 0;
       let sceneElapsedTime = 0;
       const previousPlayerPosition = new THREE.Vector3().copy(playerRoot.position);
       let playerGrassInteraction = { direction: { x: 0, z: 1 }, strength: 0 };
@@ -552,11 +1080,107 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const rect = options.canvas.getBoundingClientRect();
         return { x: event.clientX - rect.left, y: event.clientY - rect.top };
       };
+      const lootRaycaster = new THREE.Raycaster();
+      const lootPointer = new THREE.Vector2();
+      const getLootDropIdFromObject = (object: Object3D | undefined): string | undefined => {
+        let current = object;
+        while (current) {
+          const lootDropId = current.userData?.lootDropId;
+          if (typeof lootDropId === 'string') return lootDropId;
+          current = current.parent ?? undefined;
+        }
+        return undefined;
+      };
+      const getLootDropAtPoint = (point: { x: number; y: number }) => {
+        const rect = options.canvas.getBoundingClientRect();
+        lootPointer.set(
+          (point.x / Math.max(rect.width, 1)) * 2 - 1,
+          -(point.y / Math.max(rect.height, 1)) * 2 + 1,
+        );
+        lootRaycaster.setFromCamera(lootPointer, camera);
+        const hit = lootRaycaster.intersectObjects([...lootDropObjects.values()], true).find((entry) => entry.object.visible);
+        return getLootDropIdFromObject(hit?.object);
+      };
+      const getScreenPointForLoot = (drop: GameLootDrop, object: Object3D) => {
+        const rect = options.canvas.getBoundingClientRect();
+        const worldPoint = new THREE.Vector3(drop.x, drop.y + 0.08, drop.z);
+        object.getWorldPosition(worldPoint);
+        worldPoint.project(camera);
+        return {
+          x: rect.left + ((worldPoint.x + 1) / 2) * rect.width,
+          y: rect.top + ((-worldPoint.y + 1) / 2) * rect.height,
+        };
+      };
+      const getLootHudTarget = (kind: GameLootDrop['kind']) => {
+        const stat = document.querySelector<HTMLElement>(`[data-hh-stat-target="${getLootTargetStat(kind)}"]`);
+        if (stat) {
+          const rect = stat.getBoundingClientRect();
+          return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        }
+        const rect = options.canvas.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      };
+      const requestLootPickupBatch = async (dropIds: string[]) => {
+        const pickupBatch = options.onLootPickupBatchRef.current;
+        const pickupSingle = options.onLootPickupRef.current;
+        if (!pickupBatch && !pickupSingle) return;
+        const drops = dropIds.map((dropId) => {
+          const drop = options.lootDropsRef.current.find((candidate) => candidate.id === dropId);
+          const object = lootDropObjects.get(dropId);
+          return drop && object && object.visible && !collectingLootIds.has(dropId) && !claimedLootIds.has(dropId)
+            ? { drop, object }
+            : undefined;
+        }).filter((entry): entry is { drop: GameLootDrop; object: Object3D } => Boolean(entry));
+        if (drops.length === 0) return;
+        drops.forEach(({ drop }) => collectingLootIds.add(drop.id));
+        const events = drops.map(({ drop, object }, index): LootAnimationEvent => ({
+          id: `${drop.id}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+          dropId: drop.id,
+          kind: drop.kind,
+          amount: drop.amount,
+          from: getScreenPointForLoot(drop, object),
+          to: getLootHudTarget(drop.kind),
+          durationMs: getLootAnimationDuration(prefersReducedMotion),
+          delayMs: getLootAnimationDelay(index, prefersReducedMotion),
+        }));
+        if (options.onLootAnimationBatchRef.current) options.onLootAnimationBatchRef.current(events);
+        else events.forEach((event) => options.onLootAnimationRef.current?.(event));
+        syncLootDrops();
+        let collectedIds: string[] = [];
+        try {
+          if (pickupBatch) {
+            collectedIds = await pickupBatch(drops.map(({ drop }) => drop.id));
+          } else if (pickupSingle) {
+            for (const { drop } of drops) {
+              if (await pickupSingle(drop.id)) collectedIds.push(drop.id);
+            }
+          }
+        } catch {
+          collectedIds = [];
+        }
+        const collected = new Set(collectedIds);
+        drops.forEach(({ drop }) => {
+          collectingLootIds.delete(drop.id);
+          if (collected.has(drop.id)) claimedLootIds.add(drop.id);
+        });
+        syncLootDrops();
+      };
+      const requestLootPickup = (dropId: string) => {
+        void requestLootPickupBatch([dropId]);
+      };
+      let lootPointerState: { pointerId: number; dropId: string; startX: number; startY: number; moved: boolean } | null = null;
       const onPointerDown = (event: PointerEvent) => {
         if (options.pausedRef.current || isInteractiveTarget(event.target)) return;
+        const point = pointFromEvent(event);
+        const lootDropId = getLootDropAtPoint(point);
+        if (lootDropId) {
+          event.preventDefault();
+          options.canvas.setPointerCapture(event.pointerId);
+          lootPointerState = { pointerId: event.pointerId, dropId: lootDropId, startX: point.x, startY: point.y, moved: false };
+          return;
+        }
         event.preventDefault();
         options.canvas.setPointerCapture(event.pointerId);
-        const point = pointFromEvent(event);
         const rect = options.canvas.getBoundingClientRect();
         controller?.dispatch({
           type: 'pointer-down',
@@ -568,9 +1192,21 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       const onPointerMove = (event: PointerEvent) => {
         if (options.pausedRef.current) return;
-        controller?.dispatch({ type: 'pointer-move', pointerId: event.pointerId, point: pointFromEvent(event) });
+        const point = pointFromEvent(event);
+        if (lootPointerState?.pointerId === event.pointerId) {
+          if (Math.hypot(point.x - lootPointerState.startX, point.y - lootPointerState.startY) > 10) lootPointerState.moved = true;
+          return;
+        }
+        controller?.dispatch({ type: 'pointer-move', pointerId: event.pointerId, point });
       };
       const onPointerEnd = (event: PointerEvent) => {
+        if (lootPointerState?.pointerId === event.pointerId) {
+          const state = lootPointerState;
+          lootPointerState = null;
+          if (event.type === 'pointerup' && !state.moved) void requestLootPickup(state.dropId);
+          if (options.canvas.hasPointerCapture(event.pointerId)) options.canvas.releasePointerCapture(event.pointerId);
+          return;
+        }
         controller?.dispatch({ type: event.type === 'pointercancel' ? 'pointer-cancel' : 'pointer-up', pointerId: event.pointerId });
         if (options.canvas.hasPointerCapture(event.pointerId)) options.canvas.releasePointerCapture(event.pointerId);
       };
@@ -630,13 +1266,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const cameraDelta = controller?.consumeCameraDeltas();
           if (cameraDelta && (cameraDelta.cameraDelta.x !== 0 || cameraDelta.cameraDelta.y !== 0)) {
             const nextCamera = applySinglePointerCameraDrag(
-              { yaw: cameraYaw, pitch: cameraPitch, grounding: cameraGrounding },
+              { yaw: cameraYaw, pitch: cameraPitch },
               { dx: cameraDelta.cameraDelta.x, dy: cameraDelta.cameraDelta.y },
-              { pitchMin: PROTOTYPE_WORLD_CONFIG.cameraPitchMin, pitchMax: PROTOTYPE_WORLD_CONFIG.cameraPitchMax },
+              {
+                pitchMin: PROTOTYPE_WORLD_CONFIG.cameraPitchMin,
+                pitchMax: PROTOTYPE_WORLD_CONFIG.cameraPitchMax,
+              },
             );
             cameraYaw = nextCamera.yaw;
             cameraPitch = nextCamera.pitch;
-            cameraGrounding = nextCamera.grounding;
           }
           if (cameraDelta?.zoomDelta) cameraDistance = Math.min(PROTOTYPE_WORLD_CONFIG.cameraDistanceMax, Math.max(PROTOTYPE_WORLD_CONFIG.cameraDistanceMin, cameraDistance - cameraDelta.zoomDelta * 0.012));
           const keyboardCamera = getKeyboardCameraInput(keys);
@@ -646,7 +1284,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               PROTOTYPE_WORLD_CONFIG.cameraPitchMax,
               Math.max(PROTOTYPE_WORLD_CONFIG.cameraPitchMin, cameraPitch + keyboardCamera.pitch * delta * 1.2),
             );
-            cameraGrounding = 0;
           }
           if (keyboardCamera.zoom) {
             cameraDistance = Math.min(
@@ -681,54 +1318,162 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         grassInteractors[0].direction = playerGrassInteraction.direction;
         grassInteractors[0].strength = playerGrassInteraction.strength;
         proceduralGrass.update({ time: sceneElapsedTime, motionScale: grassMotionScale, interactors: grassInteractors });
+        ambientPollen.update(sceneElapsedTime);
+        butterflies.update(sceneElapsedTime);
+        eastFairytaleScenery.update(sceneElapsedTime);
         const now = clock.elapsedTime;
+        syncLootDrops();
+        for (const [dropId, object] of lootDropObjects) {
+          if (!object.visible) continue;
+          const drop = options.lootDropsRef.current.find((candidate) => candidate.id === dropId);
+          if (!drop) continue;
+          const bob = prefersReducedMotion ? 0 : Math.sin(sceneElapsedTime * 3.2 + dropId.length) * 0.035;
+          object.position.y = drop.y + bob;
+          object.rotation.y += delta * (drop.kind === 'star' ? 0.9 : 0.45);
+        }
+        const touchCollectedDropIds: string[] = [];
+        for (const drop of options.lootDropsRef.current) {
+          const object = lootDropObjects.get(drop.id);
+          if (
+            !object
+            || !object.visible
+            || collectingLootIds.has(drop.id)
+            || claimedLootIds.has(drop.id)
+            || !isLootDropInPickupRange(playerRoot.position, drop, CHARACTER_COLLISION_RADIUS)
+          ) continue;
+          touchCollectedDropIds.push(drop.id);
+        }
+        if (touchCollectedDropIds.length > 0) void requestLootPickupBatch(touchCollectedDropIds);
+        if (roamingActor) {
+          const current = { x: roamingActor.object.position.x, z: roamingActor.object.position.z };
+          if (!roamingActor.target && now >= roamingActor.nextDecisionAt) {
+            roamingActor.target = chooseRoamingTarget(current, HABITHERO_ROAMING_CHARACTER_RADIUS, wanderObstacles);
+            roamingActor.nextDecisionAt = roamingActor.target ? now : now + 1.5;
+          }
+          const isWalking = Boolean(roamingActor.target);
+          if (roamingActor.target) {
+            const step = getRoamingStep(
+              current,
+              roamingActor.target,
+              delta,
+              HABITHERO_ROAMING_CHARACTER_RADIUS,
+              HABITHERO_ROAMING_CHARACTER_SPEED * (prefersReducedMotion ? 0.45 : 1),
+              wanderObstacles,
+            );
+            roamingActor.object.position.x = step.next.x;
+            roamingActor.object.position.z = step.next.z;
+            if (step.arrived || step.blocked) {
+              roamingActor.target = null;
+              roamingActor.nextDecisionAt = now + (step.arrived ? HABITHERO_ROAMING_CHARACTER_PAUSE : PET_WANDER_RETRY_DELAY);
+            } else {
+              roamingActor.facing = step.facing;
+              const targetYaw = Math.atan2(step.facing.x, step.facing.z);
+              const yawDelta = Math.atan2(
+                Math.sin(targetYaw - roamingActor.object.rotation.y),
+                Math.cos(targetYaw - roamingActor.object.rotation.y),
+              );
+              roamingActor.object.rotation.y += yawDelta * Math.min(1, delta * 8);
+            }
+          }
+          roamingActor.animationTime += delta * (isWalking ? 8 : 2.4);
+          if (roamingWalkAction) roamingWalkAction.paused = !isWalking;
+          const bob = prefersReducedMotion
+            ? 0
+            : isWalking
+              ? Math.abs(Math.sin(roamingActor.animationTime)) * 0.018
+              : Math.sin(roamingActor.animationTime) * 0.006;
+          roamingActor.model.position.y = roamingActor.baseModelY + bob;
+          roamingActor.model.rotation.z = prefersReducedMotion
+            ? 0
+            : Math.sin(roamingActor.animationTime) * (isWalking ? 0.035 : 0.012);
+        }
         petActors.forEach((actor) => {
-          const current = { x: actor.mesh.position.x, z: actor.mesh.position.z };
+          const current = { x: actor.object.position.x, z: actor.object.position.z };
           if (actor.follow) {
             actor.state = 'following';
-            actor.target = { x: playerRoot.position.x - 0.7, z: playerRoot.position.z + 0.7 };
-            const deltaX = actor.target.x - current.x;
-            const deltaZ = actor.target.z - current.z;
-            const distance = Math.hypot(deltaX, deltaZ);
-            const step = Math.min(distance, delta * 1.5);
-            if (distance > 0 && step > 0) {
-              const next = moveWorldCharacter(current, { x: current.x + (deltaX / distance) * step, z: current.z + (deltaZ / distance) * step }, actor.radius, decorationCollisions);
-              actor.mesh.position.x = next.x;
-              actor.mesh.position.z = next.z;
-              actor.mesh.rotation.y = Math.atan2(deltaX, deltaZ);
+            const playerFacing = { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) };
+            const followingStep = getFollowingStep(
+              current,
+              { position: { x: playerRoot.position.x, z: playerRoot.position.z }, facing: playerFacing },
+              delta,
+              actor.radius,
+              PET_FOLLOW_SPEED * (prefersReducedMotion ? 0.55 : 1),
+              wanderObstacles,
+              CHARACTER_COLLISION_RADIUS,
+            );
+            actor.target = followingStep.target;
+            if (!followingStep.arrived || followingStep.rerouted) {
+              actor.facing = followingStep.facing;
+              actor.object.position.x = followingStep.next.x;
+              actor.object.position.z = followingStep.next.z;
+              const targetYaw = Math.atan2(followingStep.facing.x, followingStep.facing.z);
+              const yawDelta = Math.atan2(
+                Math.sin(targetYaw - actor.object.rotation.y),
+                Math.cos(targetYaw - actor.object.rotation.y),
+              );
+              actor.object.rotation.y += yawDelta * Math.min(1, delta * 10);
+              actor.object.position.y = actor.baseY;
+              updatePetAnimation(actor, true, delta, prefersReducedMotion);
+            } else {
+              actor.object.position.y = actor.baseY;
+              updatePetAnimation(actor, false, delta, prefersReducedMotion);
             }
             return;
           }
-          if (actor.behaviorMode !== 'wander') { actor.state = 'idle'; actor.target = null; return; }
-          if (actor.state === 'idle' && now >= actor.nextDecisionAt) {
-            actor.target = chooseWanderTarget(current, actor.radius, wanderObstacles);
+          if (actor.behaviorMode !== 'wander') {
+            actor.state = 'idle';
+            actor.target = null;
+            actor.object.position.y = actor.baseY;
+            updatePetAnimation(actor, false, delta, prefersReducedMotion);
+            return;
+          }
+          if (!actor.target && now >= actor.nextDecisionAt) {
+            actor.target = chooseRoamingTarget(current, actor.radius, wanderObstacles);
             actor.state = actor.target ? 'wandering' : 'idle';
             actor.nextDecisionAt = actor.target ? now : now + 1.2;
           }
-          if (actor.state !== 'wandering' || !actor.target) return;
-          const deltaX = actor.target.x - current.x;
-          const deltaZ = actor.target.z - current.z;
-          const distance = Math.hypot(deltaX, deltaZ);
-          if (distance <= 0.08) { actor.mesh.position.x = actor.target.x; actor.mesh.position.z = actor.target.z; actor.target = null; actor.state = 'idle'; actor.nextDecisionAt = now + 0.8; return; }
-          const step = Math.min(distance, delta * 0.75);
-          const next = moveWorldCharacter(current, { x: current.x + (deltaX / distance) * step, z: current.z + (deltaZ / distance) * step }, actor.radius, decorationCollisions);
-          actor.mesh.position.x = next.x;
-          actor.mesh.position.z = next.z;
-          if (next.x !== current.x || next.z !== current.z) actor.mesh.rotation.y = Math.atan2(deltaX, deltaZ);
+          if (actor.state !== 'wandering' || !actor.target) {
+            actor.object.position.y = actor.baseY;
+            updatePetAnimation(actor, false, delta, prefersReducedMotion);
+            return;
+          }
+          const step = getRoamingStep(
+            current,
+            actor.target,
+            delta,
+            actor.radius,
+            PET_WANDER_SPEED * (prefersReducedMotion ? 0.45 : 1),
+            wanderObstacles,
+          );
+          actor.object.position.x = step.next.x;
+          actor.object.position.z = step.next.z;
+          if (step.arrived || step.blocked) {
+            actor.target = null;
+            actor.state = 'idle';
+            actor.nextDecisionAt = now + (step.arrived ? PET_WANDER_PAUSE : PET_WANDER_RETRY_DELAY);
+            actor.object.position.y = actor.baseY;
+            updatePetAnimation(actor, false, delta, prefersReducedMotion);
+          } else {
+            actor.facing = step.facing;
+            actor.object.rotation.y = Math.atan2(step.facing.x, step.facing.z);
+            actor.object.position.y = actor.baseY;
+            updatePetAnimation(actor, true, delta, prefersReducedMotion);
+          }
         });
         if (mixer) mixer.update(delta);
+        if (roamingMixer) roamingMixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
         const zoomProgress = THREE.MathUtils.clamp((PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - cameraDistance) / (PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - PROTOTYPE_WORLD_CONFIG.cameraDistanceMin), 0, 1);
         const normalTargetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
-        const targetHeight = getGroundedCameraTargetHeight({ grounding: cameraGrounding, normalHeight: normalTargetHeight });
+        const targetHeight = getGroundedCameraTargetHeight({
+          pitch: cameraPitch,
+          pitchMin: PROTOTYPE_WORLD_CONFIG.cameraPitchMin,
+          pitchMax: PROTOTYPE_WORLD_CONFIG.cameraPitchMax,
+          normalHeight: normalTargetHeight,
+        });
         const horizontal = Math.cos(cameraPitch) * cameraDistance;
-        const target = new THREE.Vector3(
-          playerRoot.position.x - Math.sin(cameraYaw) * cameraGrounding * 1.8,
-          playerRoot.position.y + targetHeight,
-          playerRoot.position.z - Math.cos(cameraYaw) * cameraGrounding * 1.8,
-        );
-        const cameraAnchor = new THREE.Vector3(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
+        const target = new THREE.Vector3(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
         const cameraOffset = new THREE.Vector3(Math.sin(cameraYaw) * horizontal, Math.sin(cameraPitch) * cameraDistance + 0.16, Math.cos(cameraYaw) * horizontal);
-        const cameraPosition = cameraAnchor.add(cameraOffset);
+        const cameraPosition = target.clone().add(cameraOffset);
         camera.position.lerp(cameraPosition, 1 - Math.pow(0.001, Math.min(delta, 0.05)));
         camera.lookAt(target);
         rendererInstance.render(worldScene, camera);

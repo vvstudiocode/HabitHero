@@ -1,10 +1,11 @@
-export const FLOWER_COLORS = Object.freeze(['yellow', 'red', 'white', 'blue']);
+export const FLOWER_COLORS = Object.freeze(['yellow', 'red', 'white', 'blue', 'purple']);
 
 const FLOWER_COLOR_VALUES = Object.freeze({
   yellow: 0xffd85a,
   red: 0xe96a62,
   white: 0xfff8df,
   blue: 0x76aee8,
+  purple: 0xb58be8,
 });
 
 function createRandom(seed) {

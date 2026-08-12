@@ -77,15 +77,20 @@ export function createProceduralForest(THREE, {
   heightLimit = 3.2,
   layers = 7,
 }) {
-  const specs = getForestBoundaryTreeSpecs({ terrainLimit, groundHeight, heightLimit, layers });
   const forest = new THREE.Group();
   forest.name = 'procedural-forest-boundary';
+  if (layers === 0) return forest;
+
+  const specs = getForestBoundaryTreeSpecs({ terrainLimit, groundHeight, heightLimit, layers });
 
   const woodMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 1,
     metalness: 0,
+    vertexColors: true,
     flatShading: true,
+    emissive: 0x6b4a31,
+    emissiveIntensity: 0.36,
   });
   const trunkGeometry = new THREE.CylinderGeometry(0.54, 1, 1, 8);
   const trunks = new THREE.InstancedMesh(trunkGeometry, woodMaterial, specs.length);
@@ -161,8 +166,11 @@ export function createProceduralForest(THREE, {
   const canopyGeometry = createPaintedCanopyGeometry(THREE);
   const canopyMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    roughness: 1,
+    roughness: 0.92,
     metalness: 0,
+    vertexColors: true,
+    emissive: 0x638751,
+    emissiveIntensity: 0.38,
   });
   const canopies = new THREE.InstancedMesh(
     canopyGeometry,

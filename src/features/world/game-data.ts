@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { emptyChildGameData, type ChildGameData, type ChildWorldEntity, type GameCatalogItem } from './contracts';
+import { emptyChildGameData, type ChildGameData, type ChildWorldEntity, type GameCatalogItem, type GameLootDrop } from './contracts';
 
 interface CatalogRow {
   id: string;
@@ -40,6 +40,18 @@ interface WorldEntityRow {
   roaming_slot: number | null;
   is_active: boolean;
   entity_kind: ChildWorldEntity['entityKind'];
+}
+interface LootDropRow {
+  id: string;
+  child_profile_id: string;
+  source_task_id: string;
+  drop_kind: GameLootDrop['kind'];
+  amount: number;
+  position_x: number;
+  position_y: number;
+  position_z: number;
+  created_at: string;
+  status: 'available' | 'claimed' | 'cancelled';
 }
 
 interface GameDataQueryError {
@@ -116,6 +128,7 @@ export function createChildGameDataMap(
   loadoutRows: LoadoutRow[],
   worldStateRows: WorldStateRow[],
   entityRows: WorldEntityRow[],
+  lootDropRows: LootDropRow[] = [],
 ): Record<string, ChildGameData> {
   const catalog = catalogRows.map(toCatalogItem);
   const catalogById = new Map(catalog.map((item) => [item.id, item]));
@@ -157,6 +170,18 @@ export function createChildGameDataMap(
         name: item?.name,
       } satisfies ChildWorldEntity;
     });
+    data.lootDrops = lootDropRows
+      .filter((row) => row.child_profile_id === childId && row.status === 'available')
+      .map((row) => ({
+        id: row.id,
+        sourceTaskId: row.source_task_id,
+        kind: row.drop_kind,
+        amount: Number(row.amount),
+        x: Number(row.position_x),
+        y: Number(row.position_y),
+        z: Number(row.position_z),
+        createdAt: row.created_at,
+      } satisfies GameLootDrop));
     return [childId, data];
   }));
 }
@@ -172,7 +197,7 @@ export async function loadChildGameData(
   // world references. The catalog RLS policy still limits which inactive rows
   // a child can see; the shop filters inactive rows at render time.
   const catalogQuery = client.from('game_catalog_items').select('*').order('sort_order');
-  const [catalog, prices, wallets, inventory, loadouts, worldStates, entities] = await Promise.all([
+  const [catalog, prices, wallets, inventory, loadouts, worldStates, entities, lootDrops] = await Promise.all([
     loadOptionalGameData(catalogQuery, []),
     loadOptionalGameData(client.from('family_game_item_prices').select('catalog_item_id, scroll_price').eq('family_id', familyId), []),
     loadOptionalGameData(client.from('child_game_wallets').select('*').in('child_profile_id', childIds), []),
@@ -180,6 +205,7 @@ export async function loadChildGameData(
     loadOptionalGameData(client.from('child_game_loadouts').select('*').in('child_profile_id', childIds), []),
     loadOptionalGameData(client.from('child_world_states').select('*').in('child_profile_id', childIds), []),
     loadOptionalGameData(client.from('child_world_entities').select('*').in('child_profile_id', childIds).eq('is_active', true), []),
+    loadOptionalGameData(client.from('game_loot_drops').select('*').in('child_profile_id', childIds).eq('status', 'available'), []),
   ]);
   return createChildGameDataMap(
     childIds,
@@ -190,5 +216,6 @@ export async function loadChildGameData(
     loadouts as LoadoutRow[],
     worldStates as WorldStateRow[],
     entities as WorldEntityRow[],
+    lootDrops as LootDropRow[],
   );
 }

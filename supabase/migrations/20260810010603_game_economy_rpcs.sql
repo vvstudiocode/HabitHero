@@ -372,7 +372,8 @@ begin
    where child_profile_id = child_row.id and entity_kind = 'pet' and is_active;
 
   for selected_id, slot in
-    select value, ordinal::smallint from unnest(coalesce(target_inventory_item_ids, array[]::uuid[])) with ordinality
+    select roaming_item.value, roaming_item.ordinal::smallint
+      from unnest(coalesce(target_inventory_item_ids, array[]::uuid[])) with ordinality as roaming_item(value, ordinal)
   loop
     select inventory.* into inventory_row
       from public.child_inventory_items inventory

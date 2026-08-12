@@ -10,7 +10,7 @@ describe('terrain prototype camera touch controls', () => {
   it('uses a single finger to change yaw and pitch without changing zoom distance', () => {
     const next = applySinglePointerCameraDrag(
       { yaw: 0.4, pitch: 0.5 },
-      { dx: 20, dy: -40 },
+      { dx: 20, dy: 40 },
       { pitchMin: 0.12, pitchMax: 1.16 },
     );
 
@@ -19,44 +19,37 @@ describe('terrain prototype camera touch controls', () => {
     assert.equal('distance' in next, false);
   });
 
-  it('keeps upward drag at 90 degrees and uses downward drag to ground the view', () => {
-    const upward = applySinglePointerCameraDrag(
-      { yaw: 0, pitch: 1.4, grounding: 0 },
-      { dx: 0, dy: -1000 },
-      { pitchMin: 0.12, pitchMax: Math.PI / 2 },
-    );
-    const downward = applySinglePointerCameraDrag(
-      { yaw: 0, pitch: Math.PI / 2, grounding: 0 },
+  it('makes a top-to-bottom drag look farther down without crossing the vertical line', () => {
+    const pitchMax = Math.PI * (89 / 180);
+    const next = applySinglePointerCameraDrag(
+      { yaw: 0, pitch: 1.4 },
       { dx: 0, dy: 1000 },
-      { pitchMin: 0.12, pitchMax: Math.PI / 2 },
-    );
-    const returnUp = applySinglePointerCameraDrag(
-      { yaw: 0, pitch: Math.PI / 2, grounding: 1 },
-      { dx: 0, dy: -1000 },
-      { pitchMin: 0.12, pitchMax: Math.PI / 2 },
+      { pitchMin: 0.12, pitchMax },
     );
 
-    assert.equal(upward.pitch, Math.PI / 2);
-    assert.equal(downward.pitch, Math.PI / 2);
-    assert.equal(downward.grounding, 1);
-    assert.equal(returnUp.pitch, Math.PI / 2);
-    assert.equal(returnUp.grounding, 0);
+    assert.equal(next.pitch, pitchMax);
+    assert.ok(next.pitch < Math.PI / 2);
   });
 
   it('moves the look target toward the ground as the camera reaches its downward limit', () => {
-    const targetHeight = getGroundedCameraTargetHeight({
-      grounding: 1,
+    const midTargetHeight = getGroundedCameraTargetHeight({
+      pitch: Math.PI * (75 / 180),
+      pitchMin: 0.12,
+      pitchMax: Math.PI * (89 / 180),
       normalHeight: 0.5,
       groundHeight: 0.04,
     });
-    const topTargetHeight = getGroundedCameraTargetHeight({
-      grounding: 0,
+    const targetHeight = getGroundedCameraTargetHeight({
+      pitch: Math.PI * (89 / 180),
+      pitchMin: 0.12,
+      pitchMax: Math.PI * (89 / 180),
       normalHeight: 0.5,
       groundHeight: 0.04,
     });
 
+    assert.ok(midTargetHeight < 0.5);
+    assert.ok(midTargetHeight > 0.04);
     assert.ok(Math.abs(targetHeight - 0.04) < Number.EPSILON);
-    assert.ok(Math.abs(topTargetHeight - 0.5) < Number.EPSILON);
   });
 
   it('clamps pinch zoom to the supported camera distance range', () => {

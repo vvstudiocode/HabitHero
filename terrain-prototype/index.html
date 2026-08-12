@@ -137,6 +137,11 @@
       import { createProceduralGrassField } from './procedural-grass-scene.js';
       import { createProceduralFlowerField } from './procedural-flowers.js';
       import { createProceduralForest } from './procedural-trees.js';
+      import { createAmbientPollenField, createSunlightPatchField } from './natural-world-atmosphere.js';
+      import { createButterflyField } from './natural-world-creatures.js';
+      import { createNaturalBoundaryScenery } from './natural-boundary-scenery.js';
+      import { createEastFairytaleScenery } from './east-fairytale-scenery.js';
+      import { getNaturalWorldVisualSettings } from './natural-world-visuals.js';
 
       async function main() {
         const [THREE, { GLTFLoader }] = await Promise.all([
@@ -153,10 +158,12 @@
       const TERRAIN_STEP = 1.1;
       // Keep a wide non-walkable grass field around the playable grid so edge views stay covered.
       const SCENE_PADDING = 8;
-      // Enlarge only the central tree while keeping its root on the center tile.
-      const TREE_FIT_TO_TILE = 2.40 * 2;
+      // Enlarge the focal tree in the rear-right of the playable clearing.
+      const TREE_FIT_TO_TILE = 3.60;
       const TREE_HEIGHT_SCALE = 1;
       const TREE_ROOT_SINK = 0.03;
+      const TREE_POSITION = { x: 1.1, z: -1.65 };
+      const visualSettings = getNaturalWorldVisualSettings('high');
 
       const canvas = document.querySelector('#scene-canvas');
       const loadingPanel = document.querySelector('#loading-panel');
@@ -165,10 +172,10 @@
       const progressBar = document.querySelector('#progress-bar');
 
       const scene = new THREE.Scene();
-      const skyBlue = new THREE.Color(0x2d9fe3);
-      const skyboxHorizon = new THREE.Color(0x9cd3ee);
+      const skyBlue = new THREE.Color(visualSettings.backgroundColor);
+      const skyboxHorizon = new THREE.Color(visualSettings.fogColor);
       scene.background = skyBlue;
-      scene.fog = new THREE.Fog(skyboxHorizon, 9, 23);
+      scene.fog = new THREE.Fog(skyboxHorizon, visualSettings.fogNear, visualSettings.fogFar);
 
       const skyboxTexture = new THREE.TextureLoader().load(
         ASSETS.skybox,
@@ -177,6 +184,8 @@
           texture.mapping = THREE.EquirectangularReflectionMapping;
           texture.needsUpdate = true;
           scene.background = texture;
+          scene.environment = texture;
+          scene.environmentIntensity = visualSettings.environmentIntensity;
         },
         undefined,
         error => console.error('Unable to load the equirectangular daytime skybox.', error),
@@ -187,15 +196,23 @@
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.15;
+      renderer.toneMappingExposure = visualSettings.exposure;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-      scene.add(new THREE.HemisphereLight(0xdffbff, 0x456d42, 2.1));
-      const sunPosition = new THREE.Vector3(-4, 2.9, -14);
-      const sun = new THREE.DirectionalLight(0xffdda0, 3.2);
+      scene.add(new THREE.HemisphereLight(
+        visualSettings.hemisphereSkyColor,
+        visualSettings.hemisphereGroundColor,
+        visualSettings.hemisphereIntensity,
+      ));
+      const sunPosition = new THREE.Vector3(...visualSettings.sunPosition);
+      const sun = new THREE.DirectionalLight(visualSettings.sunColor, visualSettings.sunIntensity);
       sun.position.copy(sunPosition);
+      sun.target.position.set(0, 0, 0);
+      scene.add(sun.target);
       sun.castShadow = true;
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.018;
       sun.shadow.mapSize.set(2048, 2048);
       sun.shadow.camera.left = -10;
       sun.shadow.camera.right = 10;
@@ -227,11 +244,10 @@
       let cameraYaw = Math.PI / 2;
       let cameraPitch = 0.18;
       const CAMERA_PITCH_MIN = 0.12;
-      // Keep the top-of-head view at 90 degrees. Downward drag grounds the
-      // look target instead of orbiting the camera over the character.
-      const CAMERA_PITCH_MAX = Math.PI / 2;
+      // Stop one degree before vertical so a downward drag reaches the grass
+      // without moving the camera to the opposite side of the character.
+      const CAMERA_PITCH_MAX = Math.PI * (89 / 180);
       let cameraDistance = CAMERA_DISTANCE_DEFAULT;
-      let cameraGrounding = 0;
       let pointerDrag = null;
       let pinchGesture = null;
       const activePointers = new Map();
@@ -241,6 +257,9 @@
       let activeCharacterAction = null;
       const characterActions = new Map();
       let proceduralGrass = null;
+      let ambientPollen = null;
+      let butterflies = null;
+      let eastFairytaleScenery = null;
       let sceneElapsedTime = 0;
       const previousPlayerPosition = new THREE.Vector3();
       let playerGrassInteraction = {
@@ -404,9 +423,24 @@
           baseHeight: groundHeight + 0.004,
           viewportWidth: window.innerWidth,
           pixelRatio: window.devicePixelRatio || 1,
-          outerDensityMultiplier: 5,
+          outerDensityMultiplier: 36,
+          boundaryDensityMultiplier: 10,
+          sunDirection: visualSettings.sunDirection,
+          sunColor: visualSettings.sunColor,
+          ambientColor: visualSettings.grassAmbientColor,
         });
         terrain.add(proceduralGrass.ground, proceduralGrass.mesh);
+        ambientPollen = createAmbientPollenField(THREE, {
+          fieldSize: terrainWidth * 0.9,
+          count: visualSettings.pollenCount,
+          opacity: visualSettings.pollenOpacity,
+        });
+        terrain.add(ambientPollen.points);
+        terrain.add(createSunlightPatchField(THREE, {
+          color: visualSettings.sunlightPatchColor,
+          opacity: visualSettings.sunlightPatchOpacity,
+          count: visualSettings.sunlightPatchCount,
+        }).group);
 
         terrain.add(createProceduralFlowerField(THREE, {
           walkableSize: walkableWidth,
@@ -417,7 +451,7 @@
         const treeScale = (terrainStep * TREE_FIT_TO_TILE) / Math.max(treeDefinition.size.x, treeDefinition.size.z);
         const tree = placeAsset(
           treeDefinition,
-          new THREE.Vector3(0, groundHeight - TREE_ROOT_SINK, 0),
+          new THREE.Vector3(TREE_POSITION.x, groundHeight - TREE_ROOT_SINK, TREE_POSITION.z),
           treeScale,
         );
         tree.scale.y *= TREE_HEIGHT_SCALE;
@@ -428,8 +462,22 @@
           terrainLimit,
           groundHeight,
           heightLimit: centralTreeHeight * 0.5,
-          layers: 7,
+          layers: 0,
         }));
+        terrain.add(createNaturalBoundaryScenery(THREE, {
+          boundary: terrainLimit,
+          quality: 'high',
+        }).group);
+        eastFairytaleScenery = createEastFairytaleScenery(THREE, { quality: 'high' });
+        terrain.add(eastFairytaleScenery.group);
+        butterflies = createButterflyField(THREE, {
+          count: visualSettings.butterflyCount,
+          center: { x: TREE_POSITION.x, z: TREE_POSITION.z },
+          radius: 0.9,
+          minHeight: 0.78,
+          maxHeight: 1.35,
+        });
+        terrain.add(butterflies.group);
         scene.add(terrain);
       }
 
@@ -478,21 +526,20 @@
           1,
         );
         const normalTargetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
-        const targetHeight = getGroundedCameraTargetHeight({ grounding: cameraGrounding, normalHeight: normalTargetHeight });
-        reusableTarget.set(
-          playerRoot.position.x - Math.sin(cameraYaw) * cameraGrounding * 1.8,
-          playerRoot.position.y + targetHeight,
-          playerRoot.position.z - Math.cos(cameraYaw) * cameraGrounding * 1.8,
-        );
+        const targetHeight = getGroundedCameraTargetHeight({
+          pitch: cameraPitch,
+          pitchMin: CAMERA_PITCH_MIN,
+          pitchMax: CAMERA_PITCH_MAX,
+          normalHeight: normalTargetHeight,
+        });
+        reusableTarget.set(playerRoot.position.x, playerRoot.position.y + targetHeight, playerRoot.position.z);
         const horizontal = Math.cos(cameraPitch) * cameraDistance;
         reusableVector.set(
           Math.sin(cameraYaw) * horizontal,
           Math.sin(cameraPitch) * cameraDistance + 0.16,
           Math.cos(cameraYaw) * horizontal,
         );
-        reusableVector.x += playerRoot.position.x;
-        reusableVector.y += playerRoot.position.y + targetHeight;
-        reusableVector.z += playerRoot.position.z;
+        reusableVector.add(reusableTarget);
         camera.position.lerp(reusableVector, smooth);
         camera.lookAt(reusableTarget);
       }
@@ -516,6 +563,9 @@
           motionScale: grassMotionScale,
           interactors: grassInteractors,
         });
+        ambientPollen?.update(sceneElapsedTime);
+        butterflies?.update(sceneElapsedTime);
+        eastFairytaleScenery?.update(sceneElapsedTime);
         updateThirdPersonCamera(delta);
         if (characterMixer) characterMixer.update(delta);
         renderer.render(scene, camera);
@@ -597,13 +647,12 @@
         pointerDrag.x = event.clientX;
         pointerDrag.y = event.clientY;
         const nextCamera = applySinglePointerCameraDrag(
-          { yaw: cameraYaw, pitch: cameraPitch, grounding: cameraGrounding },
+          { yaw: cameraYaw, pitch: cameraPitch },
           { dx, dy },
           { pitchMin: CAMERA_PITCH_MIN, pitchMax: CAMERA_PITCH_MAX },
         );
         cameraYaw = nextCamera.yaw;
         cameraPitch = nextCamera.pitch;
-        cameraGrounding = nextCamera.grounding;
       });
 
       canvas.addEventListener('pointerup', releasePointer);

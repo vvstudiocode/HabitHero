@@ -21,7 +21,7 @@ interface DashboardCharacterHeroProps {
   title?: string;
   eyebrow?: string;
   subtitle?: string;
-  stats?: Array<{ label: string; value: string | number; suffix?: string; icon?: React.ReactNode }>;
+  stats?: Array<{ label: string; value: string | number; suffix?: string; icon?: React.ReactNode; target?: 'points' | 'scroll' }>;
   sceneLayer?: React.ReactNode;
   firstStatLabel?: string;
   firstStatValue?: string | number;
@@ -165,7 +165,7 @@ export function DashboardCharacterHero({
         )}
         <div className="hh-character-stats" data-stat-count={resolvedStats.length} aria-label="儀表板統計">
           {resolvedStats.map((stat) => (
-            <div key={stat.label} aria-label={`${stat.label}：${stat.value}${stat.suffix ?? ''}`}>
+            <div key={stat.label} data-hh-stat-target={stat.target} aria-label={`${stat.label}：${stat.value}${stat.suffix ?? ''}`}>
               <strong>
                 {stat.icon && <span className="hh-character-stat-icon" aria-hidden="true">{stat.icon}</span>}
                 <span>{stat.value}</span>

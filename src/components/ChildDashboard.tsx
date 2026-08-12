@@ -21,6 +21,7 @@ import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
 import { emptyChildGameData, type WorldMutationResult } from '../features/world/contracts';
+import { getLootDisplayedBalance, type LootAnimationEvent, type PendingLootPresentation } from '../features/world/game-loot';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
 import {
@@ -82,6 +83,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     hasSession,
     isOffline,
     mutationPending,
+    collectGameLoot,
+    collectGameLootBatch,
     purchaseGameItem,
     equipGameCharacter,
     setFollowingPet,
@@ -136,10 +139,160 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [toastLeaving, setToastLeaving] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [lootAnimations, setLootAnimations] = useState<LootAnimationEvent[]>([]);
+  const [pendingLoot, setPendingLoot] = useState<Record<string, PendingLootPresentation>>({});
+  const [lootBalanceOverride, setLootBalanceOverride] = useState<{ points: number | null; scroll: number | null }>({ points: null, scroll: null });
+  const pendingLootRef = useRef<Record<string, PendingLootPresentation>>({});
   const [now, setNow] = useState(Date.now());
   const completionMusicTaskIdRef = useRef<string | null>(null);
   const completionAudioRef = useRef<HTMLAudioElement | null>(null);
   const completionAlarmDismissedTaskIdsRef = useRef<Set<string>>(new Set());
+
+  const updatePendingLoot = (updater: (current: Record<string, PendingLootPresentation>) => Record<string, PendingLootPresentation>) => {
+    setPendingLoot((current) => {
+      const next = updater(current);
+      pendingLootRef.current = next;
+      return next;
+    });
+  };
+
+  const handleLootAnimation = (event: LootAnimationEvent) => {
+    setLootAnimations((current) => [...current.filter((item) => item.dropId !== event.dropId), event]);
+  };
+
+  const handleLootAnimationBatch = (events: LootAnimationEvent[]) => {
+    setLootAnimations((current) => {
+      const next = new Map(current.map((event) => [event.dropId, event]));
+      events.forEach((event) => next.set(event.dropId, event));
+      return [...next.values()];
+    });
+  };
+
+  const handleLootAnimationEnd = (event: LootAnimationEvent) => {
+    updatePendingLoot((current) => {
+      const pending = current[event.dropId];
+      if (!pending) return current;
+      return { ...current, [event.dropId]: { ...pending, phase: 'arrived' } };
+    });
+    setLootAnimations((current) => current.filter((item) => item.id !== event.id));
+  };
+
+  const createLootPickupIdempotencyKey = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return `loot-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  };
+
+  const handleLootPickup = async (dropId: string): Promise<boolean> => {
+    if (!activeChild) return false;
+    const drop = gameData.lootDrops.find((candidate) => candidate.id === dropId);
+    if (!drop || pendingLootRef.current[dropId]) return false;
+    updatePendingLoot((current) => ({ ...current, [dropId]: { drop, phase: 'animating' } }));
+    try {
+      const result = await collectGameLoot(activeChild.id, dropId, createLootPickupIdempotencyKey());
+      setLootBalanceOverride((current) => ({
+        points: result.kind === 'star' ? result.pointsBalance : current.points,
+        scroll: result.kind === 'scroll' ? result.walletBalance : current.scroll,
+      }));
+      return true;
+    } catch {
+      updatePendingLoot((current) => {
+        const next = { ...current };
+        delete next[dropId];
+        return next;
+      });
+      setLootAnimations((current) => current.filter((item) => item.dropId !== dropId));
+      showToast('獎勵同步失敗，物品會留在原地，請再試一次。');
+      return false;
+    }
+  };
+
+  const handleLootPickupBatch = async (dropIds: string[]): Promise<string[]> => {
+    if (!activeChild || dropIds.length === 0) return [];
+    const drops = dropIds
+      .map((dropId) => gameData.lootDrops.find((candidate) => candidate.id === dropId))
+      .filter((drop): drop is NonNullable<typeof drop> => Boolean(drop) && !pendingLootRef.current[drop.id]);
+    if (drops.length === 0) return [];
+    updatePendingLoot((current) => {
+      const next = { ...current };
+      drops.forEach((drop) => { next[drop.id] = { drop, phase: 'animating' }; });
+      return next;
+    });
+    try {
+      const result = await collectGameLootBatch(
+        activeChild.id,
+        drops.map((drop) => drop.id),
+        createLootPickupIdempotencyKey(),
+      );
+      setLootBalanceOverride((current) => ({
+        points: result.starAmount > 0 ? result.pointsBalance : current.points,
+        scroll: result.scrollAmount > 0 ? result.walletBalance : current.scroll,
+      }));
+      const collectedIds = new Set(result.dropIds);
+      updatePendingLoot((current) => {
+        const next = { ...current };
+        drops.forEach((drop) => {
+          if (!collectedIds.has(drop.id)) delete next[drop.id];
+        });
+        return next;
+      });
+      if (collectedIds.size !== drops.length) {
+        setLootAnimations((current) => current.filter((event) => collectedIds.has(event.dropId)));
+      }
+      return result.dropIds;
+    } catch {
+      updatePendingLoot((current) => {
+        const next = { ...current };
+        drops.forEach((drop) => delete next[drop.id]);
+        return next;
+      });
+      setLootAnimations((current) => current.filter((event) => !drops.some((drop) => drop.id === event.dropId)));
+      showToast('獎勵同步失敗，物品會留在原地，請再試一次。');
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (!activeChildId) return;
+    updatePendingLoot((current) => {
+      const next = { ...current };
+      for (const [dropId, pending] of Object.entries(current)) {
+        if (pending.phase === 'arrived' && !gameData.lootDrops.some((drop) => drop.id === dropId)) delete next[dropId];
+      }
+      return next;
+    });
+  }, [activeChildId, gameData.lootDrops]);
+
+  useEffect(() => {
+    pendingLootRef.current = {};
+    setPendingLoot({});
+    setLootAnimations([]);
+    setLootBalanceOverride({ points: null, scroll: null });
+  }, [activeChildId]);
+
+  const pendingLootPresentations: PendingLootPresentation[] = Object.values(pendingLoot);
+  useEffect(() => {
+    const pendingIds = new Set(pendingLootPresentations.map((pending) => pending.drop.id));
+    setLootBalanceOverride((current) => {
+      const next = { ...current };
+      if (next.points !== null && childPoints >= next.points && !gameData.lootDrops.some((drop) => drop.kind === 'star' && pendingIds.has(drop.id))) next.points = null;
+      if (next.scroll !== null && gameData.walletBalance >= next.scroll && !gameData.lootDrops.some((drop) => drop.kind === 'scroll' && pendingIds.has(drop.id))) next.scroll = null;
+      return next.points === current.points && next.scroll === current.scroll ? current : next;
+    });
+  }, [childPoints, gameData.lootDrops, gameData.walletBalance, pendingLootPresentations]);
+  const displayedPoints = getLootDisplayedBalance(
+    lootBalanceOverride.points ?? childPoints,
+    gameData.lootDrops,
+    pendingLootPresentations,
+    'star',
+    lootBalanceOverride.points !== null,
+  );
+  const displayedScrolls = getLootDisplayedBalance(
+    lootBalanceOverride.scroll ?? gameData.walletBalance,
+    gameData.lootDrops,
+    pendingLootPresentations,
+    'scroll',
+    lootBalanceOverride.scroll !== null,
+  );
   
   const showToast = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -500,12 +653,21 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         theme={{ ...activeChild.theme, accentColor: '#202124', mobileBackgroundImageUrl: undefined, desktopBackgroundImageUrl: undefined }}
         stats={[
           { label: '加入天數', value: activeChild.joinedDays, icon: <CalendarDays className="hh-character-stat-days-icon" size={17} strokeWidth={2.5} /> },
-          { label: '我的點數', value: childPoints, icon: <Star className="hh-character-stat-points" size={17} strokeWidth={2.5} /> },
-          { label: '我的卷軸', value: gameData.walletBalance, icon: <ScrollText size={17} strokeWidth={2.5} /> },
+          { label: '我的點數', value: displayedPoints, target: 'points', icon: <Star className="hh-character-stat-points" size={17} strokeWidth={2.5} /> },
+          { label: '我的卷軸', value: displayedScrolls, target: 'scroll', icon: <ScrollText size={17} strokeWidth={2.5} /> },
         ]}
         sceneLayer={(
           <Suspense fallback={<WorldPreparingScreen detail="正在載入 3D 世界…" />}>
-            <TerrainWorldLayer key={activeChild.id} childId={activeChild.id} gameData={gameData} paused={Boolean(heroFeature)} />
+            <TerrainWorldLayer
+              key={activeChild.id}
+              childId={activeChild.id}
+              gameData={gameData}
+              paused={Boolean(heroFeature)}
+              onLootPickup={handleLootPickup}
+              onLootPickupBatch={handleLootPickupBatch}
+              onLootAnimation={handleLootAnimation}
+              onLootAnimationBatch={handleLootAnimationBatch}
+            />
           </Suspense>
         )}
         menuActions={heroMenuActions}
@@ -529,6 +691,30 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           </>
         )}
       />
+      {lootAnimations.length > 0 && (
+        <div className="hh-loot-fly-layer" aria-live="polite">
+          {lootAnimations.map((event) => (
+            <div
+              key={event.id}
+              className={`hh-loot-fly-item hh-loot-fly-item--${event.kind}`}
+              role="status"
+              aria-label={`${event.kind === 'star' ? '點數' : '任務捲'}增加 ${event.amount}`}
+              style={{
+                '--hh-loot-from-x': `${event.from.x}px`,
+                '--hh-loot-from-y': `${event.from.y}px`,
+                '--hh-loot-to-x': `${event.to.x}px`,
+                '--hh-loot-to-y': `${event.to.y}px`,
+                '--hh-loot-duration': `${event.durationMs}ms`,
+                '--hh-loot-delay': `${event.delayMs ?? 0}ms`,
+              } as React.CSSProperties}
+              onAnimationEnd={() => handleLootAnimationEnd(event)}
+            >
+              {event.kind === 'star' ? <Star aria-hidden="true" size={25} fill="currentColor" /> : <ScrollText aria-hidden="true" size={25} />}
+              <strong>+{event.amount}</strong>
+            </div>
+          ))}
+        </div>
+      )}
       <ChildAdventureBoard
         tasks={adventureTasks}
         generalGroupId={activeGeneralAdventureGroup?.id}

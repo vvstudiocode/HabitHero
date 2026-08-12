@@ -79,6 +79,13 @@ describe('game economy database contract', () => {
     assert.match(rpcs, /declare\n  v_family_id uuid;/);
     assert.doesNotMatch(rpcs, /declare\n  family_id uuid;[\s\S]*values \(family_id,/);
   });
+
+  it('aliases unnest ordinality columns so roaming pets do not reference a missing value column', async () => {
+    const rpcs = await read('supabase/migrations/20260810010603_game_economy_rpcs.sql');
+    const roamingPets = rpcs.match(/create or replace function public\.set_roaming_pets[\s\S]*?\n\$\$;/)?.[0] ?? '';
+    assert.match(roamingPets, /select roaming_item\.value, roaming_item\.ordinal::smallint[\s\S]*as roaming_item\(value, ordinal\)/);
+    assert.doesNotMatch(roamingPets, /select value, ordinal::smallint/);
+  });
 });
 
 describe('terrain world loading contract', () => {
