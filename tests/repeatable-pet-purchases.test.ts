@@ -11,7 +11,8 @@ const childGamePanelSource = readFileSync(
 const migrationSources = readdirSync(join(projectRoot, 'supabase/migrations'))
   .filter((name) => name.endsWith('.sql'))
   .map((name) => readFileSync(join(projectRoot, 'supabase/migrations', name), 'utf8'))
-  .join('\n');
+  .filter((source) => /allow repeatable pet purchases/i.test(source));
+const repeatablePetMigration = migrationSources.at(-1) ?? '';
 
 describe('repeatable pet purchases', () => {
   it('keeps an owned pet purchasable while preserving single-ownership items', () => {
@@ -23,13 +24,13 @@ describe('repeatable pet purchases', () => {
   });
 
   it('creates one inventory instance per pet purchase and replays the exact instance idempotently', () => {
-    assert.match(migrationSources, /allow repeatable pet purchases/i);
-    assert.match(migrationSources, /add column if not exists instance_number integer/);
-    assert.match(migrationSources, /unique \(child_profile_id, catalog_item_id, instance_number\)/);
-    assert.match(migrationSources, /add column if not exists inventory_item_id uuid/);
-    assert.match(migrationSources, /catalog_row\.item_type = 'pet'/);
-    assert.match(migrationSources, /purchase_row\.inventory_item_id/);
-    assert.match(migrationSources, /max\(existing_inventory\.instance_number\)/);
-    assert.doesNotMatch(migrationSources, /if inventory_found and not catalog_row\.is_stackable then\s+raise exception 'item is already owned'/);
+    assert.equal(migrationSources.length, 1);
+    assert.match(repeatablePetMigration, /add column if not exists instance_number integer/);
+    assert.match(repeatablePetMigration, /unique \(child_profile_id, catalog_item_id, instance_number\)/);
+    assert.match(repeatablePetMigration, /add column if not exists inventory_item_id uuid/);
+    assert.match(repeatablePetMigration, /catalog_row\.item_type = 'pet'/);
+    assert.match(repeatablePetMigration, /purchase_row\.inventory_item_id/);
+    assert.match(repeatablePetMigration, /max\(existing_inventory\.instance_number\)/);
+    assert.match(repeatablePetMigration, /if repeatable_pet then[\s\S]*insert into public\.child_inventory_items/);
   });
 });

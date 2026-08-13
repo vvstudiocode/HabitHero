@@ -347,7 +347,7 @@ export function ChildGamePanel({
           <div className="hh-game-card-grid">
             {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection).map((item) => {
               const price = gameData.prices[item.id] ?? item.scrollPrice;
-              const owned = ownedCatalogIds.has(item.id) && !item.isStackable;
+              const owned = ownedCatalogIds.has(item.id) && item.itemType !== 'pet' && !item.isStackable;
               return (
                 <article className="hh-game-item-card" key={item.id}>
                   <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
