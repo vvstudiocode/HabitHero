@@ -1,0 +1,99 @@
+- generic [ref=f1e9]:
+  - banner [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic:
+        - generic "家長功能主選單":
+          - button "有新項目 審核" [ref=f1e14]:
+            - generic "有新項目" [ref=f1e19]
+            - strong [ref=f1e20]: 審核
+          - button [ref=f1e21]:
+            - strong [ref=f1e25]: 任務
+          - button [ref=f1e26]:
+            - strong [ref=f1e30]: 成長
+          - button [ref=f1e31]:
+            - strong [ref=f1e37]: 獎勵
+          - button [ref=f1e38]:
+            - strong [ref=f1e43]: 商店
+      - generic "儀表板統計":
+        - generic "家庭總點數：60":
+          - strong:
+            - generic: "60"
+        - generic "待審核項目：7待審核":
+          - strong:
+            - generic: "7"
+            - emphasis: 待審核
+      - button "設定" [active] [ref=f1e45]
+  - generic [ref=f1e50]:
+    - generic [ref=f1e51]:
+      - heading "設定" [level=3] [ref=f1e52]
+      - button [ref=f1e56]
+    - generic [ref=f1e60]:
+      - generic [ref=f1e61]:
+        - heading "小孩帳號管理" [level=4] [ref=f1e62]
+        - generic [ref=f1e68]:
+          - generic [ref=f1e69]:
+            - generic [ref=f1e70]:
+              - textbox "小孩名字" [ref=f1e71]: lulu
+              - button "刪除" [ref=f1e72]
+            - generic [ref=f1e76]: 登入帳號：lu123。密碼不會顯示在這裡，忘記時請由家長重新設定。
+            - button "重設小孩密碼" [ref=f1e81]
+          - generic [ref=f1e82]:
+            - generic [ref=f1e83]:
+              - textbox "小孩名字" [ref=f1e84]: 小恩
+              - button "刪除" [ref=f1e85]
+            - generic [ref=f1e89]: 登入帳號：nn1234。密碼不會顯示在這裡，忘記時請由家長重新設定。
+            - button "重設小孩密碼" [ref=f1e94]
+          - generic [ref=f1e95]:
+            - generic [ref=f1e96]:
+              - textbox "小孩名字" [ref=f1e97]: 芸芸
+              - button "刪除" [ref=f1e98]
+            - generic [ref=f1e102]: 登入帳號：nn123。密碼不會顯示在這裡，忘記時請由家長重新設定。
+            - button "重設小孩密碼" [ref=f1e107]
+          - generic [ref=f1e108]:
+            - generic [ref=f1e109]:
+              - textbox "小孩名字" [ref=f1e110]: 學生
+              - button "刪除" [ref=f1e111]
+            - generic [ref=f1e115]: 登入帳號：ss123。密碼不會顯示在這裡，忘記時請由家長重新設定。
+            - button "重設小孩密碼" [ref=f1e120]
+          - generic [ref=f1e121]:
+            - generic [ref=f1e122]:
+              - textbox "小孩名字" [ref=f1e123]: 小宣
+              - button "刪除" [ref=f1e124]
+            - generic [ref=f1e128]: 登入帳號：s123。密碼不會顯示在這裡，忘記時請由家長重新設定。
+            - button "重設小孩密碼" [ref=f1e133]
+      - button "新增小孩" [ref=f1e134]
+      - generic [ref=f1e136]:
+        - heading "帳號與家庭安全" [level=4] [ref=f1e137]
+        - generic [ref=f1e138]:
+          - button "修改家長密碼 更新管理家庭資料的家長登入密碼。" [ref=f1e139] [cursor=pointer]:
+            - generic [ref=f1e140]:
+              - strong [ref=f1e141]: 修改家長密碼
+              - generic [ref=f1e142]: 更新管理家庭資料的家長登入密碼。
+            - generic [ref=f1e143]: ›
+          - button "隱私政策 了解 HabitHero 如何處理家庭與兒童資料。" [ref=f1e144] [cursor=pointer]:
+            - generic [ref=f1e145]:
+              - strong [ref=f1e146]: 隱私政策
+              - generic [ref=f1e147]: 了解 HabitHero 如何處理家庭與兒童資料。
+            - generic [ref=f1e148]: ›
+          - button "支援中心 登入、同步、點數與資料刪除的協助。" [ref=f1e149] [cursor=pointer]:
+            - generic [ref=f1e150]:
+              - strong [ref=f1e151]: 支援中心
+              - generic [ref=f1e152]: 登入、同步、點數與資料刪除的協助。
+            - generic [ref=f1e153]: ›
+          - button "兒童與家長同意 查看家長責任與記錄本版本同意。" [ref=f1e154] [cursor=pointer]:
+            - generic [ref=f1e155]:
+              - strong [ref=f1e156]: 兒童與家長同意
+              - generic [ref=f1e157]: 查看家長責任與記錄本版本同意。
+            - generic [ref=f1e158]: ›
+          - button "刪除帳號與資料 永久刪除家庭資料與所有帳號。" [ref=f1e159] [cursor=pointer]:
+            - generic [ref=f1e160]:
+              - strong [ref=f1e161]: 刪除帳號與資料
+              - generic [ref=f1e162]: 永久刪除家庭資料與所有帳號。
+            - generic [ref=f1e163]: ›
+      - generic [ref=f1e164]:
+        - button "切換小孩視角" [ref=f1e165]
+        - region [ref=f1e171]:
+          - heading "通知" [level=4] [ref=f1e173]
+          - switch "背景通知" [disabled] [ref=f1e174]
+        - button "重新觀看新手指引" [ref=f1e177]
+        - button "登出家長端" [ref=f1e178]

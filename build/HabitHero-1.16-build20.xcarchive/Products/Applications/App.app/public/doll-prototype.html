@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HabitHero｜玩偶互動原型 </title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #18324a;
+      --muted: #6b8194;
+      --cream: #fff9ed;
+      --card: rgba(255, 255, 255, .82);
+      --line: rgba(115, 91, 46, .13);
+      --gold: #f6ad3d;
+      --mint: #51bfa0;
+      --shadow: 0 24px 70px rgba(74, 74, 53, .16);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Noto Sans TC", "DM Sans", sans-serif;
+      background: radial-gradient(circle at 15% 4%, #fff 0, transparent 30%), linear-gradient(145deg, #f5f0dc 0%, #e6f1e5 50%, #dceef3 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(59, 93, 81, .14);
+      font-size: 22px;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: .02em;
+    }
+
+    .brand span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #4b756a;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 0 5px rgba(81, 191, 160, .14);
+    }
+
+    .intro {
+      max-width: 620px;
+      margin: 62px auto 28px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      color: #bc7d1e;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .18em;
+    }
+
+    h1 {
+      margin: 12px 0 10px;
+      font-size: clamp(30px, 5vw, 52px);
+      line-height: 1.14;
+      letter-spacing: -.04em;
+    }
+
+    .intro p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .stage-card {
+      position: relative;
+      overflow: hidden;
+      display: block;
+      min-height: 620px;
+      border: 1px solid rgba(255, 255, 255, .85);
+      border-radius: 32px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .stage {
+      position: relative;
+      height: 620px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .stage::before {
+      content: "";
+      position: absolute;
+      width: 520px;
+      height: 520px;
+      border-radius: 50%;
+      top: 6%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: radial-gradient(circle, rgba(183, 235, 214, .72) 0, rgba(224, 245, 227, .12) 65%, transparent 70%);
+    }
+
+    #canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .doll-portrait {
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      bottom: 12px;
+      width: min(52vw, 360px);
+      height: 570px;
+      object-fit: contain;
+      object-position: center bottom;
+      transform: translateX(-50%);
+      transform-origin: center bottom;
+      filter: drop-shadow(0 18px 18px rgba(75, 103, 87, .15));
+      animation: none;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    @keyframes gentle-breath {
+
+      0%,
+      100% {
+        transform: translateX(-50%) translateY(0) scale(1, 1);
+      }
+
+      45% {
+        transform: translateX(-50%) translateY(-4px) scale(1.012, .992);
+      }
+
+      55% {
+        transform: translateX(-50%) translateY(-5px) scale(1.016, .988);
+      }
+    }
+
+    .doll-portrait.is-paused {
+      animation-play-state: paused;
+    }
+
+    .control-panel {
+      position: absolute;
+      z-index: 5;
+      display: none;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .control-panel.is-open {
+      display: block;
+      animation: none;
+    }
+
+    @keyframes menu-pop {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(.82);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .control-panel::before {
+      display: none;
+    }
+
+    .control-panel>* {
+      position: relative;
+    }
+
+    .panel-kicker,
+    .panel-description {
+      display: none;
+    }
+
+    .panel-kicker {
+      color: #c18327;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .1em;
+    }
+
+    h2 {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: -.03em;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    .panel-description {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .parent-actions {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .parent-action {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      align-items: center;
+      width: 132px;
+      min-height: 46px;
+      padding: 10px 14px;
+      border: 1px solid rgba(213, 198, 165, .62);
+      border-radius: 16px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .76);
+      box-shadow: 0 8px 18px rgba(94, 87, 54, .10);
+      text-align: left;
+      cursor: pointer;
+      transition: none;
+      pointer-events: auto;
+      backdrop-filter: blur(5px);
+    }
+
+    .parent-action:nth-child(1) {
+      top: 82px;
+      left: 12%;
+    }
+
+    .parent-action:nth-child(2) {
+      top: 82px;
+      right: 12%;
+      left: auto;
+    }
+
+    .parent-action:nth-child(3) {
+      top: 248px;
+      left: 6%;
+    }
+
+    .parent-action:nth-child(4) {
+      top: 410px;
+      right: 10%;
+      left: auto;
+    }
+
+    .parent-action:nth-child(5) {
+      top: 410px;
+      left: 10%;
+    }
+
+    .parent-action:hover,
+    .parent-action:focus-visible {
+      transform: translateY(-3px) scale(1.03);
+      border-color: rgba(246, 173, 61, .72);
+      box-shadow: 0 14px 26px rgba(94, 87, 54, .18);
+      outline: none;
+    }
+
+    .parent-action:active {
+      transform: translateY(0) scale(.98);
+    }
+
+    .control-panel.is-open .parent-action {
+      animation: card-fade-in 700ms ease-out both, card-float 3.8s 700ms ease-in-out both infinite;
+    }
+
+    .control-panel.is-open .parent-action:nth-child(2) { animation-delay: 70ms; }
+    .control-panel.is-open .parent-action:nth-child(3) { animation-delay: 140ms; }
+    .control-panel.is-open .parent-action:nth-child(4) { animation-delay: 210ms; }
+    .control-panel.is-open .parent-action:nth-child(5) { animation-delay: 280ms; }
+
+    @keyframes card-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes card-float {
+      0% { transform: translateY(0) scale(1); }
+      25% { transform: translateY(-3px) scale(1.005); }
+      50% { transform: translateY(0) scale(1); }
+      75% { transform: translateY(3px) scale(.995); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    .action-title {
+      display: block;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .action-icon,
+    .action-subtitle,
+    .arrow { display: none; }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      top: 158px;
+      width: 200px;
+      min-height: 22px;
+      margin: 0;
+      color: #5c796f;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .loading.hidden {
+      display: none;
+    }
+
+    .portrait-card {
+      display: none;
+      grid-template-columns: minmax(220px, 320px) 1fr;
+      align-items: center;
+      gap: 28px;
+      margin-top: 22px;
+      padding: 22px;
+      border: 1px solid rgba(255, 255, 255, .85);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, .68);
+      box-shadow: 0 18px 46px rgba(74, 74, 53, .11);
+      backdrop-filter: blur(18px);
+    }
+
+    .portrait-frame {
+      position: relative;
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 22px;
+      background: radial-gradient(circle at 50% 32%, rgba(208, 246, 230, .8), rgba(255, 255, 255, .6) 64%);
+    }
+
+    .portrait-frame::after {
+      content: "";
+      position: absolute;
+      left: 16%;
+      right: 16%;
+      bottom: 18px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(83, 132, 115, .14);
+      filter: blur(12px);
+    }
+
+    .portrait-frame img {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 280px);
+      height: 360px;
+      object-fit: contain;
+      object-position: center bottom;
+      filter: drop-shadow(0 16px 16px rgba(75, 103, 87, .16));
+    }
+
+    .portrait-copy {
+      max-width: 520px;
+    }
+
+    .portrait-copy .eyebrow {
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .portrait-copy h2 {
+      margin: 0 0 10px;
+      font-size: clamp(24px, 3vw, 34px);
+    }
+
+    .portrait-copy p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .portrait-chip {
+      display: inline-flex;
+      margin-top: 16px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #e7f8ef;
+      color: #3d806d;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 820px) {
+      .shell {
+        width: min(100% - 20px, 620px);
+        padding-top: 18px;
+      }
+
+      .status {
+        display: none;
+      }
+
+      .intro {
+        margin: 42px auto 22px;
+      }
+
+      .stage-card {
+        min-height: auto;
+        border-radius: 26px;
+      }
+
+      .stage {
+        height: min(92vw, 620px);
+        min-height: 520px;
+      }
+
+      .parent-action {
+        width: 116px;
+        min-height: 44px;
+        padding: 8px 10px;
+      }
+
+      .toast {
+        top: 139px;
+      }
+
+      .doll-portrait {
+        width: min(76vw, 360px);
+        height: calc(100% - 16px);
+      }
+
+      .portrait-card {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .portrait-frame {
+        min-height: 300px;
+      }
+
+      .portrait-frame img {
+        height: 390px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">✦</div>
+        <div><strong>HabitHero</strong><span>玩偶互動原型</span></div>
+      </div>
+      <div class="status">Prototype · Starlight Rainbow</div>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <div class="eyebrow">PARENT CONTROL PREVIEW</div>
+      <h1 id="page-title">和你的習慣小英雄互動</h1>
+      <p>點擊玩偶，先看看家長入口的五個功能按鈕。這是獨立視覺原型，尚未連接正式功能。</p>
+    </section>
+
+    <section class="stage-card">
+      <div class="stage" id="stage" aria-label="可互動的 3D 彩虹星光玩偶">
+        <div class="loading" id="loading">正在載入 3D 玩偶…</div>
+        <canvas id="canvas"></canvas>
+      </div>
+      <aside class="control-panel" aria-label="家長功能">
+        <div class="panel-kicker">PARENT SPACE</div>
+        <p class="panel-description">這五個入口先作為版面預覽，之後可以替換成真正的家長功能。</p>
+        <div class="parent-actions">
+          <button class="parent-action" data-label="今日任務"><span class="action-icon"><svg viewBox="0 0 24 24" width="20"
+                height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 5h16v15H4z" />
+                <path d="M8 3v4M16 3v4M7 11h10M7 15h6" />
+              </svg></span><span><span class="action-title">今日任務</span><span
+                class="action-subtitle">查看孩子今天的進度</span></span><span class="arrow">›</span></button>
+          <button class="parent-action" data-label="獎勵設定"><span class="action-icon mint"><svg viewBox="0 0 24 24"
+                width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 3v18M5 7h11a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h11" />
+              </svg></span><span><span class="action-title">獎勵設定</span><span
+                class="action-subtitle">設定鼓勵與兌換內容</span></span><span class="arrow">›</span></button>
+          <button class="parent-action" data-label="成長紀錄"><span class="action-icon blue"><svg viewBox="0 0 24 24"
+                width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19V5M4 19h17" />
+                <path d="m7 15 4-4 3 2 5-6" />
+              </svg></span><span><span class="action-title">成長紀錄</span><span
+                class="action-subtitle">查看長期習慣趨勢</span></span><span class="arrow">›</span></button>
+          <button class="parent-action" data-label="家庭成員"><span class="action-icon pink"><svg viewBox="0 0 24 24"
+                width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="8" r="3" />
+                <circle cx="17" cy="10" r="2.5" />
+                <path d="M3.5 19a5.5 5.5 0 0 1 11 0M15 18a4 4 0 0 1 6 1" />
+              </svg></span><span><span class="action-title">家庭成員</span><span
+                class="action-subtitle">切換與管理家庭帳號</span></span><span class="arrow">›</span></button>
+          <button class="parent-action" data-label="家長設定"><span class="action-icon purple"><svg viewBox="0 0 24 24"
+                width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" />
+                <path
+                  d="m4.9 4.9 1.5 1.5M17.6 6.4l1.5-1.5M4 12H2m20 0h-2M4.9 19.1l1.5-1.5m11.2 0 1.5 1.5M12 2v2m0 16v2" />
+              </svg></span><span><span class="action-title">家長設定</span><span
+                class="action-subtitle">權限、通知與偏好設定</span></span><span class="arrow">›</span></button>
+        </div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </aside>
+    </section>
+
+    <section class="portrait-card" aria-labelledby="portrait-title">
+      <div class="portrait-frame">
+        <img src="./images/habithero-catgirl-room.png" alt="粉貓女與溫暖房間背景" />
+      </div>
+      <div class="portrait-copy">
+        <div class="eyebrow">CHARACTER PORTRAIT</div>
+        <h2 id="portrait-title">彩色角色立繪</h2>
+        <p>彩色立繪已取代原本的 3D 玩偶，並加入輕微的上下浮動與呼吸縮放，適合放在 APP／WebApp 的角色主視覺。</p>
+        <span class="portrait-chip">薄荷綠 × 奶油白 × 星光金</span>
+      </div>
+    </section>
+  </main>
+
+  <script type="importmap">
+      {"imports":{"three":"https://unpkg.com/three@0.185.1/build/three.module.js","three/addons/":"https://unpkg.com/three@0.185.1/examples/jsm/"}}
+    </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    const canvas = document.querySelector('#canvas');
+    const stage = document.querySelector('#stage');
+    const loading = document.querySelector('#loading');
+    const toast = document.querySelector('#toast');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+    camera.position.set(0, 0.35, 5.8);
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    scene.add(new THREE.HemisphereLight(0xfff7dd, 0x9bbab2, 2.5));
+    const key = new THREE.DirectionalLight(0xfff4cf, 3.2);
+    key.position.set(-3, 5, 4); key.castShadow = true; scene.add(key);
+    const rim = new THREE.DirectionalLight(0xa5e6ff, 2.2); rim.position.set(4, 2, -2); scene.add(rim);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(1.55, 64), new THREE.MeshBasicMaterial({ color: 0x9ac5ad, transparent: true, opacity: .22 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -1.55; floor.scale.set(1.4, .55, 1); scene.add(floor);
+
+    let doll = null; let baseY = 0; let baseScaleY = 1; let mixer = null; let activeAction = null;
+    const bones = Object.create(null);
+    const actions = new Map();
+    let menuOpen = false;
+    const controlPanel = document.querySelector('.control-panel');
+    const stateLabel = { textContent: '' };
+    const wander = { target: new THREE.Vector3(), nextDecision: 0, walking: false };
+    const menuWorldPoint = new THREE.Vector3();
+    const modelUrl = new URL('./models/frosty-hoodie-character.glb', window.location.href).href;
+    new GLTFLoader().load(modelUrl, (gltf) => {
+      doll = gltf.scene;
+      mixer = new THREE.AnimationMixer(doll);
+      doll.traverse((child) => { if (child.isBone) bones[child.name] = child; });
+      gltf.animations.forEach((clip) => {
+        const action = mixer.clipAction(clip);
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.clampWhenFinished = false;
+        actions.set(clip.name, action);
+        // Blender exports the clips with an HH_ prefix; keep short aliases
+        // so the prototype can address Idle, Walk, Wave, Jump, and Cheer.
+        if (clip.name.startsWith('HH_')) actions.set(clip.name.slice(3), action);
+      });
+      const box = new THREE.Box3().setFromObject(doll);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const scale = 2.2 / Math.max(size.x, size.y, size.z);
+      doll.scale.setScalar(scale); baseScaleY = doll.scale.y;
+      doll.position.sub(center.multiplyScalar(scale));
+      doll.position.y = -.12;
+      doll.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+      scene.add(doll); baseY = doll.position.y; loading.classList.add('hidden');
+      playAnimation('Idle');
+      chooseNextTarget(0);
+    }, undefined, (error) => {
+      loading.textContent = window.location.protocol === 'file:'
+        ? '請先啟動 Vite，再用 http://localhost:3000/doll-prototype.html 開啟。'
+        : '模型載入失敗，請確認 /models/starlight-rainbow-kit.glb 可以被讀取。';
+      console.error('Blue Fluff model load failed:', modelUrl, error);
+    });
+
+    function playAnimation(name) {
+      // 目前先保留 3D 模型，但不播放任何動畫。
+      return;
+    }
+
+    function resize() { const rect = stage.getBoundingClientRect(); renderer.setSize(rect.width, rect.height, false); camera.aspect = rect.width / rect.height; camera.updateProjectionMatrix(); }
+    window.addEventListener('resize', resize); resize();
+    const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
+    function chooseNextTarget(now) {
+      wander.target.copy(doll ? doll.position : new THREE.Vector3());
+      wander.nextDecision = Infinity;
+      wander.walking = false;
+      if (!menuOpen) stateLabel.textContent = '等待互動 · 點擊我開啟功能';
+    }
+    function openMenu() {
+      menuOpen = true;
+      controlPanel.classList.add('is-open');
+      stateLabel.textContent = '想做什麼呢？選一個家長功能';
+    }
+    function closeMenu() {
+      menuOpen = false;
+      controlPanel.classList.remove('is-open');
+      toast.textContent = '';
+      playAnimation('Idle');
+      if (doll) stateLabel.textContent = '正在散步探索 · 點擊我互動';
+    }
+    stage.addEventListener('click', (event) => {
+      if (!doll) return;
+      if (event.target.closest('.control-panel')) return;
+      const rect = canvas.getBoundingClientRect(); pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1; pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      if (raycaster.intersectObject(doll, true).length) { menuOpen ? closeMenu() : openMenu(); }
+      else if (menuOpen) closeMenu();
+    });
+    document.querySelectorAll('.parent-action').forEach((button) => button.addEventListener('click', (event) => { event.stopPropagation(); toast.textContent = `已選擇「${button.dataset.label}」— 目前為預覽按鈕`; }));
+
+    const clock = new THREE.Clock();
+    const walkPose = { phase: 0 };
+    function applyMotionLayer(t, walking) {
+      // The exported clip supplies the broad pose. These small additive offsets
+      // make the contact/weight shift readable even on the tiny prototype model.
+      if (walking) {
+        walkPose.phase = t * 8.1;
+        const step = Math.sin(walkPose.phase);
+        const lift = Math.max(0, Math.sin(walkPose.phase + Math.PI * .15));
+        if (bones['thigh.L']) bones['thigh.L'].rotation.x += step * .075;
+        if (bones['thigh.R']) bones['thigh.R'].rotation.x -= step * .075;
+        if (bones['shin.L']) bones['shin.L'].rotation.x += lift * .12;
+        if (bones['shin.R']) bones['shin.R'].rotation.x += Math.max(0, Math.sin(walkPose.phase + Math.PI + Math.PI * .15)) * .12;
+        if (bones['foot.L']) bones['foot.L'].rotation.x -= lift * .075;
+        if (bones['foot.R']) bones['foot.R'].rotation.x -= Math.max(0, Math.sin(walkPose.phase + Math.PI + Math.PI * .15)) * .075;
+        if (bones['pelvis']) bones['pelvis'].rotation.z += step * .018;
+        if (bones['chest']) bones['chest'].rotation.z -= step * .012;
+        return;
+      }
+
+      // A quieter, slower breathing loop for the resting state.
+      const breath = Math.sin(t * 1.7);
+      if (bones['chest']) {
+        bones['chest'].rotation.x += breath * .012;
+        bones['chest'].scale.y *= 1 + breath * .008;
+      }
+      if (bones['spine']) bones['spine'].rotation.x += breath * .008;
+      if (bones['head']) bones['head'].rotation.z -= breath * .006;
+    }
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), .05);
+      const t = clock.elapsedTime;
+      if (doll) {
+        if (!menuOpen) {
+          const direction = new THREE.Vector3().subVectors(wander.target, doll.position); direction.y = 0;
+          const distance = direction.length();
+          if (distance < .08 || t > wander.nextDecision) { wander.walking = false; playAnimation('Idle'); if (t > wander.nextDecision) chooseNextTarget(t); }
+          if (wander.walking && distance > .01) {
+            direction.normalize();
+            doll.position.addScaledVector(direction, delta * .38);
+            doll.rotation.y = Math.atan2(direction.x, direction.z);
+          }
+        }
+        const isWalking = false;
+        const bob = 0;
+        doll.position.y = baseY + bob;
+        doll.scale.y = baseScaleY;
+          stateLabel.textContent = menuOpen ? '想做什麼呢？選一個家長功能' : '等待互動 · 點擊我開啟功能';
+      }
+      if (mixer) mixer.update(delta);
+      if (doll) applyMotionLayer(t, wander.walking && !menuOpen);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+  <script type="text/plain" id="disabled-static-script">
+      const stage = document.querySelector('#stage');
+      const portrait = document.querySelector('#doll-portrait');
+      const toast = document.querySelector('#toast');
+      const stateLabel = document.querySelector('#doll-state');
+      const controlPanel = document.querySelector('.control-panel');
+      let menuOpen = false;
+
+      function openMenu() {
+        menuOpen = true;
+        controlPanel.classList.add('is-open');
+        portrait.classList.add('is-paused');
+        stateLabel.textContent = '想做什麼呢？選一個家長功能';
+      }
+
+      function closeMenu() {
+        menuOpen = false;
+        controlPanel.classList.remove('is-open');
+        portrait.classList.remove('is-paused');
+        toast.textContent = '';
+        stateLabel.textContent = '等待互動 · 點擊我開啟功能';
+      }
+
+      stage.addEventListener('click', (event) => {
+        if (event.target.closest('.control-panel')) return;
+        menuOpen ? closeMenu() : openMenu();
+      });
+
+      document.querySelectorAll('.parent-action').forEach((button) => button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toast.textContent = `已選擇「${button.dataset.label}」— 目前為預覽按鈕`;
+      }));
+    </script>
+</body>
+
+</html>

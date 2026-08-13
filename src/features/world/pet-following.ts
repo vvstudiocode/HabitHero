@@ -7,9 +7,15 @@ import {
 } from './world-collision';
 import { isRoamingPathClear } from './world-roaming';
 
-export const PET_FOLLOW_DISTANCE = 0.48;
+export const PET_FOLLOW_DISTANCE = 0.24;
+export const PET_FOLLOW_SPACING = 0.31;
 export const PET_FOLLOW_STOP_DISTANCE = 0.18;
 export const PET_FOLLOW_SPEED = 0.75;
+
+export function getFollowingDistance(index: number): number {
+  const safeIndex = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0;
+  return PET_FOLLOW_DISTANCE + safeIndex * PET_FOLLOW_SPACING;
+}
 
 export interface PetFollowPlayer {
   position: WorldPoint2D;
@@ -98,9 +104,10 @@ export function getFollowingStep(
   speed = PET_FOLLOW_SPEED,
   obstacles: readonly CollisionCircle[] = [],
   playerRadius = CHARACTER_COLLISION_RADIUS,
+  followDistance = PET_FOLLOW_DISTANCE,
 ): PetFollowingStep {
   const safeFollowDistance = Math.max(
-    PET_FOLLOW_DISTANCE,
+    followDistance,
     playerRadius + Math.max(radius, 0.08) + 0.12,
   );
   const target = getFollowingTarget(player, safeFollowDistance);

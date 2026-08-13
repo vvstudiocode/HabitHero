@@ -1,4 +1,3 @@
-export const GRASS_WIND_STRENGTH = 1.4;
 export const MAX_GRASS_INTERACTORS = 2;
 // Keep a broad, staggered grass envelope just beyond the playable area so the
 // air-wall reads as a soft meadow edge instead of a hard scene boundary.

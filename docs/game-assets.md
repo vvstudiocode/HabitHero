@@ -1,10 +1,12 @@
 # Game assets
 
-## Anime Maiden
+For runtime grounding, walking animation, skeleton cloning, flicker, and visual verification, follow [the character and pet 3D troubleshooting guide](./character-pet-3d-troubleshooting.md).
 
-`terrain-prototype/assets/anime-maiden.glb` is the starter character used by the first world catalog entry (`character.anime-maiden`). It is covered by the license bundled beside the asset at `terrain-prototype/assets/AnimeMaiden-LICENSE.txt`.
+## Supplied characters
 
-The license permits use in commercial and non-commercial games, editing for project use, and publishing game/web work that uses the asset. It does not permit reselling or repackaging the original or modified asset, use in logos/trademarks, printed media, or inclusion in game-making tools, templates, or NFT/crypto/play-to-earn projects.
+The character shop uses eight user-provided, mobile-optimized GLBs under `public/assets/characters/`: `arthur.glb`, `elina.glb`, `sia.glb`, `elio.glb`, `moss.glb`, `noah.glb`, `collette.glb`, and `violette.glb`. All files contain the merged authored `Idle` and in-place `Walk_InPlace` clips. Models use Draco-compressed geometry and WebP textures, with transparent 512px WebP thumbnails beside the models.
+
+World character models share the `warm-hand-painted` runtime material preset: their original textures remain unchanged while reflections are softened, roughness is increased, and a subtle cream-warm tint is applied for a consistent storybook animation look.
 
 ## Forest Guardian pet
 

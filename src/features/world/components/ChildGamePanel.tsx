@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, Coins, Compass, Crown, Flower2, PawPrint, Settings, ShoppingBag, Sparkles, X } from 'lucide-react';
 import type { ChildGameData, GameCatalogItem, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
 import { getActiveDecorationEntities, getWorldRevisionAfterMutation, toDecorationDraft, type DecorationDraft } from './decoration-editing';
-import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot, MAX_ROAMING_PETS } from './roaming-pet-state';
+import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
+import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
 import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
 import type { useNotificationSettings } from '../../../hooks/useNotificationSettings';
@@ -21,7 +22,8 @@ interface ChildGamePanelProps {
   notificationSettings: ReturnType<typeof useNotificationSettings>;
   onPurchase: (catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<void>;
   onEquipCharacter: (inventoryItemId: string) => Promise<void>;
-  onSetFollowingPet: (inventoryItemId: string | null) => Promise<WorldMutationResult>;
+  onRenamePet: (inventoryItemId: string, displayName: string | null) => Promise<void>;
+  onSetFollowingPets: (inventoryItemIds: string[]) => Promise<WorldMutationResult>;
   onSetRoamingPets: (inventoryItemIds: string[]) => Promise<WorldMutationResult>;
   onPlaceDecoration: (payload: WorldMutationPayload) => Promise<WorldMutationResult>;
   onUpdateDecoration: (payload: WorldTransformMutationPayload) => Promise<WorldMutationResult>;
@@ -29,6 +31,8 @@ interface ChildGamePanelProps {
   onCollectAllDecorations: (expectedRevision: number) => Promise<WorldMutationResult>;
   onSwitchChild: () => void;
   onLogout: () => void;
+  showPetNames: boolean;
+  onShowPetNamesChange: (visible: boolean) => void;
 }
 
 function createIdempotencyKey() {
@@ -49,7 +53,8 @@ export function ChildGamePanel({
   notificationSettings,
   onPurchase,
   onEquipCharacter,
-  onSetFollowingPet,
+  onRenamePet,
+  onSetFollowingPets,
   onSetRoamingPets,
   onPlaceDecoration,
   onUpdateDecoration,
@@ -57,30 +62,48 @@ export function ChildGamePanel({
   onCollectAllDecorations,
   onSwitchChild,
   onLogout,
+  showPetNames,
+  onShowPetNamesChange,
 }: ChildGamePanelProps) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const initialRoamingPetSnapshot = getRoamingPetSnapshot(gameData);
+  const initialFollowingPetSnapshot = getFollowingPetInventoryIds(gameData);
   const [roamingPets, setRoamingPets] = useState<string[]>(initialRoamingPetSnapshot);
+  const [followingPets, setFollowingPets] = useState<string[]>(initialFollowingPetSnapshot);
   const [inventorySection, setInventorySection] = useState<'character' | 'pet' | 'decoration'>('character');
   const [shopSection, setShopSection] = useState<'character' | 'pet' | 'decoration'>('character');
   const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
   const [decorationDrafts, setDecorationDrafts] = useState<Record<string, DecorationDraft>>({});
   const [decorationMutationErrors, setDecorationMutationErrors] = useState<Record<string, DecorationMutationKind>>({});
   const [roamingMutationPending, setRoamingMutationPending] = useState(false);
+  const [editingPetId, setEditingPetId] = useState<string | null>(null);
+  const [petNameDraft, setPetNameDraft] = useState('');
+  const [renamePendingId, setRenamePendingId] = useState<string | null>(null);
   const worldRevisionRef = useRef(gameData.worldRevision);
   const worldMutationQueueRef = useRef(Promise.resolve());
   const roamingPetsRef = useRef(initialRoamingPetSnapshot);
   const roamingPetsServerSnapshotRef = useRef(initialRoamingPetSnapshot);
   const roamingMutationPendingRef = useRef(false);
+  const followingPetsRef = useRef(initialFollowingPetSnapshot);
+  const followingPetsServerSnapshotRef = useRef(initialFollowingPetSnapshot);
+  const followingMutationPendingRef = useRef(false);
+  const [followingMutationPending, setFollowingMutationPending] = useState(false);
   const ownedCatalogIds = new Set(gameData.inventory.map((item) => item.catalogItemId));
   const activeDecorationCount = gameData.worldEntities.filter((entity) => entity.entityKind === 'decoration' && entity.isActive).length;
   const title = kind === 'inventory' ? '我的背包' : kind === 'shop' ? '冒險商店' : '世界設定';
 
   useEffect(() => {
+    // The provider now mirrors roaming/following into gameData optimistically.
+    // Do not treat that transient snapshot as the server rollback baseline.
+    if (roamingMutationPendingRef.current || followingMutationPendingRef.current) return;
     const serverSnapshot = getRoamingPetSnapshot(gameData);
     roamingPetsServerSnapshotRef.current = serverSnapshot;
     roamingPetsRef.current = serverSnapshot;
     setRoamingPets(serverSnapshot);
+    const followingSnapshot = getFollowingPetInventoryIds(gameData);
+    followingPetsServerSnapshotRef.current = followingSnapshot;
+    followingPetsRef.current = followingSnapshot;
+    setFollowingPets(followingSnapshot);
   }, [gameData]);
 
   useEffect(() => {
@@ -143,7 +166,7 @@ export function ChildGamePanel({
     const currentRoamingPets = roamingPetsRef.current;
     const next = getNextRoamingPets(currentRoamingPets, inventoryItemId, getRoamablePetInventoryIds(gameData));
     if (next === currentRoamingPets) {
-      setFeedback('跟隨中的寵物不能巡遊，或巡遊名額已滿。');
+      setFeedback('跟隨中的寵物不能巡遊。');
       return;
     }
 
@@ -175,6 +198,66 @@ export function ChildGamePanel({
         },
       },
     );
+  };
+
+  const toggleFollowingPet = (inventoryItemId: string) => {
+    if (followingMutationPendingRef.current) return;
+    const next = selectFollowingPet(followingPetsRef.current, inventoryItemId);
+    followingPetsRef.current = next;
+    setFollowingPets(next);
+    followingMutationPendingRef.current = true;
+    setFollowingMutationPending(true);
+    void commitWorldMutation(() => onSetFollowingPets(next),
+      next.includes(inventoryItemId) ? '跟隨隊列已更新。' : '已取消跟隨夥伴。',
+      undefined,
+      undefined,
+      {
+        onSuccess: () => {
+          const committedSnapshot = [...next];
+          followingPetsServerSnapshotRef.current = committedSnapshot;
+          followingPetsRef.current = committedSnapshot;
+          setFollowingPets(committedSnapshot);
+          followingMutationPendingRef.current = false;
+          setFollowingMutationPending(false);
+        },
+        onFailure: () => {
+          const rollbackSnapshot = [...followingPetsServerSnapshotRef.current];
+          followingPetsRef.current = rollbackSnapshot;
+          setFollowingPets(rollbackSnapshot);
+          followingMutationPendingRef.current = false;
+          setFollowingMutationPending(false);
+          return '跟隨夥伴更新失敗，已恢復上次同步狀態。';
+        },
+      },
+    );
+  };
+
+  const startPetRename = (inventoryItemId: string, currentName: string | null | undefined) => {
+    setEditingPetId(inventoryItemId);
+    setPetNameDraft(currentName?.trim() ?? '');
+    setFeedback(null);
+  };
+
+  const cancelPetRename = () => {
+    setEditingPetId(null);
+    setPetNameDraft('');
+  };
+
+  const savePetRename = (inventoryItemId: string) => {
+    if (renamePendingId !== null) return;
+    const nextName = petNameDraft.trim();
+    if (nextName.length > 12) {
+      setFeedback('寵物名字最多 12 個字。');
+      return;
+    }
+    setRenamePendingId(inventoryItemId);
+    setEditingPetId(null);
+    setPetNameDraft('');
+    setFeedback(nextName ? '寵物名字已更新，正在背景同步。' : '已恢復預設名稱，正在背景同步。');
+    void onRenamePet(inventoryItemId, nextName || null)
+      .then(() => setFeedback('寵物名字已同步。'))
+      .catch(() => setFeedback('同步失敗，名稱已恢復，請再試一次。'))
+      .finally(() => setRenamePendingId(null));
   };
 
   return (
@@ -295,15 +378,16 @@ export function ChildGamePanel({
                 );
               }
               const isEquipped = gameData.loadout?.equippedCharacterInventoryId === inventory.id;
-              const isFollowing = gameData.loadout?.followingPetInventoryId === inventory.id;
+              const followingIndex = followingPets.indexOf(inventory.id);
+              const isFollowing = followingIndex >= 0;
               const isRoaming = roamingPets.includes(inventory.id);
               const canRoam = getRoamablePetInventoryIds(gameData).includes(inventory.id);
-              const roamingLimitReached = !isRoaming && roamingPets.length >= MAX_ROAMING_PETS;
+              const petDisplayName = inventory.displayName?.trim() || item.name;
               return (
                 <article className="hh-game-item-card" key={inventory.id}>
                   <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
                   <div className="hh-game-item-copy">
-                    <strong>{item.name}</strong>
+                    <strong>{isCharacter ? item.name : petDisplayName}</strong>
                     <span>{item.description}</span>
                   </div>
                   {isCharacter ? (
@@ -312,11 +396,34 @@ export function ChildGamePanel({
                     </button>
                   ) : (
                     <div className="hh-game-item-actions">
-                      <button type="button" className={`hh-game-action-button${isFollowing ? ' hh-game-action-button--danger' : ''}`} disabled={mutationPending} onClick={() => void commitWorldMutation(() => onSetFollowingPet(isFollowing ? null : inventory.id), isFollowing ? '已取消跟隨夥伴。' : '跟隨夥伴已更新。')}>
-                        {isFollowing ? <><X size={16} /> 取消跟隨</> : '跟隨'}
+                      {editingPetId === inventory.id ? (
+                        <div className="hh-game-pet-name-editor">
+                          <input
+                            type="text"
+                            aria-label="寵物名字"
+                            value={petNameDraft}
+                            maxLength={12}
+                            placeholder={item.name}
+                            disabled={renamePendingId === inventory.id}
+                            onChange={(event) => setPetNameDraft(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') void savePetRename(inventory.id);
+                              if (event.key === 'Escape') cancelPetRename();
+                            }}
+                          />
+                          <button type="button" className="hh-game-action-button hh-game-action-button--primary" aria-label="儲存寵物名字" disabled={renamePendingId === inventory.id} onClick={() => void savePetRename(inventory.id)}><Check size={16} /></button>
+                          <button type="button" className="hh-game-action-button" aria-label="取消改名" disabled={renamePendingId === inventory.id} onClick={cancelPetRename}><X size={16} /></button>
+                        </div>
+                      ) : (
+                        <button type="button" className="hh-game-action-button" disabled={mutationPending || renamePendingId !== null} onClick={() => startPetRename(inventory.id, inventory.displayName)}>
+                          改名
+                        </button>
+                      )}
+                      <button type="button" className={`hh-game-action-button${isFollowing ? ' hh-game-action-button--danger' : ''}`} disabled={mutationPending || followingMutationPending || roamingMutationPending} onClick={() => toggleFollowingPet(inventory.id)}>
+                        {isFollowing ? <><X size={16} /> 取消跟隨 #{followingIndex + 1}</> : '加入跟隨'}
                       </button>
-                      <button type="button" className={`hh-game-action-button${isRoaming ? ' is-selected' : ''}`} disabled={mutationPending || isFollowing || roamingMutationPending || !canRoam || roamingLimitReached} onClick={() => toggleRoamingPet(inventory.id)}>
-                        <Sparkles size={16} /> {isFollowing ? '跟隨中（不可巡遊）' : isRoaming ? '巡遊中' : roamingLimitReached ? '巡遊已滿' : '巡遊'}
+                      <button type="button" className={`hh-game-action-button${isRoaming ? ' is-selected' : ''}`} disabled={mutationPending || isFollowing || roamingMutationPending || followingMutationPending || !canRoam} onClick={() => toggleRoamingPet(inventory.id)}>
+                        <Sparkles size={16} /> {isFollowing ? `跟隨中 #${followingIndex + 1}` : isRoaming ? '巡遊中' : '巡遊'}
                       </button>
                     </div>
                   )}
@@ -366,6 +473,17 @@ export function ChildGamePanel({
       {kind === 'settings' && (
         <div className="hh-game-panel-section">
           <h3><Settings size={18} /> 通知與帳號</h3>
+          <div className="hh-game-settings-card hh-game-settings-card--toggle">
+            <div>
+              <strong>顯示寵物名字</strong>
+              <span>在世界中顯示寵物的白色小字名稱。</span>
+            </div>
+            <label className="hh-game-setting-toggle">
+              <span className="sr-only">顯示寵物名字</span>
+              <input type="checkbox" checked={showPetNames} onChange={(event) => onShowPetNamesChange(event.target.checked)} />
+              <span aria-hidden="true" />
+            </label>
+          </div>
           <div className="hh-game-settings-card"><PushNotificationSettings settings={notificationSettings} /></div>
           <div className="hh-game-settings-actions">
             <button type="button" className="hh-game-action-button" onClick={onSwitchChild}>切換孩子</button>

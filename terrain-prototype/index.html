@@ -151,18 +151,19 @@
 
       const ASSETS = {
         tree: './assets/big-tree.glb',
-        character: './assets/anime-maiden.glb',
+        character: '../public/assets/characters/arthur.glb',
         skybox: './assets/sky-equirectangular-day.png',
       };
       const GRID_SIZE = 9;
       const TERRAIN_STEP = 1.1;
       // Keep a wide non-walkable grass field around the playable grid so edge views stay covered.
       const SCENE_PADDING = 8;
-      // Enlarge the focal tree in the rear-right of the playable clearing.
-      const TREE_FIT_TO_TILE = 3.60;
+      // Keep the doubled focal tree on the upper outer edge of the playable clearing.
+      const TREE_FIT_TO_TILE = 7.20;
       const TREE_HEIGHT_SCALE = 1;
       const TREE_ROOT_SINK = 0.03;
-      const TREE_POSITION = { x: 1.1, z: -1.65 };
+      const TREE_ANCHOR_X = 1.1;
+      const TREE_OUTER_EDGE_PADDING = 0.08;
       const visualSettings = getNaturalWorldVisualSettings('high');
 
       const canvas = document.querySelector('#scene-canvas');
@@ -271,12 +272,6 @@
         direction: playerGrassInteraction.direction,
         strength: 0,
       }];
-      const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      let grassMotionScale = reducedMotionQuery.matches ? 0.18 : 1;
-      reducedMotionQuery.addEventListener('change', event => {
-        grassMotionScale = event.matches ? 0.18 : 1;
-      });
-
       function updateProgress(value, detail) {
         progressBar.style.width = `${Math.max(16, Math.min(value, 100))}%`;
         loadingDetail.textContent = detail;
@@ -358,6 +353,13 @@
         wrapper.scale.setScalar(scale);
         wrapper.add(model);
         return wrapper;
+      }
+
+      function getOuterTreePlacement({ treeSize, terrainLimit, terrainStep, treeFitToTile, x, edgePadding = TREE_OUTER_EDGE_PADDING }) {
+        const footprint = Math.max(treeSize.x, treeSize.z);
+        const scale = (terrainStep * treeFitToTile) / footprint;
+        const halfDepth = (treeSize.z * scale) / 2;
+        return { x, z: -(terrainLimit + halfDepth + edgePadding), scale, halfDepth };
       }
 
       function addPlayerMarker() {
@@ -448,16 +450,23 @@
           viewportWidth: window.innerWidth,
         }));
 
-        const treeScale = (terrainStep * TREE_FIT_TO_TILE) / Math.max(treeDefinition.size.x, treeDefinition.size.z);
+        const treePlacement = getOuterTreePlacement({
+          treeSize: treeDefinition.size,
+          terrainLimit,
+          terrainStep,
+          treeFitToTile: TREE_FIT_TO_TILE,
+          x: TREE_ANCHOR_X,
+        });
+        const TREE_POSITION = { x: treePlacement.x, z: treePlacement.z };
         const tree = placeAsset(
           treeDefinition,
-          new THREE.Vector3(TREE_POSITION.x, groundHeight - TREE_ROOT_SINK, TREE_POSITION.z),
-          treeScale,
+          new THREE.Vector3(treePlacement.x, groundHeight - TREE_ROOT_SINK, treePlacement.z),
+          treePlacement.scale,
         );
         tree.scale.y *= TREE_HEIGHT_SCALE;
         terrain.add(tree);
 
-        const centralTreeHeight = treeDefinition.size.y * treeScale * TREE_HEIGHT_SCALE;
+        const centralTreeHeight = treeDefinition.size.y * treePlacement.scale * TREE_HEIGHT_SCALE;
         terrain.add(createProceduralForest(THREE, {
           terrainLimit,
           groundHeight,
@@ -560,7 +569,6 @@
         grassInteractors[0].strength = playerGrassInteraction.strength;
         proceduralGrass?.update({
           time: sceneElapsedTime,
-          motionScale: grassMotionScale,
           interactors: grassInteractors,
         });
         ambientPollen?.update(sceneElapsedTime);

@@ -1,9 +1,8 @@
 import type { ChildGameData } from '../contracts';
-
-export const MAX_ROAMING_PETS = 3;
+import { getFollowingPetInventoryIds } from '../following-pet-state';
 
 export function getRoamablePetInventoryIds(gameData: ChildGameData): string[] {
-  const followingPetInventoryId = gameData.loadout?.followingPetInventoryId ?? null;
+  const followingPetInventoryIds = new Set(getFollowingPetInventoryIds(gameData));
   const petCatalogIds = new Set(
     gameData.catalog.filter((item) => item.itemType === 'pet' && item.isActive).map((item) => item.id),
   );
@@ -11,7 +10,7 @@ export function getRoamablePetInventoryIds(gameData: ChildGameData): string[] {
   return gameData.inventory
     .filter((inventory) => inventory.quantity > 0)
     .filter((inventory) => petCatalogIds.has(inventory.catalogItemId))
-    .filter((inventory) => inventory.id !== followingPetInventoryId)
+    .filter((inventory) => !followingPetInventoryIds.has(inventory.id))
     .map((inventory) => inventory.id);
 }
 
@@ -29,8 +28,7 @@ export function getRoamingPetSnapshot(gameData: ChildGameData): string[] {
       if (seen.has(inventoryItemId)) return false;
       seen.add(inventoryItemId);
       return true;
-    })
-    .slice(0, MAX_ROAMING_PETS);
+    });
 }
 
 export function getNextRoamingPets(
@@ -42,6 +40,5 @@ export function getNextRoamingPets(
   if (currentRoamingPetIds.includes(inventoryItemId)) {
     return currentRoamingPetIds.filter((id) => id !== inventoryItemId);
   }
-  if (currentRoamingPetIds.length >= MAX_ROAMING_PETS) return currentRoamingPetIds;
   return [...currentRoamingPetIds, inventoryItemId];
 }

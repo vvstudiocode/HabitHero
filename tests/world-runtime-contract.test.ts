@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { AnimationClip, VectorKeyframeTrack } from 'three';
 import {
   WORLD_QUALITY_SETTINGS,
   getWorldQuality,
@@ -11,6 +12,8 @@ import { emptyChildGameData } from '../src/features/world/contracts';
 import {
   getPetModelScale,
   getPetWorldScale,
+  getOuterTreePlacement,
+  createInPlaceAnimationClip,
   PET_MAX_DIMENSION_RATIO,
   PET_MAX_HEIGHT_RATIO,
   PET_WANDER_SPEED,
@@ -96,16 +99,34 @@ describe('prototype world runtime contracts', () => {
 
   it('keeps the butterfly ring close to the big tree in both scene entry points', () => {
     const standaloneSource = read('../terrain-prototype/index.html');
-    assert.match(runtimeSource, /center:\s*\{\s*x:\s*PROTOTYPE_WORLD_CONFIG\.treePosition\.x,\s*z:\s*PROTOTYPE_WORLD_CONFIG\.treePosition\.z,\s*\},\s*radius:\s*0\.9/);
+    assert.match(runtimeSource, /center:\s*\{\s*x:\s*treePlacement\.x,\s*z:\s*treePlacement\.z,\s*\},\s*radius:\s*0\.9/);
     assert.match(standaloneSource, /center:\s*\{\s*x:\s*TREE_POSITION\.x,\s*z:\s*TREE_POSITION\.z\s*\},\s*radius:\s*0\.9/);
   });
 
-  it('places the imported big tree as a side-back focal point in both scene entry points', () => {
+  it('places the imported big tree at the upper outer edge in both scene entry points', () => {
     const standaloneSource = read('../terrain-prototype/index.html');
-    assert.match(runtimeSource, /treePosition:\s*\{\s*x:\s*1\.1,\s*z:\s*-1\.65/);
-    assert.match(runtimeSource, /PROTOTYPE_WORLD_CONFIG\.treePosition\.x/);
-    assert.match(standaloneSource, /TREE_POSITION\s*=\s*\{\s*x:\s*1\.1,\s*z:\s*-1\.65/);
+    assert.match(runtimeSource, /getOuterTreePlacement\(/);
+    assert.match(runtimeSource, /treeSize: treeDefinition\.size/);
+    assert.match(runtimeSource, /treeSize: treeDefinition\.size/);
+    assert.match(runtimeSource, /treePlacement\.scale/);
+    assert.match(runtimeSource, /PROTOTYPE_WORLD_CONFIG\.treeAnchorX/);
+    assert.match(standaloneSource, /getOuterTreePlacement\(/);
+    assert.match(standaloneSource, /treeSize: treeDefinition\.size/);
+    assert.match(standaloneSource, /treeSize: treeDefinition\.size/);
+    assert.match(standaloneSource, /treePlacement\.scale/);
     assert.match(standaloneSource, /TREE_POSITION\.x/);
+  });
+
+  it('keeps the calculated tree footprint completely outside the walkable edge', () => {
+    const placement = getOuterTreePlacement({
+      treeSize: { x: 1.03942, y: 1.04616, z: 1.03661 },
+      terrainLimit: 4.862,
+      terrainStep: 1.1,
+      treeFitToTile: 7.2,
+      x: 1.1,
+    });
+    assert.ok(placement.z + placement.halfDepth < -4.862);
+    assert.ok(placement.z < -4.862);
   });
 
   it('wires the portrait control band to independent movement, camera, and pinch input', () => {
@@ -152,25 +173,50 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /cloneSkinnedObject/);
     assert.match(runtimeSource, /new THREE\.AnimationMixer\(model/);
     assert.match(runtimeSource, /createPetModel/);
+    assert.match(runtimeSource, /clipAction\(createInPlaceAnimationClip\(getWalkAnimationClip\(animations\)!\)\)/);
+    assert.match(runtimeSource, /createInPlaceAnimationClip\(getWalkAnimationClip\(roamingCharacterAnimations\)!\)/);
     assert.match(runtimeSource, /updatePetAnimation/);
     assert.match(runtimeSource, /getPetWorldScale/);
     assert.match(runtimeSource, /getPetModelScale/);
     assert.match(runtimeSource, /worldEntities\.filter\(\(entity\) => entity\.isActive\)/);
-    assert.match(runtimeSource, /followingPet\.maxScale/);
+    assert.match(runtimeSource, /followingPet\?\.maxScale/);
+    assert.match(runtimeSource, /followingPetInventoryIds\.forEach/);
+    assert.match(runtimeSource, /orderedFollowingActors/);
     assert.match(runtimeSource, /WORLD_BOUNDARY/);
     assert.match(runtimeSource, /PET_WANDER_SPEED/);
-    assert.match(runtimeSource, /chooseRoamingTarget\(current, actor\.radius, wanderObstacles\)/);
-    assert.match(runtimeSource, /getRoamingStep\([\s\S]*PET_WANDER_SPEED/);
+    assert.match(runtimeSource, /getWanderStep\([\s\S]*PET_WANDER_SPEED/);
+    assert.match(runtimeSource, /createWanderState\(/);
+    assert.match(runtimeSource, /hashWanderSeed\(/);
+    assert.doesNotMatch(runtimeSource, /chooseRoamingTarget\(current, actor\.radius, wanderObstacles\)/);
+    assert.doesNotMatch(runtimeSource, /getRoamingStep\([\s\S]*PET_WANDER_SPEED/);
     assert.equal(PET_WORLD_SCALE_MULTIPLIER, 1.3);
     assert.equal(PET_WANDER_SPEED, 0.5);
     assert.match(runtimeSource, /PET_WORLD_SCALE_MULTIPLIER/);
-    assert.match(runtimeSource, /target = null[\s\S]*nextDecisionAt/);
+    assert.match(runtimeSource, /target: null, wanderState/);
+    assert.match(runtimeSource, /state = 'wandering'/);
     assert.doesNotMatch(runtimeSource, /Math\.abs\(Math\.sin\(actor\.walkPhase\)\)/);
     assert.doesNotMatch(runtimeSource, /PET_SPRITE|farm-animals|pixel-farm-pet/);
     assert.equal(getPetWorldScale({ requestedScale: 10, petHeight: 1, characterHeight: 1 }), PET_MAX_HEIGHT_RATIO);
     assert.equal(getPetWorldScale({ requestedScale: 0.2, petHeight: 1, characterHeight: 1 }), 0.2);
     const baseModelScale = getPetModelScale({ requestedScale: 1, petHeight: 0.5, characterHeight: 1 });
     assert.equal(getPetModelScale({ requestedScale: 0.5, petHeight: 0.5, characterHeight: 1 }), baseModelScale * 0.5);
+  });
+
+  it('removes horizontal root motion from patrol clips without changing the source clip', () => {
+    const sourceClip = new AnimationClip('Walk_Forward', -1, [
+      new VectorKeyframeTrack('root.position', [0, 1], [0, -1, 0, 0, -0.8, 1.8]),
+      new VectorKeyframeTrack('pelvis.position', [0, 1], [0, 0, 0, 0, 0.02, 0]),
+    ]);
+
+    const inPlaceClip = createInPlaceAnimationClip(sourceClip);
+    const rootTrack = inPlaceClip.tracks.find((track) => track.name === 'root.position');
+    const sourceRootTrack = sourceClip.tracks.find((track) => track.name === 'root.position');
+
+    assert.ok(rootTrack);
+    assert.ok(sourceRootTrack);
+    assert.deepEqual(Array.from(rootTrack.values), [0, -1, 0, 0, rootTrack.values[4], 0]);
+    assert.deepEqual(Array.from(sourceRootTrack.values), [0, -1, 0, 0, sourceRootTrack.values[4], sourceRootTrack.values[5]]);
+    assert.notEqual(inPlaceClip, sourceClip);
   });
 
   it('caps pet scale by the largest imported model dimension, not only its height', () => {

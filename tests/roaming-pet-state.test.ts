@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
-  MAX_ROAMING_PETS,
   getNextRoamingPets,
   getRoamablePetInventoryIds,
   getRoamingPetSnapshot,
@@ -30,7 +29,6 @@ function createGameData(overrides: Partial<ChildGameData> = {}): ChildGameData {
     loadout: { equippedCharacterInventoryId: null, followingPetInventoryId: 'inventory-dog' },
     worldEntities: [],
     worldRevision: 7,
-    lootDrops: [],
     ...overrides,
   };
 }
@@ -49,7 +47,7 @@ describe('roaming pet state', () => {
     assert.deepEqual(getRoamingPetSnapshot(data), ['inventory-cat']);
   });
 
-  it('rejects non-roamable pets and never exceeds the server limit', () => {
+  it('rejects non-roamable pets but keeps every selected roaming pet in order', () => {
     const roamablePetIds = ['inventory-cat'];
 
     assert.deepEqual(getNextRoamingPets(['inventory-cat'], 'inventory-dog', roamablePetIds), ['inventory-cat']);
@@ -57,7 +55,7 @@ describe('roaming pet state', () => {
     assert.deepEqual(getNextRoamingPets(['inventory-cat', 'inventory-dog'], 'inventory-cat', roamablePetIds), ['inventory-dog']);
 
     const fullRoamablePetIds = ['inventory-cat', 'inventory-dog', 'inventory-bird', 'inventory-fox'];
-    assert.deepEqual(getNextRoamingPets(fullRoamablePetIds.slice(0, MAX_ROAMING_PETS), 'inventory-fox', fullRoamablePetIds), fullRoamablePetIds.slice(0, MAX_ROAMING_PETS));
+    assert.deepEqual(getNextRoamingPets(fullRoamablePetIds.slice(0, 3), 'inventory-fox', fullRoamablePetIds), fullRoamablePetIds);
   });
 
   it('does not expose retired pet catalog rows to roaming', () => {
@@ -81,7 +79,8 @@ describe('roaming pet state', () => {
     assert.match(childGamePanelSource, /useEffect\(\(\) => \{[\s\S]*?getRoamingPetSnapshot\(gameData\)[\s\S]*?setRoamingPets\(/);
     assert.match(childGamePanelSource, /roamingPetsServerSnapshotRef/);
     assert.match(childGamePanelSource, /巡遊夥伴更新失敗，已恢復上次同步狀態/);
-    assert.match(childGamePanelSource, /onSetFollowingPet\(isFollowing \? null : inventory\.id\)/);
+    assert.match(childGamePanelSource, /toggleFollowingPet\(inventory\.id\)/);
+    assert.match(childGamePanelSource, /onSetFollowingPets\(next\)/);
     assert.match(childGamePanelSource, /取消跟隨/);
     assert.match(childGamePanelSource, /disabled=\{mutationPending\}/);
     assert.match(childGamePanelSource, /disabled=\{mutationPending \|\| isFollowing \|\| roamingMutationPending/);

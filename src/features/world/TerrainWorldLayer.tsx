@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Object3D } from 'three';
-import type { ChildGameData, GameCatalogItem, GameLootDrop, PetBehaviorMode } from './contracts';
-import type { LootAnimationEvent } from './game-loot';
+import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
 import {
   CENTRAL_TREE_KEEP_OUT,
   circlesOverlap,
@@ -14,6 +13,8 @@ import { DynamicJoystick } from './components/DynamicJoystick';
 import { mountPrototypeWorld } from './prototype-world-runtime';
 import { getWorldQuality, type WorldQuality } from './world-quality';
 import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
+import { createWorldSceneGameDataSnapshot } from './world-scene-data';
+import { getFollowingPetInventoryIds } from './following-pet-state';
 
 export {
   WORLD_QUALITY_SETTINGS,
@@ -24,24 +25,21 @@ export type { WorldQuality } from './world-quality';
 interface TerrainWorldLayerProps {
   childId: string;
   gameData: ChildGameData;
+  showPetNames?: boolean;
   paused?: boolean;
-  onLootPickup?: (dropId: string) => Promise<boolean>;
-  onLootPickupBatch?: (dropIds: string[]) => Promise<string[]>;
-  onLootAnimation?: (event: LootAnimationEvent) => void;
-  onLootAnimationBatch?: (events: LootAnimationEvent[]) => void;
 }
 
 type ThreeNamespace = typeof import('three');
 type CharacterRenderMode = 'anime-maiden' | 'world-glb' | 'procedural';
 
 const DEFAULT_WORLD_CHARACTER: GameCatalogItem = {
-  id: 'character.anime-maiden',
+  id: 'character.arthur',
   itemType: 'character',
-  name: '動漫少女',
-  description: 'HabitHero 世界的免費初始角色。',
-  scrollPrice: 0,
-  assetKey: 'character.anime-maiden',
-  thumbnailUrl: null,
+  name: '亞瑟',
+  description: '帶著溫暖笑容、勇敢踏上冒險的旅人。',
+  scrollPrice: 9,
+  assetKey: 'character.arthur',
+  thumbnailUrl: '/assets/characters/arthur-thumbnail.webp',
   isActive: true,
   isStarter: true,
   isStackable: false,
@@ -49,7 +47,7 @@ const DEFAULT_WORLD_CHARACTER: GameCatalogItem = {
   minScale: 0.9,
   maxScale: 1.1,
   sortOrder: 10,
-  metadata: { source: 'terrain-prototype/assets/anime-maiden.glb' },
+  metadata: { model: '/assets/characters/arthur.glb', animation: 'Walk_InPlace' },
 };
 
 export function getAnimationClipName(clipNames: readonly string[], state: 'idle' | 'walk'): string | undefined {
@@ -149,7 +147,10 @@ function getEquippedCatalogItem(gameData: ChildGameData): GameCatalogItem | unde
   const equippedItem = equippedInventory
     ? gameData.catalog.find((item) => item.id === equippedInventory.catalogItemId)
     : undefined;
-  return equippedItem ?? gameData.catalog.find((item) => item.itemType === 'character' && item.assetKey === DEFAULT_WORLD_CHARACTER.assetKey) ?? DEFAULT_WORLD_CHARACTER;
+  return equippedItem && equippedItem.isActive
+    ? equippedItem
+    : gameData.catalog.find((item) => item.itemType === 'character' && item.isActive && item.assetKey === DEFAULT_WORLD_CHARACTER.assetKey)
+      ?? DEFAULT_WORLD_CHARACTER;
 }
 
 function getCatalogSceneSignature(item: GameCatalogItem | undefined) {
@@ -179,26 +180,37 @@ function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
       entity.isActive,
       entity.collisionRadius,
       entity.assetKey,
+      entity.displayName,
     ].join(':'))
     .join('|');
 }
 
-export function getTerrainWorldSceneKey(gameData: ChildGameData, quality: WorldQuality): string {
+export function getTerrainWorldSceneKey(gameData: ChildGameData, quality: WorldQuality, showPetNames = true): string {
   const equippedCatalogItem = getEquippedCatalogItem(gameData);
-  const followingPetInventoryId = gameData.loadout?.followingPetInventoryId ?? null;
-  const followingPetInventory = followingPetInventoryId
-    ? gameData.inventory.find((inventory) => inventory.id === followingPetInventoryId)
-    : undefined;
-  const followingPetCatalogItem = followingPetInventory
-    ? gameData.catalog.find((item) => item.id === followingPetInventory.catalogItemId && item.itemType === 'pet')
-    : undefined;
+  const followingPetInventoryIds = getFollowingPetInventoryIds(gameData);
+  // Keep stale loadout ids in the cache key as well. They do not render unless
+  // owned/catalog-resolvable, but changing a loadout must still invalidate a
+  // scene that was already mounted from an older snapshot.
+  const rawFollowingPetInventoryIds = gameData.loadout?.followingPetInventoryIds?.length
+    ? gameData.loadout.followingPetInventoryIds
+    : gameData.loadout?.followingPetInventoryId
+      ? [gameData.loadout.followingPetInventoryId]
+      : [];
+  const followingPetKeyIds = rawFollowingPetInventoryIds.length > 0 ? rawFollowingPetInventoryIds : followingPetInventoryIds;
+  const followingPetSignatures = followingPetKeyIds.map((inventoryId) => {
+    const inventory = gameData.inventory.find((item) => item.id === inventoryId);
+    const catalogItem = inventory
+      ? gameData.catalog.find((item) => item.id === inventory.catalogItemId && item.itemType === 'pet')
+      : undefined;
+    return [inventoryId, inventory?.displayName ?? '', getCatalogSceneSignature(catalogItem)].join(':');
+  });
   return [
     getCatalogSceneSignature(equippedCatalogItem),
     getCharacterRenderMode(equippedCatalogItem),
-    followingPetInventoryId ?? 'none',
-    getCatalogSceneSignature(followingPetCatalogItem),
+    followingPetSignatures.join('|') || 'none',
     getWorldEntitiesSceneSignature(gameData),
     quality,
+    showPetNames ? 'pet-names-on' : 'pet-names-off',
   ].join('||');
 }
 
@@ -232,35 +244,10 @@ function useWorldQuality() {
   return quality;
 }
 
-function createSceneGameDataSnapshot(gameData: ChildGameData): ChildGameData {
-  const followingPetInventoryId = gameData.loadout?.followingPetInventoryId ?? null;
-  const followingPetInventory = followingPetInventoryId
-    ? gameData.inventory.find((inventory) => inventory.id === followingPetInventoryId)
-    : undefined;
-  const followingPetCatalogItem = followingPetInventory
-    ? gameData.catalog.find((item) => item.id === followingPetInventory.catalogItemId && item.itemType === 'pet')
-    : undefined;
-  return {
-    walletBalance: 0,
-    catalog: followingPetCatalogItem ? [followingPetCatalogItem] : [],
-    prices: {},
-    inventory: followingPetInventory ? [followingPetInventory] : [],
-    loadout: { equippedCharacterInventoryId: null, followingPetInventoryId },
-    worldEntities: gameData.worldEntities,
-    worldRevision: gameData.worldRevision,
-    lootDrops: gameData.lootDrops,
-  };
-}
-
-export function TerrainWorldLayer({ childId, gameData, paused = false, onLootPickup, onLootPickupBatch, onLootAnimation, onLootAnimationBatch }: TerrainWorldLayerProps) {
+export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paused = false }: TerrainWorldLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<PointerInputController | null>(null);
   const pausedRef = useRef(paused);
-  const lootDropsRef = useRef<GameLootDrop[]>(gameData.lootDrops);
-  const onLootPickupRef = useRef(onLootPickup);
-  const onLootPickupBatchRef = useRef(onLootPickupBatch);
-  const onLootAnimationRef = useRef(onLootAnimation);
-  const onLootAnimationBatchRef = useRef(onLootAnimationBatch);
   const [input, setInput] = useState<WorldInputState>(() => new PointerInputController().getSnapshot());
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [loadingProgress, setLoadingProgress] = useState(12);
@@ -268,24 +255,20 @@ export function TerrainWorldLayer({ childId, gameData, paused = false, onLootPic
   const [showStaticFallback, setShowStaticFallback] = useState(false);
   const [runtimeAttempt, setRuntimeAttempt] = useState(0);
   const worldQuality = useWorldQuality();
-  const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality);
+  const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames);
   const sceneInput = useMemo(() => {
     const equippedCatalogItem = getEquippedCatalogItem(gameData);
     return {
-      gameData: createSceneGameDataSnapshot(gameData),
+      gameData: createWorldSceneGameDataSnapshot(gameData),
       equippedCatalogItem,
       characterRenderMode: getCharacterRenderMode(equippedCatalogItem),
       characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
+      showPetNames,
     };
   // The key intentionally excludes wallet, price, and unrelated inventory/catalog identities.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneKey]);
   pausedRef.current = paused;
-  lootDropsRef.current = gameData.lootDrops;
-  onLootPickupRef.current = onLootPickup;
-  onLootPickupBatchRef.current = onLootPickupBatch;
-  onLootAnimationRef.current = onLootAnimation;
-  onLootAnimationBatchRef.current = onLootAnimationBatch;
 
   useEffect(() => {
     const controller = new PointerInputController();
@@ -324,14 +307,10 @@ export function TerrainWorldLayer({ childId, gameData, paused = false, onLootPic
       equippedCatalogItem: sceneInput.equippedCatalogItem,
       characterRenderMode: sceneInput.characterRenderMode,
       characterModelUrl: sceneInput.characterModelUrl,
+      showPetNames: sceneInput.showPetNames,
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,
-      lootDropsRef,
-      onLootPickupRef,
-      onLootPickupBatchRef,
-      onLootAnimationRef,
-      onLootAnimationBatchRef,
       onStatus: setStatus,
       onProgress: (value, detail) => {
         setLoadingProgress(value);

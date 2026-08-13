@@ -1,0 +1,17 @@
+- generic [ref=f14e1]:
+  - generic "HabitHero 王國邊境 3D 場景" [ref=f14e2]
+  - generic:
+    - generic:
+      - generic:
+        - generic: HabitHero · Adventure Field
+        - heading "王國邊境" [level=1]
+      - generic [ref=f14e3]:
+        - button "重設第三人稱鏡頭" [ref=f14e4] [cursor=pointer]
+        - button "暫停場景" [ref=f14e9] [cursor=pointer]
+    - generic:
+      - generic: 左下搖桿移動
+      - generic: ·
+      - generic: 拖曳轉視角
+    - application "移動搖桿" [ref=f14e12]
+    - generic: 探索模式 · 弓箭手已就緒
+    - status: 弓箭手已就位，開始探索吧

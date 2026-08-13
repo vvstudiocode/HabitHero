@@ -1,0 +1,6 @@
+- main "HabitHero 第三人稱草地場景" [ref=f94e2]:
+  - region "可操作的 HabitHero 第三人稱草地場景" [ref=f94e3]:
+    - generic "第三人稱 3D 草地場景，可使用 WASD 或方向鍵移動角色位置；單指拖曳調整視角，雙指捏合縮放" [ref=f94e4]
+    - generic [ref=f94e5]:
+      - strong [ref=f94e6]: 正在準備冒險地圖
+      - paragraph [ref=f94e7]: 讀取主角模型…

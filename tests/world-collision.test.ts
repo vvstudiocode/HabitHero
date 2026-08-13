@@ -11,9 +11,10 @@ describe('world collision contract', () => {
     assert.equal(isTransformWithinWorld({ ...valid, x: 4.8 }, 0.3), false);
   });
 
-  it('protects the spawn point and central tree keep-out area', () => {
+  it('protects the spawn point and keeps the outer tree proxy beyond the movement boundary', () => {
     assert.equal(isTransformWithinWorld({ ...valid, x: CHARACTER_SPAWN.x, z: CHARACTER_SPAWN.z }, 0.3), false);
-    assert.equal(isTransformWithinWorld({ ...valid, x: CENTRAL_TREE_KEEP_OUT.x, z: CENTRAL_TREE_KEEP_OUT.z }, 0.3), false);
+    assert.ok(CENTRAL_TREE_KEEP_OUT.z + CENTRAL_TREE_KEEP_OUT.radius < -WORLD_BOUNDARY);
+    assert.equal(CENTRAL_TREE_KEEP_OUT.radius, 2);
   });
 
   it('rejects overlapping decoration footprints after scale is applied', () => {
@@ -29,21 +30,8 @@ describe('world collision contract', () => {
     assert.equal(boundary.x, WORLD_BOUNDARY - 0.35);
   });
 
-  it('lets the character approach the big tree while keeping the tree root solid', () => {
-    const nearTreeDistance = 1.45;
-    const closer = moveWorldCharacter(
-      { x: CENTRAL_TREE_KEEP_OUT.x + nearTreeDistance + 0.2, z: CENTRAL_TREE_KEEP_OUT.z },
-      { x: CENTRAL_TREE_KEEP_OUT.x + nearTreeDistance, z: CENTRAL_TREE_KEEP_OUT.z },
-      0.35,
-    );
-    assert.equal(closer.x, CENTRAL_TREE_KEEP_OUT.x + nearTreeDistance);
-
-    const blocked = moveWorldCharacter(
-      closer,
-      { x: CENTRAL_TREE_KEEP_OUT.x, z: CENTRAL_TREE_KEEP_OUT.z },
-      0.35,
-    );
-    assert.equal(blocked.x, closer.x);
-    assert.equal(blocked.z, closer.z);
+  it('lets the character reach the upper walkable edge without the outer tree blocking it', () => {
+    const upperEdge = moveWorldCharacter({ x: 0, z: -4 }, { x: 0, z: -6 }, 0.35);
+    assert.equal(upperEdge.z, -WORLD_BOUNDARY + 0.35);
   });
 });

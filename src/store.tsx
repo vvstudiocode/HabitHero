@@ -27,9 +27,19 @@ import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/t
 import { notifyAdventureCreated, notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
-import type { GameLootBatchCollectionResult, GameLootCollectionResult, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from './features/world/contracts';
-import { emptyChildGameData } from './features/world/contracts';
-import { patchEquippedCharacter } from './features/world/game-loadout';
+import type { WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from './features/world/contracts';
+import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
+import {
+  patchEquippedCharacter,
+  patchFollowingPets,
+  patchPurchasedGameItem,
+  patchRoamingPets,
+  reconcilePurchasedGameItem,
+  rollbackPurchasedGameItem,
+  type OptimisticPurchaseDraft,
+} from './features/world/game-loadout';
+import { patchPetDisplayName } from './features/world/pet-name-optimistic';
+import { patchDeletedChild, rollbackDeletedChild } from './lib/optimistic-app-state';
 
 export interface AppContextType {
   state: AppState;
@@ -116,9 +126,9 @@ export interface AppContextType {
   resetData: () => Promise<void>;
   recordParentConsent: (consentVersion: string) => Promise<void>;
   purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<Awaited<ReturnType<DataRepository['purchaseGameItem']>>>;
-  collectGameLoot: (childId: string, dropId: string, pickupIdempotencyKey: string) => Promise<GameLootCollectionResult>;
-  collectGameLootBatch: (childId: string, dropIds: string[], pickupIdempotencyKey: string) => Promise<GameLootBatchCollectionResult>;
   equipGameCharacter: (childId: string, inventoryItemId: string) => Promise<void>;
+  setPetDisplayName: (childId: string, inventoryItemId: string, displayName: string | null) => Promise<void>;
+  setFollowingPets: (childId: string, inventoryItemIds: string[]) => Promise<WorldMutationResult>;
   setFollowingPet: (childId: string, inventoryItemId: string | null) => Promise<WorldMutationResult>;
   setRoamingPets: (childId: string, inventoryItemIds: string[]) => Promise<WorldMutationResult>;
   placeWorldEntity: (childId: string, payload: WorldMutationPayload) => Promise<WorldMutationResult>;
@@ -226,6 +236,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const loadInFlight = useRef<Promise<void> | null>(null);
   const activeMutationCount = useRef(0);
+  const mutationEpoch = useRef(0);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef(state);
   const dataReadyRef = useRef(dataReady);
@@ -246,7 +257,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const retry = useCallback(async () => {
     if (!session || !repository) return;
+    if (activeMutationCount.current > 0) return;
     if (loadInFlight.current) return loadInFlight.current;
+    const loadMutationEpoch = mutationEpoch.current;
     // Only reset dataReady on the very first load (no existing data).
     // For subsequent refreshes (realtime, reconnect) keep the dashboard
     // visible to avoid the loading-screen flash.
@@ -262,6 +275,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadInFlight.current = (async () => {
       try {
         const loaded = await repository.load(session.user.id);
+        if (loadMutationEpoch !== mutationEpoch.current) {
+          setStale(true);
+          return;
+        }
         if (loaded.role === 'parent') {
           loaded.state.parentActiveChildId = resolveActiveChildId(stateRef.current.parentActiveChildId, loaded.state.children);
         }
@@ -357,15 +374,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const scheduleBackgroundRefresh = useCallback(() => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
-    refreshTimer.current = setTimeout(() => {
+    const refresh = () => {
+      if (activeMutationCount.current > 0) {
+        refreshTimer.current = setTimeout(refresh, 200);
+        return;
+      }
       refreshTimer.current = null;
       void retry();
-    }, 800);
+    };
+    refreshTimer.current = setTimeout(refresh, 800);
   }, [retry]);
 
   const mutate = useCallback(async <T,>(
     operation: (repository: DataRepository, familyId: string) => Promise<T>,
     optimisticUpdate?: (previous: AppState) => AppState,
+    optimisticRollback?: (current: AppState, previous: AppState) => AppState,
   ): Promise<T> => {
     if (!familyId || !repository) {
       setDataError('尚未載入家庭資料，請先登入後重試。');
@@ -379,6 +402,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error(message);
     }
     setDataError(null);
+    mutationEpoch.current += 1;
     activeMutationCount.current += 1;
     setMutationPending(true);
     const previousState = stateRef.current;
@@ -398,8 +422,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (optimisticUpdate) {
         setState((current) => {
-          stateRef.current = previousState;
-          return previousState;
+          const next = optimisticRollback ? optimisticRollback(current, previousState) : previousState;
+          stateRef.current = next;
+          return next;
         });
       }
       const message = error instanceof Error ? error.message : '資料更新失敗，請重試。';
@@ -441,9 +466,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const actions = {
     recordParentConsent: (consentVersion: string) => mutate((repo, id) => repo.recordParentConsent(id, consentVersion), (previous) => ({ ...previous, parentConsentVersion: consentVersion })),
-    purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => mutate((repo) => repo.purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey)),
-    collectGameLoot: (childId: string, dropId: string, pickupIdempotencyKey: string) => mutate((repo) => repo.collectGameLoot(childId, dropId, pickupIdempotencyKey)),
-    collectGameLootBatch: (childId: string, dropIds: string[], pickupIdempotencyKey: string) => mutate((repo) => repo.collectGameLootBatch(childId, dropIds, pickupIdempotencyKey)),
+    purchaseGameItem: async (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => {
+      const currentGameData = stateRef.current.gameDataByChildId[childId] ?? emptyChildGameData();
+      const catalogItem = currentGameData.catalog.find((item) => item.id === catalogItemId);
+      const existingInventoryItemId = catalogItem?.isStackable
+        ? currentGameData.inventory.find((item) => item.catalogItemId === catalogItemId)?.id ?? null
+        : null;
+      const existingQuantityBefore = existingInventoryItemId
+        ? currentGameData.inventory.find((item) => item.id === existingInventoryItemId)?.quantity
+        : undefined;
+      const localInventoryItemId = existingInventoryItemId ?? `local-purchase-${idempotencyKey}`;
+      const purchaseDraft: OptimisticPurchaseDraft = {
+        catalogItemId,
+        quantity,
+        localInventoryItemId,
+        acquiredAt: new Date().toISOString(),
+        existingInventoryItemId,
+        existingQuantityBefore,
+        totalPrice: catalogItem
+          ? (currentGameData.prices[catalogItemId] ?? catalogItem.scrollPrice) * quantity
+          : undefined,
+      };
+      const optimisticUpdate = catalogItem
+        ? (previous: AppState) => {
+          const gameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...previous,
+            gameDataByChildId: {
+              ...previous.gameDataByChildId,
+              [childId]: patchPurchasedGameItem(gameData, purchaseDraft),
+            },
+          };
+        }
+        : undefined;
+      const optimisticRollback = optimisticUpdate
+        ? (current: AppState) => {
+          const gameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...current,
+            gameDataByChildId: {
+              ...current.gameDataByChildId,
+              [childId]: rollbackPurchasedGameItem(gameData, purchaseDraft),
+            },
+          };
+        }
+        : undefined;
+      const result = await mutate(
+        (repo) => repo.purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey),
+        optimisticUpdate,
+        optimisticRollback,
+      );
+      const reconciledResult = result as GamePurchaseResult;
+      setState((current) => {
+        const gameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+        const next = {
+          ...current,
+          gameDataByChildId: {
+            ...current.gameDataByChildId,
+            [childId]: reconcilePurchasedGameItem(gameData, localInventoryItemId, reconciledResult, purchaseDraft),
+          },
+        };
+        stateRef.current = next;
+        return next;
+      });
+      return result;
+    },
     equipGameCharacter: (childId: string, inventoryItemId: string) => mutate(
       (repo) => repo.equipGameCharacter(childId, inventoryItemId),
       (previous) => {
@@ -456,9 +543,107 @@ export function AppProvider({ children }: { children: ReactNode }) {
           },
         };
       },
+      (current, previous) => {
+        const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...current,
+          gameDataByChildId: {
+            ...current.gameDataByChildId,
+            [childId]: { ...currentGameData, loadout: previousGameData.loadout },
+          },
+        };
+      },
     ),
-    setFollowingPet: (childId: string, inventoryItemId: string | null) => mutate((repo) => repo.setFollowingPet(childId, inventoryItemId)),
-    setRoamingPets: (childId: string, inventoryItemIds: string[]) => mutate((repo) => repo.setRoamingPets(childId, inventoryItemIds)),
+    setPetDisplayName: (childId: string, inventoryItemId: string, displayName: string | null) => mutate(
+      (repo) => repo.setPetDisplayName(childId, inventoryItemId, displayName),
+      (previous) => {
+        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...previous,
+          gameDataByChildId: {
+            ...previous.gameDataByChildId,
+            [childId]: patchPetDisplayName(currentGameData, inventoryItemId, displayName),
+          },
+        };
+      },
+    ),
+    setFollowingPets: (childId: string, inventoryItemIds: string[]) => mutate(
+      (repo) => repo.setFollowingPets(childId, inventoryItemIds),
+      (previous) => {
+        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...previous,
+          gameDataByChildId: {
+            ...previous.gameDataByChildId,
+            [childId]: patchFollowingPets(currentGameData, inventoryItemIds),
+          },
+        };
+      },
+      (current, previous) => {
+        const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...current,
+          gameDataByChildId: {
+            ...current.gameDataByChildId,
+            [childId]: {
+              ...currentGameData,
+              loadout: previousGameData.loadout,
+              worldEntities: previousGameData.worldEntities,
+            },
+          },
+        };
+      },
+    ),
+    setFollowingPet: (childId: string, inventoryItemId: string | null) => mutate(
+      (repo) => repo.setFollowingPet(childId, inventoryItemId),
+      (previous) => {
+        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...previous,
+          gameDataByChildId: {
+            ...previous.gameDataByChildId,
+            [childId]: patchFollowingPets(currentGameData, inventoryItemId ? [inventoryItemId] : []),
+          },
+        };
+      },
+      (current, previous) => {
+        const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...current,
+          gameDataByChildId: {
+            ...current.gameDataByChildId,
+            [childId]: { ...currentGameData, loadout: previousGameData.loadout, worldEntities: previousGameData.worldEntities },
+          },
+        };
+      },
+    ),
+    setRoamingPets: (childId: string, inventoryItemIds: string[]) => mutate(
+      (repo) => repo.setRoamingPets(childId, inventoryItemIds),
+      (previous) => {
+        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...previous,
+          gameDataByChildId: {
+            ...previous.gameDataByChildId,
+            [childId]: patchRoamingPets(currentGameData, inventoryItemIds),
+          },
+        };
+      },
+      (current, previous) => {
+        const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+        const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+        return {
+          ...current,
+          gameDataByChildId: {
+            ...current.gameDataByChildId,
+            [childId]: { ...currentGameData, worldEntities: previousGameData.worldEntities },
+          },
+        };
+      },
+    ),
     placeWorldEntity: (childId: string, payload: WorldMutationPayload) => mutate((repo) => repo.placeWorldEntity(childId, payload)),
     updateWorldEntityTransform: (childId: string, payload: WorldTransformMutationPayload) => mutate((repo) => repo.updateWorldEntityTransform(childId, payload)),
     removeWorldEntity: (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => mutate((repo) => repo.removeWorldEntity(childId, payload)),
@@ -470,7 +655,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateChildPassword: (childId: string, password: string) => mutate((repo, id) => repo.updateChildPassword(id, childId, password)),
     updateChildCode: async () => { setDataError('孩子登入代碼需由尚未提供的 invite/join token 流程建立。'); },
     updateChildName: (childId: string, name: string) => mutate((repo, id) => repo.updateChild(id, childId, name), (previous) => patchChild(previous, childId, (child) => ({ ...child, name }))),
-    deleteChild: (childId: string) => mutate((repo, id) => repo.deleteChild(id, childId), (previous) => ({ ...previous, children: previous.children.filter((child) => child.id !== childId) })),
+    deleteChild: (childId: string) => mutate(
+      (repo, id) => repo.deleteChild(id, childId),
+      (previous) => patchDeletedChild(previous, childId),
+      (current, previous) => rollbackDeletedChild(current, previous, childId),
+    ),
     addTaskTemplate: (template: Omit<TaskTemplate, 'id'>) => {
       const localId = createLocalId();
       return mutate((repo, id) => repo.insertTemplate(id, template), (previous) => ({ ...previous, taskTemplates: [...previous.taskTemplates, { ...template, id: localId }] }));

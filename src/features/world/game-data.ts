@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { emptyChildGameData, type ChildGameData, type ChildWorldEntity, type GameCatalogItem, type GameLootDrop } from './contracts';
+import { emptyChildGameData, type ChildGameData, type ChildWorldEntity, type GameCatalogItem } from './contracts';
 
 interface CatalogRow {
   id: string;
@@ -21,8 +21,13 @@ interface CatalogRow {
 
 interface PriceRow { catalog_item_id: string; scroll_price: number }
 interface WalletRow { child_profile_id: string; scroll_balance: number }
-interface InventoryRow { id: string; child_profile_id: string; catalog_item_id: string; quantity: number; acquired_via: 'starter' | 'purchase' | 'grant'; acquired_at: string }
-interface LoadoutRow { child_profile_id: string; equipped_character_inventory_id: string | null; following_pet_inventory_id: string | null }
+interface InventoryRow { id: string; child_profile_id: string; catalog_item_id: string; quantity: number; acquired_via: 'starter' | 'purchase' | 'grant'; acquired_at: string; display_name?: string | null }
+interface LoadoutRow {
+  child_profile_id: string;
+  equipped_character_inventory_id: string | null;
+  following_pet_inventory_id: string | null;
+  following_pet_inventory_ids?: string[] | null;
+}
 interface WorldStateRow { child_profile_id: string; revision: number }
 interface WorldEntityRow {
   id: string;
@@ -41,19 +46,6 @@ interface WorldEntityRow {
   is_active: boolean;
   entity_kind: ChildWorldEntity['entityKind'];
 }
-interface LootDropRow {
-  id: string;
-  child_profile_id: string;
-  source_task_id: string;
-  drop_kind: GameLootDrop['kind'];
-  amount: number;
-  position_x: number;
-  position_y: number;
-  position_z: number;
-  created_at: string;
-  status: 'available' | 'claimed' | 'cancelled';
-}
-
 interface GameDataQueryError {
   code?: string | null;
   message?: string | null;
@@ -128,7 +120,6 @@ export function createChildGameDataMap(
   loadoutRows: LoadoutRow[],
   worldStateRows: WorldStateRow[],
   entityRows: WorldEntityRow[],
-  lootDropRows: LootDropRow[] = [],
 ): Record<string, ChildGameData> {
   const catalog = catalogRows.map(toCatalogItem);
   const catalogById = new Map(catalog.map((item) => [item.id, item]));
@@ -140,10 +131,17 @@ export function createChildGameDataMap(
     data.walletBalance = Number(walletRows.find((row) => row.child_profile_id === childId)?.scroll_balance ?? 0);
     data.inventory = inventoryRows
       .filter((row) => row.child_profile_id === childId)
-      .map((row) => ({ id: row.id, catalogItemId: row.catalog_item_id, quantity: Number(row.quantity), acquiredVia: row.acquired_via, acquiredAt: row.acquired_at }));
+      .map((row) => ({ id: row.id, catalogItemId: row.catalog_item_id, quantity: Number(row.quantity), acquiredVia: row.acquired_via, acquiredAt: row.acquired_at, displayName: row.display_name ?? null }));
     const loadout = loadoutRows.find((row) => row.child_profile_id === childId);
+    const followingPetInventoryIds = Array.isArray(loadout?.following_pet_inventory_ids)
+      ? loadout.following_pet_inventory_ids.filter((value): value is string => typeof value === 'string')
+      : [];
     data.loadout = loadout
-      ? { equippedCharacterInventoryId: loadout.equipped_character_inventory_id, followingPetInventoryId: loadout.following_pet_inventory_id }
+      ? {
+        equippedCharacterInventoryId: loadout.equipped_character_inventory_id,
+        followingPetInventoryId: followingPetInventoryIds[0] ?? loadout.following_pet_inventory_id,
+        followingPetInventoryIds,
+      }
       : null;
     data.worldRevision = Number(worldStateRows.find((row) => row.child_profile_id === childId)?.revision ?? 0);
     data.worldEntities = entityRows.filter((row) => row.child_profile_id === childId && row.is_active).map((row) => {
@@ -168,20 +166,9 @@ export function createChildGameDataMap(
         collisionRadius: item?.collisionRadius,
         assetKey: item?.assetKey,
         name: item?.name,
+        displayName: inventory?.display_name ?? undefined,
       } satisfies ChildWorldEntity;
     });
-    data.lootDrops = lootDropRows
-      .filter((row) => row.child_profile_id === childId && row.status === 'available')
-      .map((row) => ({
-        id: row.id,
-        sourceTaskId: row.source_task_id,
-        kind: row.drop_kind,
-        amount: Number(row.amount),
-        x: Number(row.position_x),
-        y: Number(row.position_y),
-        z: Number(row.position_z),
-        createdAt: row.created_at,
-      } satisfies GameLootDrop));
     return [childId, data];
   }));
 }
@@ -197,7 +184,7 @@ export async function loadChildGameData(
   // world references. The catalog RLS policy still limits which inactive rows
   // a child can see; the shop filters inactive rows at render time.
   const catalogQuery = client.from('game_catalog_items').select('*').order('sort_order');
-  const [catalog, prices, wallets, inventory, loadouts, worldStates, entities, lootDrops] = await Promise.all([
+  const [catalog, prices, wallets, inventory, loadouts, worldStates, entities] = await Promise.all([
     loadOptionalGameData(catalogQuery, []),
     loadOptionalGameData(client.from('family_game_item_prices').select('catalog_item_id, scroll_price').eq('family_id', familyId), []),
     loadOptionalGameData(client.from('child_game_wallets').select('*').in('child_profile_id', childIds), []),
@@ -205,7 +192,6 @@ export async function loadChildGameData(
     loadOptionalGameData(client.from('child_game_loadouts').select('*').in('child_profile_id', childIds), []),
     loadOptionalGameData(client.from('child_world_states').select('*').in('child_profile_id', childIds), []),
     loadOptionalGameData(client.from('child_world_entities').select('*').in('child_profile_id', childIds).eq('is_active', true), []),
-    loadOptionalGameData(client.from('game_loot_drops').select('*').in('child_profile_id', childIds).eq('status', 'available'), []),
   ]);
   return createChildGameDataMap(
     childIds,
@@ -216,6 +202,5 @@ export async function loadChildGameData(
     loadouts as LoadoutRow[],
     worldStates as WorldStateRow[],
     entities as WorldEntityRow[],
-    lootDrops as LootDropRow[],
   );
 }

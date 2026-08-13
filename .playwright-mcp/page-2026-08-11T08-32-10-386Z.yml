@@ -1,0 +1,36 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic:
+        - generic "家長功能主選單":
+          - button "有新項目 審核" [ref=f1e14]:
+            - generic "有新項目" [ref=f1e19]
+            - strong [ref=f1e20]: 審核
+          - button [ref=f1e21]:
+            - strong [ref=f1e25]: 任務
+          - button [ref=f1e26]:
+            - strong [ref=f1e30]: 成長
+          - button [ref=f1e31]:
+            - strong [ref=f1e37]: 獎勵
+          - button [ref=f1e38]:
+            - strong [ref=f1e43]: 商店
+      - generic "儀表板統計":
+        - generic "家庭總點數：60":
+          - strong:
+            - generic: "60"
+        - generic "待審核項目：7待審核":
+          - strong:
+            - generic: "7"
+            - emphasis: 待審核
+      - button "設定" [ref=f1e45]
+  - dialog [ref=f1e182]:
+    - generic [ref=f1e183]:
+      - heading "要切換到哪裡？" [level=2] [ref=f1e188]
+      - paragraph [ref=f1e189]: 請選擇要使用的孩子視角，或進入家長管理端。
+      - generic [ref=f1e190]:
+        - button "lulu的任務" [ref=f1e191]
+        - button "小恩的任務" [ref=f1e196]
+        - button "芸芸的任務" [ref=f1e201]
+        - button "學生的任務" [ref=f1e206]
+        - button "小宣的任務" [ref=f1e211]
+        - button "家長管理端" [ref=f1e216]

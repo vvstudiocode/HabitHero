@@ -1,0 +1,78 @@
+[     797ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[     798ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[     804ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[     806ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[     813ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[     814ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[     820ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[     821ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    1560ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    1562ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    1573ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    1574ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    1584ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    1585ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    1591ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    1592ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    2533ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    2534ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    2541ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    2541ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    2548ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    2549ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    2556ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    2557ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    3238ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    3239ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    3250ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    3252ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    3264ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    3264ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    3272ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    3273ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[    7960ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[    8172ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   16682ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   16715ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   16877ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   16997ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   17675ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   17676ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   17683ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   17685ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   17693ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   17695ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   17701ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   17701ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   18455ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   18457ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   18466ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   18467ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   18479ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   18480ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   18485ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   18486ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   19519ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   19525ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   19535ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   19539ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   19549ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   19550ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   19557ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   19558ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   20254ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   20255ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   20266ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   20267ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   20277ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   20279ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   20288ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   20290ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   21060ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   21061ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   21073ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   21074ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   21084ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   21086ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443
+[   21094ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5500/terrain-prototype/assets/kenney-survival/Textures/colormap.png:0
+[   21094ms] [ERROR] THREE.GLTFLoader: Couldn't load texture Textures/colormap.png @ https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:3443

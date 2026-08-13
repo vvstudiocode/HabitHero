@@ -8,50 +8,73 @@ export interface WorldCharacterOption {
 }
 
 /**
- * The ChibiCharacters package ships idle, walk and run clips in every model.
- * Keep this small catalog local so the parent can select a starting character
- * before the child has an authenticated game-data session.
+ * These are the mobile-optimized supplied characters. Each model ships an
+ * in-place walk clip; models may also provide an authored idle clip.
  */
 export const WORLD_CHARACTER_CATALOG: readonly WorldCharacterOption[] = [
   {
-    id: 'character.chibi-archer',
-    name: '弓箭手',
-    assetKey: 'character.chibi-archer',
-    modelUrl: '/assets/chibi-characters/archer.glb',
-    thumbnailUrl: '/assets/chibi-characters/archer-thumbnail.png',
-    description: '帶著弓箭探索森林的敏捷旅人。',
+    id: 'character.arthur',
+    name: '亞瑟',
+    assetKey: 'character.arthur',
+    modelUrl: '/assets/characters/arthur.glb',
+    thumbnailUrl: '/assets/characters/arthur-thumbnail.webp',
+    description: '帶著溫暖笑容、勇敢踏上冒險的旅人。',
   },
   {
-    id: 'character.chibi-knight',
-    name: '騎士',
-    assetKey: 'character.chibi-knight',
-    modelUrl: '/assets/chibi-characters/knight.glb',
-    thumbnailUrl: '/assets/chibi-characters/knight-thumbnail.png',
-    description: '穿上盔甲守護冒險夥伴。',
+    id: 'character.elina',
+    name: '艾利娜',
+    assetKey: 'character.elina',
+    modelUrl: '/assets/characters/elina.glb',
+    thumbnailUrl: '/assets/characters/elina-thumbnail.webp',
+    description: '帶著輕盈步伐探索日常的小小冒險家。',
   },
   {
-    id: 'character.chibi-merchant',
-    name: '商人',
-    assetKey: 'character.chibi-merchant',
-    modelUrl: '/assets/chibi-characters/merchant.glb',
-    thumbnailUrl: '/assets/chibi-characters/merchant-thumbnail.png',
-    description: '背著行囊尋找新奇寶物。',
+    id: 'character.sia',
+    name: '希雅',
+    assetKey: 'character.sia',
+    modelUrl: '/assets/characters/sia.glb',
+    thumbnailUrl: '/assets/characters/sia-thumbnail.webp',
+    description: '細心觀察世界、總能發現新線索的夥伴。',
   },
   {
-    id: 'character.chibi-ninja',
-    name: '忍者',
-    assetKey: 'character.chibi-ninja',
-    modelUrl: '/assets/chibi-characters/ninja.glb',
-    thumbnailUrl: '/assets/chibi-characters/ninja-thumbnail.png',
-    description: '安靜又俐落地穿梭世界。',
+    id: 'character.elio',
+    name: '艾利歐',
+    assetKey: 'character.elio',
+    modelUrl: '/assets/characters/elio.glb',
+    thumbnailUrl: '/assets/characters/elio-thumbnail.webp',
+    description: '背著小行囊，準備好迎接每一個新發現。',
   },
   {
-    id: 'character.chibi-student',
-    name: '學生',
-    assetKey: 'character.chibi-student',
-    modelUrl: '/assets/chibi-characters/student.glb',
-    thumbnailUrl: '/assets/chibi-characters/student-thumbnail.png',
-    description: '把每天的學習變成一場冒險。',
+    id: 'character.moss',
+    name: '莫斯',
+    assetKey: 'character.moss',
+    modelUrl: '/assets/characters/moss.glb',
+    thumbnailUrl: '/assets/characters/moss-thumbnail.webp',
+    description: '帶著鹿角與森林氣息，安靜地踏上冒險旅程。',
+  },
+  {
+    id: 'character.noah',
+    name: '諾亞',
+    assetKey: 'character.noah',
+    modelUrl: '/assets/characters/noah.glb',
+    thumbnailUrl: '/assets/characters/noah-thumbnail.webp',
+    description: '穿著黃色雨衣，帶著探索精神踏上海邊旅程。',
+  },
+  {
+    id: 'character.collette',
+    name: '柯蕾特',
+    assetKey: 'character.collette',
+    modelUrl: '/assets/characters/collette.glb',
+    thumbnailUrl: '/assets/characters/collette-thumbnail.webp',
+    description: '戴著藍色貝雷帽，穿著紅裙踏上溫暖的小旅程。',
+  },
+  {
+    id: 'character.violette',
+    name: '薇歐莉特',
+    assetKey: 'character.violette',
+    modelUrl: '/assets/characters/violette.glb',
+    thumbnailUrl: '/assets/characters/violette-thumbnail.webp',
+    description: '帶著薰衣草色長髮，在溫柔晨光中展開每日冒險。',
   },
 ];
 

@@ -84,17 +84,23 @@ describe('HabitHero roaming character', () => {
     assert.match(runtimeSource, /HABITHERO_ROAMING_CHARACTER_SPEED \* \(prefersReducedMotion \? 0\.45 : 1\)/);
     assert.match(runtimeSource, /roamingMixer\.update\(delta \* \(prefersReducedMotion \? 0\.75 : 1\)\)/);
     assert.match(runtimeSource, /wanderObstacles/);
+    assert.match(runtimeSource, /roamingActor\.wanderState/);
+    assert.match(runtimeSource, /getWanderStep\(/);
   });
 
   it('keeps roaming pets out of the tree at spawn and lets them choose collision-safe routes', () => {
     assert.match(roamingMigrationSource, /position_x = -3\.4 \+ \(roaming_slot - 1\) \* 3\.4/);
     assert.match(roamingMigrationSource, /position_z = -3\.2/);
-    assert.match(runtimeSource, /getSafePetSpawnPosition/);
-    assert.match(runtimeSource, /chooseRoamingTarget\(current, actor\.radius, wanderObstacles\)/);
-    assert.match(runtimeSource, /getRoamingStep\(/);
+    assert.match(runtimeSource, /getDistributedPetSpawnPosition/);
+    assert.match(runtimeSource, /petSpawnObstacles\.push/);
+    assert.match(runtimeSource, /createWanderState\(hashWanderSeed\(`pet:/);
+    assert.match(runtimeSource, /getWanderStep\([\s\S]*actor\.wanderState/);
+    assert.doesNotMatch(runtimeSource, /chooseRoamingTarget\(current, actor\.radius, wanderObstacles\)/);
   });
 
-  it('selects the first patrol target even when the actor starts in wandering state without a target', () => {
-    assert.match(runtimeSource, /if \(!actor\.target && now >= actor\.nextDecisionAt\)/);
+  it('initializes an independent steering stream for each roaming actor', () => {
+    assert.match(runtimeSource, /hashWanderSeed\(`pet:\$\{entity\.id\}:\$\{entity\.inventoryItemId\}`\)/);
+    assert.match(runtimeSource, /hashWanderSeed\('habithero-roaming-character'\)/);
+    assert.match(runtimeSource, /if \(!step\.walking \|\| step\.blocked\)/);
   });
 });

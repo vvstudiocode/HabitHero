@@ -110,3 +110,17 @@ export function toAuthErrorMessage(error: unknown): string {
   }
   return '登入服務暫時無法使用，請稍後重試。';
 }
+
+export function toChildAccountErrorMessage(error: unknown): string {
+  const rawMessage = error instanceof Error ? error.message.toLowerCase() : '';
+  if (
+    rawMessage.includes('already registered')
+    || rawMessage.includes('already been registered')
+    || rawMessage.includes('child account name is already in use')
+    || rawMessage.includes('username is already in use')
+    || rawMessage.includes('already has an account')
+  ) {
+    return '這個小孩帳號名稱已被使用，請換一個。';
+  }
+  return toAuthErrorMessage(error);
+}

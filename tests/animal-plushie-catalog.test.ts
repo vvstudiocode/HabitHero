@@ -5,12 +5,12 @@ import { test } from 'node:test';
 const root = new URL('..', import.meta.url);
 const read = (path: string) => readFile(new URL(path, root), 'utf8');
 
-test('starlight sprout pet keeps the supplied GLB and cleanup migration connected', async () => {
+test('forest guardian pet keeps the supplied GLB and cleanup migration connected', async () => {
   const migration = await read('supabase/migrations/20260812101223_replace_legacy_pets_with_starlight_sprout.sql');
   const renameMigration = await read('supabase/migrations/20260812103059_rename_starlight_sprout_to_forest_guardian.sql');
 
   await access(new URL('public/assets/starlight-sprout-pet.glb', root));
-  await access(new URL('public/assets/starlight-sprout-pet-thumbnail.png', root));
+  await access(new URL('public/assets/forest-guardian-thumbnail.png', root));
   assert.match(migration, /pet\.starlight-sprout/);
   assert.match(migration, /\/assets\/starlight-sprout-pet\.glb/);
   assert.match(migration, /insert into public\.game_catalog_items/);

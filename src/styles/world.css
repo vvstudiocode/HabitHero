@@ -406,6 +406,102 @@
   gap: 8px;
 }
 
+.hh-game-pet-name-editor {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hh-game-pet-name-editor input {
+  width: min(160px, 42vw);
+  min-height: 44px;
+  padding: 0 10px;
+  color: #284f45;
+  background: #f5f8ee;
+  border: 1px solid #dce9d8;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.hh-game-settings-card--toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hh-game-settings-card--toggle > div {
+  display: grid;
+  gap: 4px;
+}
+
+.hh-game-settings-card--toggle strong {
+  color: #2b5149;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.hh-game-settings-card--toggle span {
+  color: #6c7f7a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.hh-game-setting-toggle {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 52px;
+  min-height: 44px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.hh-game-setting-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.hh-game-setting-toggle > span:last-child {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 30px;
+  background: #d7e4d6;
+  border-radius: 999px;
+  transition: background-color .18s ease;
+}
+
+.hh-game-setting-toggle > span:last-child::after {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  background: #fffdf8;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgb(39 72 66 / 18%);
+  content: '';
+  transition: transform .18s ease;
+}
+
+.hh-game-setting-toggle input:checked + span:last-child {
+  background: #5b9c69;
+}
+
+.hh-game-setting-toggle input:checked + span:last-child::after {
+  transform: translateX(22px);
+}
+
+.hh-game-setting-toggle input:focus-visible + span:last-child {
+  outline: 3px solid #202124;
+  outline-offset: 3px;
+}
+
 .hh-game-field {
   display: grid;
   gap: 4px;
@@ -487,71 +583,6 @@
   font-weight: 900;
 }
 
-.hh-loot-fly-layer {
-  position: fixed;
-  z-index: 40;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.hh-loot-fly-item {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 58px;
-  min-height: 44px;
-  justify-content: center;
-  padding: 7px 10px;
-  border: 2px solid rgb(255 255 255 / 85%);
-  border-radius: 999px;
-  box-shadow: 0 9px 22px rgb(41 65 49 / 20%);
-  transform: translate3d(var(--hh-loot-from-x), var(--hh-loot-from-y), 0) scale(.62);
-  transform-origin: center;
-  animation: hh-loot-fly var(--hh-loot-duration, 680ms) cubic-bezier(.22, .82, .24, 1) var(--hh-loot-delay, 0ms) both;
-  will-change: transform, opacity;
-}
-
-.hh-loot-fly-item strong {
-  font-size: 14px;
-  font-weight: 1000;
-}
-
-.hh-loot-fly-item--star {
-  color: #825300;
-  background: #ffd65f;
-}
-
-.hh-loot-fly-item--scroll {
-  color: #75451f;
-  background: #ffe9ad;
-}
-
-@keyframes hh-loot-fly {
-  0% {
-    opacity: 0;
-    transform: translate3d(var(--hh-loot-from-x), var(--hh-loot-from-y), 0) scale(.62) rotate(-8deg);
-  }
-
-  14% {
-    opacity: 1;
-    transform: translate3d(var(--hh-loot-from-x), calc(var(--hh-loot-from-y) - 26px), 0) scale(1.08) rotate(5deg);
-  }
-
-  68% {
-    opacity: 1;
-    transform: translate3d(var(--hh-loot-to-x), calc(var(--hh-loot-to-y) - 20px), 0) scale(.94) rotate(-3deg);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--hh-loot-to-x), var(--hh-loot-to-y), 0) scale(.58) rotate(0deg);
-  }
-}
-
 @media (max-width: 760px) {
   .hh-game-panel {
     padding-bottom: 32px;
@@ -577,9 +608,5 @@
 @media (prefers-reduced-motion: reduce) {
   .hh-terrain-world-canvas {
     cursor: default;
-  }
-
-  .hh-loot-fly-item {
-    animation-timing-function: ease-out;
   }
 }

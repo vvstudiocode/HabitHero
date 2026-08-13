@@ -1,5 +1,4 @@
 import {
-  GRASS_WIND_STRENGTH,
   MAX_GRASS_INTERACTORS,
   createProceduralGrassLayout,
   getProceduralGrassCount,
@@ -156,8 +155,6 @@ function createGrassMaterial(THREE, {
     THREE.UniformsLib.fog,
     {
       uTime: { value: 0 },
-      uMotionScale: { value: 1 },
-      uWindStrength: { value: GRASS_WIND_STRENGTH },
       uInteractorPositionA: { value: new THREE.Vector2(1000, 1000) },
       uInteractorPositionB: { value: new THREE.Vector2(1000, 1000) },
       uInteractorDirectionA: { value: new THREE.Vector2(0, 1) },
@@ -182,12 +179,9 @@ function createGrassMaterial(THREE, {
       attribute vec3 instanceOffset;
       attribute vec2 instanceScale;
       attribute float instanceRotation;
-      attribute float instancePhase;
       attribute float instanceVariation;
 
       uniform float uTime;
-      uniform float uMotionScale;
-      uniform float uWindStrength;
       uniform vec2 uInteractorPositionA;
       uniform vec2 uInteractorPositionB;
       uniform vec2 uInteractorDirectionA;
@@ -226,26 +220,10 @@ function createGrassMaterial(THREE, {
 
       void main() {
         float bladeHeight = position.y;
-        float animatedTime = uTime * uMotionScale;
-        float primaryWave = sin(
-          animatedTime * 1.65
-          + instancePhase
-          + instanceOffset.x * 0.28
-          + instanceOffset.z * 0.16
-        );
-        float detailWave = sin(
-          animatedTime * 2.9
-          - instancePhase * 0.62
-          + instanceOffset.z * 0.48
-        );
-        float gust = primaryWave * 0.74 + detailWave * 0.26;
-        float bend = uWindStrength * (0.075 + gust * 0.055) * pow(bladeHeight, 1.7);
 
         vec3 localPosition = position;
         localPosition.xz *= instanceScale.x;
         localPosition.y *= instanceScale.y;
-        localPosition.x += bend;
-        localPosition.z += bend * 0.44;
 
         float cosine = cos(instanceRotation);
         float sine = sin(instanceRotation);
@@ -272,7 +250,7 @@ function createGrassMaterial(THREE, {
 
         vBladeHeight = bladeHeight;
         vVariation = instanceVariation;
-        vWaveLight = gust;
+        vWaveLight = 0.0;
         float grassDistance = max(abs(instanceOffset.x), abs(instanceOffset.z));
         float grassOuterProgress = clamp(
           (grassDistance - uWalkableHalf) / max(uFieldHalf - uWalkableHalf, 0.001),
@@ -422,9 +400,8 @@ export function createProceduralGrassField(THREE, {
     },
   ];
 
-  function update({ time, motionScale = 1, interactors = [] }) {
+  function update({ time, interactors = [] }) {
     uniforms.uTime.value = time;
-    uniforms.uMotionScale.value = motionScale;
 
     for (let index = 0; index < MAX_GRASS_INTERACTORS; index += 1) {
       const target = interactorUniforms[index];

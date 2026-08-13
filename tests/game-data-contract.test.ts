@@ -69,28 +69,6 @@ describe('child game data mapping', () => {
     assert.equal(data['child-a'].worldEntities[0].name, '已下架裝飾');
   });
 
-  it('loads available loot drops for the owning child and ignores claimed drops', () => {
-    const data = createChildGameDataMap(
-      ['child-a', 'child-b'],
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      [
-        { id: 'drop-a', child_profile_id: 'child-a', source_task_id: 'task-a', drop_kind: 'star', amount: 8, position_x: -2, position_y: 0.35, position_z: 1, created_at: '2026-08-12T09:00:00Z', status: 'available' },
-        { id: 'drop-b', child_profile_id: 'child-b', source_task_id: 'task-b', drop_kind: 'scroll', amount: 1, position_x: -1, position_y: 0.2, position_z: 1, created_at: '2026-08-12T09:01:00Z', status: 'claimed' },
-      ],
-    );
-    assert.deepEqual(data['child-a'].lootDrops, [{
-      id: 'drop-a', sourceTaskId: 'task-a', kind: 'star', amount: 8,
-      x: -2, y: 0.35, z: 1, createdAt: '2026-08-12T09:00:00Z',
-    }]);
-    assert.deepEqual(data['child-b'].lootDrops, []);
-  });
-
   it('returns an empty per-child fallback when game tables are not deployed yet', async () => {
     const data = await loadChildGameData(gameDataClient({ missingTables: [
       'game_catalog_items',
@@ -110,7 +88,6 @@ describe('child game data mapping', () => {
       loadout: null,
       worldEntities: [],
       worldRevision: 0,
-      lootDrops: [],
     });
     assert.deepEqual(data['child-b'], data['child-a']);
   });

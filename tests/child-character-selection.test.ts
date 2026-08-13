@@ -67,7 +67,7 @@ test('family child picker uses neutral child icons during a world transition', (
   assert.doesNotMatch(source, /getCharacterById|character\.imageUrl|<img/);
 });
 
-test('new child flow exposes the five walkable GLB characters', () => {
+test('new child flow exposes the eight supplied walkable GLB characters', () => {
   const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
   const catalogSource = read('../src/features/characters/world-character-catalog.ts');
 
@@ -78,11 +78,14 @@ test('new child flow exposes the five walkable GLB characters', () => {
   assert.match(source, /role="radiogroup" aria-label="冒險人物"/);
   assert.doesNotMatch(source, /固定使用 3D 人物/);
   assert.doesNotMatch(source, /getCharactersForCategory|CHARACTER_CATEGORIES|hh-character-preview-modal/);
-  assert.match(catalogSource, /character\.chibi-archer/);
-  assert.match(catalogSource, /character\.chibi-knight/);
-  assert.match(catalogSource, /character\.chibi-merchant/);
-  assert.match(catalogSource, /character\.chibi-ninja/);
-  assert.match(catalogSource, /character\.chibi-student/);
+  assert.match(catalogSource, /character\.arthur/);
+  assert.match(catalogSource, /character\.elina/);
+  assert.match(catalogSource, /character\.sia/);
+  assert.match(catalogSource, /character\.elio/);
+  assert.match(catalogSource, /character\.moss/);
+  assert.match(catalogSource, /character\.noah/);
+  assert.match(catalogSource, /character\.collette/);
+  assert.match(catalogSource, /character\.violette/);
   assert.match(source, /aria-required="true"/);
   assert.match(source, /disabled=\{[^}]*!selectedGender/);
 });

@@ -166,12 +166,23 @@ test('child account creation shows a pending state and prevents duplicate submis
   assert.match(source, /childAccountSubmissionInFlight/);
 });
 
-test('parent child deletion shows success feedback after the card is removed', () => {
+test('duplicate child account names show a child-specific recovery message', () => {
+  const source = read('../src/components/ParentDashboard.tsx');
+
+  assert.match(source, /toChildAccountErrorMessage/);
+  assert.match(source, /setNewChildError\(toChildAccountErrorMessage\(error\)\)/);
+});
+
+test('parent child deletion closes the confirmation immediately and reports async completion', () => {
   const source = read('../src/components/ParentDashboard.tsx');
 
   assert.match(source, /toastMessage/);
   assert.match(source, /小孩已刪除/);
-  assert.match(source, /await deleteChild\(childToDelete\)/);
+  assert.match(source, /deletingChildId/);
+  assert.match(source, /const deletion = deleteChild\(targetChildId\)/);
+  assert.match(source, /setChildToDelete\(null\)/);
+  assert.match(source, /await deletion/);
+  assert.doesNotMatch(source, /await deleteChild\(childToDelete\);\s*dismissWithAnimation/);
 });
 
 test('task creation explains that a child is required', () => {
@@ -249,7 +260,8 @@ test('parent hero menu avoids duplicate destinations', () => {
   const dashboard = read('../src/components/ParentDashboard.tsx');
   const dashboardContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
 
-  assert.match(dashboard, /id: 'review-goals', title: '審核項目'/);
+  assert.match(dashboard, /id: 'review', title: '審核',[\s\S]*openHeroFeature\('review'\)/);
+  assert.doesNotMatch(dashboard, /id: 'review-goals'/);
   assert.doesNotMatch(dashboard, /id: 'review-completions'/);
   assert.doesNotMatch(dashboard, /id: 'growth-record'|id: 'completed-tasks'/);
   assert.match(dashboard, /id: 'growth', title: '成長',[\s\S]*openHeroFeature\('growth'\)/);
@@ -267,6 +279,20 @@ test('parent hero menu avoids duplicate destinations', () => {
   assert.match(dashboardContent, /heroFeature === 'wishlist'/);
   assert.match(dashboardContent, /onBackFeature/);
   assert.match(dashboard, /onBackFeature=\{\(\) => openHeroFeature\('rewards'\)\}/);
+});
+
+test('completion review opens in a fading modal instead of expanding the card', () => {
+  const panel = read('../src/features/growth/components/GoalReviewPanel.tsx');
+  const overlays = read('../src/styles/overlays.css');
+  const modals = read('../src/styles/modals.css');
+
+  assert.match(panel, /role="dialog"/);
+  assert.match(panel, /aria-modal="true"/);
+  assert.match(panel, /hh-review-dialog-overlay/);
+  assert.match(panel, /hh-review-dialog-panel/);
+  assert.doesNotMatch(panel, /reviewingTaskId === task\.id \? \(/);
+  assert.match(overlays, /\.hh-review-dialog-overlay[\s\S]*animation:\s*hh-review-dialog-overlay-in/);
+  assert.match(modals, /\.hh-review-dialog-panel[\s\S]*animation:\s*hh-review-dialog-panel-in/);
 });
 
 test('child growth menu opens the growth feature directly', () => {

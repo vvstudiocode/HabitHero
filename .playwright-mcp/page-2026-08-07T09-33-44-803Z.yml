@@ -1,0 +1,24 @@
+- generic [ref=f2e1]:
+  - generic "HabitHero 自訂 3D 場景" [ref=f2e2]
+  - generic:
+    - generic:
+      - generic:
+        - generic: HabitHero · Adventure Field
+        - heading "自訂 3D 場景" [level=1]
+        - paragraph: 讓冒險者在你提供的 GLB 場景上探索。
+      - generic [ref=f2e3]:
+        - button "重設人物鏡頭" [ref=f2e4] [cursor=pointer]:
+          - generic [ref=f2e9]: 重設鏡頭
+        - button "暫停場景" [ref=f2e10] [cursor=pointer]:
+          - generic [ref=f2e13]: 暫停
+    - generic:
+      - generic "操作提示":
+        - generic:
+          - generic: W
+          - generic: A
+          - generic: S
+          - generic: D
+        - generic: 移動
+        - generic: 拖曳調整上下左右視角
+      - generic: 探索模式 · 弓箭手已就緒
+    - status: 冒險者已回到你的 3D 場景

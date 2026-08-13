@@ -1,15 +1,5 @@
 import type { AnimationClip, Object3D } from 'three';
-import type { ChildGameData, GameCatalogItem, GameLootDrop, PetBehaviorMode } from './contracts';
-import {
-  GAME_LOOT_STAR_GLOW_RADIUS,
-  GAME_LOOT_SCROLL_VISUAL_SCALE,
-  GAME_LOOT_STAR_VISUAL_SCALE,
-  getLootAnimationDuration,
-  getLootAnimationDelay,
-  getLootTargetStat,
-  isLootDropInPickupRange,
-  type LootAnimationEvent,
-} from './game-loot';
+import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
 import {
   buildCollisionCircles,
   CENTRAL_TREE_KEEP_OUT,
@@ -31,7 +21,6 @@ import {
   applySinglePointerCameraDrag,
   getGroundedCameraTargetHeight,
 } from '../../../terrain-prototype/terrain-controls.js';
-import { updateGrassInteractionState } from '../../../terrain-prototype/procedural-grass-field.js';
 import { getProceduralGrassCount } from '../../../terrain-prototype/procedural-grass-field.js';
 import { getProceduralFlowerCount } from '../../../terrain-prototype/procedural-flower-layout.js';
 import { createProceduralGrassField } from '../../../terrain-prototype/procedural-grass-scene.js';
@@ -48,36 +37,85 @@ import {
   WORLD_QUALITY_SETTINGS,
 } from './world-quality';
 import {
-  chooseRoamingTarget,
-  getRoamingStep,
+  createWanderState,
   HABITHERO_ROAMING_CHARACTER_ASSET_KEY,
   HABITHERO_ROAMING_CHARACTER_MODEL_URL,
-  HABITHERO_ROAMING_CHARACTER_PAUSE,
   HABITHERO_ROAMING_CHARACTER_RADIUS,
   HABITHERO_ROAMING_CHARACTER_SPEED,
   HABITHERO_ROAMING_CHARACTER_VISUAL_SCALE,
+  getWanderStep,
+  hashWanderSeed,
+  type WanderState,
 } from './world-roaming';
+import { getDistributedPetSpawnPosition, getPetNavigationRadius } from './pet-spawning';
 import {
   getFollowingStep,
+  getFollowingDistance,
   PET_FOLLOW_DISTANCE,
   PET_FOLLOW_SPEED,
 } from './pet-following';
+import { getPetModelUrl as getCatalogPetModelUrl, resolvePetCatalogItem } from './pet-model-assets';
+import { getFollowingPetInventoryIds } from './following-pet-state';
+import { applyWarmHandPaintedCharacterMaterial, type WarmHandPaintedCharacterMaterial } from './character-material-style';
 
 export const PROTOTYPE_WORLD_ASSETS = {
   tree: new URL('../../../terrain-prototype/assets/big-tree.glb', import.meta.url).href,
-  character: new URL('../../../terrain-prototype/assets/anime-maiden.glb', import.meta.url).href,
+  character: '/assets/characters/arthur.glb',
   roamingCharacter: HABITHERO_ROAMING_CHARACTER_MODEL_URL,
   skybox: new URL('../../../terrain-prototype/assets/sky-equirectangular-day.png', import.meta.url).href,
 } as const;
+
+/** Ground contact for a visible foot reference, just above the meadow plane. */
+export const PLAYER_CHARACTER_GROUND_OFFSET = -0.12;
+export const CHARACTER_GROUND_CONTACT_Y = 0.055;
+
+export function getCharacterGroundingReferenceY(
+  boundsMinY: number,
+  footYs: readonly number[],
+): number {
+  const finiteFootYs = footYs.filter(Number.isFinite);
+  return finiteFootYs.length > 0 ? Math.min(...finiteFootYs) : boundsMinY;
+}
+
+export function getCharacterGroundingCorrection(
+  modelMinYRelativeToPlayerRoot: number,
+  groundY = CHARACTER_GROUND_CONTACT_Y,
+): number {
+  if (!Number.isFinite(modelMinYRelativeToPlayerRoot) || !Number.isFinite(groundY)) return 0;
+  return groundY - modelMinYRelativeToPlayerRoot;
+}
+
+/** Move a character root so an animated model's world-space lowest point meets the grass. */
+export function getGroundedRootY(
+  currentRootY: number,
+  modelMinYWorld: number,
+  parentY = 0,
+  groundY = CHARACTER_GROUND_CONTACT_Y,
+): number {
+  if (!Number.isFinite(currentRootY) || !Number.isFinite(modelMinYWorld) || !Number.isFinite(parentY)) return currentRootY;
+  return currentRootY + getCharacterGroundingCorrection(modelMinYWorld - parentY, groundY);
+}
+
+/**
+ * The supplied walk-only rigs have no idle clip. Keep them on the first
+ * authored walk pose while stopped instead of exposing the bind/T-pose frame.
+ */
+export const WALK_IDLE_POSE_RATIO = 0.04;
+
+export function getWalkIdlePoseTime(duration: number): number {
+  if (!Number.isFinite(duration) || duration <= 0) return 0;
+  const lastSafeTime = Math.max(0, duration - 0.0001);
+  return Math.min(Math.max(duration * WALK_IDLE_POSE_RATIO, 0.033), lastSafeTime);
+}
 
 export const PROTOTYPE_WORLD_CONFIG = {
   gridSize: 9,
   terrainStep: 1.1,
   scenePadding: 8,
-  treeFitToTile: 3.6,
+  treeFitToTile: 7.2,
   treeHeightScale: 1,
   treeRootSink: 0.03,
-  treePosition: { x: 1.1, z: -1.65 },
+  treeAnchorX: 1.1,
   characterTargetHeight: 0.76 * (2 / 3),
   characterMoveSpeed: 1.1,
   cameraDistanceDefault: 4.1,
@@ -90,6 +128,34 @@ export const PROTOTYPE_WORLD_CONFIG = {
   initialCameraYaw: Math.PI / 2,
   initialCameraPitch: 0.18,
 } as const;
+
+export const TREE_OUTER_EDGE_PADDING = 0.08;
+
+export function getOuterTreePlacement({
+  treeSize,
+  terrainLimit,
+  terrainStep,
+  treeFitToTile,
+  x,
+  edgePadding = TREE_OUTER_EDGE_PADDING,
+}: {
+  treeSize: { x: number; y: number; z: number };
+  terrainLimit: number;
+  terrainStep: number;
+  treeFitToTile: number;
+  x: number;
+  edgePadding?: number;
+}) {
+  const footprint = Math.max(treeSize.x, treeSize.z);
+  const scale = (terrainStep * treeFitToTile) / footprint;
+  const halfDepth = (treeSize.z * scale) / 2;
+  return {
+    x,
+    z: -(terrainLimit + halfDepth + edgePadding),
+    scale,
+    halfDepth,
+  };
+}
 
 export const PET_MAX_HEIGHT_RATIO = 0.5;
 export const PET_MAX_DIMENSION_RATIO = 0.42;
@@ -124,9 +190,41 @@ export function getPetWorldScale({
 
 export const PET_MODEL_URL = '/assets/starlight-sprout-pet.glb';
 export const PET_WORLD_SCALE_MULTIPLIER = 1.3;
+export const PET_NAME_LABEL_WORLD_SCALE = 0.11;
+const PET_NAME_LABEL_FONT_SIZE = 26;
+const PET_DEER_VISUAL_SCALE_MULTIPLIER = 8 / 3;
+const PET_DEER_MOVEMENT_SPEED_MULTIPLIER = 0.6;
+
+export function getPetVisualScaleMultiplier(assetKey?: string, metadata?: Record<string, unknown>): number {
+  const configuredMultiplier = metadata?.visualScaleMultiplier;
+  if (typeof configuredMultiplier === 'number' && Number.isFinite(configuredMultiplier) && configuredMultiplier > 0) {
+    return PET_WORLD_SCALE_MULTIPLIER * configuredMultiplier;
+  }
+  if (assetKey === 'pet.yaoguang-deer') return PET_WORLD_SCALE_MULTIPLIER * PET_DEER_VISUAL_SCALE_MULTIPLIER;
+  if (assetKey === 'pet.murphy-bear') return PET_WORLD_SCALE_MULTIPLIER * 2;
+  return PET_WORLD_SCALE_MULTIPLIER;
+}
+
+export function getPetMovementSpeedMultiplier(assetKey?: string, metadata?: Record<string, unknown>): number {
+  const configuredMultiplier = metadata?.movementSpeedMultiplier;
+  if (typeof configuredMultiplier === 'number' && Number.isFinite(configuredMultiplier) && configuredMultiplier > 0) {
+    return configuredMultiplier;
+  }
+  if (assetKey === 'pet.yaoguang-deer') return PET_DEER_MOVEMENT_SPEED_MULTIPLIER;
+  return 1;
+}
+
+export function getPetGroundOffset(_assetKey?: string, metadata?: Record<string, unknown>): number {
+  const configuredOffset = metadata?.groundOffset;
+  return typeof configuredOffset === 'number' && Number.isFinite(configuredOffset)
+    ? configuredOffset
+    : 0;
+}
+
+export function shouldHidePetGroundShadow(metadata?: Record<string, unknown>): boolean {
+  return metadata?.hideGroundShadow === true;
+}
 export const PET_WANDER_SPEED = 0.5;
-const PET_WANDER_RETRY_DELAY = 0.22;
-const PET_WANDER_PAUSE = 0.42;
 
 export function getPetModelScale({
   requestedScale,
@@ -159,13 +257,9 @@ export interface PrototypeWorldRuntimeOptions {
   characterRenderMode: 'anime-maiden' | 'world-glb' | 'procedural';
   characterModelUrl?: string;
   createProceduralCharacter: (THREE: ThreeNamespace, item?: GameCatalogItem) => Object3D;
+  showPetNames: boolean;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
-  lootDropsRef: { current: GameLootDrop[] };
-  onLootPickupRef: { current: ((dropId: string) => Promise<boolean>) | undefined };
-  onLootPickupBatchRef: { current: ((dropIds: string[]) => Promise<string[]>) | undefined };
-  onLootAnimationRef: { current: ((event: LootAnimationEvent) => void) | undefined };
-  onLootAnimationBatchRef: { current: ((events: LootAnimationEvent[]) => void) | undefined };
   onStatus: (status: RuntimeStatus) => void;
   onProgress: (value: number, detail: string) => void;
   onReady: () => void;
@@ -326,6 +420,18 @@ function applyCentralTreeMaterialFallback(THREE: ThreeNamespace, source: Object3
   });
 }
 
+function applyWarmHandPaintedCharacterStyle(source: Object3D) {
+  source.traverse((object) => {
+    const mesh = object as {
+      isMesh?: boolean;
+      material?: WarmHandPaintedCharacterMaterial | WarmHandPaintedCharacterMaterial[];
+    };
+    if (!mesh.isMesh || !mesh.material) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => applyWarmHandPaintedCharacterMaterial(material));
+  });
+}
+
 function createPlayerGroundShadowMaterial(THREE: ThreeNamespace) {
   return new THREE.ShaderMaterial({
     transparent: true,
@@ -350,100 +456,6 @@ function createPlayerGroundShadowMaterial(THREE: ThreeNamespace) {
   });
 }
 
-type LootVisualAssets = {
-  starGeometry: InstanceType<ThreeNamespace['ExtrudeGeometry']>;
-  starMaterial: InstanceType<ThreeNamespace['MeshStandardMaterial']>;
-  glowGeometry: InstanceType<ThreeNamespace['SphereGeometry']>;
-  glowMaterial: InstanceType<ThreeNamespace['MeshBasicMaterial']>;
-  starShadowGeometry: InstanceType<ThreeNamespace['CircleGeometry']>;
-  scrollPaperGeometry: InstanceType<ThreeNamespace['BoxGeometry']>;
-  scrollPaperMaterial: InstanceType<ThreeNamespace['MeshStandardMaterial']>;
-  scrollRollGeometry: InstanceType<ThreeNamespace['CylinderGeometry']>;
-  scrollRollMaterial: InstanceType<ThreeNamespace['MeshStandardMaterial']>;
-  scrollShadowGeometry: InstanceType<ThreeNamespace['CircleGeometry']>;
-  shadowMaterial: InstanceType<ThreeNamespace['MeshBasicMaterial']>;
-};
-
-const lootVisualAssetsCache = new WeakMap<object, LootVisualAssets>();
-
-function getLootVisualAssets(THREE: ThreeNamespace): LootVisualAssets {
-  const cacheKey = THREE as unknown as object;
-  const cached = lootVisualAssetsCache.get(cacheKey);
-  if (cached) return cached;
-  const shape = new THREE.Shape();
-  const points = 10;
-  for (let index = 0; index < points; index += 1) {
-    const angle = (index / points) * Math.PI * 2 - Math.PI / 2;
-    const radius = index % 2 === 0 ? 0.17 : 0.075;
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-    if (index === 0) shape.moveTo(x, y);
-    else shape.lineTo(x, y);
-  }
-  shape.closePath();
-  const assets: LootVisualAssets = {
-    starGeometry: new THREE.ExtrudeGeometry(shape, { depth: 0.055, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.012, bevelThickness: 0.012 }),
-    starMaterial: new THREE.MeshStandardMaterial({ color: 0xffc928, emissive: 0xffa400, emissiveIntensity: 0.34, roughness: 0.55, metalness: 0.08 }),
-    glowGeometry: new THREE.SphereGeometry(GAME_LOOT_STAR_GLOW_RADIUS, 10, 6),
-    glowMaterial: new THREE.MeshBasicMaterial({ color: 0xffd75a, transparent: true, opacity: 0.13, depthWrite: false }),
-    starShadowGeometry: new THREE.CircleGeometry(0.14, 16),
-    scrollPaperGeometry: new THREE.BoxGeometry(0.24, 0.16, 0.045),
-    scrollPaperMaterial: new THREE.MeshStandardMaterial({ color: 0xffedb0, emissive: 0x7a4e18, emissiveIntensity: 0.08, roughness: 0.72 }),
-    scrollRollGeometry: new THREE.CylinderGeometry(0.045, 0.045, 0.19, 10),
-    scrollRollMaterial: new THREE.MeshStandardMaterial({ color: 0xd58c32, roughness: 0.62, metalness: 0.08 }),
-    scrollShadowGeometry: new THREE.CircleGeometry(0.09, 16),
-    shadowMaterial: new THREE.MeshBasicMaterial({ color: 0x173226, transparent: true, opacity: 0.18, depthWrite: false }),
-  };
-  lootVisualAssetsCache.set(cacheKey, assets);
-  return assets;
-}
-
-function createLootDropObject(THREE: ThreeNamespace, drop: GameLootDrop): Object3D {
-  const assets = getLootVisualAssets(THREE);
-  const root = new THREE.Group();
-  root.name = `loot-drop-${drop.id}`;
-  root.userData.lootDropId = drop.id;
-  root.position.set(drop.x, drop.y, drop.z);
-
-  const shadow = new THREE.Mesh(
-    drop.kind === 'star' ? assets.starShadowGeometry : assets.scrollShadowGeometry,
-    assets.shadowMaterial,
-  );
-  shadow.name = 'loot-drop-shadow';
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = -drop.y + 0.008;
-  shadow.scale.set(1, 0.58, 1);
-  root.add(shadow);
-  const visualRoot = new THREE.Group();
-  visualRoot.scale.setScalar(drop.kind === 'scroll' ? GAME_LOOT_SCROLL_VISUAL_SCALE : 1);
-  root.add(visualRoot);
-
-  if (drop.kind === 'star') {
-    const star = new THREE.Mesh(assets.starGeometry, assets.starMaterial);
-    star.name = 'loot-drop-star';
-    star.scale.setScalar(GAME_LOOT_STAR_VISUAL_SCALE);
-    star.rotation.x = -0.12;
-    star.position.z = -0.028;
-    visualRoot.add(star);
-    const glow = new THREE.Mesh(assets.glowGeometry, assets.glowMaterial);
-    glow.name = 'loot-drop-star-glow';
-    visualRoot.add(glow);
-  } else {
-    const paper = new THREE.Mesh(assets.scrollPaperGeometry, assets.scrollPaperMaterial);
-    paper.name = 'loot-drop-scroll-paper';
-    paper.position.y = 0.02;
-    visualRoot.add(paper);
-    for (const x of [-0.13, 0.13]) {
-      const roll = new THREE.Mesh(assets.scrollRollGeometry, assets.scrollRollMaterial);
-      roll.name = 'loot-drop-scroll-roll';
-      roll.rotation.z = Math.PI / 2;
-      roll.position.set(x, 0.02, 0);
-      visualRoot.add(roll);
-    }
-  }
-  return root;
-}
-
 function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineAsset>, position: { x: number; y: number; z: number }, scale: number) {
   const wrapper = new THREE.Group();
   const model = definition.source.clone(true);
@@ -454,13 +466,16 @@ function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineA
   return wrapper;
 }
 
+function getCharacterFootNodes(source: Object3D): Object3D[] {
+  const footNodes: Object3D[] = [];
+  source.traverse((node) => {
+    if (/toe_end$/i.test(node.name)) footNodes.push(node);
+  });
+  return footNodes;
+}
+
 function getPetModelUrl(item: GameCatalogItem | undefined): string {
-  const metadataModel = item?.metadata.model;
-  return typeof metadataModel === 'string'
-    && metadataModel.startsWith('/assets/')
-    && metadataModel.toLowerCase().endsWith('.glb')
-    ? metadataModel
-    : PET_MODEL_URL;
+  return getCatalogPetModelUrl(item, PET_MODEL_URL);
 }
 
 interface PetModelInstance {
@@ -470,6 +485,40 @@ interface PetModelInstance {
   walkAction?: import('three').AnimationAction;
 }
 
+function createPetNameLabel(THREE: ThreeNamespace, displayName: string | undefined, showName: boolean): Object3D | undefined {
+  const name = displayName?.trim();
+  if (!showName || !name || typeof document === 'undefined') return undefined;
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) return undefined;
+  const font = `600 ${PET_NAME_LABEL_FONT_SIZE}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+  context.font = font;
+  const horizontalPadding = 16;
+  canvas.width = Math.max(64, Math.ceil(context.measureText(name).width + horizontalPadding * 2));
+  canvas.height = 42;
+  context.font = font;
+  context.fillStyle = '#ffffff';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(name, canvas.width / 2, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+  });
+  const label = new THREE.Sprite(material);
+  label.name = 'pet-name-label';
+  label.renderOrder = 20;
+  label.position.y = 1.1;
+  label.scale.set((canvas.width / canvas.height) * PET_NAME_LABEL_WORLD_SCALE, PET_NAME_LABEL_WORLD_SCALE, 1);
+  return label;
+}
+
 function createPetModel(
   THREE: ThreeNamespace,
   cloneSkinnedObject: (source: Object3D) => Object3D,
@@ -477,6 +526,9 @@ function createPetModel(
   animations: readonly AnimationClip[],
   characterWorldHeight: number,
   requestedScale: number,
+  displayName?: string,
+  showPetName = true,
+  hideGroundShadow = false,
 ): PetModelInstance {
   const definition = defineAsset(THREE, source);
   const model = cloneSkinnedObject(source);
@@ -487,40 +539,65 @@ function createPetModel(
     characterHeight: characterWorldHeight,
   });
   const root = new THREE.Group();
-  root.name = 'starlight-sprout-pet';
+  root.name = 'animated-pet';
   root.scale.setScalar(modelScale);
   model.position.copy(definition.offset);
 
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(1, 24),
-    new THREE.MeshBasicMaterial({ color: 0x173226, transparent: true, opacity: 0.2, depthWrite: false }),
-  );
-  shadow.name = 'starlight-sprout-pet-shadow';
-  shadow.rotation.x = -Math.PI / 2;
-  const footprint = Math.max(definition.size.x, definition.size.z, 0.08);
-  shadow.scale.set(footprint * 0.62, footprint * 0.32, 1);
-  shadow.position.y = 0.006;
-  root.add(shadow, model);
+  if (hideGroundShadow) {
+    model.traverse((object) => {
+      const mesh = object as { isMesh?: boolean; castShadow?: boolean; receiveShadow?: boolean };
+      if (!mesh.isMesh) return;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+    });
+  }
+
+  if (!hideGroundShadow) {
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 24),
+      new THREE.MeshBasicMaterial({ color: 0x173226, transparent: true, opacity: 0.2, depthWrite: false }),
+    );
+    shadow.name = 'animated-pet-shadow';
+    shadow.rotation.x = -Math.PI / 2;
+    const footprint = Math.max(definition.size.x, definition.size.z, 0.08);
+    shadow.scale.set(footprint * 0.62, footprint * 0.32, 1);
+    shadow.position.y = 0.006;
+    root.add(shadow);
+  }
+  root.add(model);
+  const nameLabel = createPetNameLabel(THREE, displayName, showPetName);
+  if (nameLabel) {
+    nameLabel.position.y = definition.size.y + 0.16;
+    root.add(nameLabel);
+  }
 
   let mixer: import('three').AnimationMixer | undefined;
   let walkAction: import('three').AnimationAction | undefined;
   if (animations.length > 0) {
     mixer = new THREE.AnimationMixer(model);
-    walkAction = mixer.clipAction(getAnimationClip(animations, 'walk'));
+    walkAction = mixer.clipAction(createInPlaceAnimationClip(getWalkAnimationClip(animations)!));
     walkAction.setLoop(THREE.LoopRepeat, Infinity);
     walkAction.play();
-    walkAction.paused = true;
+    pauseAnimationAtIdlePose(walkAction, mixer);
   }
   return { root, model, mixer, walkAction };
 }
 
+function pauseAnimationAtIdlePose(action: import('three').AnimationAction, mixer: import('three').AnimationMixer) {
+  action.reset().play();
+  action.time = getWalkIdlePoseTime(action.getClip().duration);
+  action.paused = false;
+  mixer.update(0);
+  action.paused = true;
+}
+
 function updatePetAnimation(
-  actor: { model: Object3D; mixer?: import('three').AnimationMixer; walkAction?: import('three').AnimationAction; animationTime: number },
+  actor: { model: Object3D; mixer?: import('three').AnimationMixer; walkAction?: import('three').AnimationAction; animationTime: number; movementSpeedMultiplier: number },
   isWalking: boolean,
   delta: number,
   prefersReducedMotion: boolean,
 ) {
-  actor.animationTime += delta * (isWalking ? 8 : 2.4);
+  actor.animationTime += delta * (isWalking ? 8 * actor.movementSpeedMultiplier : 2.4);
   if (actor.walkAction) actor.walkAction.paused = !isWalking;
   if (actor.mixer) actor.mixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
   actor.model.rotation.z = prefersReducedMotion
@@ -528,9 +605,34 @@ function updatePetAnimation(
     : Math.sin(actor.animationTime) * (isWalking ? 0.035 : 0.012);
 }
 
-function getAnimationClip(clips: readonly AnimationClip[], state: 'idle' | 'walk') {
+export function getCharacterAnimationClip(clips: readonly AnimationClip[], state: 'idle' | 'walk'): AnimationClip | undefined {
   const pattern = state === 'walk' ? /walk|run/i : /idle|iddle|stand|rest/i;
-  return clips.find((clip) => pattern.test(clip.name)) ?? clips[0];
+  return clips.find((clip) => pattern.test(clip.name));
+}
+
+function getWalkAnimationClip(clips: readonly AnimationClip[]): AnimationClip | undefined {
+  return getCharacterAnimationClip(clips, 'walk') ?? clips[0];
+}
+
+/**
+ * Patrol movement is driven by the world steering layer, so imported walk
+ * clips must animate in place. Some supplied GLBs also key the armature root
+ * forward; playing that root motion on top of the actor movement makes the
+ * model snap backwards when the clip loops.
+ */
+export function createInPlaceAnimationClip(clip: AnimationClip): AnimationClip {
+  const inPlaceClip = clip.clone();
+  inPlaceClip.tracks.forEach((track) => {
+    if (!/\.position$/i.test(track.name) || !/(?:^|[/.[\]])(?:root|mixamorig:hips|hips|pelvis)(?:[/.[\]]|$)/i.test(track.name)) return;
+    if (track.values.length < 3 || track.values.length % 3 !== 0) return;
+    const initialX = track.values[0];
+    const initialZ = track.values[2];
+    for (let index = 0; index < track.values.length; index += 3) {
+      track.values[index] = initialX;
+      track.values[index + 2] = initialZ;
+    }
+  });
+  return inPlaceClip;
 }
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
@@ -540,30 +642,6 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 function getPetActorState(behaviorMode: PetBehaviorMode, following: boolean) {
   if (following) return 'following' as const;
   return behaviorMode === 'wander' ? 'wandering' as const : 'idle' as const;
-}
-
-function isWalkablePetPosition(position: { x: number; z: number }, radius: number, obstacles: readonly CollisionCircle[]) {
-  return Math.abs(position.x) + radius <= WORLD_BOUNDARY
-    && Math.abs(position.z) + radius <= WORLD_BOUNDARY
-    && !obstacles.some((obstacle) => circlesOverlap({ ...position, radius }, obstacle));
-}
-
-function getSafePetSpawnPosition(
-  current: { x: number; z: number },
-  radius: number,
-  obstacles: readonly CollisionCircle[],
-) {
-  if (isWalkablePetPosition(current, radius, obstacles)) return current;
-  const candidates = [
-    { x: -3.4, z: -3.2 },
-    { x: 0, z: -3.2 },
-    { x: 3.4, z: -3.2 },
-    { x: -3.4, z: 3.2 },
-    { x: 3.4, z: 3.2 },
-  ];
-  return candidates.find((candidate) => isWalkablePetPosition(candidate, radius, obstacles))
-    ?? chooseRoamingTarget({ x: 0, z: -3.2 }, radius, obstacles)
-    ?? { x: 0, z: -3.2 };
 }
 
 export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): PrototypeWorldRuntime {
@@ -576,7 +654,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let loadingAbortController: AbortController | undefined;
   let removeListeners: (() => void) | undefined;
   let removeContextLostListener: (() => void) | undefined;
-  let threeNamespace: ThreeNamespace | undefined;
   let dracoDecoderLoader: { setDecoderPath: (path: string) => unknown; dispose: () => void } | undefined;
   const disposalTracker = createDisposalTracker();
   const resourceRoots: DisposableScene[] = [];
@@ -604,7 +681,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     dracoDecoderLoader?.dispose();
     dracoDecoderLoader = undefined;
     disposeTexture(skyboxTexture, disposalTracker);
-    if (threeNamespace) lootVisualAssetsCache.delete(threeNamespace as unknown as object);
     renderer = undefined;
     scene = undefined;
   };
@@ -617,7 +693,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       options.onStatus('loading');
       options.onProgress(10, '讀取草地與大樹模型…');
       const THREE = await import('three');
-      threeNamespace = THREE;
       if (disposed) return;
 
       // The world is mounted inside the dashboard hero. Wait for that layer's
@@ -735,6 +810,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       } else {
         throw new Error(`Unsupported character render mode: ${options.characterRenderMode}`);
       }
+      applyWarmHandPaintedCharacterStyle(characterSource);
       let roamingCharacterSource: Object3D | undefined;
       options.onProgress(58, '邀請芽芽旅行者進入世界…');
       try {
@@ -745,21 +821,21 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (!disposed && !signal.aborted) console.warn(`Unable to load roaming character ${HABITHERO_ROAMING_CHARACTER_ASSET_KEY}; keeping the world playable.`, error);
       }
       if (disposed) return;
+      if (roamingCharacterSource) applyWarmHandPaintedCharacterStyle(roamingCharacterSource);
 
-      const followingPetInventoryId = options.gameData.loadout?.followingPetInventoryId;
-      const followingPetInventory = followingPetInventoryId
-        ? options.gameData.inventory.find((inventory) => inventory.id === followingPetInventoryId)
-        : undefined;
-      const followingPet = followingPetInventory
-        ? options.gameData.catalog.find((item) => item.id === followingPetInventory.catalogItemId && item.itemType === 'pet')
-        : undefined;
+      const followingPetInventoryIds = getFollowingPetInventoryIds(options.gameData);
       const petCatalogById = new Map(options.gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => [item.id, item]));
+      const petCatalogByAssetKey = new Map(options.gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => [item.assetKey, item]));
       const petModelEntries = new Map<string, string>();
       const registerPetModel = (item: GameCatalogItem | undefined, assetKey?: string) => {
-        const resolvedAssetKey = item?.assetKey ?? assetKey;
-        if (resolvedAssetKey) petModelEntries.set(resolvedAssetKey, getPetModelUrl(item));
+        const resolvedItem = item ?? (assetKey ? petCatalogByAssetKey.get(assetKey) : undefined);
+        const resolvedAssetKey = resolvedItem?.assetKey ?? assetKey;
+        if (resolvedAssetKey) petModelEntries.set(resolvedAssetKey, getPetModelUrl(resolvedItem));
       };
-      registerPetModel(followingPet);
+      followingPetInventoryIds.forEach((inventoryId) => {
+        const inventory = options.gameData.inventory.find((item) => item.id === inventoryId);
+        registerPetModel(inventory ? petCatalogById.get(inventory.catalogItemId) : undefined);
+      });
       options.gameData.worldEntities
         .filter((entity) => entity.entityKind === 'pet')
         .forEach((entity) => registerPetModel(entity.catalogItemId ? petCatalogById.get(entity.catalogItemId) : undefined, entity.assetKey));
@@ -826,15 +902,21 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         count: visualSettings.sunlightPatchCount,
       });
       terrain.add(sunlightPatches.group);
-      const treeScale = (terrainStep * PROTOTYPE_WORLD_CONFIG.treeFitToTile) / Math.max(treeDefinition.size.x, treeDefinition.size.z);
+      const treePlacement = getOuterTreePlacement({
+        treeSize: treeDefinition.size,
+        terrainLimit,
+        terrainStep,
+        treeFitToTile: PROTOTYPE_WORLD_CONFIG.treeFitToTile,
+        x: PROTOTYPE_WORLD_CONFIG.treeAnchorX,
+      });
       const tree = placeAsset(THREE, treeDefinition, {
-        x: PROTOTYPE_WORLD_CONFIG.treePosition.x,
+        x: treePlacement.x,
         y: -PROTOTYPE_WORLD_CONFIG.treeRootSink,
-        z: PROTOTYPE_WORLD_CONFIG.treePosition.z,
-      }, treeScale);
+        z: treePlacement.z,
+      }, treePlacement.scale);
       tree.scale.y *= PROTOTYPE_WORLD_CONFIG.treeHeightScale;
       terrain.add(tree);
-      const centralTreeHeight = treeDefinition.size.y * treeScale * PROTOTYPE_WORLD_CONFIG.treeHeightScale;
+      const centralTreeHeight = treeDefinition.size.y * treePlacement.scale * PROTOTYPE_WORLD_CONFIG.treeHeightScale;
       terrain.add(createProceduralForest(THREE, {
         terrainLimit,
         groundHeight: 0,
@@ -850,8 +932,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const butterflies = createButterflyField(THREE, {
         count: visualSettings.butterflyCount,
         center: {
-          x: PROTOTYPE_WORLD_CONFIG.treePosition.x,
-          z: PROTOTYPE_WORLD_CONFIG.treePosition.z,
+          x: treePlacement.x,
+          z: treePlacement.z,
         },
         radius: 0.9,
         minHeight: 0.78,
@@ -868,6 +950,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const characterRoot = new THREE.Group();
       characterRoot.name = 'player-character';
       characterRoot.scale.setScalar(characterScale);
+      characterRoot.position.y = PLAYER_CHARACTER_GROUND_OFFSET;
       characterSource.position.copy(characterDefinition.offset);
       characterRoot.add(characterSource);
       playerRoot.add(characterRoot);
@@ -886,11 +969,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let roamingActor: {
         object: import('three').Group;
         model: Object3D;
+        footNodes: Object3D[];
         baseModelY: number;
-        target: { x: number; z: number } | null;
-        nextDecisionAt: number;
         animationTime: number;
         facing: { x: number; z: number };
+        wanderState: WanderState;
       } | undefined;
       if (roamingCharacterSource) {
         const roamingDefinition = defineAsset(THREE, roamingCharacterSource);
@@ -909,7 +992,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         roamingRoot.add(roamingModel);
         if (roamingCharacterAnimations.length > 0) {
           roamingMixer = new THREE.AnimationMixer(roamingModel);
-          const walkClip = getAnimationClip(roamingCharacterAnimations, 'walk');
+          const walkClip = createInPlaceAnimationClip(getWalkAnimationClip(roamingCharacterAnimations)!);
           if (walkClip) {
             roamingWalkAction = roamingMixer.clipAction(walkClip);
             roamingWalkAction.setLoop(THREE.LoopRepeat, Infinity);
@@ -930,13 +1013,24 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         roamingActor = {
           object: roamingRoot,
           model: roamingModel,
+          footNodes: getCharacterFootNodes(roamingModel),
           baseModelY: roamingModel.position.y,
-          target: null,
-          nextDecisionAt: 0,
           animationTime: 0,
           facing: { x: 0, z: 1 },
+          wanderState: createWanderState(hashWanderSeed('habithero-roaming-character'), { x: 0, z: 1 }),
         };
       }
+
+      const groundRoamingCharacterOnGrass = () => {
+        if (!roamingActor) return;
+        roamingActor.model.updateMatrixWorld(true);
+        const roamingBounds = new THREE.Box3().setFromObject(roamingActor.model);
+        const footYs = roamingActor.footNodes.map((node) => node.getWorldPosition(new THREE.Vector3()).y);
+        const referenceY = getCharacterGroundingReferenceY(roamingBounds.min.y, footYs);
+        roamingActor.object.position.y = getGroundedRootY(roamingActor.object.position.y, referenceY);
+        roamingActor.object.updateMatrixWorld(true);
+      };
+      groundRoamingCharacterOnGrass();
 
       if (characterAnimations.length > 0) {
         mixer = new THREE.AnimationMixer(characterSource);
@@ -944,25 +1038,59 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const characterActions = new Map<'idle' | 'walk', import('three').AnimationAction>();
       characterAnimations.forEach((clip) => {
         const name = clip.name.toLowerCase();
-        if (name.includes('walk') || name.includes('run')) characterActions.set('walk', mixer!.clipAction(clip));
+        if (name.includes('walk') || name.includes('run')) characterActions.set('walk', mixer!.clipAction(createInPlaceAnimationClip(clip)));
         if (name.includes('idle') || name.includes('iddle') || name.includes('stand') || name.includes('rest')) characterActions.set('idle', mixer!.clipAction(clip));
       });
       characterActions.forEach((action) => action.setLoop(THREE.LoopRepeat, Infinity));
       let activeCharacterAction: import('three').AnimationAction | undefined;
       const playCharacterAction = (name: 'idle' | 'walk') => {
-        const fallbackClip = getAnimationClip(characterAnimations, name);
+        const fallbackClip = name === 'walk' ? getWalkAnimationClip(characterAnimations) : undefined;
         const nextAction = characterActions.get(name) ?? (fallbackClip && mixer ? mixer.clipAction(fallbackClip) : undefined);
-        if (!nextAction || nextAction === activeCharacterAction) return;
-        nextAction.reset().fadeIn(0.16).play();
+        if (!nextAction) {
+          if (name === 'idle') {
+            const walkAction = characterActions.get('walk');
+            if (walkAction) {
+              pauseAnimationAtIdlePose(walkAction, mixer!);
+            }
+            activeCharacterAction = undefined;
+          }
+          return;
+        }
+        if (nextAction === activeCharacterAction) {
+          nextAction.paused = false;
+          return;
+        }
+        nextAction.reset();
+        if (name === 'walk') nextAction.time = getWalkIdlePoseTime(nextAction.getClip().duration);
+        const shouldFadeIn = name !== 'walk' || characterActions.has('idle');
+        if (shouldFadeIn) nextAction.fadeIn(0.16).play();
+        else nextAction.setEffectiveWeight(1).play();
+        nextAction.paused = false;
         activeCharacterAction?.fadeOut(0.16);
         activeCharacterAction = nextAction;
       };
       playCharacterAction('idle');
+      const characterFootNodes = getCharacterFootNodes(characterSource);
+      const groundCharacterOnGrass = () => {
+        characterSource.updateMatrixWorld(true);
+        const characterBounds = new THREE.Box3().setFromObject(characterSource);
+        const footYs = characterFootNodes.map((node) => node.getWorldPosition(new THREE.Vector3()).y);
+        const referenceY = getCharacterGroundingReferenceY(characterBounds.min.y, footYs);
+        characterRoot.position.y = getGroundedRootY(
+          characterRoot.position.y,
+          referenceY,
+          playerRoot.position.y,
+        );
+        characterRoot.updateMatrixWorld(true);
+      };
+      groundCharacterOnGrass();
 
       const decorationCollisions = buildCollisionCircles(options.gameData.worldEntities
         .filter((entity) => entity.entityKind === 'decoration')
         .map((entity) => ({ positionX: entity.x, positionZ: entity.z, collisionRadius: entity.collisionRadius ?? 0.3, scale: entity.scale })));
       const wanderObstacles = [CENTRAL_TREE_KEEP_OUT, ...decorationCollisions];
+      const petSpawnObstacles = [...wanderObstacles];
+      let petSpawnIndex = 0;
       const characterWorldHeight = characterDefinition.size.y * characterScale;
       const petActors: Array<{
         object: import('three').Object3D;
@@ -976,17 +1104,27 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         animationTime: number;
         facing: { x: number; z: number };
         state: 'following' | 'wandering' | 'idle';
+        followIndex: number;
+        movementSpeedMultiplier: number;
         target: { x: number; z: number } | null;
-        nextDecisionAt: number;
+        wanderState: WanderState;
       }> = [];
       options.gameData.worldEntities.filter((entity) => entity.isActive).forEach((entity) => {
         const isPet = entity.entityKind === 'pet';
-        const catalogItem = entity.catalogItemId ? petCatalogById.get(entity.catalogItemId) : undefined;
+        const catalogItem = isPet
+          ? resolvePetCatalogItem(entity, petCatalogById, petCatalogByAssetKey)
+          : undefined;
         const petModelSource = isPet ? petModelSources.get(getPetModelUrl(catalogItem)) : undefined;
-        const petWorldScale = Math.max(entity.scale, 0.01) * PET_WORLD_SCALE_MULTIPLIER;
-        const petRadius = Math.max(entity.collisionRadius ?? 0.28, 0.08) * petWorldScale;
+        const petWorldScale = Math.max(entity.scale, 0.01) * getPetVisualScaleMultiplier(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata);
+        const petGroundOffset = isPet
+          ? getPetGroundOffset(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata)
+          : 0;
+        const petMovementSpeedMultiplier = isPet
+          ? getPetMovementSpeedMultiplier(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata)
+          : 1;
+        const petRadius = getPetNavigationRadius(entity.collisionRadius ?? 0.28, entity.scale);
         const petModel = isPet && petModelSource
-          ? createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, petWorldScale)
+          ? createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, petWorldScale, entity.displayName ?? catalogItem?.name, options.showPetNames, shouldHidePetGroundShadow(catalogItem?.metadata))
           : undefined;
         if (isPet && !petModel) return;
         const object = isPet
@@ -1000,70 +1138,53 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           object.rotation.y = entity.rotationY;
           object.scale.setScalar(entity.scale);
         } else {
-          const spawn = getSafePetSpawnPosition({ x: entity.x, z: entity.z }, petRadius, wanderObstacles);
-          object.position.set(spawn.x, entity.y, spawn.z);
+          const spawn = getDistributedPetSpawnPosition(petSpawnIndex, petRadius, petSpawnObstacles);
+          petSpawnIndex += 1;
+          petSpawnObstacles.push({ ...spawn, radius: petRadius });
+          object.position.set(spawn.x, entity.y + petGroundOffset, spawn.z);
           object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
         }
         if (!isPet) (object as Object3D & { castShadow?: boolean }).castShadow = true;
         worldScene.add(object);
         if (isPet) {
-          const follow = entity.inventoryItemId === followingPetInventoryId;
-          petActors.push({ object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, behaviorMode: entity.behaviorMode, follow, radius: petRadius, baseY: entity.y, animationTime: 0, facing: { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) }, state: getPetActorState(entity.behaviorMode, follow), target: null, nextDecisionAt: 0 });
+          const followIndex = followingPetInventoryIds.indexOf(entity.inventoryItemId);
+          const follow = followIndex >= 0;
+          const initialFacing = { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) };
+          petActors.push({ object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing) });
         }
       });
-      if (followingPet && !petActors.some((actor) => actor.follow)) {
+      followingPetInventoryIds.forEach((inventoryId, followIndex) => {
+        if (petActors.some((actor) => actor.followIndex === followIndex)) return;
+        const followingInventory = options.gameData.inventory.find((inventory) => inventory.id === inventoryId);
+        const followingPet = followingInventory
+          ? petCatalogById.get(followingInventory.catalogItemId)
+          : undefined;
         const petModelSource = petModelSources.get(getPetModelUrl(followingPet));
         if (petModelSource) {
-          const petModel = createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, followingPet.maxScale * PET_WORLD_SCALE_MULTIPLIER);
+          const petVisualMultiplier = getPetVisualScaleMultiplier(followingPet?.assetKey, followingPet?.metadata);
+          const petMovementSpeedMultiplier = getPetMovementSpeedMultiplier(followingPet?.assetKey, followingPet?.metadata);
+          const petGroundOffset = getPetGroundOffset(followingPet?.assetKey, followingPet?.metadata);
+          const petModel = createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, (followingPet?.maxScale ?? 1) * petVisualMultiplier, followingInventory?.displayName ?? followingPet?.name, options.showPetNames, shouldHidePetGroundShadow(followingPet?.metadata));
           const object = petModel.root;
           const initialFacing = { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) };
           const initialFollowDistance = Math.max(
-            PET_FOLLOW_DISTANCE,
-            CHARACTER_COLLISION_RADIUS + followingPet.collisionRadius * PET_WORLD_SCALE_MULTIPLIER + 0.12,
+            getFollowingDistance(followIndex),
+            CHARACTER_COLLISION_RADIUS + (followingPet?.collisionRadius ?? 0.28) * petVisualMultiplier + 0.12,
           );
           object.position.set(
             playerRoot.position.x - initialFacing.x * initialFollowDistance,
-            0,
+            petGroundOffset,
             playerRoot.position.z - initialFacing.z * initialFollowDistance,
           );
           worldScene.add(object);
-          petActors.push({ object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, behaviorMode: 'idle', follow: true, radius: followingPet.collisionRadius * PET_WORLD_SCALE_MULTIPLIER, baseY: 0, animationTime: 0, facing: { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) }, state: 'following', target: null, nextDecisionAt: 0 });
+          petActors.push({ object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, radius: getPetNavigationRadius(followingPet?.collisionRadius ?? 0.28, followingPet?.maxScale ?? 1), baseY: petGroundOffset, animationTime: 0, facing: initialFacing, state: 'following', target: null, wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing) });
         }
-      }
-
-      const lootDropObjects = new Map<string, Object3D>();
-      const collectingLootIds = new Set<string>();
-      const claimedLootIds = new Set<string>();
-      const syncLootDrops = () => {
-        const currentDrops = options.lootDropsRef.current;
-        const liveIds = new Set(currentDrops.map((drop) => drop.id));
-        for (const [dropId, object] of lootDropObjects) {
-          if (!liveIds.has(dropId) || claimedLootIds.has(dropId) || collectingLootIds.has(dropId)) {
-            object.visible = false;
-            continue;
-          }
-          const drop = currentDrops.find((candidate) => candidate.id === dropId);
-          if (drop) {
-            object.position.set(drop.x, drop.y, drop.z);
-            object.visible = true;
-          }
-        }
-        for (const drop of currentDrops) {
-          if (claimedLootIds.has(drop.id) || collectingLootIds.has(drop.id) || lootDropObjects.has(drop.id)) continue;
-          const object = createLootDropObject(THREE, drop);
-          worldScene.add(object);
-          lootDropObjects.set(drop.id, object);
-        }
-      };
-      syncLootDrops();
+      });
 
       let cameraYaw = PROTOTYPE_WORLD_CONFIG.initialCameraYaw;
       let cameraPitch: number = PROTOTYPE_WORLD_CONFIG.initialCameraPitch;
       let cameraDistance: number = PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault;
       let sceneElapsedTime = 0;
-      const previousPlayerPosition = new THREE.Vector3().copy(playerRoot.position);
-      let playerGrassInteraction = { direction: { x: 0, z: 1 }, strength: 0 };
-      const grassInteractors = [{ position: playerRoot.position, direction: playerGrassInteraction.direction, strength: 0 }];
       const keys = new Set<string>();
       const clock = new THREE.Clock();
       const controller = options.controller;
@@ -1080,105 +1201,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const rect = options.canvas.getBoundingClientRect();
         return { x: event.clientX - rect.left, y: event.clientY - rect.top };
       };
-      const lootRaycaster = new THREE.Raycaster();
-      const lootPointer = new THREE.Vector2();
-      const getLootDropIdFromObject = (object: Object3D | undefined): string | undefined => {
-        let current = object;
-        while (current) {
-          const lootDropId = current.userData?.lootDropId;
-          if (typeof lootDropId === 'string') return lootDropId;
-          current = current.parent ?? undefined;
-        }
-        return undefined;
-      };
-      const getLootDropAtPoint = (point: { x: number; y: number }) => {
-        const rect = options.canvas.getBoundingClientRect();
-        lootPointer.set(
-          (point.x / Math.max(rect.width, 1)) * 2 - 1,
-          -(point.y / Math.max(rect.height, 1)) * 2 + 1,
-        );
-        lootRaycaster.setFromCamera(lootPointer, camera);
-        const hit = lootRaycaster.intersectObjects([...lootDropObjects.values()], true).find((entry) => entry.object.visible);
-        return getLootDropIdFromObject(hit?.object);
-      };
-      const getScreenPointForLoot = (drop: GameLootDrop, object: Object3D) => {
-        const rect = options.canvas.getBoundingClientRect();
-        const worldPoint = new THREE.Vector3(drop.x, drop.y + 0.08, drop.z);
-        object.getWorldPosition(worldPoint);
-        worldPoint.project(camera);
-        return {
-          x: rect.left + ((worldPoint.x + 1) / 2) * rect.width,
-          y: rect.top + ((-worldPoint.y + 1) / 2) * rect.height,
-        };
-      };
-      const getLootHudTarget = (kind: GameLootDrop['kind']) => {
-        const stat = document.querySelector<HTMLElement>(`[data-hh-stat-target="${getLootTargetStat(kind)}"]`);
-        if (stat) {
-          const rect = stat.getBoundingClientRect();
-          return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-        }
-        const rect = options.canvas.getBoundingClientRect();
-        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-      };
-      const requestLootPickupBatch = async (dropIds: string[]) => {
-        const pickupBatch = options.onLootPickupBatchRef.current;
-        const pickupSingle = options.onLootPickupRef.current;
-        if (!pickupBatch && !pickupSingle) return;
-        const drops = dropIds.map((dropId) => {
-          const drop = options.lootDropsRef.current.find((candidate) => candidate.id === dropId);
-          const object = lootDropObjects.get(dropId);
-          return drop && object && object.visible && !collectingLootIds.has(dropId) && !claimedLootIds.has(dropId)
-            ? { drop, object }
-            : undefined;
-        }).filter((entry): entry is { drop: GameLootDrop; object: Object3D } => Boolean(entry));
-        if (drops.length === 0) return;
-        drops.forEach(({ drop }) => collectingLootIds.add(drop.id));
-        const events = drops.map(({ drop, object }, index): LootAnimationEvent => ({
-          id: `${drop.id}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
-          dropId: drop.id,
-          kind: drop.kind,
-          amount: drop.amount,
-          from: getScreenPointForLoot(drop, object),
-          to: getLootHudTarget(drop.kind),
-          durationMs: getLootAnimationDuration(prefersReducedMotion),
-          delayMs: getLootAnimationDelay(index, prefersReducedMotion),
-        }));
-        if (options.onLootAnimationBatchRef.current) options.onLootAnimationBatchRef.current(events);
-        else events.forEach((event) => options.onLootAnimationRef.current?.(event));
-        syncLootDrops();
-        let collectedIds: string[] = [];
-        try {
-          if (pickupBatch) {
-            collectedIds = await pickupBatch(drops.map(({ drop }) => drop.id));
-          } else if (pickupSingle) {
-            for (const { drop } of drops) {
-              if (await pickupSingle(drop.id)) collectedIds.push(drop.id);
-            }
-          }
-        } catch {
-          collectedIds = [];
-        }
-        const collected = new Set(collectedIds);
-        drops.forEach(({ drop }) => {
-          collectingLootIds.delete(drop.id);
-          if (collected.has(drop.id)) claimedLootIds.add(drop.id);
-        });
-        syncLootDrops();
-      };
-      const requestLootPickup = (dropId: string) => {
-        void requestLootPickupBatch([dropId]);
-      };
-      let lootPointerState: { pointerId: number; dropId: string; startX: number; startY: number; moved: boolean } | null = null;
       const onPointerDown = (event: PointerEvent) => {
         if (options.pausedRef.current || isInteractiveTarget(event.target)) return;
         const point = pointFromEvent(event);
-        const lootDropId = getLootDropAtPoint(point);
-        if (lootDropId) {
-          event.preventDefault();
-          options.canvas.setPointerCapture(event.pointerId);
-          lootPointerState = { pointerId: event.pointerId, dropId: lootDropId, startX: point.x, startY: point.y, moved: false };
-          return;
-        }
         event.preventDefault();
         options.canvas.setPointerCapture(event.pointerId);
         const rect = options.canvas.getBoundingClientRect();
@@ -1193,20 +1218,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const onPointerMove = (event: PointerEvent) => {
         if (options.pausedRef.current) return;
         const point = pointFromEvent(event);
-        if (lootPointerState?.pointerId === event.pointerId) {
-          if (Math.hypot(point.x - lootPointerState.startX, point.y - lootPointerState.startY) > 10) lootPointerState.moved = true;
-          return;
-        }
         controller?.dispatch({ type: 'pointer-move', pointerId: event.pointerId, point });
       };
       const onPointerEnd = (event: PointerEvent) => {
-        if (lootPointerState?.pointerId === event.pointerId) {
-          const state = lootPointerState;
-          lootPointerState = null;
-          if (event.type === 'pointerup' && !state.moved) void requestLootPickup(state.dropId);
-          if (options.canvas.hasPointerCapture(event.pointerId)) options.canvas.releasePointerCapture(event.pointerId);
-          return;
-        }
         controller?.dispatch({ type: event.type === 'pointercancel' ? 'pointer-cancel' : 'pointer-up', pointerId: event.pointerId });
         if (options.canvas.hasPointerCapture(event.pointerId)) options.canvas.releasePointerCapture(event.pointerId);
       };
@@ -1243,10 +1257,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       resize();
 
-      const grassMotionScale = Math.min(
-        qualitySettings.motionScale,
-        qualitySettings.swayAmplitude / WORLD_QUALITY_SETTINGS.high.swayAmplitude,
-      );
       const animate = () => {
         if (disposed) return;
         if (options.pausedRef.current) {
@@ -1259,7 +1269,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         animationFrame = window.requestAnimationFrame(animate);
         const delta = Math.min(clock.getDelta(), 0.05);
         sceneElapsedTime += delta;
-        previousPlayerPosition.copy(playerRoot.position);
         const currentInput = controller?.getSnapshot();
         let isPlayerMoving = false;
         if (currentInput && !options.pausedRef.current) {
@@ -1296,7 +1305,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const forwardInput = joystick.strength > 0 ? -joystick.y : keyboard.y;
           const sideInput = joystick.strength > 0 ? joystick.x : keyboard.x;
           if (forwardInput || sideInput) {
-            isPlayerMoving = true;
             const direction = new THREE.Vector3(-Math.sin(cameraYaw) * forwardInput, 0, -Math.cos(cameraYaw) * forwardInput);
             direction.add(new THREE.Vector3(Math.cos(cameraYaw) * sideInput, 0, -Math.sin(cameraYaw) * sideInput));
             direction.normalize().multiplyScalar(delta * PROTOTYPE_WORLD_CONFIG.characterMoveSpeed);
@@ -1306,6 +1314,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               CHARACTER_COLLISION_RADIUS,
               decorationCollisions,
             );
+            isPlayerMoving = Math.hypot(nextPosition.x - playerRoot.position.x, nextPosition.z - playerRoot.position.z) > 0.0001;
             playerRoot.position.x = nextPosition.x;
             playerRoot.position.z = nextPosition.z;
             const targetYaw = Math.atan2(direction.x, direction.z);
@@ -1314,92 +1323,68 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           }
         }
         playCharacterAction(isPlayerMoving ? 'walk' : 'idle');
-        playerGrassInteraction = updateGrassInteractionState({ previousPosition: previousPlayerPosition, currentPosition: playerRoot.position, previousStrength: playerGrassInteraction.strength, previousDirection: playerGrassInteraction.direction, delta });
-        grassInteractors[0].direction = playerGrassInteraction.direction;
-        grassInteractors[0].strength = playerGrassInteraction.strength;
-        proceduralGrass.update({ time: sceneElapsedTime, motionScale: grassMotionScale, interactors: grassInteractors });
+        proceduralGrass.update({ time: sceneElapsedTime });
         ambientPollen.update(sceneElapsedTime);
         butterflies.update(sceneElapsedTime);
         eastFairytaleScenery.update(sceneElapsedTime);
         const now = clock.elapsedTime;
-        syncLootDrops();
-        for (const [dropId, object] of lootDropObjects) {
-          if (!object.visible) continue;
-          const drop = options.lootDropsRef.current.find((candidate) => candidate.id === dropId);
-          if (!drop) continue;
-          const bob = prefersReducedMotion ? 0 : Math.sin(sceneElapsedTime * 3.2 + dropId.length) * 0.035;
-          object.position.y = drop.y + bob;
-          object.rotation.y += delta * (drop.kind === 'star' ? 0.9 : 0.45);
-        }
-        const touchCollectedDropIds: string[] = [];
-        for (const drop of options.lootDropsRef.current) {
-          const object = lootDropObjects.get(drop.id);
-          if (
-            !object
-            || !object.visible
-            || collectingLootIds.has(drop.id)
-            || claimedLootIds.has(drop.id)
-            || !isLootDropInPickupRange(playerRoot.position, drop, CHARACTER_COLLISION_RADIUS)
-          ) continue;
-          touchCollectedDropIds.push(drop.id);
-        }
-        if (touchCollectedDropIds.length > 0) void requestLootPickupBatch(touchCollectedDropIds);
         if (roamingActor) {
           const current = { x: roamingActor.object.position.x, z: roamingActor.object.position.z };
-          if (!roamingActor.target && now >= roamingActor.nextDecisionAt) {
-            roamingActor.target = chooseRoamingTarget(current, HABITHERO_ROAMING_CHARACTER_RADIUS, wanderObstacles);
-            roamingActor.nextDecisionAt = roamingActor.target ? now : now + 1.5;
-          }
-          const isWalking = Boolean(roamingActor.target);
-          if (roamingActor.target) {
-            const step = getRoamingStep(
-              current,
-              roamingActor.target,
-              delta,
-              HABITHERO_ROAMING_CHARACTER_RADIUS,
-              HABITHERO_ROAMING_CHARACTER_SPEED * (prefersReducedMotion ? 0.45 : 1),
-              wanderObstacles,
+          const step = getWanderStep(
+            current,
+            delta,
+            HABITHERO_ROAMING_CHARACTER_RADIUS,
+            HABITHERO_ROAMING_CHARACTER_SPEED * (prefersReducedMotion ? 0.45 : 1),
+            wanderObstacles,
+            roamingActor.wanderState,
+            now,
+          );
+          const isWalking = step.walking && !step.blocked;
+          roamingActor.facing = step.facing;
+          roamingActor.object.position.x = step.next.x;
+          roamingActor.object.position.z = step.next.z;
+          if (isWalking) {
+            const targetYaw = Math.atan2(step.facing.x, step.facing.z);
+            const yawDelta = Math.atan2(
+              Math.sin(targetYaw - roamingActor.object.rotation.y),
+              Math.cos(targetYaw - roamingActor.object.rotation.y),
             );
-            roamingActor.object.position.x = step.next.x;
-            roamingActor.object.position.z = step.next.z;
-            if (step.arrived || step.blocked) {
-              roamingActor.target = null;
-              roamingActor.nextDecisionAt = now + (step.arrived ? HABITHERO_ROAMING_CHARACTER_PAUSE : PET_WANDER_RETRY_DELAY);
-            } else {
-              roamingActor.facing = step.facing;
-              const targetYaw = Math.atan2(step.facing.x, step.facing.z);
-              const yawDelta = Math.atan2(
-                Math.sin(targetYaw - roamingActor.object.rotation.y),
-                Math.cos(targetYaw - roamingActor.object.rotation.y),
-              );
-              roamingActor.object.rotation.y += yawDelta * Math.min(1, delta * 8);
-            }
+            roamingActor.object.rotation.y += yawDelta * Math.min(1, delta * 8);
           }
           roamingActor.animationTime += delta * (isWalking ? 8 : 2.4);
           if (roamingWalkAction) roamingWalkAction.paused = !isWalking;
-          const bob = prefersReducedMotion
-            ? 0
-            : isWalking
-              ? Math.abs(Math.sin(roamingActor.animationTime)) * 0.018
-              : Math.sin(roamingActor.animationTime) * 0.006;
-          roamingActor.model.position.y = roamingActor.baseModelY + bob;
+          roamingActor.model.position.y = roamingActor.baseModelY;
           roamingActor.model.rotation.z = prefersReducedMotion
             ? 0
             : Math.sin(roamingActor.animationTime) * (isWalking ? 0.035 : 0.012);
         }
+        const orderedFollowingActors = petActors
+          .filter((actor) => actor.follow)
+          .sort((left, right) => left.followIndex - right.followIndex);
+        petActors.sort((left, right) => {
+          if (left.follow && !right.follow) return -1;
+          if (!left.follow && right.follow) return 1;
+          return left.follow && right.follow ? left.followIndex - right.followIndex : 0;
+        });
         petActors.forEach((actor) => {
           const current = { x: actor.object.position.x, z: actor.object.position.z };
           if (actor.follow) {
             actor.state = 'following';
             const playerFacing = { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) };
+            const leader = actor.followIndex > 0
+              ? orderedFollowingActors.find((candidate) => candidate.followIndex === actor.followIndex - 1)
+              : undefined;
             const followingStep = getFollowingStep(
               current,
-              { position: { x: playerRoot.position.x, z: playerRoot.position.z }, facing: playerFacing },
+              leader
+                ? { position: { x: leader.object.position.x, z: leader.object.position.z }, facing: leader.facing }
+                : { position: { x: playerRoot.position.x, z: playerRoot.position.z }, facing: playerFacing },
               delta,
               actor.radius,
-              PET_FOLLOW_SPEED * (prefersReducedMotion ? 0.55 : 1),
+              PET_FOLLOW_SPEED * actor.movementSpeedMultiplier * (prefersReducedMotion ? 0.55 : 1),
               wanderObstacles,
-              CHARACTER_COLLISION_RADIUS,
+              leader?.radius ?? CHARACTER_COLLISION_RADIUS,
+              PET_FOLLOW_DISTANCE,
             );
             actor.target = followingStep.target;
             if (!followingStep.arrived || followingStep.rerouted) {
@@ -1422,46 +1407,42 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           }
           if (actor.behaviorMode !== 'wander') {
             actor.state = 'idle';
-            actor.target = null;
             actor.object.position.y = actor.baseY;
             updatePetAnimation(actor, false, delta, prefersReducedMotion);
             return;
           }
-          if (!actor.target && now >= actor.nextDecisionAt) {
-            actor.target = chooseRoamingTarget(current, actor.radius, wanderObstacles);
-            actor.state = actor.target ? 'wandering' : 'idle';
-            actor.nextDecisionAt = actor.target ? now : now + 1.2;
-          }
-          if (actor.state !== 'wandering' || !actor.target) {
-            actor.object.position.y = actor.baseY;
-            updatePetAnimation(actor, false, delta, prefersReducedMotion);
-            return;
-          }
-          const step = getRoamingStep(
+          const step = getWanderStep(
             current,
-            actor.target,
             delta,
             actor.radius,
-            PET_WANDER_SPEED * (prefersReducedMotion ? 0.45 : 1),
+            PET_WANDER_SPEED * actor.movementSpeedMultiplier * (prefersReducedMotion ? 0.45 : 1),
             wanderObstacles,
+            actor.wanderState,
+            now,
           );
+          actor.facing = step.facing;
           actor.object.position.x = step.next.x;
           actor.object.position.z = step.next.z;
-          if (step.arrived || step.blocked) {
-            actor.target = null;
+          if (!step.walking || step.blocked) {
             actor.state = 'idle';
-            actor.nextDecisionAt = now + (step.arrived ? PET_WANDER_PAUSE : PET_WANDER_RETRY_DELAY);
             actor.object.position.y = actor.baseY;
             updatePetAnimation(actor, false, delta, prefersReducedMotion);
           } else {
-            actor.facing = step.facing;
-            actor.object.rotation.y = Math.atan2(step.facing.x, step.facing.z);
+            actor.state = 'wandering';
+            const targetYaw = Math.atan2(step.facing.x, step.facing.z);
+            const yawDelta = Math.atan2(
+              Math.sin(targetYaw - actor.object.rotation.y),
+              Math.cos(targetYaw - actor.object.rotation.y),
+            );
+            actor.object.rotation.y += yawDelta * Math.min(1, delta * 6);
             actor.object.position.y = actor.baseY;
             updatePetAnimation(actor, true, delta, prefersReducedMotion);
           }
         });
         if (mixer) mixer.update(delta);
         if (roamingMixer) roamingMixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
+        groundCharacterOnGrass();
+        groundRoamingCharacterOnGrass();
         const zoomProgress = THREE.MathUtils.clamp((PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - cameraDistance) / (PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault - PROTOTYPE_WORLD_CONFIG.cameraDistanceMin), 0, 1);
         const normalTargetHeight = THREE.MathUtils.lerp(0.38, 0.5, zoomProgress);
         const targetHeight = getGroundedCameraTargetHeight({

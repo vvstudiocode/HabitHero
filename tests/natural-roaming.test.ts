@@ -9,7 +9,7 @@ import { WORLD_BOUNDARY } from '../src/features/world/world-collision';
 
 describe('natural roaming steering', () => {
   it('starts turning inward before a pet reaches the hard world boundary', () => {
-    const state = createWanderState(hashWanderSeed('tiger'), { x: 1, z: 0 });
+    const state = createWanderState(hashWanderSeed('tiger'), { x: 0, z: 1 });
     const current = { x: WORLD_BOUNDARY - 0.62, z: 0 };
     const step = getWanderStep(current, 0.1, 0.34, 0.5, [], state, 0.1);
 

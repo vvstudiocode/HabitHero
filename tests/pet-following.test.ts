@@ -4,6 +4,7 @@ import {
   getFollowingStep,
   getFollowingTarget,
   PET_FOLLOW_DISTANCE,
+  PET_FOLLOW_SPACING,
   PET_FOLLOW_SPEED,
   PET_FOLLOW_STOP_DISTANCE,
 } from '../src/features/world/pet-following';
@@ -11,7 +12,8 @@ import {
 describe('pet following movement', () => {
   it('uses a slower pet speed and a closer trailing target', () => {
     assert.equal(PET_FOLLOW_SPEED, 0.75);
-    assert.equal(PET_FOLLOW_DISTANCE, 0.48);
+    assert.equal(PET_FOLLOW_DISTANCE, 0.24);
+    assert.equal(PET_FOLLOW_SPACING, 0.31);
     assert.equal(PET_FOLLOW_STOP_DISTANCE, 0.18);
   });
 

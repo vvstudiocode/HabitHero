@@ -6,13 +6,13 @@ const root = new URL('..', import.meta.url);
 const read = (path: string) => readFile(new URL(path, root), 'utf8');
 
 describe('world dashboard navigation contract', () => {
-  it('uses the five selectable ChibiCharacters for new children', async () => {
+  it('uses the supplied characters for new children', async () => {
     const catalog = await read('src/features/characters/catalog.ts');
     const worldCatalog = await read('src/features/characters/world-character-catalog.ts');
     const settings = await read('src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
     const dashboard = await read('src/components/ParentDashboard.tsx');
 
-    assert.match(catalog, /CURRENT_WORLD_CHARACTER_ID\s*=\s*'character\.anime-maiden'/);
+    assert.match(catalog, /CURRENT_WORLD_CHARACTER_ID\s*=\s*'character\.arthur'/);
     assert.match(worldCatalog, /WORLD_CHARACTER_CATALOG/);
     assert.match(settings, /WORLD_CHARACTER_CATALOG/);
     assert.match(settings, /onNewChildCharacterChange/);
@@ -47,7 +47,7 @@ describe('world dashboard navigation contract', () => {
     assert.doesNotMatch(child, /mobileSceneVideo=/);
     assert.match(hero, /sceneImage: string/);
     assert.doesNotMatch(picker, /getCharacterById|hh-family-picker-character/);
-    assert.match(world, /character\.anime-maiden/);
+    assert.match(world, /character\.arthur/);
   });
 
   it('does not trap a child in a neutral loading state after the first load fails', async () => {

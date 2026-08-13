@@ -1,0 +1,22 @@
+- generic [ref=f1e221]:
+  - banner [ref=f1e222]:
+    - generic [ref=f1e223]:
+      - generic "HabitHero 立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [ref=f1e226]
+      - generic "儀表板統計":
+        - generic "加入天數：14":
+          - strong:
+            - generic: "14"
+        - generic "我的點數：0":
+          - strong:
+            - generic: "0"
+        - generic "我的卷軸：0":
+          - strong:
+            - generic: "0"
+      - button "開啟功能選單" [ref=f1e228]
+  - complementary "我的冒險" [ref=f1e233]:
+    - button "每日冒險 完成 0 個，共 3 個" [ref=f1e235]:
+      - generic [ref=f1e236]: 每日冒險
+      - generic "完成 0 個，共 3 個" [ref=f1e237]: 0/3
+    - button "一般冒險 完成 0 個，共 4 個" [ref=f1e241]:
+      - generic [ref=f1e242]: 一般冒險
+      - generic "完成 0 個，共 4 個" [ref=f1e243]: 0/4

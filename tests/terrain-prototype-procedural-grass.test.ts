@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
   GRASS_BOUNDARY_BAND_RATIO,
-  GRASS_WIND_STRENGTH,
   MAX_GRASS_INTERACTORS,
   createProceduralGrassLayout,
   getProceduralGrassCount,
@@ -131,9 +130,11 @@ describe('terrain prototype procedural grass', () => {
     assert.deepEqual(settling.direction, moving.direction);
   });
 
-  it('keeps wind fixed at 100 percent and reserves a second interactor for a pet', () => {
-    assert.equal(GRASS_WIND_STRENGTH, 1.4);
+  it('removes global wind while preserving interactor capacity for contact movement', () => {
     assert.equal(MAX_GRASS_INTERACTORS, 2);
+    const grassSceneSource = readFileSync(new URL('../terrain-prototype/procedural-grass-scene.js', import.meta.url), 'utf8');
+    assert.doesNotMatch(grassSceneSource, /uWindStrength|primaryWave|detailWave|float gust/);
+    assert.match(grassSceneSource, /getInteractionOffset/);
   });
 
   it('maps meadow distance into deep edge, bright middle, and muted distant color layers', () => {

@@ -37,7 +37,7 @@ describe('pet spawn distribution and stable steering', () => {
 
   it('keeps navigation radius independent from visual enlargement', () => {
     assert.equal(getPetNavigationRadius(0.38, 1), 0.38);
-    assert.equal(getPetNavigationRadius(0.38, 1.2), 0.456);
+    assert.ok(Math.abs(getPetNavigationRadius(0.38, 1.2) - 0.456) < 1e-9);
     assert.doesNotMatch(runtimeSource, /const petRadius = [^;]*petWorldScale/);
   });
 
@@ -79,6 +79,26 @@ describe('pet spawn distribution and stable steering', () => {
 
     assert.ok(maximumX - minimumX >= 3.5, `x range was ${(maximumX - minimumX).toFixed(2)}`);
     assert.ok(maximumZ - minimumZ >= 3.5, `z range was ${(maximumZ - minimumZ).toFixed(2)}`);
+  });
+
+  it('abandons an exploration target instead of staying blocked against the tree', () => {
+    const state = createWanderState(hashWanderSeed('pet:tiger'), { x: 0, z: 1 });
+    const obstacles = [{ x: 0, z: 2.2, radius: 0.8 }];
+    let position = { x: -3.2, z: -2.8 };
+    let blockedFrames = 0;
+    let consecutiveBlockedFrames = 0;
+    let longestBlockedRun = 0;
+
+    for (let frame = 0; frame < 1200; frame += 1) {
+      const step = getWanderStep(position, 0.05, 0.38, 0.5, obstacles, state, frame * 0.05);
+      position = step.next;
+      consecutiveBlockedFrames = step.blocked ? consecutiveBlockedFrames + 1 : 0;
+      if (step.blocked) blockedFrames += 1;
+      longestBlockedRun = Math.max(longestBlockedRun, consecutiveBlockedFrames);
+    }
+
+    assert.ok(blockedFrames < 60, `blocked for ${blockedFrames} frames`);
+    assert.ok(longestBlockedRun < 20, `blocked for ${longestBlockedRun} consecutive frames`);
   });
 
   it('smoothly rotates roaming pet models instead of snapping every frame', () => {

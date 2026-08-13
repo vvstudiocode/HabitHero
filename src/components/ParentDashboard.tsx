@@ -12,7 +12,7 @@ import { ParentSettingsDocuments, type ParentSettingsDocument } from './ParentSe
 import { ParentConsentModal } from './ParentConsentModal';
 import { ParentPrivacyPolicyPage } from './ParentPrivacyPolicyPage';
 import { FamilyChildPicker } from './FamilyChildPicker';
-import { deleteCurrentAccount, toAuthErrorMessage, updateCurrentParentPassword, verifyCurrentParentPassword } from '../auth';
+import { deleteCurrentAccount, toAuthErrorMessage, toChildAccountErrorMessage, updateCurrentParentPassword, verifyCurrentParentPassword } from '../auth';
 import { isCurrentParentConsent, PARENT_CONSENT_VERSION } from '../lib/legal-content';
 import { TASK_CATEGORIES, DEFAULT_TASK_CATEGORY } from '../features/growth/constants';
 import { buildGrowthStats } from '../features/growth/growth-stats';
@@ -252,6 +252,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [taskToDelete, setTaskToDelete] = useState<GroupedTask | null>(null);
   const [rewardToDelete, setRewardToDelete] = useState<GroupedReward | null>(null);
   const [childToDelete, setChildToDelete] = useState<string | null>(null);
+  const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
   const [deleteChildPin, setDeleteChildPin] = useState('');
   const [deleteChildPinError, setDeleteChildPinError] = useState('');
   const [childNameDrafts, setChildNameDrafts] = useState<Record<string, string>>({});
@@ -267,6 +268,35 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setToastMessage(null);
       toastTimer.current = null;
     }, 2600);
+  };
+
+  const handleDeleteChild = async (targetChildId: string) => {
+    if (deletingChildId !== null) return;
+    setDeletingChildId(targetChildId);
+    try {
+      await verifyCurrentParentPassword(deleteChildPin);
+    } catch (error) {
+      setDeleteChildPinError(toAuthErrorMessage(error));
+      setDeletingChildId(null);
+      return;
+    }
+
+    // Close the confirmation immediately. deleteChild applies the optimistic
+    // card/state update before its RPC resolves, so the parent sees instant feedback.
+    setChildToDelete(null);
+    setDeleteChildPin('');
+    setDeleteChildPinError('');
+    showToast('小孩已移除，正在同步…');
+
+    try {
+      const deletion = deleteChild(targetChildId);
+      await deletion;
+      showToast('小孩已刪除');
+    } catch {
+      showToast('小孩刪除失敗，已恢復資料。');
+    } finally {
+      setDeletingChildId(null);
+    }
   };
 
   const notificationSettings = useNotificationSettings({
@@ -679,7 +709,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setNewChildCharacterId(WORLD_CHARACTER_CATALOG[0]?.id ?? CURRENT_WORLD_CHARACTER_ID);
       return true;
     } catch (error) {
-      setNewChildError(toAuthErrorMessage(error));
+      setNewChildError(toChildAccountErrorMessage(error));
       return false;
     } finally {
       childAccountSubmissionInFlight.current = false;
@@ -762,7 +792,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
 
   const heroRootMenuActions: CharacterMenuAction[] = [
-    { id: 'review', title: '審核', tour: 'review-menu', icon: <Eye size={17} />, hasNotification: parentMenuNotifications.review, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('review') },
+    { id: 'review', title: '審核', tour: 'review-menu', icon: <Eye size={17} />, hasNotification: parentMenuNotifications.review, onSelect: () => openHeroFeature('review') },
     { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
     { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
     { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards || parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('rewards') },
@@ -770,9 +800,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {
-    review: [
-      { id: 'review-goals', title: '審核項目', icon: <Eye size={17} />, onSelect: () => openHeroFeature('review') },
-    ],
+    review: [],
     tasks: [
       { id: 'task-form', title: '冒險管理', tour: 'add-task-menu', icon: <CalendarDays size={17} />, onSelect: () => openHeroFeature('tasks') },
       { id: 'add-daily-adventure', title: '每日冒險', icon: <Plus size={17} />, onSelect: () => openAdventureForm('daily') },
@@ -1565,19 +1593,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 }, '.hh-parent-confirm-panel');
               }} className="flex-1 p-4 rounded-xl font-bold bg-gray-100 text-gray-600">取消</button>
               <button onClick={() => {
-                void (async () => {
-                  try {
-                    await verifyCurrentParentPassword(deleteChildPin);
-                    await deleteChild(childToDelete);
-                    dismissWithAnimation(() => setChildToDelete(null), '.hh-parent-confirm-panel');
-                    setDeleteChildPin('');
-                    setDeleteChildPinError('');
-                    showToast('小孩已刪除');
-                  } catch (error) {
-                    setDeleteChildPinError(error instanceof Error ? error.message : '刪除小孩失敗，請重試。');
-                  }
-                })();
-              }} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white">確認刪除</button>
+                void handleDeleteChild(childToDelete);
+              }} disabled={deletingChildId === childToDelete} className="flex-1 p-4 rounded-xl font-bold bg-red-500 text-white disabled:cursor-wait disabled:opacity-60">{deletingChildId === childToDelete ? '刪除中…' : '確認刪除'}</button>
             </div>
         </ModalShell>
       )}

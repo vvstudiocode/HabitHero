@@ -15,7 +15,6 @@ const baseGameData: ChildGameData = {
   loadout: { equippedCharacterInventoryId: 'inventory-character', followingPetInventoryId: null },
   worldEntities: [],
   worldRevision: 0,
-  lootDrops: [],
 };
 
 describe('terrain world scene dependencies', () => {
@@ -29,10 +28,6 @@ describe('terrain world scene dependencies', () => {
     };
 
     assert.equal(getTerrainWorldSceneKey(refreshed, 'high'), getTerrainWorldSceneKey(baseGameData, 'high'));
-    assert.equal(getTerrainWorldSceneKey({
-      ...baseGameData,
-      lootDrops: [{ id: 'drop-1', sourceTaskId: 'task-1', kind: 'star', amount: 5, x: -2, y: 0.35, z: 1, createdAt: '2026-08-12T09:00:00Z' }],
-    }, 'high'), getTerrainWorldSceneKey(baseGameData, 'high'));
   });
 
   it('changes for equipped character, following pet, world entities, and quality changes', () => {

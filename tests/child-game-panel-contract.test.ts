@@ -39,15 +39,16 @@ describe('child game panel decoration editing', () => {
   it('keeps follow and roaming mutations typed and wired as world revision results', () => {
     assert.match(dataAccessSource, /setFollowingPet\(childId: string, inventoryItemId: string \| null\): Promise<WorldMutationResult>/);
     assert.match(dataAccessSource, /setRoamingPets\(childId: string, inventoryItemIds: string\[\]\): Promise<WorldMutationResult>/);
-    assert.match(dataAccessSource, /async setFollowingPet\([\s\S]*?set_following_pet[\s\S]*?return \{ revision: Number\(result\.revision\) \};/);
+    assert.match(dataAccessSource, /setFollowingPets\(childId: string, inventoryItemIds: string\[\]\): Promise<WorldMutationResult>/);
+    assert.match(dataAccessSource, /async setFollowingPets\([\s\S]*?set_following_pets[\s\S]*?return \{ revision: Number\(result\.revision\) \};/);
     assert.match(dataAccessSource, /async setRoamingPets\([\s\S]*?set_roaming_pets[\s\S]*?return \{ revision: Number\(result\.revision\) \};/);
     assert.doesNotMatch(dataAccessSource, /setFollowingPet\(childId: string, inventoryItemId: string \| null\): Promise<void>/);
     assert.doesNotMatch(dataAccessSource, /setRoamingPets\(childId: string, inventoryItemIds: string\[\]\): Promise<void>/);
     assert.match(storeSource, /setFollowingPet: \(childId: string, inventoryItemId: string \| null\) => Promise<WorldMutationResult>/);
     assert.match(storeSource, /setRoamingPets: \(childId: string, inventoryItemIds: string\[\]\) => Promise<WorldMutationResult>/);
-    assert.match(childGamePanelSource, /onSetFollowingPet: \(inventoryItemId: string \| null\) => Promise<WorldMutationResult>/);
+    assert.match(childGamePanelSource, /onSetFollowingPets: \(inventoryItemIds: string\[\]\) => Promise<WorldMutationResult>/);
     assert.match(childGamePanelSource, /onSetRoamingPets: \(inventoryItemIds: string\[\]\) => Promise<WorldMutationResult>/);
-    assert.match(childGamePanelSource, /commitWorldMutation\(\(\) => onSetFollowingPet\(/);
+    assert.match(childGamePanelSource, /commitWorldMutation\(\(\) => onSetFollowingPets\(next\)/);
     assert.match(childGamePanelSource, /commitWorldMutation\(\(\) => onSetRoamingPets\(/);
   });
 

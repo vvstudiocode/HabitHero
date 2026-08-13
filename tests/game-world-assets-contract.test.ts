@@ -21,7 +21,7 @@ const prototypeRuntimeSource = readFileSync(
 describe('production terrain asset contract', () => {
   it('loads the central big-tree asset and keeps a procedural fallback', () => {
     assert.match(prototypeRuntimeSource, /tree: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/big-tree\.glb'/);
-    assert.match(prototypeRuntimeSource, /character: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/anime-maiden\.glb'/);
+    assert.match(prototypeRuntimeSource, /character: '\/assets\/characters\/arthur\.glb'/);
     assert.match(prototypeRuntimeSource, /skybox: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/sky-equirectangular-day\.png'/);
     assert.match(prototypeRuntimeSource, /loadGltfSafely[^\n]+PROTOTYPE_WORLD_ASSETS\.tree/);
     assert.match(prototypeRuntimeSource, /defineAsset\(THREE, treeSource\)/);
@@ -31,17 +31,17 @@ describe('production terrain asset contract', () => {
     assert.match(prototypeRuntimeSource, /outerDensityMultiplier: qualitySettings\.outerDensityMultiplier/);
     assert.match(prototypeRuntimeSource, /createProceduralFlowerField\(THREE/);
     assert.match(prototypeRuntimeSource, /createProceduralForest\(THREE/);
-    assert.match(prototypeRuntimeSource, /updateGrassInteractionState\(/);
+    assert.doesNotMatch(prototypeRuntimeSource, /updateGrassInteractionState\(/);
     assert.match(prototypeRuntimeSource, /proceduralGrass\.update\(/);
     assert.match(prototypeRuntimeSource, /worldScene\.background = loadedTexture/);
     assert.match(prototypeRuntimeSource, /rendererInstance\.toneMapping = THREE\.ACESFilmicToneMapping/);
     assert.match(prototypeRuntimeSource, /rendererInstance\.shadowMap\.type = THREE\.PCFSoftShadowMap/);
   });
 
-  it('loads the Anime Maiden fallback and selectable ChibiCharacters as animated GLBs', () => {
+  it('loads the supplied character catalog as animated GLBs', () => {
     assert.match(terrainWorldLayerSource, /getCharacterRenderMode/);
     assert.match(terrainWorldLayerSource, /createProceduralCharacter/);
-    assert.match(terrainWorldLayerSource, /item\.assetKey === 'character\.anime-maiden'/);
+    assert.match(terrainWorldLayerSource, /assetKey: 'character\.arthur'/);
     assert.match(terrainWorldLayerSource, /getWorldCharacterModelUrl/);
     assert.match(terrainWorldLayerSource, /'world-glb'/);
     assert.match(prototypeRuntimeSource, /characterRenderMode === 'anime-maiden'/);
@@ -85,6 +85,9 @@ describe('production terrain asset contract', () => {
     assert.ok(Math.abs(target.x) + 0.3 <= 4.8);
     assert.ok(Math.abs(target.z) + 0.3 <= 4.8);
     assert.ok(Math.hypot(target.x, target.z) > 1.45);
+    assert.match(prototypeRuntimeSource, /getWanderStep\(/);
+    assert.match(prototypeRuntimeSource, /wanderState/);
+    assert.doesNotMatch(prototypeRuntimeSource, /getRoamingStep\(/);
   });
 
   it('renders a semantic static scene when the 3D runtime fails and hides the canvas', () => {

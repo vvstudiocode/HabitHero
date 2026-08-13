@@ -9,7 +9,6 @@ const gameTables = [
   'child_game_loadouts',
   'child_world_states',
   'child_world_entities',
-  'game_loot_drops',
 ] as const;
 
 function createRealtimeClient() {
