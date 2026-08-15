@@ -9,8 +9,10 @@ export const WORLD_QUALITY_SETTINGS = {
     grassCount: 132,
     flowerCount: 10,
     maxPixelRatio: 1,
-    outerDensityMultiplier: 24,
-    boundaryDensityMultiplier: 6,
+    // Keep a visible meadow edge while avoiding a large duplicate-blade burst
+    // on phones that already entered the low-quality path.
+    outerDensityMultiplier: 12,
+    boundaryDensityMultiplier: 4,
     forestLayers: 0,
     shadows: false,
     shadowMapSize: 512,
@@ -18,12 +20,14 @@ export const WORLD_QUALITY_SETTINGS = {
   high: {
     grassCount: 220,
     flowerCount: 28,
-    maxPixelRatio: 2,
-    outerDensityMultiplier: 36,
-    boundaryDensityMultiplier: 10,
+    // The outer field is decorative, so spend the GPU budget on the playable
+    // meadow instead of multiplying distant decorative blades.
+    maxPixelRatio: 1.5,
+    outerDensityMultiplier: 18,
+    boundaryDensityMultiplier: 6,
     forestLayers: 0,
     shadows: true,
-    shadowMapSize: 2048,
+    shadowMapSize: 1024,
   },
 } as const;
 

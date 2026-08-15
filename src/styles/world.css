@@ -82,6 +82,8 @@
   min-height: 320px;
   overflow: hidden;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -91,6 +93,9 @@
   height: 100%;
   cursor: grab;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .hh-terrain-world-canvas:active {
@@ -241,6 +246,18 @@
   font-size: 20px;
 }
 
+.hh-game-wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.hh-game-wallet-row > .hh-game-wallet {
+  margin-bottom: 0;
+}
+
 .hh-game-panel-section {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -279,6 +296,114 @@
   box-shadow: 0 5px 14px rgb(63 103 71 / 10%);
 }
 
+.hh-game-tabs--icons button {
+  padding: 0;
+  font-size: 0;
+}
+
+.hh-game-tabs--icons button svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.hh-game-store-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hh-game-store-toolbar--parent {
+  justify-content: flex-start;
+}
+
+.hh-game-price-edit-button {
+  width: fit-content;
+  min-width: 0;
+  padding-right: 16px;
+  padding-left: 16px;
+}
+
+.hh-game-layout-controls {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+}
+
+.hh-game-layout-trigger,
+.hh-game-layout-menu button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  color: #668077;
+  border-radius: 14px;
+  font-weight: 900;
+}
+
+.hh-game-layout-menu button {
+  background: #eef5e9;
+}
+
+.hh-game-layout-trigger {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0 10px;
+  background: transparent;
+}
+
+.hh-game-layout-trigger:hover,
+.hh-game-layout-trigger:focus-visible,
+.hh-game-layout-controls.is-expanded .hh-game-layout-trigger {
+  color: #2f5b4c;
+  background: #fffdf7;
+}
+
+.hh-game-layout-menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  grid-template-columns: 44px;
+  gap: 4px;
+  padding: 4px;
+  background: #eef5e9;
+  border-radius: 14px;
+}
+
+.hh-game-layout-menu button:hover,
+.hh-game-layout-menu button:focus-visible,
+.hh-game-layout-menu button.is-selected {
+  color: #2f5b4c;
+  background: #fffdf7;
+}
+
+.hh-game-layout-notice {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 10px 14px;
+  color: #5c4b25;
+  background: #fff4ce;
+  border: 1px solid #f2d98d;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  animation: hh-game-layout-notice-in 220ms ease-out both;
+}
+
+@keyframes hh-game-layout-notice-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .hh-game-panel-section h3 {
   display: flex;
   align-items: center;
@@ -289,26 +414,267 @@
   font-weight: 900;
 }
 
-.hh-game-inventory-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.hh-game-inventory-heading h3 {
-  min-width: 0;
-  margin-top: 0;
-}
-
-.hh-game-inventory-heading .hh-game-item-actions {
-  justify-content: flex-end;
-}
-
 .hh-game-card-grid {
   display: grid;
   gap: 12px;
+}
+
+.hh-game-catalog-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.hh-game-catalog-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hh-game-catalog-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hh-game-catalog-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.hh-game-catalog-card {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid #e8eadc;
+  border-radius: 22px;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.hh-game-catalog-card:focus-visible {
+  outline: 3px solid rgb(91 156 105 / 45%);
+  outline-offset: 2px;
+}
+
+.hh-game-catalog-card-media {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+  color: #5f9b6c;
+  background: transparent;
+}
+
+.hh-game-catalog-card-media > .hh-game-item-thumbnail-button {
+  border-radius: 0;
+}
+
+.hh-game-catalog-card-media > svg {
+  width: 30%;
+  height: 30%;
+}
+
+.hh-game-catalog-card-overlay {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 10px;
+  color: #274842;
+  background: transparent;
+  pointer-events: none;
+}
+
+.hh-game-catalog-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: clamp(12px, 3.8vw, 16px);
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hh-game-catalog-card-price {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  color: #956421;
+  font-size: clamp(12px, 3.4vw, 14px);
+  font-weight: 900;
+}
+
+.hh-game-catalog-card-price svg { flex: 0 0 auto; }
+
+.hh-game-catalog-card--editing .hh-game-catalog-card-overlay {
+  top: 0;
+  bottom: auto;
+  align-items: flex-start;
+  min-height: 64px;
+  background: transparent;
+}
+
+.hh-game-catalog-card-editor {
+  position: absolute;
+  z-index: 3;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgb(255 253 248 / 94%);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+
+.hh-game-catalog-card-price-field {
+  display: grid;
+  gap: 4px;
+  color: #6c7f7a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.hh-game-catalog-card-price-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  color: #284f45;
+  background: #ffffff;
+  border: 1px solid #dce9d8;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.hh-game-catalog-card-price-field input:focus-visible {
+  outline: 3px solid rgb(91 156 105 / 30%);
+  outline-offset: 1px;
+  border-color: #5b9c69;
+}
+
+.hh-game-catalog-card-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hh-game-price-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  color: #526c61;
+  background: #f4f8ed;
+  border: 1px solid #dce9d8;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hh-game-price-editor-list {
+  display: grid;
+  gap: 8px;
+}
+
+.hh-game-price-editor-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) minmax(128px, 160px) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px;
+  background: #fffdf8;
+  border: 1px solid #e8eadc;
+  border-radius: 16px;
+}
+
+.hh-game-price-editor-thumbnail {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  overflow: hidden;
+  color: #5f9b6c;
+  background: transparent;
+  border-radius: 14px;
+}
+
+.hh-game-price-editor-thumbnail > .hh-game-item-thumbnail-button {
+  border-radius: 14px;
+}
+
+.hh-game-price-editor-identity {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.hh-game-price-editor-identity strong {
+  overflow: hidden;
+  color: #274842;
+  font-size: 15px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hh-game-price-editor-identity span {
+  color: #6c7f7a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hh-game-price-editor-field {
+  display: grid;
+  gap: 4px;
+  color: #6c7f7a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.hh-game-price-editor-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  color: #284f45;
+  background: #ffffff;
+  border: 1px solid #dce9d8;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.hh-game-price-editor-field input:focus-visible {
+  outline: 3px solid rgb(91 156 105 / 30%);
+  outline-offset: 1px;
+  border-color: #5b9c69;
+}
+
+.hh-game-price-editor-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 8px 12px;
+  color: #2f5b4c;
+  background: #eef5e9;
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+.hh-game-price-editor-reset:focus-visible {
+  outline: 3px solid rgb(91 156 105 / 30%);
+  outline-offset: 1px;
 }
 
 .hh-game-item-card {
@@ -343,6 +709,7 @@
   display: block;
   width: 100%;
   height: 100%;
+  aspect-ratio: 1 / 1;
   object-fit: contain;
 }
 
@@ -362,17 +729,6 @@
 .hh-game-item-thumbnail-button:focus-visible {
   outline: 3px solid #202124;
   outline-offset: -3px;
-}
-
-.hh-game-price-card {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-}
-
-.hh-game-price-card > .hh-game-price-controls {
-  grid-column: 1 / -1;
 }
 
 .hh-game-item-copy {
@@ -603,10 +959,57 @@
   .hh-game-item-card>.hh-game-price {
     grid-row: 2;
   }
+
+  .hh-game-price-editor-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .hh-game-price-editor-thumbnail {
+    width: 48px;
+    height: 48px;
+  }
+
+  .hh-game-price-editor-field,
+  .hh-game-price-editor-reset {
+    grid-column: 2;
+  }
+
+  .hh-game-price-editor-reset {
+    justify-self: flex-start;
+  }
+
+  .hh-game-store-toolbar,
+  .hh-game-price-save-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hh-game-store-toolbar--parent {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .hh-game-store-toolbar--parent .hh-game-price-edit-button {
+    width: fit-content;
+  }
+
+  .hh-game-layout-controls {
+    width: fit-content;
+    align-self: flex-start;
+  }
+
+  .hh-game-price-save-bar .hh-game-action-button {
+    width: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hh-terrain-world-canvas {
     cursor: default;
+  }
+
+  .hh-game-layout-notice {
+    animation: none;
   }
 }

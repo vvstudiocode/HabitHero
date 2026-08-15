@@ -27,6 +27,11 @@ import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
 import { PointValue } from './shared/PointValue';
 import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
+import {
+  preventNativeAppContextMenu,
+  preventNativeAppDragStart,
+  preventNativeAppTextSelection,
+} from '../lib/mobile-interaction';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 import { getTodayInTaipei, type ParentCalendarAdventureTask } from '../features/adventures/components/ParentAdventureCalendar';
 import {
@@ -35,8 +40,7 @@ import {
   type CreateGeneralAdventureInput,
 } from '../features/adventures/components/ParentAdventureWorkspace';
 import { ParentGamePricePanel } from '../features/world/components/ParentGamePricePanel';
-import { CURRENT_WORLD_CHARACTER_ID } from '../features/characters/catalog';
-import { WORLD_CHARACTER_CATALOG } from '../features/characters/world-character-catalog';
+import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } from '../features/characters/world-character-catalog';
 
 interface ParentDashboardProps {
   onSwitchToChild: (childId?: string) => void;
@@ -815,7 +819,12 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
 
   return (
-    <div className="hh-dashboard-screen flex flex-col min-h-[100dvh] bg-gray-50">
+    <div
+      className="hh-dashboard-screen hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-gray-50"
+      onContextMenu={preventNativeAppContextMenu}
+      onSelectStart={preventNativeAppTextSelection}
+      onDragStart={preventNativeAppDragStart}
+    >
       <DashboardCharacterHero
         sceneImage="/images/habithero-parent-living-room.png"
         sceneImageDesktop="/images/habithero-parent-living-room-desktop.png"

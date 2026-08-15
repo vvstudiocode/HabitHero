@@ -4,6 +4,11 @@ import { useAuthSession } from '../auth';
 import { Backpack, CalendarDays, CheckCircle2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
+import {
+  preventNativeAppContextMenu,
+  preventNativeAppDragStart,
+  preventNativeAppTextSelection,
+} from '../lib/mobile-interaction';
 import { Reward } from '../types';
 import { GoalProposalForm } from '../features/growth/components/GoalProposalForm';
 import { GrowthSummaryPanel } from '../features/growth/components/GrowthSummaryPanel';
@@ -174,7 +179,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const notificationSettings = useNotificationSettings({
     familyId,
     childProfileId: activeChild?.id ?? null,
-    onForegroundNotification: (title, body) => showToast(`${title}：${body}`),
   });
 
   useEffect(() => () => {
@@ -508,8 +512,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   return (
     <div
-      className="hh-dashboard-screen hh-dashboard-screen--child flex flex-col min-h-[100dvh] bg-blue-50 pb-24"
+      className="hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50 pb-24"
       style={{ '--hh-character-theme-color': '#202124' } as React.CSSProperties}
+      onContextMenu={preventNativeAppContextMenu}
+      onSelectStart={preventNativeAppTextSelection}
+      onDragStart={preventNativeAppDragStart}
     >
       <DashboardCharacterHero
         sceneImage=""

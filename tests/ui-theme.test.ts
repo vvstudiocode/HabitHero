@@ -4,17 +4,18 @@ import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('character catalog exposes a representative accent color', async () => {
-  const { CHARACTER_CATALOG } = await import('../src/features/characters/catalog.ts');
+test('world character catalog exposes the current default character', async () => {
+  const { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } = await import('../src/features/characters/world-character-catalog.ts');
 
-  assert.equal(CHARACTER_CATALOG[0]?.accentColor, '#f472b6');
+  assert.equal(CURRENT_WORLD_CHARACTER_ID, 'character.arthur');
+  assert.equal(WORLD_CHARACTER_CATALOG[0]?.id, CURRENT_WORLD_CHARACTER_ID);
 });
 
-test('shared hero resolves a child theme from its character image without caller changes', () => {
+test('shared hero uses persisted theme values without a legacy character catalog', () => {
   const hero = read('../src/components/DashboardCharacterHero.tsx');
 
-  assert.match(hero, /getCharacterByImageUrl\(sceneImage\)/);
-  assert.match(hero, /character\?\.accentColor/);
+  assert.doesNotMatch(hero, /getCharacterByImageUrl|character\?\.accentColor/);
+  assert.match(hero, /theme\?\.accentColor \?\?/);
 });
 
 test('shared hero exposes one theme color for all dashboard controls', () => {
@@ -23,7 +24,7 @@ test('shared hero exposes one theme color for all dashboard controls', () => {
   const neutralTheme = read('../src/styles/neutral-theme.css');
 
   assert.match(hero, /--hh-character-theme-color/);
-  assert.match(hero, /data-theme-color/);
+  assert.match(hero, /data-theme-color=\{menuVariant\}/);
   assert.doesNotMatch(characterStyles, /var\(--hh-character-glow\)/);
   assert.match(neutralTheme, /--hh-character-glow/);
   assert.match(neutralTheme, /\.hh-character-hero-panel\s*\{[\s\S]*?--hh-character-glow:\s*var\(--hh-character-theme-color\)/);

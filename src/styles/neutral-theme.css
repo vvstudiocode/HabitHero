@@ -293,10 +293,6 @@ body,
   fill: currentColor;
 }
 
-.hh-character-hero-panel[data-theme-color="white-catgirl-room"] .hh-character-stat-icon .hh-character-stat-days-icon {
-  color: var(--hh-neutral-ink);
-  filter: none;
-}
 
 .hh-adventure-card {
   color: var(--hh-neutral-ink);

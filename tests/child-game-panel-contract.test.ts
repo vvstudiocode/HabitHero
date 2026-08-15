@@ -21,6 +21,41 @@ const storeSource = readFileSync(
 );
 
 describe('child game panel decoration editing', () => {
+  it('uses the shared catalog card for the child shop', () => {
+    assert.match(childGamePanelSource, /<GameItemCard/);
+    assert.match(childGamePanelSource, /mode="child"/);
+    assert.match(childGamePanelSource, /showMeta=\{false\}/);
+    assert.match(childGamePanelSource, /onOpenPreview=\{openShopPreview\}/);
+    const cardUsage = childGamePanelSource.match(/<GameItemCard[\s\S]*?\/>/)?.[0] ?? '';
+    assert.doesNotMatch(cardUsage, /onPurchase=/);
+    assert.match(childGamePanelSource, /<GameItemLightbox[\s\S]*?purchaseDisabled=/);
+    assert.match(childGamePanelSource, /<GameItemLightbox[\s\S]*?purchaseLabel=/);
+    assert.match(childGamePanelSource, /onPurchase=\{kind === 'shop' \? handlePreviewPurchase : undefined\}/);
+  });
+
+  it('uses the shared square cards and action modal for the child inventory', () => {
+    const inventorySection = childGamePanelSource.match(/\{kind === 'inventory' && \([\s\S]*?\{kind === 'shop' && \(/)?.[0] ?? '';
+    assert.doesNotMatch(inventorySection, /GameCatalogLayoutControls/);
+    assert.match(inventorySection, /GameItemCard/);
+    assert.match(inventorySection, /hh-game-catalog-grid/);
+    assert.match(inventorySection, /openInventoryPreview/);
+    assert.match(childGamePanelSource, /actionContent=\{previewInventoryActions\}/);
+    assert.match(childGamePanelSource, /onEquipCharacter/);
+    assert.match(childGamePanelSource, /onPlaceDecoration/);
+  });
+
+  it('keeps child layout controls beside the wallet and uses icon-only category tabs', () => {
+    assert.match(childGamePanelSource, /hh-game-wallet-row[\s\S]*GameCatalogLayoutControls/);
+    assert.match(childGamePanelSource, /ScrollText size=\{17\} strokeWidth=\{2\.5\}/);
+    assert.doesNotMatch(childGamePanelSource, /Coins size=\{20\}/);
+    assert.match(childGamePanelSource, /hh-game-tabs hh-game-tabs--icons/);
+    assert.match(childGamePanelSource, /aria-label=\{label\}/);
+    assert.match(childGamePanelSource, /title=\{label\}/);
+    assert.match(childGamePanelSource, /hh-game-lightbox-pet-rename-row/);
+    assert.doesNotMatch(childGamePanelSource, /hh-game-inventory-heading/);
+    assert.doesNotMatch(childGamePanelSource, /用卷軸交換/);
+  });
+
   it('keeps every active entity for a stackable inventory item addressable by entity id', () => {
     const entities = [
       { id: 'entity-1', inventoryItemId: 'inventory-1', entityKind: 'decoration', isActive: true },
@@ -78,8 +113,9 @@ describe('child game panel decoration editing', () => {
     assert.equal(childGamePanelSource.includes('onBlur'), false);
   });
 
-  it('keeps decoration inventory controls in the same heading row as other inventory sections', () => {
-    assert.match(childGamePanelSource, /<div className="hh-game-inventory-heading">[\s\S]*?<h3>[\s\S]*?世界裝飾[\s\S]*?全部收回[\s\S]*?<\/div>/);
+  it('keeps decoration inventory controls available alongside the layout control', () => {
+    assert.match(childGamePanelSource, /inventorySection === 'decoration'[\s\S]*?全部收回/);
+    assert.match(childGamePanelSource, /onCollectAllDecorations/);
   });
 
   it('returns to the 3D world immediately after a successful character switch', () => {

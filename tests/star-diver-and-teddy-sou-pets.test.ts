@@ -11,15 +11,9 @@ const pets = [
     model: 'public/assets/pets/star-diver.glb',
     thumbnail: 'public/assets/pets/star-diver-thumbnail.webp',
   },
-  {
-    key: 'teddy-sou',
-    name: '泰迪酥',
-    model: 'public/assets/pets/teddy-sou.glb',
-    thumbnail: 'public/assets/pets/teddy-sou-thumbnail.webp',
-  },
 ] as const;
 
-test('ships both supplied pets as compact animated GLBs', async () => {
+test('ships Star Diver as a compact animated GLB', async () => {
   const migration = await readFile(new URL('supabase/migrations/20260813063922_add_star_diver_and_teddy_sou_pets.sql', root), 'utf8');
 
   for (const pet of pets) {
@@ -30,7 +24,7 @@ test('ships both supplied pets as compact animated GLBs', async () => {
     assert.ok(modelStats.size < 1 * 1024 * 1024, `${pet.name} GLB should stay below 1 MB for mobile delivery`);
     const modelContents = (await readFile(model)).toString('latin1');
     assert.equal(modelContents.slice(0, 4), 'glTF');
-    assert.match(modelContents, /Armature\|mixamo\.com\|Layer0/);
+    assert.match(modelContents, /Walk_InPlace/);
     assert.match(modelContents, /KHR_draco_mesh_compression/);
     assert.match(modelContents, /EXT_texture_webp/);
     assert.match(migration, new RegExp(`pet\\.${pet.key}`));
@@ -40,7 +34,7 @@ test('ships both supplied pets as compact animated GLBs', async () => {
   }
 });
 
-test('ships compact WebP thumbnails for both supplied pets', async () => {
+test('ships a compact WebP thumbnail for Star Diver', async () => {
   for (const pet of pets) {
     const thumbnail = new URL(pet.thumbnail, root);
     await access(thumbnail);

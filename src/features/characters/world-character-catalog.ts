@@ -7,6 +7,8 @@ export interface WorldCharacterOption {
   description: string;
 }
 
+export const CURRENT_WORLD_CHARACTER_ID = 'character.arthur';
+
 /**
  * These are the mobile-optimized supplied characters. Each model ships an
  * in-place walk clip; models may also provide an authored idle clip.
@@ -75,6 +77,22 @@ export const WORLD_CHARACTER_CATALOG: readonly WorldCharacterOption[] = [
     modelUrl: '/assets/characters/violette.glb',
     thumbnailUrl: '/assets/characters/violette-thumbnail.webp',
     description: '帶著薰衣草色長髮，在溫柔晨光中展開每日冒險。',
+  },
+  {
+    id: 'character.gilt',
+    name: '吉爾特',
+    assetKey: 'character.gilt',
+    modelUrl: '/assets/characters/gilt.glb',
+    thumbnailUrl: '/assets/characters/gilt-thumbnail.webp',
+    description: '穿著閃電雨衣，在每一場雨裡收集勇氣與新發現。',
+  },
+  {
+    id: 'character.lunalia',
+    name: '露娜莉亞',
+    assetKey: 'character.lunalia',
+    modelUrl: '/assets/characters/lunalia.glb',
+    thumbnailUrl: '/assets/characters/lunalia-thumbnail.webp',
+    description: '伴著月光與樹影，溫柔地守護每一次夜間冒險。',
   },
 ];
 

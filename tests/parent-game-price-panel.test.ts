@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ParentGamePricePanel } from '../src/features/world/components/ParentGamePricePanel';
 import type { GameCatalogItem } from '../src/features/world/contracts';
+
+const parentPanelSource = readFileSync(new URL('../src/features/world/components/ParentGamePricePanel.tsx', import.meta.url), 'utf8');
 
 describe('parent world price panel', () => {
   it('renders a recoverable empty state instead of returning a blank panel', () => {
@@ -50,5 +53,25 @@ describe('parent world price panel', () => {
     assert.match(html, />商店</);
     assert.match(html, /src="\/assets\/animal-plushies\/bear-thumbnail\.png"/);
     assert.match(html, /class="hh-game-price-card/);
+    assert.match(html, /aria-label="商品版面欄數：目前 2 欄"/);
+    assert.match(html, /編輯價格/);
+    assert.doesNotMatch(html, /家庭自訂/);
+  });
+
+  it('keeps parent price editing in a separate list instead of covering catalog cards', () => {
+    assert.match(parentPanelSource, /hh-game-price-editor-list/);
+    assert.match(parentPanelSource, /editingPrices \? \(/);
+    assert.match(parentPanelSource, /GameItemPreview/);
+    assert.doesNotMatch(parentPanelSource, /editing=\{editingPrices\}/);
+  });
+
+  it('keeps parent catalog cards image-only in every layout', () => {
+    assert.match(parentPanelSource, /showMeta=\{false\}/);
+  });
+
+  it('keeps parent layout controls beside the compact price editor trigger', () => {
+    assert.match(parentPanelSource, /hh-game-store-toolbar--parent/);
+    assert.match(parentPanelSource, /hh-game-price-edit-button/);
+    assert.doesNotMatch(parentPanelSource, /調整這個家庭看到的任務捲價格/);
   });
 });

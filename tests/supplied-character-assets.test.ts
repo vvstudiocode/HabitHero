@@ -16,6 +16,7 @@ const migrationPath = new URL('supabase/migrations/20260813075119_replace_legacy
 const mossMigrationPath = new URL('supabase/migrations/20260813080000_add_moss_character.sql', root);
 const colletteMigrationPath = new URL('supabase/migrations/20260813104601_add_collette_character.sql', root);
 const violetteMigrationPath = new URL('supabase/migrations/20260813110128_add_violette_character.sql', root);
+const giltLunaliaMigrationPath = new URL('supabase/migrations/20260814133802_add_gilt_lunalia_characters.sql', root);
 const suppliedCharacterIdleMigrationPath = new URL('supabase/migrations/20260813120228_add_idle_animations_to_supplied_characters.sql', root);
 
 const suppliedCharacters = [
@@ -27,6 +28,8 @@ const suppliedCharacters = [
   { id: 'character.noah', name: '諾亞', model: '/assets/characters/noah.glb', thumbnail: '/assets/characters/noah-thumbnail.webp' },
   { id: 'character.collette', name: '柯蕾特', model: '/assets/characters/collette.glb', thumbnail: '/assets/characters/collette-thumbnail.webp' },
   { id: 'character.violette', name: '薇歐莉特', model: '/assets/characters/violette.glb', thumbnail: '/assets/characters/violette-thumbnail.webp' },
+  { id: 'character.gilt', name: '吉爾特', model: '/assets/characters/gilt.glb', thumbnail: '/assets/characters/gilt-thumbnail.webp' },
+  { id: 'character.lunalia', name: '露娜莉亞', model: '/assets/characters/lunalia.glb', thumbnail: '/assets/characters/lunalia-thumbnail.webp' },
 ] as const;
 
 function readGlbJson(path: URL): Record<string, unknown> {
@@ -116,6 +119,11 @@ describe('supplied character assets', () => {
     const violetteMigration = readFileSync(violetteMigrationPath, 'utf8');
     assert.match(violetteMigration, /character\.violette/);
     assert.match(violetteMigration, /warm-hand-painted/);
+
+    const giltLunaliaMigration = readFileSync(giltLunaliaMigrationPath, 'utf8');
+    assert.match(giltLunaliaMigration, /character\.gilt/);
+    assert.match(giltLunaliaMigration, /character\.lunalia/);
+    assert.match(giltLunaliaMigration, /warm-hand-painted/);
 
     const suppliedCharacterIdleMigration = readFileSync(suppliedCharacterIdleMigrationPath, 'utf8');
     for (const character of suppliedCharacters.slice(0, 4)) {

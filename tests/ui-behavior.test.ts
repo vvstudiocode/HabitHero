@@ -331,6 +331,13 @@ test('switching child views does not disable the saved notification preference',
   assert.doesNotMatch(hook, /useEffect\(\(\) => \{[\s\S]*disablePushDevicesForProfile\(client, profileId\)/);
 });
 
+test('child 3D world does not render foreground push notifications as a toast', () => {
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+
+  assert.match(dashboard, /const notificationSettings = useNotificationSettings\(\{[\s\S]*?familyId,[\s\S]*?childProfileId: activeChild\?\.id \?\? null,[\s\S]*?\}\);/);
+  assert.doesNotMatch(dashboard, /onForegroundNotification: \(title, body\) => showToast/);
+});
+
 test('child feature menu keeps the submenu mounted while it animates closed', () => {
   const hero = read('../src/components/DashboardCharacterHero.tsx');
   const dashboard = read('../src/components/ChildDashboard.tsx');

@@ -314,6 +314,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   isolation: isolate;
+  touch-action: pan-y;
   scroll-padding-top: 88px;
   background: #ffffff;
   animation: hh-feature-modal-in 260ms ease-out both;

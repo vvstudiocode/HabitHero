@@ -43,3 +43,12 @@ test('task notification requests carry an authenticated session header', () => {
   assert.match(source, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.match(source, /notifyAdventureCreated/);
 });
+
+test('notification defaults are enabled without overwriting an explicit opt-out', () => {
+  const migration = read('../supabase/migrations/20260815080000_restore_default_push_notifications.sql');
+
+  assert.match(migration, /alter table public\.profiles[\s\S]*alter column notifications_enabled set default true/i);
+  assert.match(migration, /update public\.profiles[\s\S]*set notifications_enabled = true/i);
+  assert.match(migration, /not exists \([\s\S]*from public\.push_devices/i);
+  assert.match(migration, /where notifications_enabled = false/i);
+});

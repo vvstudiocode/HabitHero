@@ -157,7 +157,21 @@ function getCatalogSceneSignature(item: GameCatalogItem | undefined) {
   if (!item) return 'none';
   const preview = typeof item.metadata.preview === 'string' ? item.metadata.preview : '';
   const color = typeof item.metadata.color === 'string' ? item.metadata.color : '';
-  return [item.id, item.assetKey, item.collisionRadius, preview, color].join(':');
+  const petPresentation = item.itemType === 'pet'
+    ? [
+      'model',
+      'animation',
+      'idleAnimation',
+      'visualScaleMultiplier',
+      'movementSpeedMultiplier',
+      'groundOffset',
+      'hideGroundMarker',
+      'hideGroundShadow',
+      'groundShadowScaleMultiplier',
+      'nameLabelScaleMultiplier',
+    ].map((key) => `${key}=${String(item.metadata[key] ?? '')}`).join(',')
+    : '';
+  return [item.id, item.assetKey, item.collisionRadius, preview, color, petPresentation].join(':');
 }
 
 function getWorldEntitiesSceneSignature(gameData: ChildGameData) {

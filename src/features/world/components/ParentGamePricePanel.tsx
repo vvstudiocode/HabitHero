@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { RotateCcw } from 'lucide-react';
 import type { GameCatalogItem, GameItemType } from '../contracts';
 import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
+import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 
 interface ParentGamePricePanelProps {
   catalog: GameCatalogItem[];
@@ -17,6 +19,15 @@ const typeLabels: Record<GameItemType, string> = {
   decoration: '裝飾',
 };
 
+interface PriceChange {
+  item: GameCatalogItem;
+  value: string;
+}
+
+function isValidPrice(value: string) {
+  return /^\d+$/.test(value) && Number(value) >= 1;
+}
+
 export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave, onReset }: ParentGamePricePanelProps) {
   const items = useMemo(
     () => catalog.filter((item) => item.isActive && !item.isStarter).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -25,6 +36,13 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [activeType, setActiveType] = useState<GameItemType>('character');
   const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
+  const [layoutColumns, setLayoutColumns] = useState<GameCatalogLayoutColumns>(2);
+  const [editingPrices, setEditingPrices] = useState(false);
+  const [savingDrafts, setSavingDrafts] = useState(false);
+  const [layoutNotice, setLayoutNotice] = useState<{ id: number; message: string } | null>(null);
+  const syncedPricesRef = useRef<Record<string, string>>({});
+  const acknowledgedPricesRef = useRef<Record<string, string>>({});
+  const editedDraftIdsRef = useRef(new Set<string>());
 
   const visibleItems = useMemo(
     () => items.filter((item) => item.itemType === activeType),
@@ -32,14 +50,107 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
   );
 
   useEffect(() => {
-    setDrafts(Object.fromEntries(items.map((item) => [item.id, String(prices[item.id] ?? item.scrollPrice)])));
+    const nextPrices = Object.fromEntries(items.map((item) => [item.id, String(prices[item.id] ?? item.scrollPrice)]));
+    const previousPrices = syncedPricesRef.current;
+    setDrafts((current) => {
+      const next = { ...current };
+      items.forEach((item) => {
+        const serverValue = nextPrices[item.id];
+        const hasLocalEdit = editedDraftIdsRef.current.has(item.id);
+        if (current[item.id] === undefined || (!hasLocalEdit && current[item.id] === previousPrices[item.id])) next[item.id] = serverValue;
+        if (current[item.id] === serverValue) {
+          editedDraftIdsRef.current.delete(item.id);
+          if (acknowledgedPricesRef.current[item.id] === serverValue) delete acknowledgedPricesRef.current[item.id];
+        }
+      });
+      return next;
+    });
+    syncedPricesRef.current = nextPrices;
   }, [items, prices]);
+
+  useEffect(() => {
+    if (!layoutNotice) return undefined;
+    const timeout = window.setTimeout(() => setLayoutNotice(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [layoutNotice]);
+
+  const persistedPrice = (item: GameCatalogItem) => prices[item.id] ?? item.scrollPrice;
+  const draftValue = (item: GameCatalogItem) => drafts[item.id] ?? String(persistedPrice(item));
+  const priceChanges = useMemo<PriceChange[]>(
+    () => items.flatMap((item) => {
+      const value = draftValue(item);
+      const persisted = String(persistedPrice(item));
+      if (value === persisted || acknowledgedPricesRef.current[item.id] === value) return [];
+      return [{ item, value }];
+    }),
+    // The ref only acknowledges a completed save; savingDrafts causes the next render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [drafts, items, prices, savingDrafts],
+  );
+  const hasUnsavedDrafts = priceChanges.length > 0;
+  const hasInvalidDrafts = priceChanges.some(({ value }) => !isValidPrice(value));
+
+  const showNotice = (message: string) => setLayoutNotice({ id: Date.now(), message });
+
+  const handleLayoutChange = (nextColumns: GameCatalogLayoutColumns) => {
+    if (nextColumns === layoutColumns) return;
+    setLayoutColumns(nextColumns);
+    if (hasUnsavedDrafts) showNotice('版面已切換，尚未儲存的價格草稿仍保留。');
+  };
+
+  const handleSaveDrafts = async () => {
+    if (!hasUnsavedDrafts || hasInvalidDrafts || savingDrafts) return;
+    setSavingDrafts(true);
+    try {
+      await Promise.all(priceChanges.map(({ item, value }) => onSave(item.id, Number(value))));
+      priceChanges.forEach(({ item, value }) => { acknowledgedPricesRef.current[item.id] = value; });
+      showNotice('價格已儲存，正在同步家庭商店。');
+    } catch {
+      showNotice('部分價格尚未儲存，草稿已保留，請稍後再試。');
+    } finally {
+      setSavingDrafts(false);
+    }
+  };
+
+  const handleReset = async (item: GameCatalogItem) => {
+    if (savingDrafts) return;
+    setSavingDrafts(true);
+    try {
+      await onReset(item.id);
+      acknowledgedPricesRef.current[item.id] = String(item.scrollPrice);
+      editedDraftIdsRef.current.add(item.id);
+      setDrafts((current) => ({ ...current, [item.id]: String(item.scrollPrice) }));
+    } catch {
+      showNotice('還原價格失敗，原本的草稿仍保留。');
+    } finally {
+      setSavingDrafts(false);
+    }
+  };
+
+  const handleDraftChange = (itemId: string, value: string) => {
+    editedDraftIdsRef.current.add(itemId);
+    setDrafts((current) => ({ ...current, [itemId]: value }));
+  };
+
+  const previewPrice = previewItem
+    ? (() => {
+      const value = draftValue(previewItem);
+      return isValidPrice(value) ? Number(value) : persistedPrice(previewItem);
+    })()
+    : undefined;
+
+  const toggleEditingPrices = () => {
+    if (editingPrices && hasUnsavedDrafts) {
+      showNotice('尚有未儲存的價格，請先儲存變更。');
+      return;
+    }
+    setEditingPrices((current) => !current);
+  };
 
   return (
     <section className="hh-world-price-panel space-y-3" aria-labelledby="game-price-heading">
       <div>
         <h2 id="game-price-heading" className="text-xl font-black text-gray-900">商店</h2>
-        <p className="mt-1 text-xs leading-5 text-gray-500">調整這個家庭看到的任務捲價格；商品內容與初始角色由系統維護。</p>
       </div>
       {catalog.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-700" role="status">
@@ -48,6 +159,13 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
         </div>
       ) : (
         <>
+          <div className="hh-game-store-toolbar hh-game-store-toolbar--parent">
+            <GameCatalogLayoutControls columns={layoutColumns} onChange={handleLayoutChange} />
+            <button type="button" className="hh-game-action-button hh-game-action-button--primary hh-game-price-edit-button" aria-pressed={editingPrices} onClick={toggleEditingPrices}>
+              {editingPrices ? '完成編輯' : '編輯價格'}
+            </button>
+          </div>
+          {layoutNotice && <div key={layoutNotice.id} className="hh-game-layout-notice" role="status">{layoutNotice.message}</div>}
           <div className="hh-game-tabs" role="tablist" aria-label="商店分類">
             {(['character', 'pet', 'decoration'] as const).map((type) => (
               <button key={type} type="button" role="tab" aria-selected={activeType === type} className={activeType === type ? 'is-selected' : ''} onClick={() => setActiveType(type)}>
@@ -55,63 +173,69 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
               </button>
             ))}
           </div>
-          <div className="space-y-2">
-            {visibleItems.map((item) => {
-              const defaultPrice = item.scrollPrice;
-              const familyPrice = prices[item.id];
-              const isCustomized = familyPrice !== undefined;
-              const value = drafts[item.id] ?? String(familyPrice ?? defaultPrice);
-              return (
-                <div key={item.id} className="hh-game-price-card rounded-2xl border border-gray-100 bg-gray-50 p-3">
-                  <div className="hh-game-item-icon hh-game-item-icon--thumbnail" aria-hidden={item.thumbnailUrl ? undefined : true}>
-                    <GameItemPreview item={item} onOpen={setPreviewItem} />
-                  </div>
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <strong className="block truncate text-sm text-gray-900">{item.name}</strong>
-                      <span className="text-xs font-bold text-gray-500">{typeLabels[item.itemType]} · 預設 {defaultPrice} 張</span>
+          {editingPrices ? (
+            <div className="hh-game-price-editor-list" aria-label="商品價格編輯">
+              {visibleItems.map((item) => {
+                const isCustomized = prices[item.id] !== undefined;
+                return (
+                  <article className="hh-game-price-editor-row" key={item.id}>
+                    <div className="hh-game-price-editor-thumbnail">
+                      <GameItemPreview item={item} onOpen={setPreviewItem} />
                     </div>
-                    {isCustomized && <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-[11px] font-bold text-blue-700">家庭自訂</span>}
-                  </div>
-                  <div className="hh-game-price-controls flex items-center gap-2">
-                    <label className="sr-only" htmlFor={`game-price-${item.id}`}>{item.name} 任務捲價格</label>
-                    <input
-                      id={`game-price-${item.id}`}
-                      type="number"
-                      min="1"
-                      step="1"
-                      inputMode="numeric"
-                      value={value}
-                      onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: event.target.value }))}
-                      className="min-h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 font-bold text-gray-800 outline-none focus:ring-2 focus:ring-blue-400"
-                    />
-                    <button
-                      type="button"
-                      disabled={loading || !/^\d+$/.test(value) || Number(value) < 1}
-                      onClick={() => void onSave(item.id, Number(value))}
-                      className="min-h-11 shrink-0 rounded-xl bg-blue-500 px-3 text-sm font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-wait disabled:opacity-50"
-                    >
-                      儲存
-                    </button>
+                    <div className="hh-game-price-editor-identity">
+                      <strong>{item.name}</strong>
+                      <span>{typeLabels[item.itemType]}</span>
+                    </div>
+                    <label className="hh-game-price-editor-field">
+                      <span>任務捲價格</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        inputMode="numeric"
+                        aria-label={`${item.name} 任務捲價格`}
+                        value={draftValue(item)}
+                        onChange={(event) => handleDraftChange(item.id, event.target.value)}
+                        disabled={loading || savingDrafts}
+                      />
+                    </label>
                     {isCustomized && (
-                      <button
-                        type="button"
-                        disabled={loading}
-                        onClick={() => void onReset(item.id)}
-                        className="min-h-11 shrink-0 rounded-xl bg-white px-3 text-sm font-bold text-gray-600 ring-1 ring-inset ring-gray-200 transition-colors hover:bg-gray-100 disabled:cursor-wait disabled:opacity-50"
-                      >
-                        還原
+                      <button type="button" className="hh-game-price-editor-reset" onClick={() => void handleReset(item)} disabled={loading || savingDrafts}>
+                        <RotateCcw size={16} aria-hidden="true" />
+                        <span>還原</span>
                       </button>
                     )}
-                  </div>
-                </div>
-              );
-            })}
-            {visibleItems.length === 0 && <p className="hh-game-empty">這個分類目前沒有可調整的商品。</p>}
-          </div>
+                  </article>
+                );
+              })}
+              {visibleItems.length === 0 && <p className="hh-game-empty">這個分類目前沒有可調整的商品。</p>}
+            </div>
+          ) : (
+            <div className={`hh-game-catalog-grid hh-game-catalog-grid--${layoutColumns}`}>
+              {visibleItems.map((item) => (
+                <GameItemCard
+                  key={item.id}
+                  item={item}
+                  price={persistedPrice(item)}
+                  mode="parent"
+                  showMeta={false}
+                  onOpenPreview={setPreviewItem}
+                />
+              ))}
+              {visibleItems.length === 0 && <p className="hh-game-empty">這個分類目前沒有可調整的商品。</p>}
+            </div>
+          )}
+          {editingPrices && (
+            <div className="hh-game-price-save-bar">
+              <span>{hasUnsavedDrafts ? `有 ${priceChanges.length} 項價格尚未儲存` : '目前沒有未儲存的價格'}</span>
+              <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={loading || savingDrafts || !hasUnsavedDrafts || hasInvalidDrafts} onClick={() => void handleSaveDrafts()}>
+                {savingDrafts ? '儲存中…' : '儲存變更'}
+              </button>
+            </div>
+          )}
         </>
       )}
-      <GameItemLightbox item={previewItem} onClose={() => setPreviewItem(null)} />
+      <GameItemLightbox item={previewItem} price={previewPrice} onClose={() => setPreviewItem(null)} />
     </section>
   );
 }

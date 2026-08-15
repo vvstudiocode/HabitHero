@@ -43,10 +43,10 @@ describe('prototype world runtime contracts', () => {
     assert.equal(scaleWorldBudget(1000, 'low', 'flower'), 357);
     assert.ok(WORLD_QUALITY_SETTINGS.low.outerDensityMultiplier < WORLD_QUALITY_SETTINGS.high.outerDensityMultiplier);
     assert.ok(WORLD_QUALITY_SETTINGS.low.boundaryDensityMultiplier < WORLD_QUALITY_SETTINGS.high.boundaryDensityMultiplier);
-    assert.equal(WORLD_QUALITY_SETTINGS.low.outerDensityMultiplier, 24);
-    assert.equal(WORLD_QUALITY_SETTINGS.high.outerDensityMultiplier, 36);
-    assert.equal(WORLD_QUALITY_SETTINGS.low.boundaryDensityMultiplier, 6);
-    assert.equal(WORLD_QUALITY_SETTINGS.high.boundaryDensityMultiplier, 10);
+    assert.equal(WORLD_QUALITY_SETTINGS.low.outerDensityMultiplier, 12);
+    assert.equal(WORLD_QUALITY_SETTINGS.high.outerDensityMultiplier, 18);
+    assert.equal(WORLD_QUALITY_SETTINGS.low.boundaryDensityMultiplier, 4);
+    assert.equal(WORLD_QUALITY_SETTINGS.high.boundaryDensityMultiplier, 6);
     assert.ok(WORLD_QUALITY_SETTINGS.low.forestLayers <= WORLD_QUALITY_SETTINGS.high.forestLayers);
     assert.equal(WORLD_QUALITY_SETTINGS.low.shadows, false);
     assert.equal(WORLD_QUALITY_SETTINGS.high.shadows, true);
@@ -59,7 +59,10 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /boundaryDensityMultiplier: qualitySettings\.boundaryDensityMultiplier/);
     assert.match(runtimeSource, /layers: qualitySettings\.forestLayers/);
     assert.match(runtimeSource, /shadowMap\.enabled = qualitySettings\.shadows/);
-    assert.match(runtimeSource, /setPixelRatio\(Math\.min\([^\n]+qualitySettings\.maxPixelRatio/);
+    assert.match(runtimeSource, /getWorldPixelRatio\(/);
+    assert.match(runtimeSource, /rendererInstance\.setPixelRatio\(pixelRatio\)/);
+    assert.match(runtimeSource, /shouldRenderWorldFrame\(/);
+    assert.match(runtimeSource, /sun\.castShadow = qualitySettings\.shadows/);
   });
 
   it('keeps the natural lighting pass connected to the quality budget', () => {
@@ -71,6 +74,11 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /createButterflyField/);
     assert.match(runtimeSource, /createNaturalBoundaryScenery/);
     assert.match(grassSceneSource, /createNaturalGroundMaterial/);
+    assert.match(grassSceneSource, /outerGround\.receiveShadow = false/);
+    assert.match(grassSceneSource, /walkableGround\.receiveShadow = true/);
+    assert.match(grassSceneSource, /ground\.add\(outerGround, walkableGround\)/);
+    assert.match(grassSceneSource, /mesh\.castShadow = false/);
+    assert.match(grassSceneSource, /mesh\.receiveShadow = false/);
     assert.match(grassSceneSource, /uSunDirection/);
     assert.match(grassSceneSource, /habitHeroGroundHash/);
     assert.match(treeSceneSource, /vertexColors: true/);

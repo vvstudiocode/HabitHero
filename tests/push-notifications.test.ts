@@ -3,10 +3,9 @@ import test from 'node:test';
 import {
   getNotificationPermissionLabel,
   getNotificationRecipientRole,
-  hasEnabledPushDevice,
   shouldRegisterPushNotifications,
 } from '../src/lib/notification-preferences';
-import { notifyTaskEvent, setNotificationPreference } from '../src/lib/push-notifications';
+import { notifyTaskEvent, readNotificationPreference, setNotificationPreference } from '../src/lib/push-notifications';
 
 test('push registration only starts when the user enabled notifications and permission is granted', () => {
   assert.equal(shouldRegisterPushNotifications({ enabled: true, permission: 'granted', platform: 'ios' }), true);
@@ -27,11 +26,33 @@ test('task origin maps to the intended notification recipient', () => {
   assert.equal(getNotificationRecipientRole('child_proposed'), 'parent');
 });
 
-test('notification preference is enabled when at least one device is active', () => {
-  assert.equal(hasEnabledPushDevice([{ enabled: true }]), true);
-  assert.equal(hasEnabledPushDevice([{ enabled: false }, { enabled: true }]), true);
-  assert.equal(hasEnabledPushDevice([{ enabled: false }]), false);
-  assert.equal(hasEnabledPushDevice([]), false);
+test('notification preference reads the persistent profile setting instead of device rows', async () => {
+  const calls: Array<{ table: string; operation: string; value?: unknown }> = [];
+  const client = {
+    from(table: string) {
+      calls.push({ table, operation: 'from' });
+      return {
+        select(fields: string) {
+          calls.push({ table, operation: 'select', value: fields });
+          return {
+            eq(column: string, value: string) {
+              calls.push({ table, operation: `eq:${column}`, value });
+              return {
+                maybeSingle: async () => ({ data: { notifications_enabled: true }, error: null }),
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  assert.equal(await readNotificationPreference(client as never, 'profile-1'), true);
+  assert.deepEqual(calls, [
+    { table: 'profiles', operation: 'from' },
+    { table: 'profiles', operation: 'select', value: 'notifications_enabled' },
+    { table: 'profiles', operation: 'eq:id', value: 'profile-1' },
+  ]);
 });
 
 test('notification preference syncs the profile flag used by the sender', async () => {

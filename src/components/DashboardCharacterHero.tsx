@@ -1,5 +1,4 @@
 import React from 'react';
-import { getCharacterByImageUrl } from '../features/characters/catalog';
 import type { ThemeSettings } from '../types';
 
 export type CharacterMenuAction = {
@@ -71,8 +70,7 @@ export function DashboardCharacterHero({
   const rootActions = rootMenuActions ?? menuActions ?? [];
   const subActions = rootMenuActions && activeMenuId ? (menuActions ?? []) : [];
   const hasMenu = rootActions.length > 0 || subActions.length > 0;
-  const character = getCharacterByImageUrl(sceneImage);
-  const themeColor = theme?.accentColor ?? character?.accentColor ?? (menuVariant === 'parent' ? '#d99a24' : '#f472b6');
+  const themeColor = theme?.accentColor ?? (menuVariant === 'parent' ? '#d99a24' : '#202124');
   const resolvedSceneImage = theme?.mobileBackgroundImageUrl ?? sceneImage;
   const resolvedSceneImageDesktop = theme?.desktopBackgroundImageUrl ?? sceneImageDesktop;
   const hasSceneLayer = Boolean(sceneLayer);
@@ -85,7 +83,7 @@ export function DashboardCharacterHero({
     <header className="hh-character-dashboard-header">
       <div
         className="hh-character-hero-panel"
-        data-theme-color={character?.id ?? menuVariant}
+        data-theme-color={menuVariant}
         style={{ '--hh-character-theme-color': themeColor } as React.CSSProperties}
         onClick={(event) => {
           if (!activeMenuId || !onMenuClose) return;

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Coins, Compass, Crown, Flower2, PawPrint, Settings, ShoppingBag, Sparkles, X } from 'lucide-react';
-import type { ChildGameData, GameCatalogItem, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
+import { Check, Compass, Crown, Flower2, PawPrint, ScrollText, Settings, Sparkles, X } from 'lucide-react';
+import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
 import { getActiveDecorationEntities, getWorldRevisionAfterMutation, toDecorationDraft, type DecorationDraft } from './decoration-editing';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
 import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
-import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
+import { GameItemLightbox } from './GameItemImagePreview';
+import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
 import type { useNotificationSettings } from '../../../hooks/useNotificationSettings';
 
@@ -40,11 +41,11 @@ function createIdempotencyKey() {
   return `purchase-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-const itemTypeLabels: Record<GameCatalogItem['itemType'], string> = {
-  character: '角色',
-  pet: '寵物',
-  decoration: '裝飾',
-};
+function getInventoryDisplayItem(inventory: ChildInventoryItem, item: GameCatalogItem) {
+  if (item.itemType !== 'pet') return item;
+  const displayName = inventory.displayName?.trim();
+  return displayName && displayName !== item.name ? { ...item, name: displayName } : item;
+}
 
 export function ChildGamePanel({
   kind,
@@ -72,7 +73,10 @@ export function ChildGamePanel({
   const [followingPets, setFollowingPets] = useState<string[]>(initialFollowingPetSnapshot);
   const [inventorySection, setInventorySection] = useState<'character' | 'pet' | 'decoration'>('character');
   const [shopSection, setShopSection] = useState<'character' | 'pet' | 'decoration'>('character');
+  const [inventoryColumns, setInventoryColumns] = useState<GameCatalogLayoutColumns>(2);
+  const [shopColumns, setShopColumns] = useState<GameCatalogLayoutColumns>(2);
   const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
+  const [previewInventory, setPreviewInventory] = useState<ChildInventoryItem | null>(null);
   const [decorationDrafts, setDecorationDrafts] = useState<Record<string, DecorationDraft>>({});
   const [decorationMutationErrors, setDecorationMutationErrors] = useState<Record<string, DecorationMutationKind>>({});
   const [roamingMutationPending, setRoamingMutationPending] = useState(false);
@@ -91,6 +95,39 @@ export function ChildGamePanel({
   const ownedCatalogIds = new Set(gameData.inventory.map((item) => item.catalogItemId));
   const activeDecorationCount = gameData.worldEntities.filter((entity) => entity.entityKind === 'decoration' && entity.isActive).length;
   const title = kind === 'inventory' ? '我的背包' : kind === 'shop' ? '冒險商店' : '世界設定';
+  const previewPrice = kind === 'shop' && previewItem ? gameData.prices[previewItem.id] ?? previewItem.scrollPrice : undefined;
+  const previewOwned = previewItem !== null
+    && ownedCatalogIds.has(previewItem.id)
+    && previewItem.itemType !== 'pet'
+    && !previewItem.isStackable;
+  const previewPurchaseDisabled = previewItem === null
+    || mutationPending
+    || previewOwned
+    || (previewPrice !== undefined && gameData.walletBalance < previewPrice);
+  const previewPurchaseLabel = previewOwned
+    ? '已擁有'
+    : previewPrice !== undefined && gameData.walletBalance < previewPrice
+      ? '卷軸不足'
+      : '兌換';
+  const handlePreviewPurchase = () => {
+    if (kind !== 'shop' || !previewItem) return;
+    void run(() => onPurchase(previewItem.id, 1, createIdempotencyKey()), '已加入背包。');
+  };
+
+  const openInventoryPreview = (inventory: ChildInventoryItem, item: GameCatalogItem) => {
+    setPreviewInventory(inventory);
+    setPreviewItem(getInventoryDisplayItem(inventory, item));
+  };
+
+  const openShopPreview = (item: GameCatalogItem) => {
+    setPreviewInventory(null);
+    setPreviewItem(item);
+  };
+
+  const closePreview = () => {
+    setPreviewInventory(null);
+    setPreviewItem(null);
+  };
 
   useEffect(() => {
     // The provider now mirrors roaming/following into gameData optimistically.
@@ -160,6 +197,54 @@ export function ChildGamePanel({
     worldMutationQueueRef.current = queued.then(() => undefined, () => undefined);
     return queued;
   };
+
+  const setDecorationDraft = (entity: ChildWorldEntity, field: keyof DecorationDraft, value: number) => {
+    setDecorationDrafts((current) => ({
+      ...current,
+      [entity.id]: { ...(current[entity.id] ?? toDecorationDraft(entity)), [field]: value },
+    }));
+  };
+
+  const commitDecorationEntity = (inventoryId: string, entity: ChildWorldEntity, draft: DecorationDraft) => commitWorldMutation(
+    (expectedRevision) => onUpdateDecoration({
+      inventoryItemId: inventoryId,
+      entityId: entity.id,
+      expectedRevision,
+      transform: { x: draft.x, y: entity.y, z: draft.z, rotationX: entity.rotationX, rotationY: draft.rotationY, rotationZ: entity.rotationZ, scale: draft.scale },
+    }),
+    '位置已更新。',
+    entity.id,
+    'update',
+  );
+
+  const cancelDecorationEntity = (entity: ChildWorldEntity) => {
+    setDecorationDrafts((current) => ({ ...current, [entity.id]: toDecorationDraft(entity) }));
+    setDecorationMutationError(entity.id, null);
+    setFeedback('已取消變更。');
+  };
+
+  const removeDecorationEntity = (inventoryId: string, entity: ChildWorldEntity) => commitWorldMutation(
+    (expectedRevision) => onRemoveDecoration(entity.id, inventoryId, expectedRevision),
+    '裝飾已收回背包。',
+    entity.id,
+    'remove',
+  );
+
+  const retryDecorationEntity = (inventoryId: string, entity: ChildWorldEntity, draft: DecorationDraft) => (
+    decorationMutationErrors[entity.id] === 'remove'
+      ? removeDecorationEntity(inventoryId, entity)
+      : commitDecorationEntity(inventoryId, entity, draft)
+  );
+
+  const placeDecoration = (inventoryId: string, draft: DecorationDraft) => commitWorldMutation(
+    (expectedRevision) => onPlaceDecoration({
+      inventoryItemId: inventoryId,
+      expectedRevision,
+      transform: { x: draft.x, y: 0, z: draft.z, rotationX: 0, rotationY: draft.rotationY, rotationZ: 0, scale: draft.scale },
+      behaviorMode: 'static',
+    }),
+    '裝飾已放入世界。',
+  );
 
   const toggleRoamingPet = (inventoryItemId: string) => {
     if (roamingMutationPendingRef.current) return;
@@ -260,6 +345,103 @@ export function ChildGamePanel({
       .finally(() => setRenamePendingId(null));
   };
 
+  const visibleInventory = gameData.inventory.flatMap((inventory) => {
+    const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
+    if (!item || item.itemType !== inventorySection || (inventorySection === 'pet' && !item.isActive)) return [];
+    return [{ inventory, item }];
+  });
+
+  const previewInventoryActions = previewInventory && previewItem ? (() => {
+    const inventory = previewInventory;
+    const item = previewItem;
+
+    if (item.itemType === 'character') {
+      const isEquipped = gameData.loadout?.equippedCharacterInventoryId === inventory.id;
+      return (
+        <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending || isEquipped} onClick={() => void run(() => onEquipCharacter(inventory.id), '角色已換裝。')}>
+          {isEquipped ? <><Check size={16} aria-hidden="true" /> 使用中</> : '換裝'}
+        </button>
+      );
+    }
+
+    if (item.itemType === 'pet') {
+      const followingIndex = followingPets.indexOf(inventory.id);
+      const isFollowing = followingIndex >= 0;
+      const isRoaming = roamingPets.includes(inventory.id);
+      const canRoam = getRoamablePetInventoryIds(gameData).includes(inventory.id);
+      return (
+        <>
+          {editingPetId === inventory.id ? (
+            <div className="hh-game-lightbox-action-row hh-game-lightbox-pet-rename-row">
+              <input
+                className="hh-game-lightbox-pet-name-input"
+                type="text"
+                aria-label="寵物名字"
+                value={petNameDraft}
+                maxLength={12}
+                placeholder={item.name}
+                disabled={renamePendingId === inventory.id}
+                onChange={(event) => setPetNameDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void savePetRename(inventory.id);
+                  if (event.key === 'Escape') cancelPetRename();
+                }}
+              />
+              <button type="button" className="hh-game-action-button hh-game-action-button--primary" aria-label="儲存寵物名字" disabled={renamePendingId === inventory.id} onClick={() => void savePetRename(inventory.id)}><Check size={16} aria-hidden="true" /></button>
+              <button type="button" className="hh-game-action-button" aria-label="取消改名" disabled={renamePendingId === inventory.id} onClick={cancelPetRename}><X size={16} aria-hidden="true" /></button>
+            </div>
+          ) : (
+            <button type="button" className="hh-game-action-button" disabled={mutationPending || renamePendingId !== null} onClick={() => startPetRename(inventory.id, inventory.displayName)}>
+              改名
+            </button>
+          )}
+          <button type="button" className={`hh-game-action-button${isFollowing ? ' hh-game-action-button--danger' : ''}`} disabled={mutationPending || followingMutationPending || roamingMutationPending} onClick={() => toggleFollowingPet(inventory.id)}>
+            {isFollowing ? <><X size={16} aria-hidden="true" /> 取消跟隨 #{followingIndex + 1}</> : '加入跟隨'}
+          </button>
+          <button type="button" className={`hh-game-action-button${isRoaming ? ' is-selected' : ''}`} disabled={mutationPending || isFollowing || roamingMutationPending || followingMutationPending || !canRoam} onClick={() => toggleRoamingPet(inventory.id)}>
+            <Sparkles size={16} aria-hidden="true" /> {isFollowing ? `跟隨中 #${followingIndex + 1}` : isRoaming ? '巡遊中' : '巡遊'}
+          </button>
+        </>
+      );
+    }
+
+    const entities = getActiveDecorationEntities(gameData.worldEntities, inventory.id);
+    const newDraftKey = `${inventory.id}:new`;
+    const newDraft = decorationDrafts[newDraftKey] ?? { x: 1.8, z: -1.5, rotationY: 0, scale: 1 };
+    const hasRoom = item.isStackable ? entities.length < inventory.quantity : entities.length === 0;
+    return (
+      <>
+        <span className="hh-game-lightbox-status">{entities.length}/{item.isStackable ? inventory.quantity : 1} 件已放置</span>
+        {entities.map((entity, entityIndex) => {
+          const draft = decorationDrafts[entity.id] ?? toDecorationDraft(entity);
+          return (
+            <div className="hh-game-lightbox-action-group" key={entity.id}>
+              <strong>第 {entityIndex + 1} 份裝飾</strong>
+              <div className="hh-game-lightbox-field-grid">
+                <label className="hh-game-lightbox-field">X<input type="number" step="0.1" value={draft.x} onChange={(event) => setDecorationDraft(entity, 'x', Number(event.target.value))} /></label>
+                <label className="hh-game-lightbox-field">Z<input type="number" step="0.1" value={draft.z} onChange={(event) => setDecorationDraft(entity, 'z', Number(event.target.value))} /></label>
+                <label className="hh-game-lightbox-field">旋轉Y<input type="number" step="0.1" value={draft.rotationY} onChange={(event) => setDecorationDraft(entity, 'rotationY', Number(event.target.value))} /></label>
+                <label className="hh-game-lightbox-field">大小<input type="number" min="0.25" max="3" step="0.1" value={draft.scale} onChange={(event) => setDecorationDraft(entity, 'scale', Number(event.target.value))} /></label>
+              </div>
+              <div className="hh-game-lightbox-action-row">
+                <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending} onClick={() => void commitDecorationEntity(inventory.id, entity, draft)}>套用</button>
+                <button type="button" className="hh-game-action-button" disabled={mutationPending} onClick={() => cancelDecorationEntity(entity)}>取消</button>
+                <button type="button" className="hh-game-action-button hh-game-action-button--danger" disabled={mutationPending} onClick={() => void removeDecorationEntity(inventory.id, entity)}>收回</button>
+              </div>
+              {decorationMutationErrors[entity.id] && (
+                <>
+                  <span className="hh-game-field-hint" role="status">變更失敗</span>
+                  <button type="button" className="hh-game-action-button" disabled={mutationPending} onClick={() => void retryDecorationEntity(inventory.id, entity, draft)}>重試</button>
+                </>
+              )}
+            </div>
+          );
+        })}
+        {hasRoom && <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending} onClick={() => void placeDecoration(inventory.id, newDraft)}>放置{entities.length > 0 ? '一份' : ''}</button>}
+      </>
+    );
+  })() : null;
+
   return (
     <section className="hh-game-panel" aria-labelledby="hh-game-panel-title">
       <div className="hh-game-panel-header">
@@ -270,171 +452,54 @@ export function ChildGamePanel({
       </div>
 
       {kind !== 'settings' && (
-        <div className="hh-game-wallet" aria-label={`目前有 ${gameData.walletBalance} 張卷軸`}>
-          <Coins size={20} aria-hidden="true" />
-          <span>卷軸</span>
-          <strong>{gameData.walletBalance}</strong>
+        <div className="hh-game-wallet-row">
+          <div className="hh-game-wallet" aria-label={`目前有 ${gameData.walletBalance} 張卷軸`}>
+            <ScrollText size={17} strokeWidth={2.5} aria-hidden="true" />
+            <span>卷軸</span>
+            <strong>{gameData.walletBalance}</strong>
+          </div>
+          {kind === 'inventory' && <GameCatalogLayoutControls columns={inventoryColumns} onChange={setInventoryColumns} />}
+          {kind === 'shop' && <GameCatalogLayoutControls columns={shopColumns} onChange={setShopColumns} />}
         </div>
       )}
 
       {kind === 'inventory' && (
         <div className={`hh-game-panel-section${kind === 'inventory' ? ' hh-game-panel-section--inventory' : ''}`}>
-          <div className="hh-game-tabs" role="tablist" aria-label="背包分類">
+          <div className="hh-game-tabs hh-game-tabs--icons" role="tablist" aria-label="背包分類">
             {([['character', '角色'], ['pet', '寵物'], ['decoration', '裝飾']] as const).map(([value, label]) => (
-              <button key={value} type="button" role="tab" aria-selected={inventorySection === value} className={inventorySection === value ? 'is-selected' : ''} onClick={() => setInventorySection(value)}>
+              <button key={value} type="button" role="tab" aria-label={label} title={label} aria-selected={inventorySection === value} className={inventorySection === value ? 'is-selected' : ''} onClick={() => setInventorySection(value)}>
                 {value === 'character' ? <Crown size={16} /> : value === 'pet' ? <PawPrint size={16} /> : <Flower2 size={16} />}
-                {label}
               </button>
             ))}
           </div>
-          <div className="hh-game-inventory-heading">
-            <h3>{inventorySection === 'decoration' ? <Flower2 size={18} /> : <ShoppingBag size={18} />} {inventorySection === 'character' ? '角色' : inventorySection === 'pet' ? '寵物' : '世界裝飾'}</h3>
-            {inventorySection === 'decoration' && (
-              <div className="hh-game-item-actions">
-                <button
-                  type="button"
-                  className="hh-game-action-button hh-game-action-button--danger"
-                  disabled={mutationPending || activeDecorationCount === 0}
-                  onClick={() => void commitWorldMutation((expectedRevision) => onCollectAllDecorations(expectedRevision), '全部裝飾已收回背包。')}
-                >
-                  全部收回
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="hh-game-card-grid">
-            {gameData.inventory.filter((inventory) => {
-              const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
-              return item?.itemType === inventorySection && (inventorySection !== 'pet' || item.isActive);
-            }).map((inventory, index) => {
-              const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
-              if (!item) return null;
-              const isCharacter = item.itemType === 'character';
-              if (inventorySection === 'decoration') {
-                const entities = getActiveDecorationEntities(gameData.worldEntities, inventory.id);
-                const newDraftKey = `${inventory.id}:new`;
-                const newDraft = decorationDrafts[newDraftKey] ?? { x: 1.8 + (index * 0.7), z: -1.5, rotationY: 0, scale: 1 };
-                const hasRoom = item.isStackable ? entities.length < inventory.quantity : entities.length === 0;
-                return (
-                  <article className="hh-game-item-card hh-game-decoration-card" key={inventory.id}>
-                    <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
-                    <div className="hh-game-item-copy"><strong>{item.name}</strong><span>{entities.length}/{item.isStackable ? inventory.quantity : 1} 件已放置</span></div>
-                    {entities.map((entity, entityIndex) => {
-                      const draft = decorationDrafts[entity.id] ?? toDecorationDraft(entity);
-                      const setDraft = (field: keyof DecorationDraft, value: number) => setDecorationDrafts((current) => ({
-                        ...current,
-                        [entity.id]: { ...(current[entity.id] ?? toDecorationDraft(entity)), [field]: value },
-                      }));
-                      const commitEntity = () => commitWorldMutation(
-                        (expectedRevision) => onUpdateDecoration({
-                          inventoryItemId: inventory.id,
-                          entityId: entity.id,
-                          expectedRevision,
-                          transform: { x: draft.x, y: entity.y, z: draft.z, rotationX: entity.rotationX, rotationY: draft.rotationY, rotationZ: entity.rotationZ, scale: draft.scale },
-                        }),
-                        '位置已更新。',
-                        entity.id,
-                        'update',
-                      );
-                      const cancelEntity = () => {
-                        setDecorationDrafts((current) => ({ ...current, [entity.id]: toDecorationDraft(entity) }));
-                        setDecorationMutationError(entity.id, null);
-                        setFeedback('已取消變更。');
-                      };
-                      const removeEntity = () => commitWorldMutation(
-                        (expectedRevision) => onRemoveDecoration(entity.id, inventory.id, expectedRevision),
-                        '裝飾已收回背包。',
-                        entity.id,
-                        'remove',
-                      );
-                      const retryEntity = () => decorationMutationErrors[entity.id] === 'remove'
-                        ? removeEntity()
-                        : commitEntity();
-                      return (
-                        <div className="hh-game-item-actions" key={entity.id} data-entity-id={entity.id}>
-                          <span className="hh-game-field-hint">#{entityIndex + 1}</span>
-                          <label className="hh-game-field">X<input type="number" step="0.1" value={draft.x} onChange={(event) => setDraft('x', Number(event.target.value))} /></label>
-                          <label className="hh-game-field">Z<input type="number" step="0.1" value={draft.z} onChange={(event) => setDraft('z', Number(event.target.value))} /></label>
-                          <label className="hh-game-field">旋轉Y<input type="number" step="0.1" value={draft.rotationY} onChange={(event) => setDraft('rotationY', Number(event.target.value))} /></label>
-                          <label className="hh-game-field">大小<input type="number" min="0.25" max="3" step="0.1" value={draft.scale} onChange={(event) => setDraft('scale', Number(event.target.value))} /></label>
-                          <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending} onClick={() => void commitEntity()}>套用</button>
-                          <button type="button" className="hh-game-action-button" disabled={mutationPending} onClick={cancelEntity}>取消</button>
-                          <button type="button" className="hh-game-action-button hh-game-action-button--danger" disabled={mutationPending} onClick={() => void removeEntity()}>收回</button>
-                          {decorationMutationErrors[entity.id] && (
-                            <>
-                              <span className="hh-game-field-hint" role="status">變更失敗</span>
-                              <button type="button" className="hh-game-action-button" disabled={mutationPending} onClick={() => void retryEntity()}>重試</button>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {hasRoom && (
-                      <div className="hh-game-item-actions">
-                        <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending} onClick={() => void commitWorldMutation((expectedRevision) => onPlaceDecoration({ inventoryItemId: inventory.id, expectedRevision, transform: { x: newDraft.x, y: 0, z: newDraft.z, rotationX: 0, rotationY: newDraft.rotationY, rotationZ: 0, scale: newDraft.scale }, behaviorMode: 'static' }), '裝飾已放入世界。')}>放置{entities.length > 0 ? '一份' : ''}</button>
-                      </div>
-                    )}
-                  </article>
-                );
-              }
-              const isEquipped = gameData.loadout?.equippedCharacterInventoryId === inventory.id;
-              const followingIndex = followingPets.indexOf(inventory.id);
-              const isFollowing = followingIndex >= 0;
-              const isRoaming = roamingPets.includes(inventory.id);
-              const canRoam = getRoamablePetInventoryIds(gameData).includes(inventory.id);
-              const petDisplayName = inventory.displayName?.trim() || item.name;
+          {inventorySection === 'decoration' && (
+            <div className="hh-game-store-toolbar">
+              <button
+                type="button"
+                className="hh-game-action-button hh-game-action-button--danger"
+                disabled={mutationPending || activeDecorationCount === 0}
+                onClick={() => void commitWorldMutation((expectedRevision) => onCollectAllDecorations(expectedRevision), '全部裝飾已收回背包。')}
+              >
+                全部收回
+              </button>
+            </div>
+          )}
+          <div className={`hh-game-catalog-grid hh-game-catalog-grid--${inventoryColumns}`}>
+            {visibleInventory.map(({ inventory, item }) => {
+              const displayItem = getInventoryDisplayItem(inventory, item);
               return (
-                <article className="hh-game-item-card" key={inventory.id}>
-                  <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
-                  <div className="hh-game-item-copy">
-                    <strong>{isCharacter ? item.name : petDisplayName}</strong>
-                    <span>{item.description}</span>
-                  </div>
-                  {isCharacter ? (
-                    <button type="button" className="hh-game-action-button" disabled={mutationPending || isEquipped} onClick={() => void run(() => onEquipCharacter(inventory.id), '角色已換裝。')}>
-                      {isEquipped ? <><Check size={16} /> 使用中</> : '換裝'}
-                    </button>
-                  ) : (
-                    <div className="hh-game-item-actions">
-                      {editingPetId === inventory.id ? (
-                        <div className="hh-game-pet-name-editor">
-                          <input
-                            type="text"
-                            aria-label="寵物名字"
-                            value={petNameDraft}
-                            maxLength={12}
-                            placeholder={item.name}
-                            disabled={renamePendingId === inventory.id}
-                            onChange={(event) => setPetNameDraft(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') void savePetRename(inventory.id);
-                              if (event.key === 'Escape') cancelPetRename();
-                            }}
-                          />
-                          <button type="button" className="hh-game-action-button hh-game-action-button--primary" aria-label="儲存寵物名字" disabled={renamePendingId === inventory.id} onClick={() => void savePetRename(inventory.id)}><Check size={16} /></button>
-                          <button type="button" className="hh-game-action-button" aria-label="取消改名" disabled={renamePendingId === inventory.id} onClick={cancelPetRename}><X size={16} /></button>
-                        </div>
-                      ) : (
-                        <button type="button" className="hh-game-action-button" disabled={mutationPending || renamePendingId !== null} onClick={() => startPetRename(inventory.id, inventory.displayName)}>
-                          改名
-                        </button>
-                      )}
-                      <button type="button" className={`hh-game-action-button${isFollowing ? ' hh-game-action-button--danger' : ''}`} disabled={mutationPending || followingMutationPending || roamingMutationPending} onClick={() => toggleFollowingPet(inventory.id)}>
-                        {isFollowing ? <><X size={16} /> 取消跟隨 #{followingIndex + 1}</> : '加入跟隨'}
-                      </button>
-                      <button type="button" className={`hh-game-action-button${isRoaming ? ' is-selected' : ''}`} disabled={mutationPending || isFollowing || roamingMutationPending || followingMutationPending || !canRoam} onClick={() => toggleRoamingPet(inventory.id)}>
-                        <Sparkles size={16} /> {isFollowing ? `跟隨中 #${followingIndex + 1}` : isRoaming ? '巡遊中' : '巡遊'}
-                      </button>
-                    </div>
-                  )}
-                </article>
+                <GameItemCard
+                  key={inventory.id}
+                  item={displayItem}
+                  price={0}
+                  mode="child"
+                  showMeta={false}
+                  onOpenPreview={() => openInventoryPreview(inventory, item)}
+                />
               );
             })}
           </div>
-          {gameData.inventory.filter((inventory) => {
-            const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
-            return item?.itemType === inventorySection && (inventorySection !== 'pet' || item.isActive);
-          }).length === 0 && (
+          {visibleInventory.length === 0 && (
             <p className="hh-game-empty">這個分類目前還沒有物品，完成冒險後來商店看看吧。</p>
           )}
         </div>
@@ -442,28 +507,25 @@ export function ChildGamePanel({
 
       {kind === 'shop' && (
         <div className="hh-game-panel-section">
-          <div className="hh-game-tabs" role="tablist" aria-label="商店分類">
+          <div className="hh-game-tabs hh-game-tabs--icons" role="tablist" aria-label="商店分類">
             {([['character', '角色'], ['pet', '寵物'], ['decoration', '裝飾']] as const).map(([value, label]) => (
-              <button key={value} type="button" role="tab" aria-selected={shopSection === value} className={shopSection === value ? 'is-selected' : ''} onClick={() => setShopSection(value)}>
+              <button key={value} type="button" role="tab" aria-label={label} title={label} aria-selected={shopSection === value} className={shopSection === value ? 'is-selected' : ''} onClick={() => setShopSection(value)}>
                 {value === 'character' ? <Crown size={16} /> : value === 'pet' ? <PawPrint size={16} /> : <Flower2 size={16} />}
-                {label}
               </button>
             ))}
           </div>
-          <h3><ShoppingBag size={18} /> {itemTypeLabels[shopSection]} · 用卷軸交換</h3>
-          <div className="hh-game-card-grid">
+          <div className={`hh-game-catalog-grid hh-game-catalog-grid--${shopColumns}`}>
             {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection).map((item) => {
               const price = gameData.prices[item.id] ?? item.scrollPrice;
-              const owned = ownedCatalogIds.has(item.id) && item.itemType !== 'pet' && !item.isStackable;
               return (
-                <article className="hh-game-item-card" key={item.id}>
-                  <div className="hh-game-item-icon hh-game-item-icon--thumbnail"><GameItemPreview item={item} onOpen={setPreviewItem} /></div>
-                  <div className="hh-game-item-copy"><strong>{item.name}</strong><span>{itemTypeLabels[item.itemType]} · {item.description}</span></div>
-                  <div className="hh-game-price"><Coins size={15} /> {price}</div>
-                  <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending || owned || gameData.walletBalance < price} onClick={() => void run(() => onPurchase(item.id, 1, createIdempotencyKey()), '已加入背包。')}>
-                    {owned ? '已擁有' : gameData.walletBalance < price ? '卷軸不足' : '兌換'}
-                  </button>
-                </article>
+                <GameItemCard
+                  key={item.id}
+                  item={item}
+                  price={price}
+                  mode="child"
+                  showMeta={false}
+                  onOpenPreview={openShopPreview}
+                />
               );
             })}
           </div>
@@ -493,7 +555,15 @@ export function ChildGamePanel({
       )}
 
       {feedback && <p className="hh-game-feedback" role="status">{feedback}</p>}
-      <GameItemLightbox item={previewItem} onClose={() => setPreviewItem(null)} />
+      <GameItemLightbox
+        item={previewItem}
+        price={previewPrice}
+        purchaseDisabled={previewPurchaseDisabled}
+        purchaseLabel={previewPurchaseLabel}
+        onPurchase={kind === 'shop' ? handlePreviewPurchase : undefined}
+        actionContent={previewInventoryActions}
+        onClose={closePreview}
+      />
     </section>
   );
 }

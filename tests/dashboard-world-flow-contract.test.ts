@@ -7,12 +7,11 @@ const read = (path: string) => readFile(new URL(path, root), 'utf8');
 
 describe('world dashboard navigation contract', () => {
   it('uses the supplied characters for new children', async () => {
-    const catalog = await read('src/features/characters/catalog.ts');
     const worldCatalog = await read('src/features/characters/world-character-catalog.ts');
     const settings = await read('src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
     const dashboard = await read('src/components/ParentDashboard.tsx');
 
-    assert.match(catalog, /CURRENT_WORLD_CHARACTER_ID\s*=\s*'character\.arthur'/);
+    assert.match(worldCatalog, /CURRENT_WORLD_CHARACTER_ID\s*=\s*'character\.arthur'/);
     assert.match(worldCatalog, /WORLD_CHARACTER_CATALOG/);
     assert.match(settings, /WORLD_CHARACTER_CATALOG/);
     assert.match(settings, /onNewChildCharacterChange/);

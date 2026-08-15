@@ -1,7 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PushNotifications, type ActionPerformed, type PushNotificationSchema } from '@capacitor/push-notifications';
-import { hasEnabledPushDevice } from './notification-preferences';
 import type { NotificationPermission } from './notification-preferences';
 
 export type TaskNotificationEvent = 'created' | 'submitted' | 'reviewed';
@@ -93,14 +92,15 @@ export async function requestAndRegisterIosPush(context: PushDeviceContext) {
 
 export async function readNotificationPreference(supabase: SupabaseClient, profileId: string) {
   const { data, error } = await supabase
-    .from('push_devices')
-    .select('enabled')
-    .eq('profile_id', profileId)
-    .eq('platform', 'ios')
-    .eq('enabled', true)
-    .limit(1);
+    .from('profiles')
+    .select('notifications_enabled')
+    .eq('id', profileId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
-  return hasEnabledPushDevice(data);
+  // Missing profile rows are created during the app-data bootstrap. Treat a
+  // transient gap as the default-on state so an app update cannot turn push
+  // notifications off merely because its device row has not been recreated.
+  return data?.notifications_enabled !== false;
 }
 
 export async function setNotificationPreference(supabase: SupabaseClient, profileId: string, enabled: boolean) {

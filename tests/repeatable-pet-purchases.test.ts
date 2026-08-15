@@ -16,11 +16,9 @@ const repeatablePetMigration = migrationSources.at(-1) ?? '';
 
 describe('repeatable pet purchases', () => {
   it('keeps an owned pet purchasable while preserving single-ownership items', () => {
-    assert.match(
-      childGamePanelSource,
-      /const owned = ownedCatalogIds\.has\(item\.id\) && item\.itemType !== 'pet' && !item\.isStackable;/,
-    );
-    assert.match(childGamePanelSource, /disabled=\{mutationPending \|\| owned \|\| gameData\.walletBalance < price\}/);
+    assert.match(childGamePanelSource, /const previewOwned = previewItem !== null[\s\S]*?previewItem\.itemType !== 'pet'[\s\S]*?!previewItem\.isStackable/);
+    assert.match(childGamePanelSource, /const previewPurchaseDisabled = previewItem === null[\s\S]*?mutationPending[\s\S]*?previewOwned[\s\S]*?gameData\.walletBalance < previewPrice/);
+    assert.match(childGamePanelSource, /purchaseDisabled=\{previewPurchaseDisabled\}/);
   });
 
   it('creates one inventory instance per pet purchase and replays the exact instance idempotently', () => {

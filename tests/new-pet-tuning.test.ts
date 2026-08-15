@@ -19,14 +19,11 @@ const runtime = readFileSync(new URL('src/features/world/prototype-world-runtime
 describe('Star Diver and Teddy Sou tuning', () => {
   it('uses the requested size and slower movement tuning', () => {
     assert.equal(getPetVisualScaleMultiplier('pet.star-diver', { visualScaleMultiplier: 2 }), 1.3 * 2);
-    assert.equal(getPetVisualScaleMultiplier('pet.teddy-sou', { visualScaleMultiplier: 2 }), 1.3 * 2);
     assert.equal(getPetMovementSpeedMultiplier('pet.star-diver', { movementSpeedMultiplier: 0.65 }), 0.65);
-    assert.equal(getPetMovementSpeedMultiplier('pet.teddy-sou', { movementSpeedMultiplier: 0.7 }), 0.7);
   });
 
   it('lowers the supplied pets onto the grass instead of leaving them hovering', () => {
     assert.equal(getPetGroundOffset('pet.star-diver', { groundOffset: -0.12 }), -0.12);
-    assert.equal(getPetGroundOffset('pet.teddy-sou', { groundOffset: -0.12 }), -0.12);
   });
 
   it('promotes the selected pet without discarding the rest of the follow queue', () => {
@@ -64,10 +61,8 @@ describe('Star Diver and Teddy Sou tuning', () => {
   it('persists the identity and presentation tuning in the Supabase migration', () => {
     assert.ok(migrationName, 'tuning migration should exist');
     assert.match(migration, /asset_key = 'pet\.star-diver'/);
-    assert.match(migration, /asset_key = 'pet\.teddy-sou'/);
     assert.match(migration, /'visualScaleMultiplier', 2/);
     assert.match(migration, /'movementSpeedMultiplier', 0\.65/);
-    assert.match(migration, /'movementSpeedMultiplier', 0\.7/);
     assert.match(migration, /'hideGroundShadow', true/);
     assert.ok(groundMigrationName, 'grounding migration should exist');
     assert.match(groundMigration, /'groundOffset', -0\.12/);

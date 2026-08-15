@@ -74,6 +74,22 @@ EXPORTS = (
         thumbnail_output=os.path.join(ROOT, "public/assets/characters/elio-thumbnail.webp"),
         label="ELIO",
     ),
+    CharacterExport(
+        source="/Users/studio.vv/Downloads/吉爾特.fbx",
+        idle_source="/Users/studio.vv/Downloads/吉爾特Idle.fbx",
+        output=os.path.join(ROOT, "public/assets/characters/gilt.glb"),
+        thumbnail_source="/Users/studio.vv/Downloads/吉爾特去背.png",
+        thumbnail_output=os.path.join(ROOT, "public/assets/characters/gilt-thumbnail.webp"),
+        label="GILT",
+    ),
+    CharacterExport(
+        source="/Users/studio.vv/Downloads/露娜莉亞.fbx",
+        idle_source="/Users/studio.vv/Downloads/露娜莉亞idle.fbx",
+        output=os.path.join(ROOT, "public/assets/characters/lunalia.glb"),
+        thumbnail_source="/Users/studio.vv/Downloads/露娜莉亞去背.png",
+        thumbnail_output=os.path.join(ROOT, "public/assets/characters/lunalia-thumbnail.webp"),
+        label="LUNALIA",
+    ),
 )
 
 

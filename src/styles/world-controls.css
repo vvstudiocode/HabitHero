@@ -2,15 +2,53 @@
 .hh-world-joystick {
   position: absolute;
   z-index: 3;
+  top: calc(100% - max(18px, calc(env(safe-area-inset-bottom, 0px) + 18px)) - 56px);
+  left: 50%;
   width: 112px;
   height: 112px;
-  margin: -56px 0 0 -56px;
+  margin: 0;
   pointer-events: none;
+  touch-action: none;
+  contain: layout paint;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: left 180ms ease-out, top 180ms ease-out, opacity 180ms ease-out;
   border: 2px solid rgb(255 255 255 / 68%);
   border-radius: 50%;
   background: rgb(56 112 91 / 18%);
   box-shadow: 0 12px 28px rgb(32 76 53 / 18%), inset 0 0 0 8px rgb(255 255 255 / 12%);
   backdrop-filter: blur(4px);
+}
+
+.hh-world-joystick--fixed {
+  display: none;
+}
+
+.hh-world-joystick--dynamic {
+  top: clamp(56px, var(--hh-joystick-y), calc(100% - 56px));
+  left: clamp(56px, var(--hh-joystick-x), calc(100% - 56px));
+}
+
+.hh-world-joystick--fixed::before {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  padding: 4px 8px;
+  color: rgb(255 253 241 / 90%);
+  font-family: Nunito, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  content: '拖曳移動';
+  background: rgb(38 81 63 / 58%);
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+.hh-world-joystick--fixed[data-active='true'] {
+  opacity: 0.8;
 }
 
 .hh-world-joystick::after {
@@ -38,7 +76,18 @@
   transform-origin: center;
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .hh-world-joystick--fixed {
+    display: block;
+    opacity: 0.46;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hh-world-joystick {
+    transition: none;
+  }
+
   .hh-world-joystick-knob {
     transition: none;
   }

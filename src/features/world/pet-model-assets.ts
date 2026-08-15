@@ -3,8 +3,13 @@ import type { ChildWorldEntity, GameCatalogItem } from './contracts';
 type PetCatalogLookup = Pick<GameCatalogItem, 'assetKey' | 'metadata'>;
 
 const CANONICAL_PET_MODEL_PATHS: Record<string, string> = {
+  'pet.christo': '/assets/pets/christo.glb',
+  'pet.kaldo': '/assets/pets/kaldo.glb',
+  'pet.moko': '/assets/pets/moko.glb',
+  'pet.nibus': '/assets/pets/nibus.glb',
+  'pet.orian': '/assets/pets/orian.glb',
+  'pet.oum': '/assets/pets/oum.glb',
   'pet.star-diver': '/assets/pets/star-diver.glb',
-  'pet.teddy-sou': '/assets/pets/teddy-sou.glb',
 };
 
 export function getPetModelUrl(item: PetCatalogLookup | undefined, fallbackUrl: string): string {

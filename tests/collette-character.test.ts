@@ -3,8 +3,10 @@ import { readFileSync, statSync } from 'node:fs';
 import { test } from 'node:test';
 import { WORLD_CHARACTER_CATALOG } from '../src/features/characters/world-character-catalog';
 import {
+  PICTUREBOOK_PET_MATERIAL_STYLE,
   WARM_HAND_PAINTED_CHARACTER_STYLE,
   applyWarmHandPaintedCharacterMaterial,
+  applyPicturebookPetMaterial,
 } from '../src/features/world/character-material-style';
 
 const root = new URL('../', import.meta.url);
@@ -85,8 +87,49 @@ test('warm hand-painted material preset softens reflections without replacing te
   assert.equal(material.needsUpdate, true);
 });
 
+test('picturebook pet material keeps color textures while removing plastic and metal response', () => {
+  const material = {
+    roughness: 0.42,
+    metalness: 0.65,
+    envMapIntensity: 1,
+    specularIntensity: 1,
+    clearcoat: 1,
+    clearcoatRoughness: 0.1,
+    transmission: 0.4,
+    flatShading: false,
+    color: { r: 0.5, g: 0.4, b: 0.3, setRGB: () => undefined },
+    map: { colorSpace: 'linear', needsUpdate: false },
+    normalMap: {},
+    roughnessMap: {},
+    metalnessMap: {},
+    clearcoatMap: {},
+    clearcoatNormalMap: {},
+    clearcoatRoughnessMap: {},
+    needsUpdate: false,
+  };
+
+  applyPicturebookPetMaterial(material);
+
+  assert.equal(material.roughness, PICTUREBOOK_PET_MATERIAL_STYLE.roughness);
+  assert.equal(material.metalness, PICTUREBOOK_PET_MATERIAL_STYLE.metalness);
+  assert.equal(material.envMapIntensity, PICTUREBOOK_PET_MATERIAL_STYLE.envMapIntensity);
+  assert.equal(material.specularIntensity, PICTUREBOOK_PET_MATERIAL_STYLE.specularIntensity);
+  assert.equal(material.clearcoat, PICTUREBOOK_PET_MATERIAL_STYLE.clearcoat);
+  assert.equal(material.transmission, PICTUREBOOK_PET_MATERIAL_STYLE.transmission);
+  assert.equal(material.flatShading, PICTUREBOOK_PET_MATERIAL_STYLE.flatShading);
+  assert.equal(material.normalMap, null);
+  assert.equal(material.roughnessMap, null);
+  assert.equal(material.metalnessMap, null);
+  assert.equal(material.clearcoatMap, null);
+  assert.equal(material.map.colorSpace, 'srgb');
+  assert.equal(material.map.needsUpdate, true);
+  assert.equal(material.needsUpdate, true);
+  assert.ok(material.color.r > 0.5, 'pet base colors should be lifted slightly');
+});
+
 test('world applies the shared warm hand-painted style to player and roaming characters', () => {
   const runtime = readFileSync(new URL('../src/features/world/prototype-world-runtime.ts', import.meta.url), 'utf8');
   assert.match(runtime, /applyWarmHandPaintedCharacterStyle\(characterSource\)/);
   assert.match(runtime, /applyWarmHandPaintedCharacterStyle\(roamingCharacterSource\)/);
+  assert.match(runtime, /applyPicturebookPetModelStyle\(petResult\.scene\)/);
 });

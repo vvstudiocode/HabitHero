@@ -19,8 +19,8 @@ const prototypeRuntimeSource = readFileSync(
 );
 
 describe('production terrain asset contract', () => {
-  it('loads the central big-tree asset and keeps a procedural fallback', () => {
-    assert.match(prototypeRuntimeSource, /tree: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/big-tree\.glb'/);
+  it('loads the optimized big-tree asset and keeps a procedural fallback', () => {
+    assert.match(prototypeRuntimeSource, /tree: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/big-tree-optimized\.glb'/);
     assert.match(prototypeRuntimeSource, /character: '\/assets\/characters\/arthur\.glb'/);
     assert.match(prototypeRuntimeSource, /skybox: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/sky-equirectangular-day\.png'/);
     assert.match(prototypeRuntimeSource, /loadGltfSafely[^\n]+PROTOTYPE_WORLD_ASSETS\.tree/);

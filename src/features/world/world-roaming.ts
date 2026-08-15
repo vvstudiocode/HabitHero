@@ -48,6 +48,16 @@ export interface WanderStep {
   blocked: boolean;
 }
 
+export interface WanderPauseDurationRange {
+  min: number;
+  max: number;
+}
+
+export const DEFAULT_WANDER_PAUSE_DURATION_RANGE = {
+  min: WANDER_PAUSE_DURATION_MIN,
+  max: WANDER_PAUSE_DURATION_MAX,
+} as const satisfies WanderPauseDurationRange;
+
 function normalize(point: WorldPoint2D): WorldPoint2D {
   const length = Math.hypot(point.x, point.z);
   return length > 0.0001 ? { x: point.x / length, z: point.z / length } : { x: 0, z: 1 };
@@ -212,11 +222,14 @@ export function getWanderStep(
   obstacles: readonly CollisionCircle[],
   state: WanderState,
   now = 0,
+  pauseDurationRange: WanderPauseDurationRange = DEFAULT_WANDER_PAUSE_DURATION_RANGE,
 ): WanderStep {
   const safeDelta = Math.max(0, Number.isFinite(delta) ? delta : 0);
   const safeNow = Number.isFinite(now) ? now : state.nextPauseAt;
+  const pauseMin = Number.isFinite(pauseDurationRange.min) ? Math.max(0, pauseDurationRange.min) : WANDER_PAUSE_DURATION_MIN;
+  const pauseMax = Number.isFinite(pauseDurationRange.max) ? Math.max(pauseMin, pauseDurationRange.max) : Math.max(pauseMin, WANDER_PAUSE_DURATION_MAX);
   if (safeNow >= state.nextPauseAt && state.pauseUntil === Number.POSITIVE_INFINITY) {
-    state.pauseUntil = safeNow + randomBetween(state, WANDER_PAUSE_DURATION_MIN, WANDER_PAUSE_DURATION_MAX);
+    state.pauseUntil = safeNow + randomBetween(state, pauseMin, pauseMax);
     state.nextPauseAt = Number.POSITIVE_INFINITY;
   }
   if (state.pauseUntil !== Number.POSITIVE_INFINITY && safeNow < state.pauseUntil) {

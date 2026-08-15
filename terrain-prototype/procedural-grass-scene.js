@@ -374,17 +374,36 @@ export function createProceduralGrassField(THREE, {
     sunColor,
     ambientColor,
   });
-  const ground = new THREE.Mesh(
+  const groundMaterial = createNaturalGroundMaterial(THREE, { walkableSize, fieldSize });
+  const outerGround = new THREE.Mesh(
     new THREE.PlaneGeometry(fieldSize, fieldSize),
-    createNaturalGroundMaterial(THREE, { walkableSize, fieldSize }),
+    groundMaterial,
   );
+  outerGround.name = 'procedural-meadow-outer-ground';
+  outerGround.rotation.x = -Math.PI / 2;
+  outerGround.position.y = baseHeight - 0.006;
+  outerGround.receiveShadow = false;
+
+  const walkableGround = new THREE.Mesh(
+    new THREE.PlaneGeometry(walkableSize, walkableSize),
+    groundMaterial,
+  );
+  walkableGround.name = 'procedural-walkable-shadow-ground';
+  walkableGround.rotation.x = -Math.PI / 2;
+  walkableGround.position.y = baseHeight - 0.005;
+  walkableGround.receiveShadow = true;
+
+  const ground = new THREE.Group();
   ground.name = 'procedural-meadow-ground';
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = baseHeight - 0.006;
-  ground.receiveShadow = true;
+  ground.add(outerGround, walkableGround);
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = 'procedural-interactive-grass';
+  // Keep the grass lit by its custom shader without adding blade shadows to
+  // the scene's shadow pass. The walkable ground still receives main-scene
+  // shadows, so trees and characters retain their depth cues there.
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
   mesh.frustumCulled = false;
 
   const interactorUniforms = [

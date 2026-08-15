@@ -54,4 +54,28 @@ describe('terrain world scene dependencies', () => {
     );
     assert.notEqual(getTerrainWorldSceneKey(baseGameData, 'low'), getTerrainWorldSceneKey(baseGameData, 'high'));
   });
+
+  it('rebuilds the world when a following pet presentation or grounding metadata changes', () => {
+    const petCatalogItem = {
+      id: 'pet-nibus', itemType: 'pet' as const, name: '尼布斯', description: '', scrollPrice: 1,
+      assetKey: 'pet.nibus', thumbnailUrl: null, isActive: true, isStarter: false, isStackable: false,
+      collisionRadius: 0.3, minScale: 0.8, maxScale: 1.2, sortOrder: 2,
+      metadata: { model: '/assets/pets/nibus.glb', groundOffset: -0.12, hideGroundMarker: true },
+    };
+    const petInventory = { id: 'inventory-pet', catalogItemId: 'pet-nibus', quantity: 1, acquiredVia: 'purchase' as const, acquiredAt: '2026-08-09T00:00:00Z' };
+    const before = {
+      ...baseGameData,
+      catalog: [...baseGameData.catalog, petCatalogItem],
+      inventory: [...baseGameData.inventory, petInventory],
+      loadout: { ...baseGameData.loadout!, followingPetInventoryId: 'inventory-pet' },
+    };
+    const after = {
+      ...before,
+      catalog: before.catalog.map((item) => item.id === 'pet-nibus'
+        ? { ...item, metadata: { ...item.metadata, groundOffset: -0.22, nameLabelScaleMultiplier: 0.33 } }
+        : item),
+    };
+
+    assert.notEqual(getTerrainWorldSceneKey(after, 'high'), getTerrainWorldSceneKey(before, 'high'));
+  });
 });

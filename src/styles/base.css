@@ -145,6 +145,38 @@ body,
   color: var(--hh-neutral-ink);
 }
 
+/* App surfaces should behave like native controls instead of selectable web
+ * documents. Editable fields opt back into the platform text interaction. */
+.hh-app-interaction-surface,
+.hh-app-interaction-surface * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.hh-app-interaction-surface button,
+.hh-app-interaction-surface [role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.hh-app-interaction-surface img,
+.hh-app-interaction-surface canvas,
+.hh-app-interaction-surface video {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.hh-app-interaction-surface input,
+.hh-app-interaction-surface textarea,
+.hh-app-interaction-surface select,
+.hh-app-interaction-surface [contenteditable='true'],
+.hh-app-interaction-surface [data-allow-text-selection='true'] {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Preserve character/model color. White theme is a surface treatment, not a filter. */
 .hh-login-canvas,
 .hh-character-hero__canvas,

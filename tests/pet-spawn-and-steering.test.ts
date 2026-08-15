@@ -35,6 +35,24 @@ describe('pet spawn distribution and stable steering', () => {
     }
   });
 
+  it('starts pets in a randomized mid-field spread instead of the outer rim', () => {
+    const occupied = [{ x: 0, z: 2.2, radius: 0.8 }];
+    const spawns = Array.from({ length: 8 }, (_, index) => {
+      const spawn = getDistributedPetSpawnPosition(index, 0.38, occupied);
+      occupied.push({ ...spawn, radius: 0.38 });
+      return spawn;
+    });
+
+    assert.ok(spawns.every((spawn) => Math.hypot(spawn.x, spawn.z) >= 1.05));
+    assert.ok(spawns.every((spawn) => Math.hypot(spawn.x, spawn.z) <= 2.85));
+    assert.ok(spawns.every((spawn) => Math.abs(spawn.x) <= 2.85 && Math.abs(spawn.z) <= 2.85));
+    assert.ok(new Set(spawns.map((spawn) => Math.sign(spawn.x) * 2 + Math.sign(spawn.z))).size >= 3);
+  });
+
+  it('keeps the initial mid-field spread clear of the player start', () => {
+    assert.match(runtimeSource, /petSpawnObstacles = \[CHARACTER_SPAWN/);
+  });
+
   it('keeps navigation radius independent from visual enlargement', () => {
     assert.equal(getPetNavigationRadius(0.38, 1), 0.38);
     assert.ok(Math.abs(getPetNavigationRadius(0.38, 1.2) - 0.456) < 1e-9);

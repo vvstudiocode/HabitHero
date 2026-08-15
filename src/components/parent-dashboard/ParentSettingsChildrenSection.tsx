@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff, KeyRound, Plus, Trash2, Users, X } from 'lucide-react';
-import { CURRENT_WORLD_CHARACTER_ID, type ChildGender } from '../../features/characters/catalog';
-import { WORLD_CHARACTER_CATALOG } from '../../features/characters/world-character-catalog';
+import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } from '../../features/characters/world-character-catalog';
+import type { ChildGender } from '../../types';
 import { dismissWithAnimation } from '../../lib/utils';
 
 export interface NewChildProfile {

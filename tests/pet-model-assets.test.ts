@@ -27,17 +27,14 @@ function pet(assetKey: string, model: string): GameCatalogItem {
 
 describe('pet model asset resolution', () => {
   it('keeps the supplied pet identities tied to their canonical model paths', () => {
-    const swappedMetadataStar = pet('pet.star-diver', '/assets/pets/teddy-sou.glb');
-    const swappedMetadataTeddy = pet('pet.teddy-sou', '/assets/pets/star-diver.glb');
+    const swappedMetadataStar = pet('pet.star-diver', '/assets/pets/wrong.glb');
+    const swappedMetadataChristo = pet('pet.christo', '/assets/pets/wrong.glb');
 
     assert.equal(
       getPetModelUrl(swappedMetadataStar, fallbackUrl),
       '/assets/pets/star-diver.glb',
     );
-    assert.equal(
-      getPetModelUrl(swappedMetadataTeddy, fallbackUrl),
-      '/assets/pets/teddy-sou.glb',
-    );
+    assert.equal(getPetModelUrl(swappedMetadataChristo, fallbackUrl), '/assets/pets/christo.glb');
   });
 
   it('resolves a roaming pet by asset key when its legacy entity has no catalog id', () => {

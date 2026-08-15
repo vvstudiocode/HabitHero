@@ -4,6 +4,7 @@ import {
   buildCollisionCircles,
   CENTRAL_TREE_KEEP_OUT,
   CHARACTER_COLLISION_RADIUS,
+  CHARACTER_SPAWN,
   circlesOverlap,
   WORLD_BOUNDARY,
   moveWorldCharacter,
@@ -36,6 +37,7 @@ import {
   scaleWorldBudget,
   WORLD_QUALITY_SETTINGS,
 } from './world-quality';
+import { getWorldPixelRatio, shouldRenderWorldFrame } from './world-performance';
 import {
   createWanderState,
   HABITHERO_ROAMING_CHARACTER_ASSET_KEY,
@@ -55,11 +57,24 @@ import {
   PET_FOLLOW_SPEED,
 } from './pet-following';
 import { getPetModelUrl as getCatalogPetModelUrl, resolvePetCatalogItem } from './pet-model-assets';
+import {
+  advancePetIdleCycle,
+  getPetAnimationClipName,
+  PET_ANIMATION_CROSSFADE_SECONDS,
+  PET_IDLE_PAUSE_DURATION_RANGE,
+  PET_WALK_ONLY_PAUSE_DURATION_RANGE,
+  queuePetMoveAfterIdleCycle,
+} from './pet-animation';
 import { getFollowingPetInventoryIds } from './following-pet-state';
-import { applyWarmHandPaintedCharacterMaterial, type WarmHandPaintedCharacterMaterial } from './character-material-style';
+import {
+  applyPicturebookPetMaterial,
+  applyWarmHandPaintedCharacterMaterial,
+  type PicturebookPetMaterial,
+  type WarmHandPaintedCharacterMaterial,
+} from './character-material-style';
 
 export const PROTOTYPE_WORLD_ASSETS = {
-  tree: new URL('../../../terrain-prototype/assets/big-tree.glb', import.meta.url).href,
+  tree: new URL('../../../terrain-prototype/assets/big-tree-optimized.glb', import.meta.url).href,
   character: '/assets/characters/arthur.glb',
   roamingCharacter: HABITHERO_ROAMING_CHARACTER_MODEL_URL,
   skybox: new URL('../../../terrain-prototype/assets/sky-equirectangular-day.png', import.meta.url).href,
@@ -191,9 +206,12 @@ export function getPetWorldScale({
 export const PET_MODEL_URL = '/assets/starlight-sprout-pet.glb';
 export const PET_WORLD_SCALE_MULTIPLIER = 1.3;
 export const PET_NAME_LABEL_WORLD_SCALE = 0.11;
+export const PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER = 0.55;
+export const PET_NAME_LABEL_HEAD_GAP = 0.22;
 const PET_NAME_LABEL_FONT_SIZE = 26;
 const PET_DEER_VISUAL_SCALE_MULTIPLIER = 8 / 3;
 const PET_DEER_MOVEMENT_SPEED_MULTIPLIER = 0.6;
+const PET_OUM_VISUAL_SCALE_MULTIPLIER = 4;
 
 export function getPetVisualScaleMultiplier(assetKey?: string, metadata?: Record<string, unknown>): number {
   const configuredMultiplier = metadata?.visualScaleMultiplier;
@@ -202,6 +220,7 @@ export function getPetVisualScaleMultiplier(assetKey?: string, metadata?: Record
   }
   if (assetKey === 'pet.yaoguang-deer') return PET_WORLD_SCALE_MULTIPLIER * PET_DEER_VISUAL_SCALE_MULTIPLIER;
   if (assetKey === 'pet.murphy-bear') return PET_WORLD_SCALE_MULTIPLIER * 2;
+  if (assetKey === 'pet.oum') return PET_WORLD_SCALE_MULTIPLIER * PET_OUM_VISUAL_SCALE_MULTIPLIER;
   return PET_WORLD_SCALE_MULTIPLIER;
 }
 
@@ -221,9 +240,62 @@ export function getPetGroundOffset(_assetKey?: string, metadata?: Record<string,
     : 0;
 }
 
+/** Optional extra grounding used only while a supplied walk clip is active. */
+export function getPetWalkingGroundOffset(_assetKey?: string, metadata?: Record<string, unknown>): number {
+  const configuredOffset = metadata?.walkingGroundOffset;
+  return typeof configuredOffset === 'number' && Number.isFinite(configuredOffset)
+    ? configuredOffset
+    : 0;
+}
+
 export function shouldHidePetGroundShadow(metadata?: Record<string, unknown>): boolean {
   return metadata?.hideGroundShadow === true;
 }
+
+/** Hide only the handcrafted oval marker while preserving real sun-cast shadows. */
+export function shouldHidePetGroundMarker(metadata?: Record<string, unknown>): boolean {
+  return metadata?.hideGroundMarker === true;
+}
+
+function getPetDecorationScaleMultiplier(metadata: Record<string, unknown> | undefined, key: string): number {
+  const configuredMultiplier = metadata?.[key];
+  return typeof configuredMultiplier === 'number'
+    && Number.isFinite(configuredMultiplier)
+    && configuredMultiplier > 0
+    ? configuredMultiplier
+    : 1;
+}
+
+export function getPetGroundShadowScale(metadata?: Record<string, unknown>): number {
+  return getPetDecorationScaleMultiplier(metadata, 'groundShadowScaleMultiplier');
+}
+
+export function getPetNameLabelScale(metadata?: Record<string, unknown>): number {
+  const configuredMultiplier = metadata?.nameLabelScaleMultiplier;
+  return typeof configuredMultiplier === 'number'
+    && Number.isFinite(configuredMultiplier)
+    && configuredMultiplier > 0
+    ? configuredMultiplier
+    : PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER;
+}
+
+export function getPetNameLabelLocalScale(modelScale: number, labelScaleMultiplier: number): number {
+  const safeModelScale = Number.isFinite(modelScale) && modelScale > 0 ? modelScale : 1;
+  const safeLabelScale = Number.isFinite(labelScaleMultiplier) && labelScaleMultiplier > 0
+    ? labelScaleMultiplier
+    : PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER;
+  return safeLabelScale / safeModelScale;
+}
+
+export function getPetNameLabelY(modelHeight: number, modelScale = 1): number {
+  const safeModelHeight = Number.isFinite(modelHeight) ? Math.max(modelHeight, 0) : 0;
+  const safeModelScale = Number.isFinite(modelScale) && modelScale > 0 ? modelScale : 1;
+  // The label is a child of the normalized model root. Keep the gap in world
+  // units so tiny external-rig source units do not push the label far above
+  // the pet after the root is scaled up.
+  return safeModelHeight + PET_NAME_LABEL_HEAD_GAP / safeModelScale;
+}
+
 export const PET_WANDER_SPEED = 0.5;
 
 export function getPetModelScale({
@@ -432,6 +504,18 @@ function applyWarmHandPaintedCharacterStyle(source: Object3D) {
   });
 }
 
+function applyPicturebookPetModelStyle(source: Object3D) {
+  source.traverse((object) => {
+    const mesh = object as {
+      isMesh?: boolean;
+      material?: PicturebookPetMaterial | PicturebookPetMaterial[];
+    };
+    if (!mesh.isMesh || !mesh.material) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => applyPicturebookPetMaterial(material));
+  });
+}
+
 function createPlayerGroundShadowMaterial(THREE: ThreeNamespace) {
   return new THREE.ShaderMaterial({
     transparent: true,
@@ -483,9 +567,17 @@ interface PetModelInstance {
   model: Object3D;
   mixer?: import('three').AnimationMixer;
   walkAction?: import('three').AnimationAction;
+  idleAction?: import('three').AnimationAction;
+  activeAction?: import('three').AnimationAction;
 }
 
-function createPetNameLabel(THREE: ThreeNamespace, displayName: string | undefined, showName: boolean): Object3D | undefined {
+function createPetNameLabel(
+  THREE: ThreeNamespace,
+  displayName: string | undefined,
+  showName: boolean,
+  scaleMultiplier = PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER,
+  modelScale = 1,
+): Object3D | undefined {
   const name = displayName?.trim();
   if (!showName || !name || typeof document === 'undefined') return undefined;
   const canvas = document.createElement('canvas');
@@ -514,8 +606,12 @@ function createPetNameLabel(THREE: ThreeNamespace, displayName: string | undefin
   const label = new THREE.Sprite(material);
   label.name = 'pet-name-label';
   label.renderOrder = 20;
-  label.position.y = 1.1;
-  label.scale.set((canvas.width / canvas.height) * PET_NAME_LABEL_WORLD_SCALE, PET_NAME_LABEL_WORLD_SCALE, 1);
+  const localScale = getPetNameLabelLocalScale(modelScale, scaleMultiplier);
+  label.scale.set(
+    (canvas.width / canvas.height) * PET_NAME_LABEL_WORLD_SCALE * localScale,
+    PET_NAME_LABEL_WORLD_SCALE * localScale,
+    1,
+  );
   return label;
 }
 
@@ -529,6 +625,9 @@ function createPetModel(
   displayName?: string,
   showPetName = true,
   hideGroundShadow = false,
+  hideGroundMarker = false,
+  groundShadowScaleMultiplier = 1,
+  nameLabelScaleMultiplier = PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER,
 ): PetModelInstance {
   const definition = defineAsset(THREE, source);
   const model = cloneSkinnedObject(source);
@@ -552,7 +651,7 @@ function createPetModel(
     });
   }
 
-  if (!hideGroundShadow) {
+  if (!hideGroundShadow && !hideGroundMarker) {
     const shadow = new THREE.Mesh(
       new THREE.CircleGeometry(1, 24),
       new THREE.MeshBasicMaterial({ color: 0x173226, transparent: true, opacity: 0.2, depthWrite: false }),
@@ -560,27 +659,44 @@ function createPetModel(
     shadow.name = 'animated-pet-shadow';
     shadow.rotation.x = -Math.PI / 2;
     const footprint = Math.max(definition.size.x, definition.size.z, 0.08);
-    shadow.scale.set(footprint * 0.62, footprint * 0.32, 1);
+    shadow.scale.set(
+      footprint * 0.62 * groundShadowScaleMultiplier,
+      footprint * 0.32 * groundShadowScaleMultiplier,
+      1,
+    );
     shadow.position.y = 0.006;
     root.add(shadow);
   }
   root.add(model);
-  const nameLabel = createPetNameLabel(THREE, displayName, showPetName);
+  const nameLabel = createPetNameLabel(THREE, displayName, showPetName, nameLabelScaleMultiplier, modelScale);
   if (nameLabel) {
-    nameLabel.position.y = definition.size.y + 0.16;
+    nameLabel.position.y = getPetNameLabelY(definition.size.y, modelScale);
     root.add(nameLabel);
   }
 
   let mixer: import('three').AnimationMixer | undefined;
   let walkAction: import('three').AnimationAction | undefined;
+  let idleAction: import('three').AnimationAction | undefined;
+  let activeAction: import('three').AnimationAction | undefined;
   if (animations.length > 0) {
     mixer = new THREE.AnimationMixer(model);
-    walkAction = mixer.clipAction(createInPlaceAnimationClip(getWalkAnimationClip(animations)!));
-    walkAction.setLoop(THREE.LoopRepeat, Infinity);
-    walkAction.play();
-    pauseAnimationAtIdlePose(walkAction, mixer);
+    const walkClip = getWalkAnimationClip(animations);
+    const idleClipName = getPetAnimationClipName(animations.map((clip) => clip.name), 'idle');
+    const idleClip = idleClipName ? animations.find((clip) => clip.name === idleClipName) : undefined;
+    if (walkClip) {
+      walkAction = mixer.clipAction(createInPlaceAnimationClip(getWalkAnimationClip(animations)!));
+      walkAction.setLoop(THREE.LoopRepeat, Infinity);
+      walkAction.play();
+    }
+    if (idleClip) {
+      idleAction = mixer.clipAction(createInPlaceAnimationClip(idleClip));
+      idleAction.setLoop(THREE.LoopRepeat, Infinity);
+      idleAction.reset().play();
+    }
+    activeAction = idleAction ?? walkAction;
+    if (walkAction) pauseAnimationAtIdlePose(walkAction, mixer);
   }
-  return { root, model, mixer, walkAction };
+  return { root, model, mixer, walkAction, idleAction, activeAction };
 }
 
 function pauseAnimationAtIdlePose(action: import('three').AnimationAction, mixer: import('three').AnimationMixer) {
@@ -592,14 +708,69 @@ function pauseAnimationAtIdlePose(action: import('three').AnimationAction, mixer
 }
 
 function updatePetAnimation(
-  actor: { model: Object3D; mixer?: import('three').AnimationMixer; walkAction?: import('three').AnimationAction; animationTime: number; movementSpeedMultiplier: number },
+  actor: {
+    object: Object3D;
+    model: Object3D;
+    mixer?: import('three').AnimationMixer;
+    walkAction?: import('three').AnimationAction;
+    idleAction?: import('three').AnimationAction;
+    activeAction?: import('three').AnimationAction;
+    animationTime: number;
+    idleCycleElapsed: number;
+    movePending: boolean;
+    movementSpeedMultiplier: number;
+    baseY: number;
+    walkingGroundOffset: number;
+  },
   isWalking: boolean,
   delta: number,
   prefersReducedMotion: boolean,
 ) {
+  const mixerDelta = delta * (prefersReducedMotion ? 0.75 : 1);
   actor.animationTime += delta * (isWalking ? 8 * actor.movementSpeedMultiplier : 2.4);
-  if (actor.walkAction) actor.walkAction.paused = !isWalking;
-  if (actor.mixer) actor.mixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
+  let nextAction = isWalking ? actor.walkAction : actor.idleAction;
+  if (isWalking && actor.idleAction && actor.activeAction === actor.idleAction) {
+    actor.movePending = true;
+  } else if (!isWalking) {
+    actor.movePending = false;
+  }
+
+  if (actor.idleAction && actor.activeAction === actor.idleAction) {
+    const queuedState = queuePetMoveAfterIdleCycle(
+      { cycleElapsed: actor.idleCycleElapsed, movePending: actor.movePending },
+      isWalking && Boolean(actor.walkAction),
+    );
+    const idleCycle = advancePetIdleCycle(
+      queuedState,
+      mixerDelta,
+      actor.idleAction.getClip().duration,
+    );
+    actor.idleCycleElapsed = idleCycle.state.cycleElapsed;
+    actor.movePending = idleCycle.state.movePending;
+    if (idleCycle.shouldSwitchToWalk && actor.walkAction) nextAction = actor.walkAction;
+  }
+
+  if (nextAction) {
+    if (actor.activeAction !== nextAction) {
+      const previousAction = actor.activeAction;
+      nextAction.reset().setEffectiveWeight(1).play();
+      if (previousAction) {
+        nextAction.crossFadeFrom(previousAction, PET_ANIMATION_CROSSFADE_SECONDS, true);
+      }
+      actor.activeAction = nextAction;
+      if (nextAction === actor.idleAction) actor.idleCycleElapsed = 0;
+    }
+    nextAction.paused = false;
+  } else if (!isWalking && actor.walkAction) {
+    actor.walkAction.paused = true;
+    actor.activeAction = actor.walkAction;
+  }
+  if (actor.mixer) actor.mixer.update(mixerDelta);
+  if (actor.activeAction === actor.walkAction && isWalking) {
+    actor.object.position.y = actor.baseY + actor.walkingGroundOffset;
+  } else {
+    actor.object.position.y = actor.baseY;
+  }
   actor.model.rotation.z = prefersReducedMotion
     ? 0
     : Math.sin(actor.animationTime) * (isWalking ? 0.035 : 0.012);
@@ -623,7 +794,7 @@ function getWalkAnimationClip(clips: readonly AnimationClip[]): AnimationClip | 
 export function createInPlaceAnimationClip(clip: AnimationClip): AnimationClip {
   const inPlaceClip = clip.clone();
   inPlaceClip.tracks.forEach((track) => {
-    if (!/\.position$/i.test(track.name) || !/(?:^|[/.[\]])(?:root|mixamorig:hips|hips|pelvis)(?:[/.[\]]|$)/i.test(track.name)) return;
+    if (!/\.position$/i.test(track.name) || !/(?:^|[/.[\]])(?:armature|root|hips|pelvis|mixamorig:?root|mixamorig:?hips|mixamorig:?pelvis)(?:[/.[\]]|$)/i.test(track.name)) return;
     if (track.values.length < 3 || track.values.length % 3 !== 0) return;
     const initialX = track.values[0];
     const initialZ = track.values[2];
@@ -710,13 +881,19 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       });
       const qualitySettings = WORLD_QUALITY_SETTINGS[quality];
       const visualSettings = getNaturalWorldVisualSettings(quality);
+      const viewportWidth = Math.max(options.canvas.getBoundingClientRect().width, window.innerWidth, 1);
+      const pixelRatio = getWorldPixelRatio({
+        devicePixelRatio: window.devicePixelRatio,
+        viewportWidth,
+        maxPixelRatio: qualitySettings.maxPixelRatio,
+      });
       const contextAttributes = { antialias: true, alpha: false };
       const webglContext = options.canvas.getContext('webgl2', contextAttributes)
         ?? options.canvas.getContext('webgl', contextAttributes);
       if (!webglContext) throw new Error('WebGL context is unavailable for the terrain canvas.');
       const rendererInstance = new THREE.WebGLRenderer({ canvas: options.canvas, context: webglContext as WebGL2RenderingContext, antialias: true, alpha: false });
       renderer = rendererInstance;
-      rendererInstance.setPixelRatio(Math.min(window.devicePixelRatio || 1, qualitySettings.maxPixelRatio));
+      rendererInstance.setPixelRatio(pixelRatio);
       rendererInstance.outputColorSpace = THREE.SRGBColorSpace;
       rendererInstance.toneMapping = THREE.ACESFilmicToneMapping;
       rendererInstance.toneMappingExposure = visualSettings.exposure;
@@ -846,6 +1023,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         await Promise.all(petModelUrls.map(async (modelUrl) => {
           try {
             const petResult = await loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, modelUrl, signal);
+            applyPicturebookPetModelStyle(petResult.scene);
             if (trackResourceRoot(petResult.scene)) petModelSources.set(modelUrl, petResult);
           } catch (error) {
             if (!disposed && !signal.aborted) console.warn(`Unable to load pet model ${modelUrl}; skipping that pet.`, error);
@@ -866,10 +1044,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         fieldSize: terrainWidth * 0.98,
         walkableSize: walkableWidth,
         baseHeight: 0.004,
-        viewportWidth: window.innerWidth,
-        pixelRatio: window.devicePixelRatio || 1,
+        viewportWidth,
+        pixelRatio,
         count: scaleWorldBudget(
-          getProceduralGrassCount({ width: window.innerWidth, pixelRatio: window.devicePixelRatio || 1 }),
+          getProceduralGrassCount({ width: viewportWidth, pixelRatio }),
           quality,
           'grass',
         ),
@@ -1089,7 +1267,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         .filter((entity) => entity.entityKind === 'decoration')
         .map((entity) => ({ positionX: entity.x, positionZ: entity.z, collisionRadius: entity.collisionRadius ?? 0.3, scale: entity.scale })));
       const wanderObstacles = [CENTRAL_TREE_KEEP_OUT, ...decorationCollisions];
-      const petSpawnObstacles = [...wanderObstacles];
+      const petSpawnObstacles = [CHARACTER_SPAWN, ...wanderObstacles];
       let petSpawnIndex = 0;
       const characterWorldHeight = characterDefinition.size.y * characterScale;
       const petActors: Array<{
@@ -1097,15 +1275,20 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         model: Object3D;
         mixer?: import('three').AnimationMixer;
         walkAction?: import('three').AnimationAction;
+        idleAction?: import('three').AnimationAction;
+        activeAction?: import('three').AnimationAction;
         behaviorMode: PetBehaviorMode;
         follow: boolean;
         radius: number;
         baseY: number;
         animationTime: number;
+        idleCycleElapsed: number;
+        movePending: boolean;
         facing: { x: number; z: number };
         state: 'following' | 'wandering' | 'idle';
         followIndex: number;
         movementSpeedMultiplier: number;
+        walkingGroundOffset: number;
         target: { x: number; z: number } | null;
         wanderState: WanderState;
       }> = [];
@@ -1119,12 +1302,28 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const petGroundOffset = isPet
           ? getPetGroundOffset(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata)
           : 0;
+        const petWalkingGroundOffset = isPet
+          ? getPetWalkingGroundOffset(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata)
+          : 0;
         const petMovementSpeedMultiplier = isPet
           ? getPetMovementSpeedMultiplier(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata)
           : 1;
         const petRadius = getPetNavigationRadius(entity.collisionRadius ?? 0.28, entity.scale);
         const petModel = isPet && petModelSource
-          ? createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, petWorldScale, entity.displayName ?? catalogItem?.name, options.showPetNames, shouldHidePetGroundShadow(catalogItem?.metadata))
+          ? createPetModel(
+            THREE,
+            cloneSkinnedObject,
+            petModelSource.scene,
+            petModelSource.animations,
+            characterWorldHeight,
+            petWorldScale,
+            entity.displayName ?? catalogItem?.name,
+            options.showPetNames,
+            shouldHidePetGroundShadow(catalogItem?.metadata),
+            shouldHidePetGroundMarker(catalogItem?.metadata),
+            getPetGroundShadowScale(catalogItem?.metadata),
+            getPetNameLabelScale(catalogItem?.metadata),
+          )
           : undefined;
         if (isPet && !petModel) return;
         const object = isPet
@@ -1150,7 +1349,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const followIndex = followingPetInventoryIds.indexOf(entity.inventoryItemId);
           const follow = followIndex >= 0;
           const initialFacing = { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) };
-          petActors.push({ object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing) });
+          petActors.push({ object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, idleAction: petModel!.idleAction, activeAction: petModel!.activeAction, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing) });
         }
       });
       followingPetInventoryIds.forEach((inventoryId, followIndex) => {
@@ -1164,7 +1363,21 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const petVisualMultiplier = getPetVisualScaleMultiplier(followingPet?.assetKey, followingPet?.metadata);
           const petMovementSpeedMultiplier = getPetMovementSpeedMultiplier(followingPet?.assetKey, followingPet?.metadata);
           const petGroundOffset = getPetGroundOffset(followingPet?.assetKey, followingPet?.metadata);
-          const petModel = createPetModel(THREE, cloneSkinnedObject, petModelSource.scene, petModelSource.animations, characterWorldHeight, (followingPet?.maxScale ?? 1) * petVisualMultiplier, followingInventory?.displayName ?? followingPet?.name, options.showPetNames, shouldHidePetGroundShadow(followingPet?.metadata));
+          const petWalkingGroundOffset = getPetWalkingGroundOffset(followingPet?.assetKey, followingPet?.metadata);
+          const petModel = createPetModel(
+            THREE,
+            cloneSkinnedObject,
+            petModelSource.scene,
+            petModelSource.animations,
+            characterWorldHeight,
+            (followingPet?.maxScale ?? 1) * petVisualMultiplier,
+            followingInventory?.displayName ?? followingPet?.name,
+            options.showPetNames,
+            shouldHidePetGroundShadow(followingPet?.metadata),
+            shouldHidePetGroundMarker(followingPet?.metadata),
+            getPetGroundShadowScale(followingPet?.metadata),
+            getPetNameLabelScale(followingPet?.metadata),
+          );
           const object = petModel.root;
           const initialFacing = { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) };
           const initialFollowDistance = Math.max(
@@ -1177,7 +1390,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             playerRoot.position.z - initialFacing.z * initialFollowDistance,
           );
           worldScene.add(object);
-          petActors.push({ object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, radius: getPetNavigationRadius(followingPet?.collisionRadius ?? 0.28, followingPet?.maxScale ?? 1), baseY: petGroundOffset, animationTime: 0, facing: initialFacing, state: 'following', target: null, wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing) });
+          petActors.push({ object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, idleAction: petModel.idleAction, activeAction: petModel.activeAction, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: getPetNavigationRadius(followingPet?.collisionRadius ?? 0.28, followingPet?.maxScale ?? 1), baseY: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing) });
         }
       });
 
@@ -1188,6 +1401,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const keys = new Set<string>();
       const clock = new THREE.Clock();
       const controller = options.controller;
+      let lastRenderedAt = Number.NEGATIVE_INFINITY;
 
       const resize = () => {
         const rect = options.canvas.getBoundingClientRect();
@@ -1257,7 +1471,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       resize();
 
-      const animate = () => {
+      const animate = (frameTime = window.performance.now()) => {
         if (disposed) return;
         if (options.pausedRef.current) {
           pausedTimer = window.setTimeout(() => {
@@ -1267,6 +1481,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           return;
         }
         animationFrame = window.requestAnimationFrame(animate);
+        if (!shouldRenderWorldFrame({ now: frameTime, lastRenderedAt })) return;
+        lastRenderedAt = frameTime;
         const delta = Math.min(clock.getDelta(), 0.05);
         sceneElapsedTime += delta;
         const currentInput = controller?.getSnapshot();
@@ -1419,6 +1635,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             wanderObstacles,
             actor.wanderState,
             now,
+            actor.idleAction ? PET_IDLE_PAUSE_DURATION_RANGE : PET_WALK_ONLY_PAUSE_DURATION_RANGE,
           );
           actor.facing = step.facing;
           actor.object.position.x = step.next.x;
