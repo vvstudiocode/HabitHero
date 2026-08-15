@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Compass, Crown, Flower2, PawPrint, ScrollText, Settings, Sparkles, X } from 'lucide-react';
-import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
-import { getActiveDecorationEntities, getWorldRevisionAfterMutation, toDecorationDraft, type DecorationDraft } from './decoration-editing';
+import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem, GamePurchaseResult, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
+import { degreesToRadians, getActiveDecorationEntities, getWorldRevisionAfterMutation, radiansToDegrees, toDecorationDraft, type DecorationDraft } from './decoration-editing';
+import { buildCollisionCircles } from '../world-collision';
+import { toWorldMutationErrorMessage } from '../world-errors';
+import { createDecorationPlacementDraft, isDecorationPlacementValid } from '../world-placement';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
 import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
 import { GameItemLightbox } from './GameItemImagePreview';
@@ -21,11 +24,13 @@ interface ChildGamePanelProps {
   gameData: ChildGameData;
   mutationPending: boolean;
   notificationSettings: ReturnType<typeof useNotificationSettings>;
-  onPurchase: (catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<void>;
+  onPurchase: (catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<GamePurchaseResult>;
   onEquipCharacter: (inventoryItemId: string) => Promise<void>;
   onRenamePet: (inventoryItemId: string, displayName: string | null) => Promise<void>;
   onSetFollowingPets: (inventoryItemIds: string[]) => Promise<WorldMutationResult>;
   onSetRoamingPets: (inventoryItemIds: string[]) => Promise<WorldMutationResult>;
+  onStartDecorationPlacement: (inventoryItemId: string, catalogItemId: string) => void;
+  onStartExistingDecorationPlacement: (entityId: string) => void;
   onPlaceDecoration: (payload: WorldMutationPayload) => Promise<WorldMutationResult>;
   onUpdateDecoration: (payload: WorldTransformMutationPayload) => Promise<WorldMutationResult>;
   onRemoveDecoration: (entityId: string, inventoryItemId: string, expectedRevision: number) => Promise<WorldMutationResult>;
@@ -59,6 +64,8 @@ export function ChildGamePanel({
   onRenamePet,
   onSetFollowingPets,
   onSetRoamingPets,
+  onStartDecorationPlacement,
+  onStartExistingDecorationPlacement,
   onPlaceDecoration,
   onUpdateDecoration,
   onRemoveDecoration,
@@ -115,7 +122,10 @@ export function ChildGamePanel({
       : '兌換';
   const handlePreviewPurchase = () => {
     if (kind !== 'shop' || !previewItem) return;
-    void run(() => onPurchase(previewItem.id, 1, createIdempotencyKey()), '已加入背包。');
+    const catalogItemId = previewItem.id;
+    setPreviewInventory(null);
+    setPreviewItem(null);
+    void run(() => onPurchase(catalogItemId, 1, createIdempotencyKey()), '已加入背包。');
   };
 
   const openInventoryPreview = (inventory: ChildInventoryItem, item: GameCatalogItem) => {
@@ -155,7 +165,7 @@ export function ChildGamePanel({
     worldRevisionRef.current = Math.max(worldRevisionRef.current, gameData.worldRevision);
   }, [gameData.worldRevision]);
 
-  const run = async (action: () => Promise<void>, success: string) => {
+  const run = async (action: () => Promise<unknown>, success: string) => {
     setFeedback(null);
     try {
       await action();
@@ -193,9 +203,10 @@ export function ChildGamePanel({
         lifecycle?.onSuccess?.();
         if (entityId) setDecorationMutationError(entityId, null);
         setFeedback(success);
-      } catch {
+      } catch (error) {
         if (entityId && failureKind) setDecorationMutationError(entityId, failureKind);
-        setFeedback(lifecycle?.onFailure?.() ?? (entityId ? '裝飾變更失敗，請按重試。' : '這個動作沒有完成，請稍後再試。'));
+        const fallback = lifecycle?.onFailure?.() ?? (entityId ? '裝飾變更失敗，請按重試。' : '這個動作沒有完成，請稍後再試。');
+        setFeedback(toWorldMutationErrorMessage(error, fallback));
       }
     });
     worldMutationQueueRef.current = queued.then(() => undefined, () => undefined);
@@ -209,17 +220,46 @@ export function ChildGamePanel({
     }));
   };
 
-  const commitDecorationEntity = (inventoryId: string, entity: ChildWorldEntity, draft: DecorationDraft) => commitWorldMutation(
-    (expectedRevision) => onUpdateDecoration({
-      inventoryItemId: inventoryId,
-      entityId: entity.id,
-      expectedRevision,
-      transform: { x: draft.x, y: entity.y, z: draft.z, rotationX: entity.rotationX, rotationY: draft.rotationY, rotationZ: entity.rotationZ, scale: draft.scale },
-    }),
-    '位置已更新。',
-    entity.id,
-    'update',
+  const getDecorationCatalogItem = (inventoryItemId: string) => {
+    const inventory = gameData.inventory.find((candidate) => candidate.id === inventoryItemId);
+    return inventory
+      ? gameData.catalog.find((candidate) => candidate.id === inventory.catalogItemId && candidate.itemType === 'decoration')
+      : undefined;
+  };
+
+  const getDecorationCollisionCircles = (excludedEntityId?: string) => buildCollisionCircles(
+    gameData.worldEntities
+      .filter((candidate) => candidate.entityKind === 'decoration' && candidate.isActive && candidate.id !== excludedEntityId)
+      .map((candidate) => ({
+        positionX: candidate.x,
+        positionZ: candidate.z,
+        collisionRadius: candidate.collisionRadius ?? getDecorationCatalogItem(candidate.inventoryItemId)?.collisionRadius ?? 0.3,
+        scale: candidate.scale,
+      })),
   );
+
+  const isDecorationDraftValid = (inventoryId: string, draft: DecorationDraft, excludedEntityId?: string) => {
+    const item = getDecorationCatalogItem(inventoryId);
+    return Boolean(item && isDecorationPlacementValid(draft, item, getDecorationCollisionCircles(excludedEntityId)));
+  };
+
+  const commitDecorationEntity = (inventoryId: string, entity: ChildWorldEntity, draft: DecorationDraft) => {
+    if (!isDecorationDraftValid(inventoryId, draft, entity.id)) {
+      setFeedback('這裡不能放置，請把裝飾移回可遊玩草地。');
+      return;
+    }
+    return commitWorldMutation(
+      (expectedRevision) => onUpdateDecoration({
+        inventoryItemId: inventoryId,
+        entityId: entity.id,
+        expectedRevision,
+        transform: { x: draft.x, y: entity.y, z: draft.z, rotationX: entity.rotationX, rotationY: draft.rotationY, rotationZ: entity.rotationZ, scale: draft.scale },
+      }),
+      '位置已更新。',
+      entity.id,
+      'update',
+    );
+  };
 
   const cancelDecorationEntity = (entity: ChildWorldEntity) => {
     setDecorationDrafts((current) => ({ ...current, [entity.id]: toDecorationDraft(entity) }));
@@ -240,15 +280,21 @@ export function ChildGamePanel({
       : commitDecorationEntity(inventoryId, entity, draft)
   );
 
-  const placeDecoration = (inventoryId: string, draft: DecorationDraft) => commitWorldMutation(
-    (expectedRevision) => onPlaceDecoration({
-      inventoryItemId: inventoryId,
-      expectedRevision,
-      transform: { x: draft.x, y: 0, z: draft.z, rotationX: 0, rotationY: draft.rotationY, rotationZ: 0, scale: draft.scale },
-      behaviorMode: 'static',
-    }),
-    '裝飾已放入世界。',
-  );
+  const placeDecoration = (inventoryId: string, draft: DecorationDraft) => {
+    if (!isDecorationDraftValid(inventoryId, draft)) {
+      setFeedback('這裡不能放置，請把裝飾移回可遊玩草地。');
+      return;
+    }
+    return commitWorldMutation(
+      (expectedRevision) => onPlaceDecoration({
+        inventoryItemId: inventoryId,
+        expectedRevision,
+        transform: { x: draft.x, y: 0, z: draft.z, rotationX: 0, rotationY: draft.rotationY, rotationZ: 0, scale: draft.scale },
+        behaviorMode: 'static',
+      }),
+      '裝飾已放入世界。',
+    );
+  };
 
   const toggleRoamingPet = (inventoryItemId: string) => {
     if (roamingMutationPendingRef.current) return;
@@ -411,25 +457,18 @@ export function ChildGamePanel({
 
     const entities = getActiveDecorationEntities(gameData.worldEntities, inventory.id);
     const newDraftKey = `${inventory.id}:new`;
-    const newDraft = decorationDrafts[newDraftKey] ?? { x: 1.8, z: -1.5, rotationY: 0, scale: 1 };
+    const newDraft = decorationDrafts[newDraftKey] ?? createDecorationPlacementDraft(item);
+    const newDraftValid = isDecorationDraftValid(inventory.id, newDraft);
     const hasRoom = item.isStackable ? entities.length < inventory.quantity : entities.length === 0;
     return (
       <>
         <span className="hh-game-lightbox-status">{entities.length}/{item.isStackable ? inventory.quantity : 1} 件已放置</span>
-        {entities.map((entity, entityIndex) => {
+        {entities.map((entity) => {
           const draft = decorationDrafts[entity.id] ?? toDecorationDraft(entity);
           return (
-            <div className="hh-game-lightbox-action-group" key={entity.id}>
-              <strong>第 {entityIndex + 1} 份裝飾</strong>
-              <div className="hh-game-lightbox-field-grid">
-                <label className="hh-game-lightbox-field">X<input type="number" step="0.1" value={draft.x} onChange={(event) => setDecorationDraft(entity, 'x', Number(event.target.value))} /></label>
-                <label className="hh-game-lightbox-field">Z<input type="number" step="0.1" value={draft.z} onChange={(event) => setDecorationDraft(entity, 'z', Number(event.target.value))} /></label>
-                <label className="hh-game-lightbox-field">旋轉Y<input type="number" step="0.1" value={draft.rotationY} onChange={(event) => setDecorationDraft(entity, 'rotationY', Number(event.target.value))} /></label>
-                <label className="hh-game-lightbox-field">大小<input type="number" min="0.25" max="3" step="0.1" value={draft.scale} onChange={(event) => setDecorationDraft(entity, 'scale', Number(event.target.value))} /></label>
-              </div>
+            <div key={entity.id}>
               <div className="hh-game-lightbox-action-row">
-                <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending} onClick={() => void commitDecorationEntity(inventory.id, entity, draft)}>套用</button>
-                <button type="button" className="hh-game-action-button" disabled={mutationPending} onClick={() => cancelDecorationEntity(entity)}>取消</button>
+                <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending} onClick={() => { closePreview(); onStartExistingDecorationPlacement(entity.id); }}>重新擺放</button>
                 <button type="button" className="hh-game-action-button hh-game-action-button--danger" disabled={mutationPending} onClick={() => void removeDecorationEntity(inventory.id, entity)}>收回</button>
               </div>
               {decorationMutationErrors[entity.id] && (
@@ -441,7 +480,19 @@ export function ChildGamePanel({
             </div>
           );
         })}
-        {hasRoom && <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={mutationPending} onClick={() => void placeDecoration(inventory.id, newDraft)}>放置{entities.length > 0 ? '一份' : ''}</button>}
+        {hasRoom && <button
+          type="button"
+          className="hh-game-action-button hh-game-action-button--primary"
+          disabled={mutationPending || (entities.length > 0 && !newDraftValid)}
+          onClick={() => {
+            if (entities.length === 0) {
+              closePreview();
+              onStartDecorationPlacement(inventory.id, item.id);
+              return;
+            }
+            void placeDecoration(inventory.id, newDraft);
+          }}
+        >放置{entities.length > 0 ? '一份' : ''}</button>}
       </>
     );
   })() : null;

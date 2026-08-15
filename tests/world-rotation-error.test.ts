@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, it } from 'node:test';
 import {
   applyDecorationPlacementControl,
@@ -35,5 +37,15 @@ describe('world mutation error messages', () => {
     );
 
     assert.equal(message, '家具旋轉角度超出範圍，請稍微調整後再試一次。');
+  });
+});
+
+describe('database rotation defense', () => {
+  it('normalizes rotations in the database write path too', async () => {
+    const migration = await readFile(path.resolve('supabase/migrations/20260816130000_normalize_world_entity_rotations.sql'), 'utf8');
+
+    assert.match(migration, /normalize_world_rotation/);
+    assert.match(migration, /before insert or update of rotation_x, rotation_y, rotation_z/i);
+    assert.match(migration, /new\.rotation_y\s*:=\s*private\.normalize_world_rotation/i);
   });
 });

@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { Backpack, CalendarDays, CheckCircle2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
+import { Backpack, CalendarDays, CheckCircle2, Flower2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import {
@@ -26,8 +26,20 @@ import { ChildDashboardBackgroundMusic } from './ChildDashboardBackgroundMusic';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
-import { emptyChildGameData, type WorldMutationResult } from '../features/world/contracts';
+import { emptyChildGameData, type GameCatalogItem, type GamePurchaseResult, type WorldMutationResult } from '../features/world/contracts';
 import { getPetNameDisplayPreference, setPetNameDisplayPreference } from '../features/world/pet-name-display-preference';
+import { buildCollisionCircles } from '../features/world/world-collision';
+import { toWorldMutationErrorMessage } from '../features/world/world-errors';
+import {
+  applyDecorationPlacementGesture,
+  applyDecorationPlacementControl,
+  createDecorationPlacementDraft,
+  isDecorationPlacementValid,
+  toDecorationPlacementTransform,
+  type DecorationPlacementControl,
+  type DecorationPlacementDraft,
+  type DecorationPlacementGestureDelta,
+} from '../features/world/world-placement';
 import { getBackgroundMusicPreference, setBackgroundMusicPreference } from '../lib/background-music-preference';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
 import { AdventureRewardCelebration } from '../features/adventures/components/AdventureRewardCelebration';
@@ -70,6 +82,16 @@ type ChildMenuGroup = ChildFeature | 'backpack';
 type ChildAdventureRewardNotice =
   | { mode: 'submitted'; taskName: string; pendingStars: number }
   | { mode: 'approved'; bundle: AdventureRewardBundle };
+interface DecorationPurchasePrompt {
+  inventoryItemId: string;
+  item: GameCatalogItem;
+}
+interface DecorationPlacementSession {
+  inventoryItemId: string;
+  catalogItemId: string;
+  draft: DecorationPlacementDraft;
+  entityId?: string;
+}
 const HERO_MENU_EXIT_MS = 1200;
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
 const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
@@ -118,6 +140,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<ChildTab>('goals');
   const [heroFeature, setHeroFeature] = useState<ChildFeature | null>(null);
+  const [decorationPurchasePrompt, setDecorationPurchasePrompt] = useState<DecorationPurchasePrompt | null>(null);
+  const [decorationPlacement, setDecorationPlacement] = useState<DecorationPlacementSession | null>(null);
+  const [decorationPlacementPending, setDecorationPlacementPending] = useState(false);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
   const heroMenuOpenFrame = useRef<number | null>(null);
@@ -136,12 +161,32 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     ? state.children.find(c => c.id === activeChildId)
     : undefined;
   const gameData = activeChildId ? state.gameDataByChildId[activeChildId] ?? emptyChildGameData() : emptyChildGameData();
+  const activeDecorationCollisionCircles = buildCollisionCircles(
+    gameData.worldEntities
+      .filter((entity) => entity.entityKind === 'decoration' && entity.isActive && entity.id !== decorationPlacement?.entityId)
+      .map((entity) => ({
+        positionX: entity.x,
+        positionZ: entity.z,
+        collisionRadius: entity.collisionRadius ?? 0.3,
+        scale: entity.scale,
+      })),
+  );
+  const placementItem = decorationPlacement
+    ? gameData.catalog.find((item) => item.id === decorationPlacement.catalogItemId && item.itemType === 'decoration')
+    : undefined;
+  const placementValid = Boolean(
+    decorationPlacement
+      && placementItem
+      && isDecorationPlacementValid(decorationPlacement.draft, placementItem, activeDecorationCollisionCircles),
+  );
   const [showPetNames, setShowPetNames] = useState(() => getPetNameDisplayPreference(activeChildId ?? ''));
   const [backgroundMusicEnabled, setBackgroundMusicEnabled] = useState(() => getBackgroundMusicPreference(activeChildId ?? ''));
 
   useEffect(() => {
     setShowPetNames(getPetNameDisplayPreference(activeChildId ?? ''));
     setBackgroundMusicEnabled(getBackgroundMusicPreference(activeChildId ?? ''));
+    setDecorationPurchasePrompt(null);
+    setDecorationPlacement(null);
   }, [activeChildId]);
 
   const handleShowPetNamesChange = (visible: boolean) => {
@@ -464,6 +509,20 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }
   };
 
+  const handleGamePurchase = async (
+    catalogItemId: string,
+    quantity: number,
+    idempotencyKey: string,
+  ): Promise<GamePurchaseResult> => {
+    if (!activeChild) throw new Error('找不到目前的孩子資料。');
+    const result = await purchaseGameItem(activeChild.id, catalogItemId, quantity, idempotencyKey);
+    const item = gameData.catalog.find((candidate) => candidate.id === catalogItemId);
+    if (item?.itemType === 'decoration') {
+      setDecorationPurchasePrompt({ inventoryItemId: result.inventoryItemId, item });
+    }
+    return result;
+  };
+
   const openChildFeature = (feature: ChildFeature) => {
     if (feature === 'goals' || feature === 'growth' || feature === 'wishlist') setActiveTab(feature);
     setHeroFeature(feature);
@@ -491,10 +550,122 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     dismissWithAnimation(closeForm, selector);
   };
 
-  const closeChildFeature = () => {
-    dismissWithAnimation(() => setHeroFeature(null), '.hh-parent-content-modal', 260);
+  const closeChildFeature = (afterClose?: () => void) => {
+    dismissWithAnimation(() => {
+      setHeroFeature(null);
+      afterClose?.();
+    }, '.hh-parent-content-modal', 260);
     setHeroMenuGroup(null);
     setHeroMenuVisible(false);
+  };
+
+  const startDecorationPlacement = () => {
+    if (!decorationPurchasePrompt) return;
+    const prompt = decorationPurchasePrompt;
+    setDecorationPurchasePrompt(null);
+    closeChildFeature(() => setDecorationPlacement({
+      inventoryItemId: prompt.inventoryItemId,
+      catalogItemId: prompt.item.id,
+      draft: createDecorationPlacementDraft(prompt.item),
+    }));
+  };
+
+  const startOwnedDecorationPlacement = (inventoryItemId: string, catalogItemId: string) => {
+    const item = gameData.catalog.find((candidate) => candidate.id === catalogItemId && candidate.itemType === 'decoration');
+    if (!item) return;
+    closeChildFeature(() => setDecorationPlacement({
+      inventoryItemId,
+      catalogItemId,
+      draft: createDecorationPlacementDraft(item),
+    }));
+  };
+
+  const startExistingDecorationPlacement = (entityId: string) => {
+    const entity = gameData.worldEntities.find((candidate) => candidate.id === entityId && candidate.entityKind === 'decoration' && candidate.isActive);
+    if (!entity) return;
+    const inventory = gameData.inventory.find((candidate) => candidate.id === entity.inventoryItemId);
+    const catalogItemId = entity.catalogItemId ?? inventory?.catalogItemId;
+    const item = catalogItemId
+      ? gameData.catalog.find((candidate) => candidate.id === catalogItemId && candidate.itemType === 'decoration')
+      : undefined;
+    if (!item) return;
+    setHeroFeature(null);
+    setHeroMenuGroup(null);
+    setHeroMenuVisible(false);
+    setDecorationPlacement({
+      inventoryItemId: entity.inventoryItemId,
+      catalogItemId: item.id,
+      entityId: entity.id,
+      draft: { x: entity.x, z: entity.z, rotationY: entity.rotationY, scale: entity.scale },
+    });
+  };
+
+  const leaveDecorationInInventory = () => {
+    setDecorationPurchasePrompt(null);
+    closeChildFeature(() => showToast('裝飾已放進背包，之後想放再來找它。'));
+  };
+
+  const handleDecorationPlacementPositionChange = (position: { x: number; z: number }) => {
+    setDecorationPlacement((current) => current ? { ...current, draft: { ...current.draft, ...position } } : current);
+  };
+
+  const handleDecorationPlacementControl = (control: DecorationPlacementControl) => {
+    setDecorationPlacement((current) => {
+      if (!current) return current;
+      const item = gameData.catalog.find((candidate) => candidate.id === current.catalogItemId && candidate.itemType === 'decoration');
+      return item
+        ? { ...current, draft: applyDecorationPlacementControl(current.draft, control, item) }
+        : current;
+    });
+  };
+
+  const handleDecorationPlacementGesture = (gesture: DecorationPlacementGestureDelta) => {
+    setDecorationPlacement((current) => {
+      if (!current) return current;
+      const item = gameData.catalog.find((candidate) => candidate.id === current.catalogItemId && candidate.itemType === 'decoration');
+      return item
+        ? { ...current, draft: applyDecorationPlacementGesture(current.draft, gesture, item) }
+        : current;
+    });
+  };
+
+  const completeDecorationPlacement = async () => {
+    if (!activeChildId || !decorationPlacement || !placementItem || !placementValid || decorationPlacementPending) return;
+    const placementSession = decorationPlacement;
+    const expectedRevision = gameData.worldRevision;
+    setDecorationPlacement(null);
+    setDecorationPlacementPending(true);
+    try {
+      const transform = toDecorationPlacementTransform(placementSession.draft);
+      if (placementSession.entityId) {
+        await updateWorldEntityTransform(activeChildId, {
+          inventoryItemId: placementSession.inventoryItemId,
+          entityId: placementSession.entityId,
+          expectedRevision,
+          transform,
+        });
+        showToast('家具位置已更新！');
+      } else {
+        await placeWorldEntity(activeChildId, {
+          inventoryItemId: placementSession.inventoryItemId,
+          expectedRevision,
+          transform,
+          behaviorMode: 'static',
+        });
+        showToast('裝飾已放到世界！');
+      }
+    } catch (error) {
+      setDecorationPlacement(placementSession);
+      showToast(toWorldMutationErrorMessage(error, '這裡不能放置，換一個草地位置試試看。'));
+    } finally {
+      setDecorationPlacementPending(false);
+    }
+  };
+
+  const cancelDecorationPlacement = () => {
+    if (decorationPlacementPending) return;
+    setDecorationPlacement(null);
+    showToast('裝飾先留在背包裡。');
   };
 
   const toggleHeroMenuGroup = (tab: ChildMenuGroup) => {
@@ -580,7 +751,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   return (
     <div
-      className="hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50 pb-24"
+      className={`hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50${decorationPlacement ? ' is-decoration-placement' : ''}`}
       style={{ '--hh-character-theme-color': '#202124' } as React.CSSProperties}
       onContextMenu={preventNativeAppContextMenu}
       onSelectStart={preventNativeAppTextSelection}
@@ -603,7 +774,16 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               childId={activeChild.id}
               gameData={gameData}
               showPetNames={showPetNames}
-              paused={Boolean(heroFeature || adventureRewardNotice)}
+              paused={Boolean((heroFeature && !decorationPlacement) || adventureRewardNotice)}
+              placement={decorationPlacement ?? undefined}
+              placementValid={placementValid}
+              placementPending={decorationPlacementPending}
+              onPlacementPositionChange={handleDecorationPlacementPositionChange}
+              onPlacementControl={handleDecorationPlacementControl}
+              onPlacementGestureChange={handleDecorationPlacementGesture}
+              onCompletePlacement={() => void completeDecorationPlacement()}
+              onCancelPlacement={cancelDecorationPlacement}
+              onStartDecorationPlacement={startExistingDecorationPlacement}
             />
           </Suspense>
         )}
@@ -683,9 +863,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               gameData={gameData}
               mutationPending={actionPending || mutationPending}
               notificationSettings={notificationSettings}
-              onPurchase={async (catalogItemId, quantity, idempotencyKey) => {
-                await purchaseGameItem(activeChild.id, catalogItemId, quantity, idempotencyKey);
-              }}
+              onPurchase={handleGamePurchase}
               onEquipCharacter={async (inventoryItemId) => {
                 closeChildFeature();
                 await equipGameCharacter(activeChild.id, inventoryItemId);
@@ -693,6 +871,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onRenamePet={(inventoryItemId, displayName) => setPetDisplayName(activeChild.id, inventoryItemId, displayName)}
               onSetFollowingPets={(inventoryItemIds): Promise<WorldMutationResult> => setFollowingPets(activeChild.id, inventoryItemIds)}
               onSetRoamingPets={(inventoryItemIds): Promise<WorldMutationResult> => setRoamingPets(activeChild.id, inventoryItemIds)}
+              onStartDecorationPlacement={startOwnedDecorationPlacement}
+              onStartExistingDecorationPlacement={startExistingDecorationPlacement}
               onPlaceDecoration={(payload) => placeWorldEntity(activeChild.id, payload)}
               onUpdateDecoration={(payload) => updateWorldEntityTransform(activeChild.id, payload)}
               onRemoveDecoration={(entityId, inventoryItemId, expectedRevision) => removeWorldEntity(activeChild.id, { entityId, inventoryItemId, expectedRevision })}
@@ -934,6 +1114,30 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               >
                 確認取消
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {decorationPurchasePrompt && (
+        <div className="hh-decoration-purchase-choice" role="dialog" aria-modal="true" aria-labelledby="decoration-purchase-choice-title">
+          <button type="button" className="hh-decoration-purchase-choice-backdrop" aria-label="關閉裝飾放置選擇" onClick={leaveDecorationInInventory} />
+          <div className="hh-decoration-purchase-choice-card">
+            <div className="hh-decoration-purchase-choice-icon">
+              {decorationPurchasePrompt.item.thumbnailUrl ? (
+                <img src={decorationPurchasePrompt.item.thumbnailUrl} alt="" />
+              ) : (
+                <Flower2 size={28} aria-hidden="true" />
+              )}
+            </div>
+            <div className="hh-decoration-purchase-choice-copy">
+              <p className="hh-decoration-purchase-choice-eyebrow">已加入背包</p>
+              <h2 id="decoration-purchase-choice-title">要現在放置「{decorationPurchasePrompt.item.name}」嗎？</h2>
+              <p>可以先放到世界，也可以之後從背包慢慢挑位置。</p>
+            </div>
+            <div className="hh-decoration-purchase-choice-actions">
+              <button type="button" className="hh-decoration-purchase-choice-secondary" onClick={leaveDecorationInInventory}>稍後再放</button>
+              <button type="button" className="hh-decoration-purchase-choice-primary" onClick={startDecorationPlacement}>現在放置</button>
             </div>
           </div>
         </div>
