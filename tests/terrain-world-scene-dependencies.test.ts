@@ -30,15 +30,15 @@ describe('terrain world scene dependencies', () => {
     assert.equal(getTerrainWorldSceneKey(refreshed, 'high'), getTerrainWorldSceneKey(baseGameData, 'high'));
   });
 
-  it('changes for equipped character, following pet, world entities, and quality changes', () => {
-    assert.notEqual(
+  it('keeps the mounted world stable while updating character and pet actors in place', () => {
+    assert.equal(
       getTerrainWorldSceneKey({
         ...baseGameData,
         loadout: { ...baseGameData.loadout!, equippedCharacterInventoryId: 'inventory-other' },
       }, 'high'),
       getTerrainWorldSceneKey(baseGameData, 'high'),
     );
-    assert.notEqual(
+    assert.equal(
       getTerrainWorldSceneKey({
         ...baseGameData,
         loadout: { ...baseGameData.loadout!, followingPetInventoryId: 'inventory-pet' },
@@ -55,7 +55,7 @@ describe('terrain world scene dependencies', () => {
     assert.notEqual(getTerrainWorldSceneKey(baseGameData, 'low'), getTerrainWorldSceneKey(baseGameData, 'high'));
   });
 
-  it('rebuilds the world when a following pet presentation or grounding metadata changes', () => {
+  it('keeps pet presentation changes out of the remount key', () => {
     const petCatalogItem = {
       id: 'pet-nibus', itemType: 'pet' as const, name: '尼布斯', description: '', scrollPrice: 1,
       assetKey: 'pet.nibus', thumbnailUrl: null, isActive: true, isStarter: false, isStackable: false,
@@ -76,6 +76,6 @@ describe('terrain world scene dependencies', () => {
         : item),
     };
 
-    assert.notEqual(getTerrainWorldSceneKey(after, 'high'), getTerrainWorldSceneKey(before, 'high'));
+    assert.equal(getTerrainWorldSceneKey(after, 'high'), getTerrainWorldSceneKey(before, 'high'));
   });
 });

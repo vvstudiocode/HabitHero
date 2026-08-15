@@ -20,6 +20,7 @@ import { validateRewardPoints } from '../lib/reward-validation';
 import { getParentMenuNotifications } from '../lib/menu-notifications';
 import { FirstUseGuide, hasCompletedFirstUseGuide } from './FirstUseGuide';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
+import { ParentDashboardBackgroundMusic } from './ParentDashboardBackgroundMusic';
 import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashboard/ParentDashboardContent';
 import { ParentSettingsChildrenSection, type NewChildProfile } from './parent-dashboard/ParentSettingsChildrenSection';
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
@@ -41,6 +42,7 @@ import {
 } from '../features/adventures/components/ParentAdventureWorkspace';
 import { ParentGamePricePanel } from '../features/world/components/ParentGamePricePanel';
 import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } from '../features/characters/world-character-catalog';
+import { getParentBackgroundMusicPreference, setParentBackgroundMusicPreference } from '../lib/parent-background-music-preference';
 
 interface ParentDashboardProps {
   onSwitchToChild: (childId?: string) => void;
@@ -92,6 +94,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
   const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent, revokeTaskApproval, setFamilyGameItemPrice, resetFamilyGameItemPrice } = appStore;
   const [activeTab, setActiveTab] = useState<ParentTab>('review');
+  const [parentBackgroundMusicEnabled, setParentBackgroundMusicEnabled] = useState(() => getParentBackgroundMusicPreference(familyId ?? ''));
   const [heroFeature, setHeroFeature] = useState<ParentTab | null>(null);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ParentTab | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
@@ -248,6 +251,16 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [newParentPin, setNewParentPin] = useState('');
   const [oldParentPin, setOldParentPin] = useState('');
   const [showParentPasswordForm, setShowParentPasswordForm] = useState(false);
+
+  useEffect(() => {
+    setParentBackgroundMusicEnabled(getParentBackgroundMusicPreference(familyId ?? ''));
+  }, [familyId]);
+
+  const handleParentBackgroundMusicChange = (enabled: boolean) => {
+    if (!familyId) return;
+    setParentBackgroundMusicEnabled(enabled);
+    setParentBackgroundMusicPreference(familyId, enabled);
+  };
 
   // Wishlist Pricing
   const [wishlistPricing, setWishlistPricing] = useState<Record<string, number>>({});
@@ -825,6 +838,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       onSelectStart={preventNativeAppTextSelection}
       onDragStart={preventNativeAppDragStart}
     >
+      <ParentDashboardBackgroundMusic enabled={parentBackgroundMusicEnabled} />
       <DashboardCharacterHero
         sceneImage="/images/habithero-parent-living-room.png"
         sceneImageDesktop="/images/habithero-parent-living-room-desktop.png"
@@ -1259,7 +1273,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                     </div>
                   )}
                   {([
-                    ['privacy', '隱私政策', '了解 HabitHero 如何處理家庭與兒童資料。'],
+                    ['privacy', '隱私政策', '了解習慣冒險島如何處理家庭與兒童資料。'],
                     ['support', '支援中心', '登入、同步、點數與資料刪除的協助。'],
                     ['consent', '兒童與家長同意', '查看家長責任與記錄本版本同意。'],
                     ['delete-account', '刪除帳號與資料', '永久刪除家庭資料與所有帳號。'],
@@ -1286,6 +1300,23 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 >
                   <Users size={18} /> 切換小孩視角
                 </button>
+                <section className="hh-notification-settings" aria-labelledby="parent-background-music-title">
+                  <div className="hh-notification-settings-heading">
+                    <h4 id="parent-background-music-title">背景音樂</h4>
+                  </div>
+                  <button
+                    type="button"
+                    className={`hh-notification-toggle${parentBackgroundMusicEnabled ? ' is-on' : ''}`}
+                    role="switch"
+                    aria-checked={parentBackgroundMusicEnabled}
+                    aria-label="背景音樂"
+                    onClick={() => handleParentBackgroundMusicChange(!parentBackgroundMusicEnabled)}
+                  >
+                    <span className="hh-notification-toggle-track" aria-hidden="true">
+                      <span className="hh-notification-toggle-thumb" />
+                    </span>
+                  </button>
+                </section>
                 <PushNotificationSettings settings={notificationSettings} />
                 <button type="button" onClick={() => { setShowSettings(false); setShowFirstUseGuide(true); }} className="mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-3 font-bold text-blue-700 transition-colors hover:bg-blue-100">
                   重新觀看新手指引

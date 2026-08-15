@@ -15,10 +15,10 @@ interface ParentSettingsDocumentsProps {
 }
 
 const documentMeta: Record<ParentSettingsDocument, { title: string; eyebrow: string }> = {
-  privacy: { title: '隱私政策', eyebrow: 'HabitHero · Privacy' },
-  support: { title: '支援中心', eyebrow: 'HabitHero · Support' },
-  consent: { title: '兒童與家長同意', eyebrow: 'HabitHero · Family safety' },
-  'delete-account': { title: '刪除帳號與資料', eyebrow: 'HabitHero · Data deletion' },
+  privacy: { title: '隱私政策', eyebrow: '習慣冒險島 · 隱私政策' },
+  support: { title: '支援中心', eyebrow: '習慣冒險島 · 支援' },
+  consent: { title: '兒童與家長同意', eyebrow: '習慣冒險島 · 家庭安全' },
+  'delete-account': { title: '刪除帳號與資料', eyebrow: '習慣冒險島 · 資料刪除' },
 };
 
 export function ParentSettingsDocuments({ document, consentRecorded, onClose, onConsent, onDeleteAccount, required = false }: ParentSettingsDocumentsProps) {
@@ -92,7 +92,7 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
 
         {document === 'privacy' && (
           <article className="hh-document-article">
-            <p className="hh-document-lead">這份政策說明 HabitHero 如何處理家庭與兒童資料。版本日期：{PRIVACY_POLICY_VERSION}。</p>
+            <p className="hh-document-lead">這份政策說明習慣冒險島如何處理家庭與兒童資料。版本日期：{PRIVACY_POLICY_VERSION}。</p>
             {privacyPolicySections.map((section) => (
               <section key={section.title}>
                 <h2>{section.title}</h2>
@@ -117,14 +117,14 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
             <section>
               <h2>聯絡支援</h2>
               <p>請寄信至 vvstudiocode@gmail.com，並附上家長帳號 Email、發生時間與不含敏感資料的錯誤描述。請不要寄送密碼或孩子的完整個人資料。</p>
-              <a className="hh-document-link" href="mailto:vvstudiocode@gmail.com?subject=HabitHero%20支援請求">寄送支援請求 <ExternalLink size={16} aria-hidden="true" /></a>
+              <a className="hh-document-link" href="mailto:vvstudiocode@gmail.com?subject=%E7%BF%92%E6%85%A3%E5%86%92%E9%9A%AA%E5%B3%B6%20%E6%94%AF%E6%8F%B4%E8%AB%8B%E6%B1%82">寄送支援請求 <ExternalLink size={16} aria-hidden="true" /></a>
             </section>
           </article>
         )}
 
         {document === 'consent' && (
           <article className="hh-document-article">
-            <p className="hh-document-lead">{required ? '建立或管理孩子資料前，請先由家長完成以下確認。完成後才能使用家庭任務、心得與獎勵功能。' : 'HabitHero 由家長建立家庭與孩子帳號。家長必須先了解資料用途，再讓孩子使用任務、心得與獎勵功能。'}</p>
+            <p className="hh-document-lead">{required ? '建立或管理孩子資料前，請先由家長完成以下確認。完成後才能使用家庭任務、心得與獎勵功能。' : '習慣冒險島由家長建立家庭與孩子帳號。家長必須先了解資料用途，再讓孩子使用任務、心得與獎勵功能。'}</p>
             <section>
               <h2>家長確認事項</h2>
               <ul className="hh-document-checklist">
@@ -162,7 +162,7 @@ export function ParentSettingsDocuments({ document, consentRecorded, onClose, on
               <p>如果只是暫時不使用，請先登出。若你要行使資料刪除權，請勾選下方確認並繼續。</p>
               <label className="hh-delete-confirm">
                 <input type="checkbox" checked={deleteConfirmed} onChange={(event) => setDeleteConfirmed(event.target.checked)} disabled={isDeleting} />
-                <span>我確認要永久刪除我的 HabitHero 帳號與家庭資料。</span>
+                <span>我確認要永久刪除我的習慣冒險島帳號與家庭資料。</span>
               </label>
             </section>
             {actionError && <p className="hh-document-error" role="alert">{actionError}</p>}

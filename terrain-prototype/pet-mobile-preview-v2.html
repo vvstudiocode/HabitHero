@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>HabitHero · 手機上架圖預覽</title>
+    <title>習慣冒險島 · 手機上架圖預覽</title>
     <style>
       :root { color-scheme: dark; }
       * { box-sizing: border-box; }
@@ -21,7 +21,7 @@
   <body>
     <main class="preview">
       <div class="toolbar"><span id="mode-label">寵物集合版 · 手機試稿</span><a id="switch-link" href="?mode=characters">查看角色版 →</a></div>
-      <div class="frame"><img id="preview-image" alt="HabitHero 手機上架圖預覽" /></div>
+      <div class="frame"><img id="preview-image" alt="習慣冒險島手機上架圖預覽" /></div>
       <p class="note">這是上架圖構圖預覽頁。使用 <code>?mode=characters</code> 可切換角色版。</p>
     </main>
     <script>
@@ -34,7 +34,7 @@
       const link = document.querySelector('#switch-link');
       if (isCharacter) {
         image.src = `${base}character-collection-mobile-v1.png`;
-        image.alt = 'HabitHero 角色集合手機版';
+        image.alt = '習慣冒險島角色集合手機版';
         label.textContent = '角色集合版 · 手機試稿';
         link.href = '?mode=pets';
         link.textContent = '查看寵物版 →';

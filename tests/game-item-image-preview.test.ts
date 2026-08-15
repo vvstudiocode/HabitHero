@@ -40,6 +40,11 @@ test('catalog cards keep the image and compact information in one square surface
   assert.match(worldStyles, /\.hh-game-item-preview[\s\S]*aspect-ratio: 1 \/ 1/);
 });
 
+test('catalog cards keep shop and backpack images free of decorative frames', () => {
+  assert.match(worldStyles, /\.hh-game-catalog-card \{[^}]*border:\s*0;/);
+  assert.match(worldStyles, /\.hh-game-item-thumbnail-button \{[^}]*border:\s*0;/);
+});
+
 test('catalog cards keep the image and information free of drop shadows', () => {
   assert.match(worldStyles, /\.hh-game-catalog-card \{[\s\S]*box-shadow: none/);
   assert.match(worldStyles, /\.hh-game-catalog-card \{[^}]*background: transparent;/);

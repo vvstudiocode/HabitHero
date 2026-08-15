@@ -21,6 +21,7 @@ interface DashboardCharacterHeroProps {
   eyebrow?: string;
   subtitle?: string;
   stats?: Array<{ label: string; value: string | number; suffix?: string; icon?: React.ReactNode; target?: 'points' | 'scroll' }>;
+  statsPulse?: boolean;
   sceneLayer?: React.ReactNode;
   firstStatLabel?: string;
   firstStatValue?: string | number;
@@ -66,6 +67,7 @@ export function DashboardCharacterHero({
   menuVariant = 'parent',
   onMenuClose,
   menuOpen = true,
+  statsPulse = false,
 }: DashboardCharacterHeroProps) {
   const rootActions = rootMenuActions ?? menuActions ?? [];
   const subActions = rootMenuActions && activeMenuId ? (menuActions ?? []) : [];
@@ -161,7 +163,7 @@ export function DashboardCharacterHero({
             )}
           </div>
         )}
-        <div className="hh-character-stats" data-stat-count={resolvedStats.length} aria-label="儀表板統計">
+        <div className={`hh-character-stats${statsPulse ? ' is-reward-pulsing' : ''}`} data-stat-count={resolvedStats.length} aria-label="儀表板統計">
           {resolvedStats.map((stat) => (
             <div key={stat.label} data-hh-stat-target={stat.target} aria-label={`${stat.label}：${stat.value}${stat.suffix ?? ''}`}>
               <strong>

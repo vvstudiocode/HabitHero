@@ -1,4 +1,4 @@
-/* HabitHero neutral white theme.
+/* 習慣冒險島 neutral white theme.
  * Keep the existing layout and interaction rules in index.css; this file only
  * defines the final visual surface so the app stays white without grayscale filters.
  */
@@ -180,6 +180,18 @@ body,
 .hh-sprite-theme select:focus-visible {
   outline: 3px solid rgba(111, 111, 118, 0.35) !important;
   outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hh-sprite-theme .hh-adventure-reward-action:hover {
+    background: var(--hh-reward-card-mint) !important;
+    color: #fffdf7 !important;
+  }
+}
+
+.hh-sprite-theme .hh-adventure-reward-action:focus-visible {
+  background: var(--hh-reward-card-mint) !important;
+  color: #fffdf7 !important;
 }
 
 .hh-sprite-theme button:disabled,

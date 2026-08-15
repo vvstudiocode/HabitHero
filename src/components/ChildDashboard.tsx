@@ -22,12 +22,15 @@ import {
 } from '../lib/task-completion-audio';
 import { getChildMenuNotifications } from '../lib/menu-notifications';
 import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
+import { ChildDashboardBackgroundMusic } from './ChildDashboardBackgroundMusic';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
 import { emptyChildGameData, type WorldMutationResult } from '../features/world/contracts';
 import { getPetNameDisplayPreference, setPetNameDisplayPreference } from '../features/world/pet-name-display-preference';
+import { getBackgroundMusicPreference, setBackgroundMusicPreference } from '../lib/background-music-preference';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
+import { AdventureRewardCelebration } from '../features/adventures/components/AdventureRewardCelebration';
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
 import {
   getAdventureTaskState,
@@ -35,6 +38,17 @@ import {
   hasStartedAdventureTimer,
   isLegacyGrowthTask,
 } from '../features/adventures/adventure-progress';
+import {
+  createAdventureRewardBundle,
+  createInitialAdventureRewardNoticeState,
+  getApprovedAdventureRewardEvents,
+  getUnseenAdventureRewardEvents,
+  markAdventureRewardTaskSubmitted,
+  markAdventureRewardEventsSeen,
+  readAdventureRewardNoticeState,
+  writeAdventureRewardNoticeState,
+  type AdventureRewardBundle,
+} from '../features/adventures/adventure-reward-notice';
 import { getTodayAdventureSummary } from '../features/adventures/today-adventure-summary';
 import type { AdventureCompletionInput, AdventureTask } from '../features/adventures/types';
 import { PointValue } from './shared/PointValue';
@@ -53,6 +67,9 @@ interface ChildDashboardProps {
 type ChildTab = 'goals' | 'growth' | 'wishlist';
 type ChildFeature = ChildTab | ChildGamePanelKind;
 type ChildMenuGroup = ChildFeature | 'backpack';
+type ChildAdventureRewardNotice =
+  | { mode: 'submitted'; taskName: string; pendingStars: number }
+  | { mode: 'approved'; bundle: AdventureRewardBundle };
 const HERO_MENU_EXIT_MS = 1200;
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
 const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
@@ -120,15 +137,23 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     : undefined;
   const gameData = activeChildId ? state.gameDataByChildId[activeChildId] ?? emptyChildGameData() : emptyChildGameData();
   const [showPetNames, setShowPetNames] = useState(() => getPetNameDisplayPreference(activeChildId ?? ''));
+  const [backgroundMusicEnabled, setBackgroundMusicEnabled] = useState(() => getBackgroundMusicPreference(activeChildId ?? ''));
 
   useEffect(() => {
     setShowPetNames(getPetNameDisplayPreference(activeChildId ?? ''));
+    setBackgroundMusicEnabled(getBackgroundMusicPreference(activeChildId ?? ''));
   }, [activeChildId]);
 
   const handleShowPetNamesChange = (visible: boolean) => {
     if (!activeChildId) return;
     setShowPetNames(visible);
     setPetNameDisplayPreference(activeChildId, visible);
+  };
+
+  const handleBackgroundMusicChange = (enabled: boolean) => {
+    if (!activeChildId) return;
+    setBackgroundMusicEnabled(enabled);
+    setBackgroundMusicPreference(activeChildId, enabled);
   };
   const activeGeneralAdventureGroup = state.adventureGroups?.find(
     (group) => group.childProfileId === activeChildId && group.status === 'active',
@@ -148,6 +173,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [wishName, setWishName] = useState('');
   const [wishlistToCancel, setWishlistToCancel] = useState<import('../types').WishlistItem | null>(null);
   const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
+  const [adventureRewardNotice, setAdventureRewardNotice] = useState<ChildAdventureRewardNotice | null>(null);
   
   // Toast Message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -190,6 +216,28 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const adventureTasks = tasks.filter((task) => !isLegacyGrowthTask(task)) as AdventureTask[];
   const adventureDate = getTaipeiDateKey(new Date(now));
   const todayAdventureSummary = getTodayAdventureSummary(adventureTasks, adventureDate);
+
+  useEffect(() => {
+    setAdventureRewardNotice(null);
+  }, [activeChildId]);
+
+  useEffect(() => {
+    if (!activeChildId || !activeChild || loading || adventureRewardNotice) return;
+    const events = getApprovedAdventureRewardEvents(adventureTasks);
+    const storedState = readAdventureRewardNoticeState(activeChildId);
+    if (!storedState.initialized) {
+      writeAdventureRewardNoticeState(
+        activeChildId,
+        createInitialAdventureRewardNoticeState(events, storedState.submittedTaskIds),
+      );
+      return;
+    }
+    const unseenEvents = getUnseenAdventureRewardEvents(events, storedState.seenTaskIds);
+    if (unseenEvents.length === 0) return;
+    const bundle = createAdventureRewardBundle(unseenEvents);
+    setAdventureRewardNotice({ mode: 'approved', bundle });
+  }, [activeChild, activeChildId, adventureRewardNotice, adventureTasks, loading]);
+
   const growthTasksWithChild = activeChild ? tasks.map((task) => ({ ...task, childId: activeChild.id, childName: activeChild.name })) : [];
   const growthSummary = activeChild ? getChildGrowthSummary({ ...activeChild, tasks } as typeof activeChild, state.ledger) : null;
   const childMenuNotifications = getChildMenuNotifications({
@@ -338,8 +386,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   };
 
   const handleSubmitGoalProposal = async (input: GoalProposalInput) => {
-    const taskId = await handleProposeGoal(input);
-    if (taskId) setAdventureOpenRequest({ id: taskId, requestId: Date.now() });
+    await handleProposeGoal(input);
     dismissWithAnimation(() => setShowGoalForm(false), '.hh-goal-proposal-overlay');
   };
 
@@ -351,10 +398,31 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         throw new Error('目前無法安全送出冒險，請重新整理後再試。');
       }
       await appStore.submitAdventureCompletion(task.id, input);
-      showToast('冒險已送出，等待爸媽確認。');
+      const noticeState = readAdventureRewardNoticeState(activeChild.id);
+      writeAdventureRewardNoticeState(
+        activeChild.id,
+        markAdventureRewardTaskSubmitted(noticeState, task.id),
+      );
+      setAdventureRewardNotice((current) => current ?? {
+          mode: 'submitted',
+          taskName: task.name,
+          pendingStars: Math.max(0, Math.trunc(task.points)),
+        });
     } finally {
       setActionPending(false);
     }
+  };
+
+  const dismissAdventureRewardNotice = () => {
+    const notice = adventureRewardNotice;
+    if (notice?.mode === 'approved' && activeChildId) {
+      const currentState = readAdventureRewardNoticeState(activeChildId);
+      writeAdventureRewardNoticeState(
+        activeChildId,
+        markAdventureRewardEventsSeen(currentState, notice.bundle.events),
+      );
+    }
+    setAdventureRewardNotice(null);
   };
 
   const handleAddWish = async () => {
@@ -518,6 +586,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       onSelectStart={preventNativeAppTextSelection}
       onDragStart={preventNativeAppDragStart}
     >
+      <ChildDashboardBackgroundMusic enabled={backgroundMusicEnabled} />
       <DashboardCharacterHero
         sceneImage=""
         theme={{ ...activeChild.theme, accentColor: '#202124', mobileBackgroundImageUrl: undefined, desktopBackgroundImageUrl: undefined }}
@@ -526,6 +595,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           { label: '我的點數', value: displayedPoints, target: 'points', icon: <Star className="hh-character-stat-points" size={17} strokeWidth={2.5} /> },
           { label: '我的卷軸', value: displayedScrolls, target: 'scroll', icon: <ScrollText size={17} strokeWidth={2.5} /> },
         ]}
+        statsPulse={Boolean(adventureRewardNotice)}
         sceneLayer={(
           <Suspense fallback={<WorldPreparingScreen detail="正在載入 3D 世界…" />}>
             <TerrainWorldLayer
@@ -533,7 +603,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               childId={activeChild.id}
               gameData={gameData}
               showPetNames={showPetNames}
-              paused={Boolean(heroFeature)}
+              paused={Boolean(heroFeature || adventureRewardNotice)}
             />
           </Suspense>
         )}
@@ -617,8 +687,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 await purchaseGameItem(activeChild.id, catalogItemId, quantity, idempotencyKey);
               }}
               onEquipCharacter={async (inventoryItemId) => {
-                await equipGameCharacter(activeChild.id, inventoryItemId);
                 closeChildFeature();
+                await equipGameCharacter(activeChild.id, inventoryItemId);
               }}
               onRenamePet={(inventoryItemId, displayName) => setPetDisplayName(activeChild.id, inventoryItemId, displayName)}
               onSetFollowingPets={(inventoryItemIds): Promise<WorldMutationResult> => setFollowingPets(activeChild.id, inventoryItemIds)}
@@ -631,6 +701,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onLogout={onLogout}
               showPetNames={showPetNames}
               onShowPetNamesChange={handleShowPetNamesChange}
+              backgroundMusicEnabled={backgroundMusicEnabled}
+              onBackgroundMusicChange={handleBackgroundMusicChange}
             />
           </Suspense>
         )}
@@ -865,6 +937,16 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             </div>
           </div>
         </div>
+      )}
+
+      {adventureRewardNotice && (
+        <AdventureRewardCelebration
+          mode={adventureRewardNotice.mode}
+          taskName={adventureRewardNotice.mode === 'submitted' ? adventureRewardNotice.taskName : undefined}
+          pendingStars={adventureRewardNotice.mode === 'submitted' ? adventureRewardNotice.pendingStars : undefined}
+          bundle={adventureRewardNotice.mode === 'approved' ? adventureRewardNotice.bundle : undefined}
+          onDismiss={dismissAdventureRewardNotice}
+        />
       )}
 
       {/* Toast Notification */}

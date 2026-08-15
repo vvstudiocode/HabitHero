@@ -36,7 +36,7 @@ export function PasswordRecovery({ mode, onBack, onResetComplete }: PasswordReco
       if (mode === 'request') {
         const { error: resetError } = await requestParentPasswordReset(email);
         if (resetError) setError(toAuthErrorMessage(resetError));
-        else setMessage('如果這個 Email 有註冊 HabitHero，重設密碼連結已寄出，請檢查信箱。');
+        else setMessage('如果這個 Email 有註冊習慣冒險島，重設密碼連結已寄出，請檢查信箱。');
       } else {
         await resetCurrentParentPassword(password);
         await signOut();
@@ -56,8 +56,9 @@ export function PasswordRecovery({ mode, onBack, onResetComplete }: PasswordReco
       <div className="hh-login-vignette" />
       <div className="hh-login-grain" />
       <main className="hh-login-shell">
-        <section className="hh-login-copy" aria-label="HabitHero 密碼安全">
-          <h1>HabitHero</h1>
+        <section className="hh-login-copy" aria-label="習慣冒險島密碼安全">
+          <h1>習慣冒險島</h1>
+          <p>把每天的小事變成一場冒險</p>
           <p>找回家長帳號，繼續陪孩子完成每天的小任務。</p>
         </section>
         <section className="hh-login-panel" aria-label={mode === 'request' ? '忘記密碼表單' : '重設密碼表單'}>

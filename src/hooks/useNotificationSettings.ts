@@ -64,7 +64,7 @@ export function useNotificationSettings({ familyId, childProfileId, onForeground
     void addPushListeners({
       onReceived: notification => {
         if (!active) return;
-        foregroundNotificationRef.current?.(notification.title ?? 'HabitHero', notification.body ?? '你有一則新通知。');
+        foregroundNotificationRef.current?.(notification.title ?? '習慣冒險島', notification.body ?? '你有一則新通知。');
       },
     }).then(remove => {
       if (active) removeListeners = remove;
@@ -111,7 +111,7 @@ export function useNotificationSettings({ familyId, childProfileId, onForeground
         } satisfies PushDeviceContext);
         setPermission(result.permission);
         if (result.permission !== 'granted') {
-          setError('請允許 HabitHero 使用通知，才能收到背景提醒。');
+          setError('請允許習慣冒險島使用通知，才能收到背景提醒。');
           return false;
         }
         registeredContext.current = `${profileId}:${familyId}:${childProfileId ?? 'parent'}`;

@@ -453,6 +453,85 @@
   transform: translateY(4px);
 }
 
+.hh-adventure-reward-overlay {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: max(24px, calc(env(safe-area-inset-top, 0px) + 24px)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgb(27 48 46 / 48%);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: hh-adventure-reward-overlay-in var(--hh-adventure-reward-enter-duration) ease-out both;
+}
+
+.hh-adventure-reward-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+}
+
+.hh-adventure-reward-particle-layer {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hh-adventure-reward-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hh-adventure-reward-sparkle {
+  position: absolute;
+  top: calc(50% + var(--hh-reward-sparkle-y));
+  left: calc(50% + var(--hh-reward-sparkle-x));
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  opacity: 0;
+  transform: rotate(45deg) scale(.35);
+  animation: hh-adventure-reward-sparkle-pop 900ms cubic-bezier(.16, 1, .3, 1) var(--hh-reward-sparkle-delay) both;
+}
+
+.hh-adventure-reward-sparkle::before,
+.hh-adventure-reward-sparkle::after {
+  position: absolute;
+  inset: 3px -4px;
+  border-radius: inherit;
+  background: currentColor;
+  content: '';
+}
+
+.hh-adventure-reward-sparkle::after {
+  transform: rotate(90deg);
+}
+
+.hh-adventure-reward-sparkle.is-gold { color: var(--hh-reward-card-gold); }
+.hh-adventure-reward-sparkle.is-pink { color: var(--hh-reward-card-pink); }
+.hh-adventure-reward-sparkle.is-mint { color: var(--hh-reward-card-mint); }
+.hh-adventure-reward-sparkle.is-blue { color: var(--hh-reward-card-blue); }
+
+@keyframes hh-adventure-reward-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hh-adventure-reward-sparkle-pop {
+  0% { opacity: 0; transform: rotate(45deg) scale(.35); }
+  26% { opacity: .92; transform: rotate(45deg) scale(1); }
+  100% { opacity: 0; transform: rotate(45deg) scale(.72) translateY(16px); }
+}
+
 .hh-adventure-detail-header {
   display: flex;
   align-items: flex-start;
@@ -661,9 +740,16 @@
   .hh-parent-content-modal,
   .hh-adventure-detail-overlay,
   .hh-adventure-detail,
+  .hh-adventure-reward-overlay,
   .hh-review-dialog-overlay {
     animation-duration: .01ms;
     transition-duration: .01ms;
+  }
+
+  .hh-adventure-reward-sparkle {
+    opacity: .72;
+    transform: rotate(45deg) scale(.72);
+    animation: none;
   }
 }
 

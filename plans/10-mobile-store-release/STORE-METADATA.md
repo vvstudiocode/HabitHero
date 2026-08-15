@@ -1,4 +1,4 @@
-# HabitHero 商店與家庭安全交付規格
+# 習慣冒險島商店與家庭安全交付規格
 
 更新日期：2026-07-23
 
@@ -9,7 +9,7 @@
 - 家長同意使用 `parent_consents` 儲存版本與時間，由 `record_parent_consent` RPC 驗證家庭家長身份。
 - App 內帳號刪除透過 JWT 驗證的 `manage-account` Edge Function，刪除家庭資料、孩子帳號與家長 Auth 帳號。
 - 公開頁面：`/privacy-policy.html`、`/support.html`、`/delete-account.html`。
-- Capacitor app ID/package ID：`com.habithero.app`。
+- Capacitor app ID/package ID：`com.vvstudiocode.habithero`。
 
 ## 上架前產品/法務必填
 

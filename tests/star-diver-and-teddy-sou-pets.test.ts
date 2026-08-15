@@ -9,12 +9,13 @@ const pets = [
     key: 'star-diver',
     name: '星辰潛者',
     model: 'public/assets/pets/star-diver.glb',
-    thumbnail: 'public/assets/pets/star-diver-thumbnail.webp',
+    thumbnail: 'public/assets/pets/star-diver-thumbnail.png',
   },
 ] as const;
 
 test('ships Star Diver as a compact animated GLB', async () => {
   const migration = await readFile(new URL('supabase/migrations/20260813063922_add_star_diver_and_teddy_sou_pets.sql', root), 'utf8');
+  const thumbnailMigration = await readFile(new URL('supabase/migrations/20260815080100_update_star_diver_thumbnail.sql', root), 'utf8');
 
   for (const pet of pets) {
     const model = new URL(pet.model, root);
@@ -31,17 +32,18 @@ test('ships Star Diver as a compact animated GLB', async () => {
     assert.match(migration, new RegExp(pet.name));
     assert.match(migration, new RegExp(`/assets/pets/${pet.key}\\.glb`));
     assert.match(migration, new RegExp(`/assets/pets/${pet.key}-thumbnail\\.webp`));
+    assert.match(thumbnailMigration, new RegExp(`/assets/pets/${pet.key}-thumbnail\\.png`));
   }
 });
 
-test('ships a compact WebP thumbnail for Star Diver', async () => {
+test('ships the supplied transparent PNG thumbnail and removes the old WebP', async () => {
   for (const pet of pets) {
     const thumbnail = new URL(pet.thumbnail, root);
     await access(thumbnail);
     const thumbnailStats = await stat(thumbnail);
-    assert.ok(thumbnailStats.size < 100 * 1024, `${pet.name} thumbnail should stay below 100 KB`);
+    assert.ok(thumbnailStats.size < 300 * 1024, `${pet.name} thumbnail should stay below 300 KB`);
     const thumbnailContents = await readFile(thumbnail);
-    assert.equal(thumbnailContents.toString('ascii', 0, 4), 'RIFF');
-    assert.equal(thumbnailContents.toString('ascii', 8, 12), 'WEBP');
+    assert.ok(thumbnailContents.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])));
+    await assert.rejects(() => access(new URL('public/assets/pets/star-diver-thumbnail.webp', root)));
   }
 });

@@ -10,11 +10,10 @@ import {
 import { PointerInputController } from './input/pointer-input-controller';
 import type { WorldInputState } from './input/world-input-types';
 import { DynamicJoystick } from './components/DynamicJoystick';
-import { mountPrototypeWorld } from './prototype-world-runtime';
+import { mountPrototypeWorld, type PrototypeWorldRuntime } from './prototype-world-runtime';
 import { getWorldQuality, type WorldQuality } from './world-quality';
 import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
 import { createWorldSceneGameDataSnapshot } from './world-scene-data';
-import { getFollowingPetInventoryIds } from './following-pet-state';
 
 export {
   WORLD_QUALITY_SETTINGS,
@@ -153,29 +152,12 @@ function getEquippedCatalogItem(gameData: ChildGameData): GameCatalogItem | unde
       ?? DEFAULT_WORLD_CHARACTER;
 }
 
-function getCatalogSceneSignature(item: GameCatalogItem | undefined) {
-  if (!item) return 'none';
-  const preview = typeof item.metadata.preview === 'string' ? item.metadata.preview : '';
-  const color = typeof item.metadata.color === 'string' ? item.metadata.color : '';
-  const petPresentation = item.itemType === 'pet'
-    ? [
-      'model',
-      'animation',
-      'idleAnimation',
-      'visualScaleMultiplier',
-      'movementSpeedMultiplier',
-      'groundOffset',
-      'hideGroundMarker',
-      'hideGroundShadow',
-      'groundShadowScaleMultiplier',
-      'nameLabelScaleMultiplier',
-    ].map((key) => `${key}=${String(item.metadata[key] ?? '')}`).join(',')
-    : '';
-  return [item.id, item.assetKey, item.collisionRadius, preview, color, petPresentation].join(':');
-}
-
 function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
   return [...gameData.worldEntities]
+    // Decorations change the collision map and need a world rebuild. Pet
+    // actors are updated by the mounted runtime so follow/roam never flashes
+    // the whole terrain scene.
+    .filter((entity) => entity.entityKind !== 'pet')
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((entity) => [
       entity.id,
@@ -200,28 +182,7 @@ function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
 }
 
 export function getTerrainWorldSceneKey(gameData: ChildGameData, quality: WorldQuality, showPetNames = true): string {
-  const equippedCatalogItem = getEquippedCatalogItem(gameData);
-  const followingPetInventoryIds = getFollowingPetInventoryIds(gameData);
-  // Keep stale loadout ids in the cache key as well. They do not render unless
-  // owned/catalog-resolvable, but changing a loadout must still invalidate a
-  // scene that was already mounted from an older snapshot.
-  const rawFollowingPetInventoryIds = gameData.loadout?.followingPetInventoryIds?.length
-    ? gameData.loadout.followingPetInventoryIds
-    : gameData.loadout?.followingPetInventoryId
-      ? [gameData.loadout.followingPetInventoryId]
-      : [];
-  const followingPetKeyIds = rawFollowingPetInventoryIds.length > 0 ? rawFollowingPetInventoryIds : followingPetInventoryIds;
-  const followingPetSignatures = followingPetKeyIds.map((inventoryId) => {
-    const inventory = gameData.inventory.find((item) => item.id === inventoryId);
-    const catalogItem = inventory
-      ? gameData.catalog.find((item) => item.id === inventory.catalogItemId && item.itemType === 'pet')
-      : undefined;
-    return [inventoryId, inventory?.displayName ?? '', getCatalogSceneSignature(catalogItem)].join(':');
-  });
   return [
-    getCatalogSceneSignature(equippedCatalogItem),
-    getCharacterRenderMode(equippedCatalogItem),
-    followingPetSignatures.join('|') || 'none',
     getWorldEntitiesSceneSignature(gameData),
     quality,
     showPetNames ? 'pet-names-on' : 'pet-names-off',
@@ -268,6 +229,7 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
   const [loadingDetail, setLoadingDetail] = useState('讀取草地與大樹模型…');
   const [showStaticFallback, setShowStaticFallback] = useState(false);
   const [runtimeAttempt, setRuntimeAttempt] = useState(0);
+  const runtimeRef = useRef<PrototypeWorldRuntime | null>(null);
   const worldQuality = useWorldQuality();
   const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames);
   const sceneInput = useMemo(() => {
@@ -279,9 +241,7 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
       characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
       showPetNames,
     };
-  // The key intentionally excludes wallet, price, and unrelated inventory/catalog identities.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sceneKey]);
+  }, [gameData, showPetNames]);
   pausedRef.current = paused;
 
   useEffect(() => {
@@ -336,8 +296,16 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
       },
       onError: () => setStatus('failed'),
     });
-    return () => runtime.dispose();
-  }, [childId, runtimeAttempt, sceneInput]);
+    runtimeRef.current = runtime;
+    return () => {
+      if (runtimeRef.current === runtime) runtimeRef.current = null;
+      runtime.dispose();
+    };
+  }, [childId, runtimeAttempt, sceneKey]);
+
+  useEffect(() => {
+    runtimeRef.current?.update(sceneInput);
+  }, [sceneInput]);
 
   const equippedCatalogItem = getEquippedCatalogItem(gameData);
   const staticCharacterName = equippedCatalogItem?.name ?? '冒險旅人';
@@ -349,7 +317,7 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
         ref={canvasRef}
         className="hh-terrain-world-canvas"
         tabIndex={0}
-        aria-label="HabitHero 立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。"
+        aria-label="習慣冒險島立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。"
         hidden={showStaticFallback}
         aria-hidden={showStaticFallback}
       />

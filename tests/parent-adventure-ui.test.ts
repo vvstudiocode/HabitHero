@@ -113,16 +113,19 @@ test('general adventure form uses an icon-only sheet header and hides scrollbar 
   assert.match(overlayStyles, /\.hh-goal-proposal-sheet-bar\s*\{[\s\S]*?position:\s*absolute[\s\S]*?left:\s*16px/);
   assert.match(
     neutralStyles,
-    /button:not\(\.hh-character-menu-action\):not\(\.hh-character-icon-button\):not\(\.hh-adventure-button\):not\(\.hh-goal-proposal-backdrop\):hover/,
+    /button:not\(\.hh-character-menu-action\):not\(\.hh-character-icon-button\):not\(\.hh-adventure-button\):not\(\.hh-goal-proposal-backdrop\)(?::not\(\.hh-adventure-reward-action\))?:hover/,
   );
   assert.match(neutralStyles, /\.hh-goal-proposal-backdrop:hover,[\s\S]*?background:\s*rgba\(32, 33, 36, 0\.28\)\s*!important/);
 });
 
-test('a newly created general adventure opens immediately after the creation layer exits', () => {
+test('a newly created general adventure waits for the child to open it from the board', () => {
   const board = read('../src/features/adventures/components/ChildAdventureBoard.tsx');
   const dashboard = read('../src/components/ChildDashboard.tsx');
   const proposalForm = read('../src/features/growth/components/GoalProposalForm.tsx');
   const overlayStyles = read('../src/styles/overlays.css');
+  const submitHandlerStart = dashboard.indexOf('const handleSubmitGoalProposal');
+  const completionHandlerStart = dashboard.indexOf('const handleAdventureCompletion');
+  const submitHandler = dashboard.slice(submitHandlerStart, completionHandlerStart);
 
   assert.match(board, /requestedTask\?: \{ id: string; requestId: number \}/);
   assert.match(board, /setOpenCard\(requestedType\)/);
@@ -130,10 +133,11 @@ test('a newly created general adventure opens immediately after the creation lay
   assert.match(board, /setSelectedTaskId\(requestedTask\.id\)/);
   assert.match(board, /handledRequestId\.current === requestedTask\.requestId/);
   assert.match(dashboard, /requestedTask=\{adventureOpenRequest\}/);
-  assert.match(dashboard, /setAdventureOpenRequest\(\{ id: taskId, requestId: Date\.now\(\) \}\)/);
+  assert.doesNotMatch(submitHandler, /setAdventureOpenRequest/);
+  assert.match(dashboard, /setAdventureOpenRequest\(\{ id: task\.id, requestId: Date\.now\(\) \}\)/);
   assert.match(dashboard, /dismissWithAnimation\([\s\S]*?\.hh-goal-proposal-overlay/);
-  assert.match(proposalForm, /建立並開始/);
-  assert.match(proposalForm, /完成後再由爸媽確認點數/);
+  assert.match(proposalForm, /建立冒險/);
+  assert.match(proposalForm, /回到一般冒險項目，想開始時再點開/);
   assert.match(overlayStyles, /\.hh-goal-proposal-overlay\.hh-modal-exit[\s\S]*?hh-goal-overlay-exit/);
 });
 

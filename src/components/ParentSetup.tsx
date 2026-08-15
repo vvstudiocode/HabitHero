@@ -65,8 +65,9 @@ export function ParentSetup({ onBack, onGoLogin, onComplete }: ParentSetupProps)
       <div className="hh-login-grain" />
 
       <main className="hh-login-shell">
-        <section className="hh-login-copy" aria-label="HabitHero 註冊視覺">
-          <h1>HabitHero</h1>
+        <section className="hh-login-copy" aria-label="習慣冒險島註冊視覺">
+          <h1>習慣冒險島</h1>
+          <p>把每天的小事變成一場冒險</p>
           <p>先建立家長帳號，再替孩子安排每天的任務與獎勵。</p>
         </section>
 

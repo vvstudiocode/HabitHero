@@ -130,7 +130,7 @@ Deno.serve(async request => {
 
     const origin = (hasTaskId ? task.origin : 'parent_assigned') as TaskOrigin;
     let targetProfileIds: string[] = [];
-    let title = 'HabitHero';
+    let title = '習慣冒險島';
     let message = `有新的任務：「${task.name}」`;
     const { data: child } = await adminClient
       .from('child_profiles')
@@ -163,7 +163,7 @@ Deno.serve(async request => {
     if (hasScheduleId) {
       if (!await isParent()) return json({ error: 'Only a parent can send a daily adventure notification' }, 403);
       targetProfileIds = [child.profile_id];
-      title = 'HabitHero 習慣小英雄';
+      title = '習慣冒險島';
       message = `家長新增了每日冒險：「${task.name}」`;
     } else if (event === 'created' && origin === 'child_proposed') {
       // The proposal RPC permits a family parent to create a proposal while
@@ -172,12 +172,12 @@ Deno.serve(async request => {
         return json({ error: 'Only the child or a family parent can create this task' }, 403);
       }
       targetProfileIds = await getParents();
-      title = 'HabitHero 習慣小英雄';
+      title = '習慣冒險島';
       message = `${child.display_name} 建立了「${task.name}」，完成後會請你確認點數。`;
     } else if (event === 'created' && (origin === 'parent_assigned' || origin === 'parent_suggested' || origin === 'system_template')) {
       if (!await isParent()) return json({ error: 'Only a parent can send this task notification' }, 403);
       targetProfileIds = [child.profile_id];
-      title = 'HabitHero 習慣小英雄';
+      title = '習慣冒險島';
       message = `家長新增了任務：「${task.name}」`;
     } else if (event === 'submitted') {
       // The completion RPC permits either the child or a family parent to
@@ -187,7 +187,7 @@ Deno.serve(async request => {
         return json({ error: 'Only the child or a family parent can send a completion notification' }, 403);
       }
       targetProfileIds = await getParents();
-      title = 'HabitHero 習慣小英雄';
+      title = '習慣冒險島';
       message = `${child.display_name} 完成了「${task.name}」，請確認完成內容。`;
     } else if (event === 'reviewed') {
       if (!await isParent()) return json({ error: 'Only a parent can send a review notification' }, 403);

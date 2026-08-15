@@ -11,7 +11,7 @@ test('task notification sender supports creation, submission, and review events'
   assert.match(source, /event === 'created' && origin === 'child_proposed'/);
   assert.match(source, /event === 'created' && origin === 'child_proposed'[\s\S]{0,300}child\.profile_id !== userData\.user\.id && !await isParent\(\)/);
   assert.match(source, /event === 'submitted'/);
-  assert.equal(source.match(/title = 'HabitHero 習慣小英雄'/g)?.length, 4);
+  assert.equal(source.match(/title = '習慣冒險島'/g)?.length, 5);
   assert.match(source, /event === 'reviewed'/);
   assert.match(source, /body\.event/);
   assert.match(source, /body\.scheduleId/);

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">HabitHero</string>
-    <string name="title_activity_main">HabitHero</string>
+    <string name="app_name">習慣冒險島</string>
+    <string name="title_activity_main">習慣冒險島</string>
     <string name="package_name">com.vvstudiocode.habithero</string>
     <string name="custom_url_scheme">com.vvstudiocode.habithero</string>
 </resources>

@@ -118,8 +118,8 @@ describe('child game panel decoration editing', () => {
     assert.match(childGamePanelSource, /onCollectAllDecorations/);
   });
 
-  it('returns to the 3D world immediately after a successful character switch', () => {
-    assert.match(childDashboardSource, /onEquipCharacter=\{async \(inventoryItemId\) => \{[\s\S]*?await equipGameCharacter\(activeChild\.id, inventoryItemId\);[\s\S]*?closeChildFeature\(\);/);
+  it('returns to the 3D world immediately while character sync continues in the background', () => {
+    assert.match(childDashboardSource, /onEquipCharacter=\{async \(inventoryItemId\) => \{[\s\S]*?closeChildFeature\(\);[\s\S]*?await equipGameCharacter\(activeChild\.id, inventoryItemId\);/);
   });
 
   it('keeps the feature close control in the outer child modal only', () => {

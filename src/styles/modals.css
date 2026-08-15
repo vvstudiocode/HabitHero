@@ -142,6 +142,213 @@
   animation: hh-toast-fade-out 0.28s ease-in both;
 }
 
+.hh-adventure-reward-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(100%, 420px);
+  max-height: calc(100dvh - 48px);
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  padding: 28px 24px 24px;
+  border: 1px solid var(--hh-reward-card-line);
+  border-radius: 32px;
+  color: var(--hh-reward-card-ink);
+  text-align: center;
+  background: var(--hh-reward-card-surface);
+  box-shadow: 0 28px 80px rgb(20 49 44 / 32%), 0 8px 24px rgb(214 154 38 / 14%);
+  animation: hh-adventure-reward-card-in var(--hh-adventure-reward-enter-duration) cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.hh-adventure-reward-badge {
+  position: relative;
+  display: grid;
+  width: 84px;
+  height: 84px;
+  margin-bottom: 14px;
+  place-items: center;
+  color: var(--hh-reward-card-gold);
+  background: radial-gradient(circle, #fffdf5 0 34%, var(--hh-reward-card-gold-soft) 35% 72%, transparent 73%);
+  filter: drop-shadow(0 8px 16px rgb(214 154 38 / 18%));
+  animation: hh-adventure-reward-badge-pop 520ms cubic-bezier(.16, 1, .3, 1) 180ms both;
+}
+
+.hh-adventure-reward-badge>svg:first-child {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  color: var(--hh-reward-card-pink);
+}
+
+.hh-adventure-reward-badge-star {
+  fill: var(--hh-reward-card-gold-soft);
+}
+
+.hh-adventure-reward-eyebrow,
+.hh-adventure-reward-description,
+.hh-adventure-reward-card h2 {
+  margin: 0;
+}
+
+.hh-adventure-reward-eyebrow {
+  color: var(--hh-reward-card-mint);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.hh-adventure-reward-card h2 {
+  margin-top: 5px;
+  color: var(--hh-reward-card-ink);
+  font-family: Fredoka, Nunito, sans-serif;
+  font-size: clamp(30px, 8vw, 42px);
+  font-weight: 700;
+  letter-spacing: -.05em;
+  line-height: 1.05;
+}
+
+.hh-adventure-reward-description {
+  max-width: 32ch;
+  margin-top: 12px;
+  color: var(--hh-reward-card-muted);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.hh-adventure-reward-event-list {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  margin: 18px 0 0;
+  padding: 10px 14px;
+  overflow: hidden;
+  border-radius: 16px;
+  color: var(--hh-reward-card-muted);
+  background: rgb(255 255 255 / 68%);
+  list-style: none;
+  text-align: left;
+}
+
+.hh-adventure-reward-event-list li {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hh-adventure-reward-event-list li::before {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 8px 1px 0;
+  border-radius: 50%;
+  background: var(--hh-reward-card-gold);
+  content: '';
+}
+
+.hh-adventure-reward-totals {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.hh-adventure-reward-total {
+  display: grid;
+  min-width: 132px;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: center;
+  column-gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--hh-reward-card-line);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 68%);
+  animation: hh-adventure-reward-total-pop 420ms cubic-bezier(.16, 1, .3, 1) 380ms both;
+}
+
+.hh-adventure-reward-total svg {
+  grid-row: span 2;
+}
+
+.hh-adventure-reward-total strong {
+  font-family: Fredoka, Nunito, sans-serif;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.hh-adventure-reward-total span {
+  color: var(--hh-reward-card-muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.hh-adventure-reward-total.is-star {
+  color: var(--hh-reward-card-gold);
+}
+
+.hh-adventure-reward-total.is-scroll {
+  color: var(--hh-reward-card-blue);
+}
+
+.hh-adventure-reward-total.is-star span,
+.hh-adventure-reward-total.is-scroll span {
+  color: var(--hh-reward-card-muted);
+}
+
+.hh-adventure-reward-action {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 22px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 18px;
+  color: #fffdf7;
+  background: var(--hh-reward-card-mint);
+  box-shadow: 0 8px 18px rgb(107 168 135 / 24%);
+  font-size: 17px;
+  font-weight: 900;
+  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+}
+
+.hh-adventure-reward-action:hover {
+  filter: brightness(1.04);
+  box-shadow: 0 10px 22px rgb(107 168 135 / 30%);
+}
+
+.hh-adventure-reward-action:active {
+  transform: scale(.98);
+}
+
+.hh-adventure-reward-action:focus-visible {
+  outline: 3px solid var(--hh-reward-card-gold);
+  outline-offset: 3px;
+}
+
+@keyframes hh-adventure-reward-card-in {
+  0% { opacity: 0; transform: translateY(22px) scale(.92); }
+  72% { opacity: 1; transform: translateY(-2px) scale(1.015); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes hh-adventure-reward-badge-pop {
+  0% { opacity: 0; transform: scale(.58) rotate(-10deg); }
+  65% { opacity: 1; transform: scale(1.08) rotate(3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes hh-adventure-reward-total-pop {
+  0% { opacity: 0; transform: translateY(8px) scale(.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   *,
@@ -677,6 +884,23 @@
 @media (max-width: 760px) {
   .hh-safe-modal-shell {
     padding-top: max(44px, calc(env(safe-area-inset-top, 0px) + 44px));
+  }
+
+  .hh-adventure-reward-card {
+    max-height: calc(100dvh - max(48px, calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px) + 32px)));
+    padding: 24px 18px 18px;
+    border-radius: 28px;
+  }
+
+  .hh-adventure-reward-totals {
+    gap: 8px;
+  }
+
+  .hh-adventure-reward-total {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 
   .hh-adventure-form-dialog {

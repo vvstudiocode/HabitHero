@@ -260,6 +260,14 @@ describe('prototype world runtime contracts', () => {
     assert.match(storeSource, /equipGameCharacter:[\s\S]*?patchEquippedCharacter/);
   });
 
+  it('updates character and pet actors without remounting the terrain runtime', () => {
+    assert.match(runtimeSource, /update: \(next: PrototypeWorldRuntimeUpdate\) => void/);
+    assert.match(runtimeSource, /queueCharacterUpdate/);
+    assert.match(runtimeSource, /updatePetActors/);
+    assert.match(worldLayerSource, /runtimeRef\.current\?\.update\(sceneInput\)/);
+    assert.doesNotMatch(worldLayerSource, /\[childId, runtimeAttempt, sceneInput\]\);/);
+  });
+
   it('documents the actual quality strategy without claiming an absent fallback loader', () => {
     assert.match(docsSource, /high.*outer-density multiplier of 36/is);
     assert.match(docsSource, /low.*360.*distant tree silhouettes.*disables renderer shadows/is);

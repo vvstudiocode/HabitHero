@@ -189,7 +189,8 @@ function MainApp() {
     if (childWorldTransition) return <WorldPreparingScreen detail="正在載入孩子的冒險世界…" />;
     return renderLoginBackgroundScreen(
       <div className="flex flex-col items-center text-center">
-        <p className="text-lg font-bold text-white drop-shadow-lg">HabitHero 習慣小英雄</p>
+        <p className="text-lg font-bold text-white drop-shadow-lg">習慣冒險島</p>
+        <p className="mt-1 text-sm font-bold text-white/90 drop-shadow-lg">把每天的小事變成一場冒險</p>
         <p className="mt-2 text-sm font-bold text-white/85 drop-shadow-lg">啟動中…</p>
       </div>
     );

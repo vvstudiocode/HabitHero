@@ -920,6 +920,24 @@
   line-height: 1;
 }
 
+.hh-character-stats.is-reward-pulsing>div {
+  animation: hh-character-stats-reward-pulse 620ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.hh-character-stats.is-reward-pulsing>[data-hh-stat-target="points"] {
+  animation-delay: 90ms;
+}
+
+.hh-character-stats.is-reward-pulsing>[data-hh-stat-target="scroll"] {
+  animation-delay: 150ms;
+}
+
+@keyframes hh-character-stats-reward-pulse {
+  0% { transform: scale(1); }
+  48% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
 .hh-character-stat-icon {
   display: inline-flex;
   color: var(--hh-character-theme-color);

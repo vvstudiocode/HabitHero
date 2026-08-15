@@ -38,4 +38,15 @@
   --hh-adventure-enter-duration: 220ms;
   --hh-adventure-exit-duration: 180ms;
   --hh-adventure-board-width: 160px;
+  --hh-adventure-reward-enter-duration: 360ms;
+  --hh-adventure-reward-exit-duration: 180ms;
+  --hh-reward-card-surface: #fffaf0;
+  --hh-reward-card-ink: #3f3b36;
+  --hh-reward-card-muted: #776f66;
+  --hh-reward-card-line: #f0dfb7;
+  --hh-reward-card-gold: #d69a26;
+  --hh-reward-card-gold-soft: #fff0b8;
+  --hh-reward-card-mint: #6ba887;
+  --hh-reward-card-blue: #7b9ed0;
+  --hh-reward-card-pink: #d98ba4;
 }

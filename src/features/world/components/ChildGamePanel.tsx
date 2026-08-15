@@ -34,6 +34,8 @@ interface ChildGamePanelProps {
   onLogout: () => void;
   showPetNames: boolean;
   onShowPetNamesChange: (visible: boolean) => void;
+  backgroundMusicEnabled: boolean;
+  onBackgroundMusicChange: (enabled: boolean) => void;
 }
 
 function createIdempotencyKey() {
@@ -65,6 +67,8 @@ export function ChildGamePanel({
   onLogout,
   showPetNames,
   onShowPetNamesChange,
+  backgroundMusicEnabled,
+  onBackgroundMusicChange,
 }: ChildGamePanelProps) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const initialRoamingPetSnapshot = getRoamingPetSnapshot(gameData);
@@ -537,8 +541,17 @@ export function ChildGamePanel({
           <h3><Settings size={18} /> 通知與帳號</h3>
           <div className="hh-game-settings-card hh-game-settings-card--toggle">
             <div>
+              <strong>背景音樂</strong>
+            </div>
+            <label className="hh-game-setting-toggle">
+              <span className="sr-only">背景音樂</span>
+              <input type="checkbox" checked={backgroundMusicEnabled} onChange={(event) => onBackgroundMusicChange(event.target.checked)} />
+              <span aria-hidden="true" />
+            </label>
+          </div>
+          <div className="hh-game-settings-card hh-game-settings-card--toggle">
+            <div>
               <strong>顯示寵物名字</strong>
-              <span>在世界中顯示寵物的白色小字名稱。</span>
             </div>
             <label className="hh-game-setting-toggle">
               <span className="sr-only">顯示寵物名字</span>
@@ -546,7 +559,7 @@ export function ChildGamePanel({
               <span aria-hidden="true" />
             </label>
           </div>
-          <div className="hh-game-settings-card"><PushNotificationSettings settings={notificationSettings} /></div>
+          <PushNotificationSettings settings={notificationSettings} className="hh-game-settings-card" />
           <div className="hh-game-settings-actions">
             <button type="button" className="hh-game-action-button" onClick={onSwitchChild}>切換孩子</button>
             <button type="button" className="hh-game-action-button hh-game-action-button--danger" onClick={onLogout}>登出</button>

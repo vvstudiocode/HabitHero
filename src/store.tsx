@@ -157,6 +157,18 @@ export function shouldBlockAppForDataLoad({ sessionLoading, dataLoading, hasSess
   return false;
 }
 
+export function shouldRefreshAppDataOnResume({
+  visibilityState,
+  isOnline,
+}: {
+  visibilityState: 'visible' | 'hidden';
+  isOnline: boolean;
+}) {
+  return visibilityState === 'visible' && isOnline;
+}
+
+export const LIVE_DATA_REFRESH_INTERVAL_MS = 45_000;
+
 export function replaceOptimisticTaskId(
   state: AppState,
   childId: string,
@@ -356,6 +368,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [retry]);
 
   useEffect(() => {
+    const isBrowserOnline = () => typeof navigator === 'undefined' || navigator.onLine;
+    const refreshOnResume = () => {
+      if (!shouldRefreshAppDataOnResume({
+        visibilityState: document.visibilityState,
+        isOnline: isBrowserOnline(),
+      })) return;
+      void retry();
+    };
+    const refreshOnVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshOnResume();
+    };
+    window.addEventListener('focus', refreshOnResume);
+    window.addEventListener('pageshow', refreshOnResume);
+    document.addEventListener('visibilitychange', refreshOnVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', refreshOnResume);
+      window.removeEventListener('pageshow', refreshOnResume);
+      document.removeEventListener('visibilitychange', refreshOnVisibilityChange);
+    };
+  }, [retry]);
+
+  useEffect(() => {
+    if (!session || !dataReady) return undefined;
+    const timer = window.setInterval(() => {
+      const isOnline = typeof navigator === 'undefined' || navigator.onLine;
+      if (!shouldRefreshAppDataOnResume({ visibilityState: document.visibilityState, isOnline })) return;
+      void retry();
+    }, LIVE_DATA_REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [dataReady, retry, session]);
+
+  useEffect(() => {
     if (!familyId || !session || !role || !repository) return undefined;
     return subscribeToAppData(getSupabaseClient(), {
       familyId,
@@ -367,8 +411,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setStale(true);
         void retry();
       },
-      // Only refresh on actual reconnection, not on initial SUBSCRIBED
-      onReconnect: () => { setIsOffline(false); setStale(true); },
+      // Only refresh on actual reconnection, not on initial SUBSCRIBED.
+      // Realtime recovery must also reconcile missed task/reward changes.
+      onReconnect: () => {
+        setIsOffline(false);
+        setStale(true);
+        void retry();
+      },
     });
   }, [familyId, repository, retry, role, session, state.childLoggedInId]);
 
