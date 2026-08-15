@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { getActiveDecorationEntities, getWorldRevisionAfterMutation, toDecorationDraft } from '../src/features/world/components/decoration-editing';
+import {
+  degreesToRadians,
+  getActiveDecorationEntities,
+  getWorldRevisionAfterMutation,
+  radiansToDegrees,
+  toDecorationDraft,
+} from '../src/features/world/components/decoration-editing';
 
 const childGamePanelSource = readFileSync(
   new URL('../src/features/world/components/ChildGamePanel.tsx', import.meta.url),
@@ -19,6 +25,14 @@ const storeSource = readFileSync(
   new URL('../src/store.tsx', import.meta.url),
   'utf8',
 );
+const terrainWorldLayerSource = readFileSync(
+  new URL('../src/features/world/TerrainWorldLayer.tsx', import.meta.url),
+  'utf8',
+);
+const modalSourceForOverflow = readFileSync(
+  new URL('../src/styles/modals.css', import.meta.url),
+  'utf8',
+);
 
 describe('child game panel decoration editing', () => {
   it('uses the shared catalog card for the child shop', () => {
@@ -31,6 +45,22 @@ describe('child game panel decoration editing', () => {
     assert.match(childGamePanelSource, /<GameItemLightbox[\s\S]*?purchaseDisabled=/);
     assert.match(childGamePanelSource, /<GameItemLightbox[\s\S]*?purchaseLabel=/);
     assert.match(childGamePanelSource, /onPurchase=\{kind === 'shop' \? handlePreviewPurchase : undefined\}/);
+  });
+
+  it('keeps direct inventory decoration placement inside catalog bounds', () => {
+    assert.match(childGamePanelSource, /decorationDrafts\[newDraftKey\] \?\? createDecorationPlacementDraft\(item\)/);
+    assert.match(childGamePanelSource, /isDecorationPlacementValid\(draft, item,/);
+    assert.match(childGamePanelSource, /const newDraftValid = isDecorationDraftValid\(inventory\.id, newDraft\)/);
+  });
+
+  it('closes the shop item lightbox before starting the purchase placement flow', () => {
+    const purchaseHandlerStart = childGamePanelSource.indexOf('const handlePreviewPurchase');
+    const purchaseHandlerEnd = childGamePanelSource.indexOf('const openInventoryPreview', purchaseHandlerStart);
+    const purchaseHandler = childGamePanelSource.slice(purchaseHandlerStart, purchaseHandlerEnd);
+
+    assert.match(purchaseHandler, /setPreviewItem\(null\)/);
+    assert.match(purchaseHandler, /setPreviewInventory\(null\)/);
+    assert.ok(purchaseHandler.indexOf('setPreviewItem(null)') < purchaseHandler.indexOf('onPurchase('));
   });
 
   it('uses the shared square cards and action modal for the child inventory', () => {
@@ -96,6 +126,13 @@ describe('child game panel decoration editing', () => {
     });
   });
 
+  it('converts the child-facing rotation control between degrees and world radians', () => {
+    assert.equal(radiansToDegrees(Math.PI), 180);
+    assert.equal(degreesToRadians(180), Math.PI);
+    assert.match(childGamePanelSource, /radiansToDegrees\(draft\.rotationY\)/);
+    assert.match(childGamePanelSource, /degreesToRadians\(Number\(event\.target\.value\)\)/);
+  });
+
   it('exposes explicit transform actions and queues retries with the latest world revision', () => {
     assert.ok(childGamePanelSource.includes('onCollectAllDecorations: (expectedRevision: number) => Promise<WorldMutationResult>'));
     assert.ok(childDashboardSource.includes('collectAllWorldDecorations,'));
@@ -125,5 +162,29 @@ describe('child game panel decoration editing', () => {
   it('keeps the feature close control in the outer child modal only', () => {
     assert.doesNotMatch(childGamePanelSource, /hh-game-panel-close|aria-label="關閉功能頁面"/);
     assert.match(childDashboardSource, /className="hh-character-icon-button"/);
+  });
+
+  it('offers a post-purchase placement choice and returns to the world placement mode', () => {
+    assert.match(childGamePanelSource, /onPurchase: .*Promise<GamePurchaseResult>/);
+    assert.match(childDashboardSource, /要現在放置/);
+    assert.match(childDashboardSource, /現在放置/);
+    assert.match(childDashboardSource, /稍後再放/);
+    assert.match(childDashboardSource, /setDecorationPurchasePrompt/);
+    assert.match(childDashboardSource, /placement={decorationPlacement/);
+    assert.match(childDashboardSource, /onCompletePlacement/);
+    assert.match(terrainWorldLayerSource, /裝飾放置工具/);
+    assert.match(terrainWorldLayerSource, /拖曳或點一下草地來選位置/);
+    assert.match(terrainWorldLayerSource, /完成放置/);
+  });
+
+  it('uses the 0.1 minimum size and optimistic placement state', () => {
+    assert.match(childGamePanelSource, /<input type="number" min="0\.1" max="3" step="0\.1" value=\{draft\.scale\}/);
+    assert.match(storeSource, /patchPlacedWorldEntity/);
+    assert.match(childDashboardSource, /const placementSession = decorationPlacement;/);
+    assert.match(childDashboardSource, /setDecorationPlacement\(null\);[\s\S]*?placeWorldEntity/);
+  });
+
+  it('keeps the furniture lightbox free of a visible page scrollbar', () => {
+    assert.match(modalSourceForOverflow, /\.hh-game-item-lightbox-content[\s\S]*?scrollbar-width:\s*none/);
   });
 });
