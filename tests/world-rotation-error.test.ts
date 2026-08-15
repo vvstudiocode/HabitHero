@@ -42,7 +42,7 @@ describe('world mutation error messages', () => {
 
 describe('database rotation defense', () => {
   it('normalizes rotations in the database write path too', async () => {
-    const migration = await readFile(path.resolve('supabase/migrations/20260816130000_normalize_world_entity_rotations.sql'), 'utf8');
+    const migration = await readFile(path.resolve('supabase/migrations/20260815201428_normalize_world_entity_rotations.sql'), 'utf8');
 
     assert.match(migration, /normalize_world_rotation/);
     assert.match(migration, /before insert or update of rotation_x, rotation_y, rotation_z/i);
