@@ -1,4 +1,4 @@
-/* HabitHero neutral white theme.
+/* 習慣冒險島 neutral white theme.
  * Keep the existing layout and interaction rules in index.css; this file only
  * defines the final visual surface so the app stays white without grayscale filters.
  */
@@ -182,6 +182,18 @@ body,
   outline-offset: 2px;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .hh-sprite-theme .hh-adventure-reward-action:hover {
+    background: var(--hh-reward-card-mint) !important;
+    color: #fffdf7 !important;
+  }
+}
+
+.hh-sprite-theme .hh-adventure-reward-action:focus-visible {
+  background: var(--hh-reward-card-mint) !important;
+  color: #fffdf7 !important;
+}
+
 .hh-sprite-theme button:disabled,
 .hh-login-screen button:disabled {
   background: var(--hh-neutral-soft) !important;
@@ -243,6 +255,25 @@ body,
   box-shadow: 0 8px 20px var(--hh-neutral-shadow), 0 0 28px var(--hh-character-glow-strong);
 }
 
+.hh-character-icon-button.is-expanded,
+.hh-character-icon-button.is-expanded:hover,
+.hh-character-icon-button.is-expanded:active {
+  box-shadow: none;
+}
+
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button,
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:hover,
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:active,
+.hh-parent-content-modal-bar .hh-character-icon-button,
+.hh-parent-content-modal-bar .hh-character-icon-button:hover,
+.hh-parent-content-modal-bar .hh-character-icon-button:active,
+.hh-character-menu.is-open .hh-character-menu-action,
+.hh-character-menu.is-open .hh-character-menu-action:hover,
+.hh-character-menu.is-open .hh-character-menu-action:active,
+.hh-character-menu.is-open .hh-character-menu-action.is-selected {
+  box-shadow: none;
+}
+
 .hh-character-icon-button:focus-visible,
 .hh-character-menu-action:focus-visible {
   outline: 3px solid var(--hh-character-focus-ring);
@@ -264,15 +295,16 @@ body,
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
+.hh-character-stat-icon {
+  color: var(--hh-neutral-ink) !important;
+  filter: none;
+}
+
 .hh-character-stat-icon .hh-character-stat-points {
-  color: #facc15;
+  color: var(--hh-neutral-ink);
   fill: currentColor;
 }
 
-.hh-character-hero-panel[data-theme-color="white-catgirl-room"] .hh-character-stat-icon .hh-character-stat-days-icon {
-  color: var(--hh-neutral-ink);
-  filter: none;
-}
 
 .hh-adventure-card {
   color: var(--hh-neutral-ink);

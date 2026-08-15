@@ -1,0 +1,6 @@
+[    1285ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://127.0.0.1:8765/favicon.ico:0
+[    1933ms] [ERROR] Error: THREE.GLTFLoader: No DRACOLoader instance provided.
+    at new GLTFDracoMeshCompressionExtension (https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:1996:10)
+    at GLTFLoader.parse (https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:509:37)
+    at Object.onLoad (https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js:311:11)
+    at https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.core.js:44365:38 @ http://127.0.0.1:8765/Desktop/HabitHero/terrain-prototype/pet-mobile-preview.html:258

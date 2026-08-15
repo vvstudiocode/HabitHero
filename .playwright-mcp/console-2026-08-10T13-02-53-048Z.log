@@ -1,0 +1,8 @@
+[     328ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=b6710c93:20102
+[  261495ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/:0
+[  261495ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/:0
+[  446932ms] [ERROR] WebSocket connection to 'ws://localhost:3000/?token=PX-3BLO3oTaX' failed: Page entered Back-Forward Cache. @ http://localhost:3000/:0
+[  446932ms] [ERROR] WebSocket connection to 'wss://rqofqnoyxnmlsuejeyld.supabase.co/realtime/v1/websocket?apikey=sb_publishable_SfHafMQbkeWtk5czAu6r7g_vWwZ4HOa&vsn=2.0.0' failed: Page entered Back-Forward Cache. @ http://localhost:3000/:0
+[  448315ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:963
+[  448691ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=b6710c93:20102
+[  452186ms] [WARNING] WebSocket connection to 'wss://rqofqnoyxnmlsuejeyld.supabase.co/realtime/v1/websocket?apikey=sb_publishable_SfHafMQbkeWtk5czAu6r7g_vWwZ4HOa&vsn=2.0.0' failed: WebSocket is closed before the connection is established. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=b6710c93:6167

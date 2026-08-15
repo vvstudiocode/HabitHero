@@ -71,8 +71,9 @@ export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, initial
       <div className="hh-login-grain" />
 
       <main className="hh-login-shell">
-        <section className="hh-login-copy" aria-label="HabitHero 登入視覺">
-          <h1>HabitHero</h1>
+        <section className="hh-login-copy" aria-label="習慣冒險島登入視覺">
+          <h1>習慣冒險島</h1>
+          <p>把每天的小事變成一場冒險</p>
           <p>
             把每天的小任務
             <br />

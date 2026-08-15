@@ -1,0 +1,11 @@
+- main "HabitHero 第三人稱草地場景" [ref=f1e2]:
+  - region "可操作的 HabitHero 第三人稱草地場景" [ref=f1e3]:
+    - generic "第三人稱 3D 草地場景，可使用 WASD 或方向鍵移動角色位置" [ref=f1e4]
+    - generic:
+      - generic [ref=f1e5]:
+        - status [ref=f1e6]: 載入 3D 場景中
+        - button "重置相機" [ref=f1e7] [cursor=pointer]
+      - generic: WASD 移動角色位置拖曳旋轉視角 · 滾輪縮放
+    - generic [ref=f1e8]:
+      - strong [ref=f1e9]: 正在準備冒險地圖
+      - paragraph [ref=f1e10]: 讀取大樹模型…

@@ -1,0 +1,37 @@
+- generic [ref=f1e221]:
+  - banner [ref=f1e222]:
+    - generic [ref=f1e223]:
+      - generic "HabitHero 立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [ref=f1e226]
+      - generic:
+        - generic "孩子功能子選單":
+          - button "有新項目 冒險日記" [ref=f1e246]:
+            - generic "有新項目" [ref=f1e251]
+            - strong [ref=f1e252]: 冒險日記
+          - button [ref=f1e253]:
+            - strong [ref=f1e259]: 背包
+          - button [ref=f1e260]:
+            - strong [ref=f1e265]: 商店
+          - button [ref=f1e266]:
+            - strong [ref=f1e272]: 獎勵
+          - button [ref=f1e273]:
+            - strong [ref=f1e277]: 成長
+          - button [ref=f1e278]:
+            - strong [ref=f1e283]: 設定
+      - generic "儀表板統計":
+        - generic "加入天數：14":
+          - strong:
+            - generic: "14"
+        - generic "我的點數：0":
+          - strong:
+            - generic: "0"
+        - generic "我的卷軸：0":
+          - strong:
+            - generic: "0"
+      - button "收合功能選單" [expanded] [active] [ref=f1e284]
+  - complementary "我的冒險" [ref=f1e233]:
+    - button "每日冒險 完成 0 個，共 3 個" [ref=f1e235]:
+      - generic [ref=f1e236]: 每日冒險
+      - generic "完成 0 個，共 3 個" [ref=f1e237]: 0/3
+    - button "一般冒險 完成 0 個，共 4 個" [ref=f1e241]:
+      - generic [ref=f1e242]: 一般冒險
+      - generic "完成 0 個，共 4 個" [ref=f1e243]: 0/4

@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { shouldBlockAppForDataLoad } from '../src/store';
+import { shouldBlockAppForDataLoad, shouldRefreshAppDataOnResume } from '../src/store';
+
+const storeSource = readFileSync(new URL('../src/store.tsx', import.meta.url), 'utf8');
 
 describe('app data loading gate', () => {
   it('keeps the app on the loading screen after login until family data is ready', () => {
@@ -39,5 +42,22 @@ describe('app data loading gate', () => {
       hasSession: true,
       dataReady: false,
     }), true);
+  });
+
+  it('refreshes when a live app returns to the foreground with network access', () => {
+    assert.equal(shouldRefreshAppDataOnResume({ visibilityState: 'visible', isOnline: true }), true);
+  });
+
+  it('does not refresh hidden or offline documents until the browser can sync', () => {
+    assert.equal(shouldRefreshAppDataOnResume({ visibilityState: 'hidden', isOnline: true }), false);
+    assert.equal(shouldRefreshAppDataOnResume({ visibilityState: 'visible', isOnline: false }), false);
+  });
+
+  it('keeps realtime recovery and foreground polling wired to the shared retry path', () => {
+    assert.match(storeSource, /onReconnect:[\s\S]*?void retry\(\)/);
+    assert.match(storeSource, /addEventListener\('focus'/);
+    assert.match(storeSource, /addEventListener\('pageshow'/);
+    assert.match(storeSource, /addEventListener\('visibilitychange'/);
+    assert.match(storeSource, /setInterval\(/);
   });
 });

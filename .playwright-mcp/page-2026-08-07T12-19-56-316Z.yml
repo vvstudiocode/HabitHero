@@ -1,0 +1,6 @@
+- main "HabitHero 第三人稱草地場景" [ref=f537e2]:
+  - region "可操作的 HabitHero 第三人稱草地場景" [ref=f537e3]:
+    - generic "第三人稱 3D 草地場景，可使用 WASD 或方向鍵移動角色位置" [ref=f537e4]
+    - generic [ref=f537e5]:
+      - strong [ref=f537e6]: 正在準備冒險地圖
+      - paragraph [ref=f537e7]: 讀取大樹模型…

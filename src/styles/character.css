@@ -10,7 +10,7 @@
 
 .hh-dashboard-screen {
   --hh-character-content-left: 28px;
-  --hh-character-top-offset: 40px;
+  --hh-character-top-offset: 44px;
 }
 
 .hh-sprite-theme .hh-dashboard-screen>.hh-character-dashboard-header {
@@ -163,7 +163,7 @@
   top: max(152px, calc(env(safe-area-inset-top) + 128px));
   left: var(--hh-character-content-left);
   display: grid;
-  gap: 8px;
+  gap: 4px;
   width: min(var(--hh-adventure-board-width), calc(100vw - (var(--hh-character-content-left) * 2)));
   max-height: calc(100dvh - max(152px, calc(env(safe-area-inset-top) + 128px)) - 28px);
   overflow-x: hidden;
@@ -213,6 +213,7 @@
   overflow: hidden;
   font-size: 16px;
   font-weight: 900;
+  line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -221,6 +222,7 @@
   font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 900;
+  line-height: 1;
 }
 
 .hh-adventure-card-chevron {
@@ -232,7 +234,7 @@
 }
 
 .hh-adventure-card-content {
-  padding: 4px 6px 8px;
+  padding: 2px 6px 4px;
   opacity: 0;
   transform: translateY(-4px);
   transition:
@@ -264,7 +266,7 @@
   gap: 6px;
   width: 100%;
   min-height: 44px;
-  padding: 6px 10px;
+  padding: 4px 10px;
   text-align: left;
   touch-action: manipulation;
 }
@@ -310,7 +312,7 @@
 .hh-adventure-empty {
   min-height: 44px;
   margin: 0;
-  padding: 12px 10px;
+  padding: 8px 10px;
   font-size: 14px;
   font-weight: 800;
 }
@@ -705,7 +707,7 @@
 }
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
-  top: calc(9px + var(--hh-menu-submenu-offset));
+  top: calc(17px + var(--hh-menu-submenu-offset));
   right: 16px;
 }
 
@@ -853,6 +855,7 @@
   display: flex;
   gap: 8px;
   max-width: 58%;
+  pointer-events: none;
 }
 
 .hh-character-stats>div {
@@ -872,6 +875,16 @@
 .hh-character-stats>div:has(.hh-character-stat-points) {
   width: 150px;
   min-width: 150px;
+}
+
+.hh-character-stats[data-stat-count="3"]>div {
+  width: 118px;
+  min-width: 118px;
+}
+
+.hh-character-stats[data-stat-count="3"]>div:has(.hh-character-stat-points) {
+  width: 128px;
+  min-width: 128px;
 }
 
 @keyframes hh-menu-float {
@@ -905,6 +918,24 @@
   font-family: Fredoka, sans-serif;
   font-size: 19px;
   line-height: 1;
+}
+
+.hh-character-stats.is-reward-pulsing>div {
+  animation: hh-character-stats-reward-pulse 620ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.hh-character-stats.is-reward-pulsing>[data-hh-stat-target="points"] {
+  animation-delay: 90ms;
+}
+
+.hh-character-stats.is-reward-pulsing>[data-hh-stat-target="scroll"] {
+  animation-delay: 150ms;
+}
+
+@keyframes hh-character-stats-reward-pulse {
+  0% { transform: scale(1); }
+  48% { transform: scale(1.06); }
+  100% { transform: scale(1); }
 }
 
 .hh-character-stat-icon {
@@ -1356,6 +1387,11 @@
     max-width: 62%;
   }
 
+  .hh-adventure-card-trigger {
+    min-height: 40px;
+    height: 40px;
+  }
+
   .hh-character-stats>div {
     width: 100px;
     min-width: 100px;
@@ -1366,6 +1402,31 @@
   .hh-character-stats>div:has(.hh-character-stat-points) {
     width: 150px;
     min-width: 150px;
+  }
+
+  .hh-character-stats[data-stat-count="3"] {
+    width: calc(100vw - var(--hh-character-content-left) - 64px);
+    max-width: calc(100vw - var(--hh-character-content-left) - 64px);
+    gap: 4px;
+  }
+
+  .hh-character-stats[data-stat-count="3"]>div {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 0;
+    min-height: 40px;
+    height: 40px;
+    padding: 0 8px;
+  }
+
+  .hh-character-stats[data-stat-count="3"]>div:has(.hh-character-stat-days-icon) {
+    width: auto;
+    min-width: 0;
+  }
+
+  .hh-character-stats[data-stat-count="3"]>div:has(.hh-character-stat-points) {
+    width: auto;
+    min-width: 0;
   }
 }
 

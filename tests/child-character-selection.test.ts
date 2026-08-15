@@ -1,39 +1,39 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const fileHash = (path: string | URL) => createHash('md5').update(readFileSync(path)).digest('hex');
 
-test('character catalog provides category-based options independent of gender', async () => {
-  const { CHARACTER_CATALOG, getCharacterById, getCharactersForCategory } = await import('../src/features/characters/catalog.ts');
+test('legacy room character catalog and assets are removed', async () => {
+  const root = new URL('..', import.meta.url);
+  assert.equal(existsSync(new URL('../src/features/characters/catalog.ts', import.meta.url)), false);
 
-  assert.equal(CHARACTER_CATALOG.length, 4);
-  assert.equal(getCharactersForCategory('all').length, 4);
-  assert.equal(CHARACTER_CATALOG[0].id, 'pink-catgirl-room');
-  assert.equal(CHARACTER_CATALOG[0].imageUrl, '/images/habithero-catgirl-room.png');
-  assert.equal(CHARACTER_CATALOG[0].desktopImageUrl, '/images/habithero-catgirl-room-desktop.png');
-  assert.equal(getCharacterById('black-catboy-room')?.name, '黑貓男');
-  assert.equal(getCharacterById('black-catboy-room')?.imageUrl, '/images/habithero-black-catboy-room.png');
-  assert.equal(getCharacterById('black-catboy-room')?.desktopImageUrl, '/images/habithero-black-catboy-room-desktop.png');
-  assert.equal(getCharacterById('black-catboy-room')?.accentColor, '#d9d9df');
-  assert.equal(getCharacterById('blue-catboy-room')?.name, '藍貓男');
-  assert.equal(getCharacterById('blue-catboy-room')?.imageUrl, '/images/habithero-blue-catboy-room.png');
-  assert.equal(getCharacterById('blue-catboy-room')?.desktopImageUrl, '/images/habithero-blue-catboy-room-desktop.png');
-  assert.equal(getCharacterById('blue-catboy-room')?.accentColor, '#a8dcff');
-  assert.equal(fileHash(new URL('../public/images/habithero-blue-catboy-room.png', import.meta.url)), '7daef77c30b28ef2386f0a3ea48546a1');
-  assert.equal(fileHash(new URL('../public/images/habithero-blue-catboy-room-desktop.png', import.meta.url)), 'a90ce4a5864829a12d0bb398162273fb');
-  assert.equal(getCharacterById('pink-catgirl-room')?.imageUrl, '/images/habithero-catgirl-room.png');
-  assert.equal(getCharacterById('white-catgirl-room')?.name, '白貓女');
-  assert.equal(getCharacterById('white-catgirl-room')?.imageUrl, '/images/habithero-white-catgirl-room.png');
-  assert.equal(getCharacterById('white-catgirl-room')?.desktopImageUrl, '/images/habithero-white-catgirl-room-desktop.png');
-  assert.equal(getCharacterById('white-catgirl-room')?.accentColor, '#ffffff');
-  assert.ok(fileHash(new URL('../public/images/habithero-white-catgirl-room.png', import.meta.url)).length > 0);
-  assert.ok(fileHash(new URL('../public/images/habithero-white-catgirl-room-desktop.png', import.meta.url)).length > 0);
-  assert.equal(getCharacterById('missing-character'), undefined);
-  assert.equal(new Set(CHARACTER_CATALOG.map(character => character.id)).size, CHARACTER_CATALOG.length);
-  assert.ok(CHARACTER_CATALOG.every(character => ['adventure', 'nature', 'fantasy'].includes(character.category)));
+  const legacyAssets = [
+    'public/images/habithero-catgirl-room.png',
+    'public/images/habithero-catgirl-room-desktop.png',
+    'public/images/habithero-black-catboy-room.png',
+    'public/images/habithero-black-catboy-room-desktop.png',
+    'public/images/habithero-blue-catboy-room.png',
+    'public/images/habithero-blue-catboy-room-desktop.png',
+    'public/images/habithero-white-catgirl-room.png',
+    'public/images/habithero-white-catgirl-room-desktop.png',
+    'public/videos/habithero-black-catboy.mp4',
+    'public/videos/habithero-blue-catboy.mp4',
+    'public/videos/habithero-white-catgirl.mp4',
+    'ios/App/App/public/images/habithero-catgirl-room.png',
+    'ios/App/App/public/images/habithero-catgirl-room-desktop.png',
+    'ios/App/App/public/images/habithero-black-catboy-room.png',
+    'ios/App/App/public/images/habithero-black-catboy-room-desktop.png',
+    'ios/App/App/public/images/habithero-blue-catboy-room.png',
+    'ios/App/App/public/images/habithero-blue-catboy-room-desktop.png',
+    'ios/App/App/public/images/habithero-white-catgirl-room.png',
+    'ios/App/App/public/images/habithero-white-catgirl-room-desktop.png',
+    'ios/App/App/public/videos/habithero-black-catboy.mp4',
+    'ios/App/App/public/videos/habithero-blue-catboy.mp4',
+    'ios/App/App/public/videos/habithero-white-catgirl.mp4',
+  ];
+
+  for (const asset of legacyAssets) assert.equal(existsSync(new URL(asset, root)), false, asset);
 });
 
 test('dashboard hero supports a muted mobile video while keeping the image fallback', () => {
@@ -49,36 +49,55 @@ test('dashboard hero supports a muted mobile video while keeping the image fallb
   assert.match(source, /loop/);
 });
 
-test('parent and child dashboards provide their own complete scene images', () => {
+test('parent dashboard keeps its scene image while child dashboard owns the terrain world', () => {
   const parentSource = read('../src/components/ParentDashboard.tsx');
   const childSource = read('../src/components/ChildDashboard.tsx');
 
   assert.match(parentSource, /sceneImage="\/images\/habithero-parent-living-room\.png"/);
   assert.match(parentSource, /sceneImageDesktop="\/images\/habithero-parent-living-room-desktop\.png"/);
-  assert.match(childSource, /getCharacterById\(activeChild\?\.characterId\)/);
-  assert.match(childSource, /sceneImage=\{activeCharacter\.imageUrl\}/);
-  assert.match(childSource, /sceneImageDesktop=\{activeCharacter\.desktopImageUrl\}/);
-  assert.match(childSource, /mobileSceneVideo=\{activeCharacter\.id === 'pink-catgirl-room' \? '\/videos\/habithero-dashboard\.mp4' : activeCharacter\.id === 'black-catboy-room' \? '\/videos\/habithero-black-catboy\.mp4' : activeCharacter\.id === 'blue-catboy-room' \? '\/videos\/habithero-blue-catboy\.mp4' : activeCharacter\.id === 'white-catgirl-room' \? '\/videos\/habithero-white-catgirl\.mp4' : undefined\}/);
+  assert.match(childSource, /sceneImage=""/);
+  assert.doesNotMatch(childSource, /mobileSceneVideo=/);
+  assert.match(childSource, /TerrainWorldLayer/);
 });
 
-test('family child picker uses each child character scene thumbnail', () => {
+test('dashboard hero no longer resolves legacy character images', () => {
+  const source = read('../src/components/DashboardCharacterHero.tsx');
+
+  assert.doesNotMatch(source, /features\/characters\/catalog/);
+  assert.doesNotMatch(source, /getCharacterByImageUrl/);
+  assert.match(source, /data-theme-color=\{menuVariant\}/);
+});
+
+test('family child picker uses neutral child icons during a world transition', () => {
   const source = read('../src/components/FamilyChildPicker.tsx');
 
-  assert.match(source, /getCharacterById\(child\.characterId\)/);
-  assert.match(source, /character\.imageUrl/);
-  assert.match(source, /<img/);
+  assert.match(source, /<User size=\{20\}/);
+  assert.doesNotMatch(source, /getCharacterById|character\.imageUrl|<img/);
 });
 
-test('new child flow requires gender and character before creation', () => {
+test('new child flow exposes the ten supplied walkable GLB characters', () => {
   const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
+  const catalogSource = read('../src/features/characters/world-character-catalog.ts');
 
   assert.match(source, /newChildGender/);
   assert.match(source, /newChildCharacterId/);
-  assert.match(source, /getCharactersForCategory/);
-  assert.match(source, /CHARACTER_CATEGORIES/);
-  assert.match(source, /hh-character-preview-modal/);
+  assert.match(source, /WORLD_CHARACTER_CATALOG/);
+  assert.match(source, /onNewChildCharacterChange/);
+  assert.match(source, /role="radiogroup" aria-label="冒險人物"/);
+  assert.doesNotMatch(source, /固定使用 3D 人物/);
+  assert.doesNotMatch(source, /getCharactersForCategory|CHARACTER_CATEGORIES|hh-character-preview-modal/);
+  assert.match(catalogSource, /character\.arthur/);
+  assert.match(catalogSource, /character\.elina/);
+  assert.match(catalogSource, /character\.sia/);
+  assert.match(catalogSource, /character\.elio/);
+  assert.match(catalogSource, /character\.moss/);
+  assert.match(catalogSource, /character\.noah/);
+  assert.match(catalogSource, /character\.collette/);
+  assert.match(catalogSource, /character\.violette/);
+  assert.match(catalogSource, /character\.gilt/);
+  assert.match(catalogSource, /character\.lunalia/);
   assert.match(source, /aria-required="true"/);
-  assert.match(source, /disabled=\{[^}]*!selectedGender[^}]*!selectedCharacterId/);
+  assert.match(source, /disabled=\{[^}]*!selectedGender/);
 });
 
 test('new child drawer closes only after the creation request succeeds', () => {
@@ -90,7 +109,7 @@ test('new child drawer closes only after the creation request succeeds', () => {
   assert.match(source, /if \(created\) closeNewChildForm\(\)/);
 });
 
-test('gender and character controls are keyboard and touch accessible', () => {
+test('gender controls are keyboard and touch accessible', () => {
   const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
 
   assert.match(source, /role="radiogroup"/);
@@ -98,8 +117,8 @@ test('gender and character controls are keyboard and touch accessible', () => {
   assert.match(source, /aria-checked=\{selectedGender === gender/);
   assert.match(source, /type="button"/);
   assert.match(source, /hh-gender-option/);
-  assert.match(source, /hh-character-selection-trigger/);
-  assert.match(source, /aria-haspopup="dialog"/);
+  assert.match(source, /hh-world-character-option/);
+  assert.doesNotMatch(source, /hh-character-selection-trigger|aria-haspopup="dialog"/);
 });
 
 test('child account provisioning sends the selected identity to the RPC', () => {

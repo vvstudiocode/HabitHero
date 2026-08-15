@@ -23,5 +23,14 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": ["supabase/functions", "backups"]
+  "exclude": [
+    "supabase/functions",
+    "backups",
+    "dist",
+    "build",
+    "android/app/build",
+    "android/app/src/main/assets",
+    "ios/App/App/public",
+    "ios/DerivedData"
+  ]
 }

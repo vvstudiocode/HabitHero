@@ -9,8 +9,22 @@ interface RealtimeOptions {
   onReconnect: () => void;
 }
 
-const familyTables = ['family_members', 'child_profiles', 'task_templates', 'tasks', 'rewards', 'wishlist_items', 'reward_redemptions', 'point_ledger'] as const;
-const childTables = ['profiles', 'child_profiles', 'tasks', 'rewards', 'wishlist_items', 'reward_redemptions', 'point_ledger'] as const;
+const gameTables = [
+  'family_game_item_prices',
+  'child_game_wallets',
+  'child_inventory_items',
+  'child_game_loadouts',
+  'child_world_states',
+  'child_world_entities',
+] as const;
+const familyScopedTables = new Set([
+  'family_members',
+  'child_profiles',
+  'task_templates',
+  'family_game_item_prices',
+]);
+const familyTables = ['family_members', 'child_profiles', 'task_templates', 'tasks', 'rewards', 'wishlist_items', 'reward_redemptions', 'point_ledger', ...gameTables] as const;
+const childTables = ['profiles', 'child_profiles', 'tasks', 'rewards', 'wishlist_items', 'reward_redemptions', 'point_ledger', ...gameTables] as const;
 
 export function subscribeToAppData(client: SupabaseClient, options: RealtimeOptions) {
   const tables = options.role === 'parent' ? familyTables : childTables;
@@ -19,7 +33,7 @@ export function subscribeToAppData(client: SupabaseClient, options: RealtimeOpti
   for (const table of tables) {
     const filter = table === 'profiles'
       ? `id=eq.${options.userId}`
-      : table === 'family_members' || table === 'child_profiles' || table === 'task_templates'
+      : familyScopedTables.has(table)
       ? `family_id=eq.${options.familyId}`
       : options.role === 'child' ? `child_profile_id=eq.${options.childProfileId}` : `family_id=eq.${options.familyId}`;
     channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, options.onChange);

@@ -45,7 +45,7 @@ export function ParentConsentModal({ onClose, onAgree, onOpenPrivacyPolicy, canC
           <div className="flex items-center gap-3">
             <div className="hh-consent-modal-icon" aria-hidden="true"><ShieldCheck size={24} /></div>
             <div>
-              <p className="hh-document-kicker">HabitHero · Family safety</p>
+              <p className="hh-document-kicker">習慣冒險島 · 家庭安全</p>
               <h2 id="parent-consent-modal-title">兒童與家長同意</h2>
             </div>
           </div>
@@ -62,7 +62,7 @@ export function ParentConsentModal({ onClose, onAgree, onOpenPrivacyPolicy, canC
           </section>
           <section>
             <h3>隱私政策</h3>
-            <p>HabitHero 會處理家長 Email、孩子顯示名稱、任務、心得、心情與獎勵紀錄，用於家庭同步、任務管理、帳號安全與資料刪除。</p>
+            <p>習慣冒險島會處理家長 Email、孩子顯示名稱、任務、心得、心情與獎勵紀錄，用於家庭同步、任務管理、帳號安全與資料刪除。</p>
             <button type="button" className="hh-document-link" onClick={onOpenPrivacyPolicy}>
               查看完整隱私政策 <ArrowRight size={16} aria-hidden="true" />
             </button>

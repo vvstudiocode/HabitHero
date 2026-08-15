@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { Baby, LockKeyhole, User } from 'lucide-react';
 import type { Child } from '../types';
 import { dismissWithAnimation } from '../lib/utils';
-import { getCharacterById } from '../features/characters/catalog';
 
 interface FamilyChildPickerProps {
   children: Child[];
@@ -28,10 +27,7 @@ export function FamilyChildPicker({ children, onSelect, onParentMode }: FamilyCh
         <div className="mt-5 space-y-2">
           {children.map((child) => (
             <button key={child.id} type="button" onClick={() => dismiss(() => onSelect(child.id))} className="hh-family-picker-child-option flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left font-black transition-colors">
-              {(() => {
-                const character = getCharacterById(child.characterId);
-                return character ? <img className="hh-family-picker-character" src={character.imageUrl} alt="" aria-hidden="true" /> : <User size={20} />;
-              })()}
+              <User size={20} aria-hidden="true" />
               <span>{child.name}的任務</span>
             </button>
           ))}

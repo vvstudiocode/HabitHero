@@ -11,9 +11,11 @@ test('task notification sender supports creation, submission, and review events'
   assert.match(source, /event === 'created' && origin === 'child_proposed'/);
   assert.match(source, /event === 'created' && origin === 'child_proposed'[\s\S]{0,300}child\.profile_id !== userData\.user\.id && !await isParent\(\)/);
   assert.match(source, /event === 'submitted'/);
-  assert.match(source, /title = 'HabitHero 習慣小英雄'/);
+  assert.equal(source.match(/title = '習慣冒險島'/g)?.length, 5);
   assert.match(source, /event === 'reviewed'/);
   assert.match(source, /body\.event/);
+  assert.match(source, /body\.scheduleId/);
+  assert.match(source, /daily adventure/);
 });
 
 test('APNs sender selects the Team ID for the active environment', () => {
@@ -39,4 +41,14 @@ test('task notification requests carry an authenticated session header', () => {
 
   assert.match(source, /supabase\.auth\.getSession\(\)/);
   assert.match(source, /Authorization: `Bearer \$\{accessToken\}`/);
+  assert.match(source, /notifyAdventureCreated/);
+});
+
+test('notification defaults are enabled without overwriting an explicit opt-out', () => {
+  const migration = read('../supabase/migrations/20260815080000_restore_default_push_notifications.sql');
+
+  assert.match(migration, /alter table public\.profiles[\s\S]*alter column notifications_enabled set default true/i);
+  assert.match(migration, /update public\.profiles[\s\S]*set notifications_enabled = true/i);
+  assert.match(migration, /not exists \([\s\S]*from public\.push_devices/i);
+  assert.match(migration, /where notifications_enabled = false/i);
 });

@@ -14,7 +14,7 @@ export function ParentPrivacyPolicyPage({ onClose }: ParentPrivacyPolicyPageProp
           <ArrowLeft size={22} aria-hidden="true" />
           <span>返回同意視窗</span>
         </button>
-        <span className="hh-document-eyebrow">HabitHero · Privacy</span>
+        <span className="hh-document-eyebrow">習慣冒險島 · 隱私政策</span>
         <div className="hh-document-header-spacer" aria-hidden="true" />
       </header>
 
@@ -28,7 +28,7 @@ export function ParentPrivacyPolicyPage({ onClose }: ParentPrivacyPolicyPageProp
         </div>
 
         <article className="hh-document-article">
-          <p className="hh-document-lead">這份政策說明 HabitHero 如何處理家庭與兒童資料。版本日期：{PRIVACY_POLICY_VERSION}。</p>
+          <p className="hh-document-lead">這份政策說明習慣冒險島如何處理家庭與兒童資料。版本日期：{PRIVACY_POLICY_VERSION}。</p>
           {privacyPolicySections.map((section) => (
             <section key={section.title}>
               <h2>{section.title}</h2>

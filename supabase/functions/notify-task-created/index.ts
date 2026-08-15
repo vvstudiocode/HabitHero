@@ -60,7 +60,7 @@ async function createApnsToken(environment: 'sandbox' | 'production') {
   return `${unsigned}.${base64Url(new Uint8Array(signature))}`;
 }
 
-async function sendApns(token: string, title: string, body: string, taskId: string) {
+async function sendApns(token: string, title: string, body: string, notificationId: string) {
   const bundleId = Deno.env.get('APNS_BUNDLE_ID') ?? 'com.vvstudiocode.habithero';
   const environment = Deno.env.get('APNS_ENVIRONMENT') === 'production' ? 'production' : 'sandbox';
   const jwt = await createApnsToken(environment);
@@ -78,7 +78,7 @@ async function sendApns(token: string, title: string, body: string, taskId: stri
     },
     body: JSON.stringify({
       aps: { alert: { title, body }, sound: 'default' },
-      taskId,
+      taskId: notificationId,
     }),
   });
   return { configured: true, status: response.status };
@@ -95,10 +95,15 @@ Deno.serve(async request => {
   if (!supabaseUrl || !serviceRoleKey || !publishableKey || !authorization) return json({ error: 'Authentication is required' }, 401);
 
   try {
-    const body = await request.json() as { taskId?: string; event?: TaskNotificationEvent };
-    if (!body.taskId || !/^[0-9a-f-]{36}$/i.test(body.taskId)) return json({ error: 'Task id is invalid' }, 400);
+    const body = await request.json() as { taskId?: string; scheduleId?: string; event?: TaskNotificationEvent };
+    const hasTaskId = Boolean(body.taskId);
+    const hasScheduleId = Boolean(body.scheduleId);
+    if (hasTaskId === hasScheduleId) return json({ error: 'Provide exactly one task id or schedule id' }, 400);
+    const referenceId = body.taskId ?? body.scheduleId ?? '';
+    if (!/^[0-9a-f-]{36}$/i.test(referenceId)) return json({ error: 'Notification reference id is invalid' }, 400);
     const event = body.event ?? 'created';
     if (!['created', 'submitted', 'reviewed'].includes(event)) return json({ error: 'Notification event is invalid' }, 400);
+    if (hasScheduleId && event !== 'created') return json({ error: 'Schedules only support created notifications' }, 400);
 
     const userClient = createClient(supabaseUrl, publishableKey, {
       global: { headers: { Authorization: authorization } },
@@ -110,16 +115,22 @@ Deno.serve(async request => {
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) return json({ error: 'Authentication is required' }, 401);
 
-    const { data: task, error: taskError } = await adminClient
-      .from('tasks')
-      .select('id, family_id, child_profile_id, name, origin, status, points, approved_points')
-      .eq('id', body.taskId)
-      .single();
+    const { data: task, error: taskError } = hasTaskId
+      ? await adminClient
+        .from('tasks')
+        .select('id, family_id, child_profile_id, name, origin, status, points, approved_points')
+        .eq('id', referenceId)
+        .single()
+      : await adminClient
+        .from('task_schedules')
+        .select('id, family_id, child_profile_id, name, points')
+        .eq('id', referenceId)
+        .single();
     if (taskError || !task) return json({ error: 'Task not found' }, 404);
 
-    const origin = task.origin as TaskOrigin;
+    const origin = (hasTaskId ? task.origin : 'parent_assigned') as TaskOrigin;
     let targetProfileIds: string[] = [];
-    let title = 'HabitHero';
+    let title = '習慣冒險島';
     let message = `有新的任務：「${task.name}」`;
     const { data: child } = await adminClient
       .from('child_profiles')
@@ -149,19 +160,24 @@ Deno.serve(async request => {
       return Boolean(parentMember);
     };
 
-    if (event === 'created' && origin === 'child_proposed') {
+    if (hasScheduleId) {
+      if (!await isParent()) return json({ error: 'Only a parent can send a daily adventure notification' }, 403);
+      targetProfileIds = [child.profile_id];
+      title = '習慣冒險島';
+      message = `家長新增了每日冒險：「${task.name}」`;
+    } else if (event === 'created' && origin === 'child_proposed') {
       // The proposal RPC permits a family parent to create a proposal while
       // viewing a child account. Keep this authorization aligned with it.
       if (child.profile_id !== userData.user.id && !await isParent()) {
         return json({ error: 'Only the child or a family parent can create this task' }, 403);
       }
       targetProfileIds = await getParents();
-      title = '孩子建立了新冒險';
+      title = '習慣冒險島';
       message = `${child.display_name} 建立了「${task.name}」，完成後會請你確認點數。`;
     } else if (event === 'created' && (origin === 'parent_assigned' || origin === 'parent_suggested' || origin === 'system_template')) {
       if (!await isParent()) return json({ error: 'Only a parent can send this task notification' }, 403);
       targetProfileIds = [child.profile_id];
-      title = '有新的任務';
+      title = '習慣冒險島';
       message = `家長新增了任務：「${task.name}」`;
     } else if (event === 'submitted') {
       // The completion RPC permits either the child or a family parent to
@@ -171,7 +187,7 @@ Deno.serve(async request => {
         return json({ error: 'Only the child or a family parent can send a completion notification' }, 403);
       }
       targetProfileIds = await getParents();
-      title = 'HabitHero 習慣小英雄';
+      title = '習慣冒險島';
       message = `${child.display_name} 完成了「${task.name}」，請確認完成內容。`;
     } else if (event === 'reviewed') {
       if (!await isParent()) return json({ error: 'Only a parent can send a review notification' }, 403);
@@ -200,7 +216,7 @@ Deno.serve(async request => {
     let sent = 0;
     let configured = false;
     for (const device of devices ?? []) {
-      const result = await sendApns(device.token, title, message, task.id);
+      const result = await sendApns(device.token, title, message, referenceId);
       configured = result.configured;
       if (result.status >= 200 && result.status < 300) sent += 1;
       if (result.status === 400 || result.status === 410) {

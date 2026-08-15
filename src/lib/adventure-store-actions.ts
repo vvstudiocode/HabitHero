@@ -30,6 +30,7 @@ export interface AdventureStoreActionDependencies {
   isOnline: () => boolean;
   setError: (message: string | null) => void;
   notifyTask?: (taskId: string, event: TaskNotificationEvent) => Promise<void>;
+  notifyAdventure?: (scheduleId: string) => Promise<void>;
 }
 
 const patchTask = (
@@ -112,10 +113,16 @@ export function createAdventureStoreActions({
   isOnline,
   setError,
   notifyTask,
+  notifyAdventure,
 }: AdventureStoreActionDependencies) {
   const fireTaskNotification = (taskId: string, event: TaskNotificationEvent) => {
     if (!notifyTask) return;
     void notifyTask(taskId, event).catch(() => undefined);
+  };
+
+  const fireAdventureNotification = (scheduleId: string) => {
+    if (!notifyAdventure) return;
+    void notifyAdventure(scheduleId).catch(() => undefined);
   };
 
   const optimisticCompletion = (
@@ -255,7 +262,7 @@ export function createAdventureStoreActions({
       fireTaskNotification(taskId, 'reviewed');
     },
 
-    createAdventureSchedule: (input: AdventureScheduleInput) => {
+    createAdventureSchedule: async (input: AdventureScheduleInput) => {
       const now = new Date().toISOString();
       const occurrenceDate = getDateKeyInTimezone(new Date(), input.timezone ?? 'Asia/Taipei');
       const createsToday = input.activeFrom <= occurrenceDate
@@ -283,8 +290,8 @@ export function createAdventureStoreActions({
         createdAt: now,
         updatedAt: now,
       }));
-      return mutate(
-        (repository, id) => repository.createAdventureSchedule(id, input).then(() => undefined),
+      const scheduleIds = await mutate(
+        (repository, id) => repository.createAdventureSchedule(id, input),
         (previous) => ({
           ...previous,
           taskSchedules: [...(previous.taskSchedules ?? []), ...schedules],
@@ -321,6 +328,7 @@ export function createAdventureStoreActions({
           }),
         }),
       );
+      scheduleIds.forEach(fireAdventureNotification);
     },
 
     updateAdventureSchedule: async (scheduleId: string, updates: AdventureScheduleUpdateInput) => {
@@ -360,9 +368,9 @@ export function createAdventureStoreActions({
         }),
       ),
 
-    createGeneralAdventure: (input: GeneralAdventureInput) =>
-      mutate(
-        (repository, id) => repository.createGeneralAdventure(id, input).then(() => undefined),
+    createGeneralAdventure: async (input: GeneralAdventureInput) => {
+      const taskIds = await mutate(
+        (repository, id) => repository.createGeneralAdventure(id, input),
         (previous) => {
           const now = new Date().toISOString();
           return {
@@ -393,7 +401,9 @@ export function createAdventureStoreActions({
             }),
           };
         },
-      ),
+      );
+      taskIds.forEach(taskId => fireTaskNotification(taskId, 'created'));
+    },
 
     updateGeneralAdventureTitle: (childId: string, title: string) =>
       mutate(

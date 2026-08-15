@@ -1,0 +1,8 @@
+- main "HabitHero 第三人稱草地場景" [ref=f2e2]:
+  - region "可操作的 HabitHero 第三人稱草地場景" [ref=f2e3]:
+    - generic "第三人稱 3D 草地場景，可使用 WASD 或方向鍵移動角色位置" [ref=f2e4]
+    - generic:
+      - generic [ref=f2e5]:
+        - status [ref=f2e6]: 場景已就緒
+        - button "重置相機" [ref=f2e7] [cursor=pointer]
+      - generic: WASD 移動角色位置拖曳旋轉視角 · 滾輪縮放

@@ -1,10 +1,15 @@
 import { Capacitor } from '@capacitor/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PushNotifications, type ActionPerformed, type PushNotificationSchema } from '@capacitor/push-notifications';
-import { hasEnabledPushDevice } from './notification-preferences';
 import type { NotificationPermission } from './notification-preferences';
 
 export type TaskNotificationEvent = 'created' | 'submitted' | 'reviewed';
+
+type NotificationRequest = {
+  taskId?: string;
+  scheduleId?: string;
+  event: TaskNotificationEvent;
+};
 
 export interface PushDeviceContext {
   supabase: SupabaseClient;
@@ -87,14 +92,15 @@ export async function requestAndRegisterIosPush(context: PushDeviceContext) {
 
 export async function readNotificationPreference(supabase: SupabaseClient, profileId: string) {
   const { data, error } = await supabase
-    .from('push_devices')
-    .select('enabled')
-    .eq('profile_id', profileId)
-    .eq('platform', 'ios')
-    .eq('enabled', true)
-    .limit(1);
+    .from('profiles')
+    .select('notifications_enabled')
+    .eq('id', profileId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
-  return hasEnabledPushDevice(data);
+  // Missing profile rows are created during the app-data bootstrap. Treat a
+  // transient gap as the default-on state so an app update cannot turn push
+  // notifications off merely because its device row has not been recreated.
+  return data?.notifications_enabled !== false;
 }
 
 export async function setNotificationPreference(supabase: SupabaseClient, profileId: string, enabled: boolean) {
@@ -114,17 +120,26 @@ export async function disablePushDevicesForProfile(supabase: SupabaseClient, pro
   if (error) throw new Error(error.message);
 }
 
-export async function notifyTaskEvent(supabase: SupabaseClient, taskId: string, event: TaskNotificationEvent) {
-  if (!taskId) return;
+async function invokeNotification(supabase: SupabaseClient, body: NotificationRequest) {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) throw new Error(sessionError.message);
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error('登入狀態已失效，無法發送通知。');
   const { error } = await supabase.functions.invoke('notify-task-created', {
-    body: { taskId, event },
+    body,
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (error) throw new Error(error.message);
+}
+
+export async function notifyTaskEvent(supabase: SupabaseClient, taskId: string, event: TaskNotificationEvent) {
+  if (!taskId) return;
+  await invokeNotification(supabase, { taskId, event });
+}
+
+export async function notifyAdventureCreated(supabase: SupabaseClient, scheduleId: string) {
+  if (!scheduleId) return;
+  await invokeNotification(supabase, { scheduleId, event: 'created' });
 }
 
 export function notifyTaskCreated(supabase: SupabaseClient, taskId: string) {

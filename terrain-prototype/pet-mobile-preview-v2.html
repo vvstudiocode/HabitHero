@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>習慣冒險島 · 手機上架圖預覽</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; min-height: 100%; margin: 0; background: #123d2c; }
+      body { display: grid; place-items: center; padding: 24px; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .preview { width: min(540px, 100%); }
+      .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; color: #e8f7e8; font-size: 13px; }
+      .toolbar a { color: #d7f5df; text-decoration: none; }
+      .toolbar a:hover { text-decoration: underline; }
+      .frame { overflow: hidden; border: 1px solid rgba(255,255,255,.35); border-radius: 28px; box-shadow: 0 24px 60px rgba(0,0,0,.35); background: #78bdd8; }
+      img { display: block; width: 100%; height: auto; }
+      .note { margin: 12px 0 0; color: #b9dbc4; font-size: 12px; line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <main class="preview">
+      <div class="toolbar"><span id="mode-label">寵物集合版 · 手機試稿</span><a id="switch-link" href="?mode=characters">查看角色版 →</a></div>
+      <div class="frame"><img id="preview-image" alt="習慣冒險島手機上架圖預覽" /></div>
+      <p class="note">這是上架圖構圖預覽頁。使用 <code>?mode=characters</code> 可切換角色版。</p>
+    </main>
+    <script>
+      // Keep the preview self-contained so it works both from a local file:// URL
+      // and when served by the project preview server.
+      const base = './';
+      const isCharacter = new URLSearchParams(location.search).get('mode') === 'characters';
+      const image = document.querySelector('#preview-image');
+      const label = document.querySelector('#mode-label');
+      const link = document.querySelector('#switch-link');
+      if (isCharacter) {
+        image.src = `${base}character-collection-mobile-v1.png`;
+        image.alt = '習慣冒險島角色集合手機版';
+        label.textContent = '角色集合版 · 手機試稿';
+        link.href = '?mode=pets';
+        link.textContent = '查看寵物版 →';
+      } else {
+        image.src = `${base}pet-collection-mobile-v3.png`;
+      }
+    </script>
+  </body>
+</html>

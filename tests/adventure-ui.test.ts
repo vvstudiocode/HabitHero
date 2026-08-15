@@ -303,8 +303,8 @@ test('child adventure UI is composed from reusable accessible components', () =>
   assert.match(overlayStyles, /\.hh-adventure-detail-overlay/);
   assert.match(overlayStyles, /hh-adventure-detail-fade-in[^;]*backwards/);
   assert.match(overlayStyles, /\.hh-adventure-detail-overlay\.is-leaving\s*\{[^}]*animation:\s*none/s);
-  assert.match(proposal, /建立並開始/);
-  assert.match(proposal, /完成後再由爸媽確認點數/);
+  assert.match(proposal, /建立冒險/);
+  assert.match(proposal, /回到一般冒險項目，想開始時再點開/);
   assert.doesNotMatch(proposal, /送給爸媽確認/);
   assert.doesNotMatch(dashboard + board, /再完成一個冒險，房間就會有變化/);
 });

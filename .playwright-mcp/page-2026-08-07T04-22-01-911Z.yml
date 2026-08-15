@@ -1,0 +1,24 @@
+- generic [ref=f14e1]:
+  - generic "HabitHero 王國邊境 3D 場景" [ref=f14e2]
+  - generic:
+    - generic:
+      - generic:
+        - generic: HabitHero · Adventure Field
+        - heading "王國邊境" [level=1]
+        - paragraph: 穿過晨霧，從城門一路探索到河畔營地。
+      - generic [ref=f14e3]:
+        - button "重設第三人稱鏡頭" [ref=f14e4] [cursor=pointer]:
+          - generic [ref=f14e14]: 重設鏡頭
+        - button "暫停場景" [ref=f14e9] [cursor=pointer]:
+          - generic [ref=f14e15]: 暫停
+    - generic:
+      - generic "操作提示":
+        - generic:
+          - generic: W
+          - generic: A
+          - generic: S
+          - generic: D
+        - generic: 移動
+        - generic: 拖曳畫面旋轉鏡頭
+      - generic: 探索模式 · 弓箭手已就緒
+    - status: 弓箭手已就位，開始探索吧

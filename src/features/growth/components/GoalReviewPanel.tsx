@@ -1,5 +1,6 @@
-import { Fragment, useState } from 'react';
-import { CheckCircle2, RotateCcw } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { CheckCircle2, RotateCcw, X } from 'lucide-react';
 import { TASK_CATEGORIES } from '../constants';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTaskWithChild, TaskCategory } from '../types';
 import { CategoryBadge } from './CategoryBadge';
@@ -22,6 +23,23 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
   const [resolvedCompletionIds, setResolvedCompletionIds] = useState<Set<string>>(() => new Set());
   const visibleProposedTasks = proposedTasks.filter((task) => !resolvedProposalIds.has(task.id));
   const visiblePendingTasks = pendingTasks.filter((task) => !resolvedCompletionIds.has(task.id));
+  const reviewingTask = visiblePendingTasks.find((task) => task.id === reviewingTaskId) ?? null;
+  const reviewCloseButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!reviewingTask) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !loading) setReviewingTaskId(null);
+    };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    reviewCloseButtonRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [loading, reviewingTask]);
 
   return (
     <div className="space-y-6">
@@ -69,19 +87,6 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
         </div>
         {visiblePendingTasks.map((task) => (
           <Fragment key={task.id}>
-            {reviewingTaskId === task.id ? (
-              <ParentFeedbackForm
-              task={task}
-              childName={task.childName}
-              loading={loading}
-              onCancel={() => setReviewingTaskId(null)}
-              onSubmit={async (input) => {
-                await onReviewCompletion(task.childId, task.id, input);
-                setResolvedCompletionIds((ids) => new Set(ids).add(task.id));
-                setReviewingTaskId(null);
-              }}
-            />
-          ) : (
             <GoalCard
               task={task}
               childName={task.childName}
@@ -91,11 +96,38 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
                 </button>
               )}
             />
-          )}
           </Fragment>
         ))}
         {visiblePendingTasks.length === 0 && <EmptyState text="沒有等待審核的完成心得。" />}
       </section>
+
+      {reviewingTask && createPortal((
+        <div className="hh-review-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="review-dialog-title">
+          <button
+            type="button"
+            className="hh-review-dialog-backdrop"
+            aria-label="關閉審核視窗"
+            onClick={() => { if (!loading) setReviewingTaskId(null); }}
+          />
+          <section className="hh-review-dialog-panel">
+            <button ref={reviewCloseButtonRef} type="button" className="hh-review-dialog-close" aria-label="關閉審核視窗" onClick={() => setReviewingTaskId(null)} disabled={loading}>
+              <X size={20} />
+            </button>
+            <div id="review-dialog-title" className="sr-only">審核 {reviewingTask.name}</div>
+            <ParentFeedbackForm
+              task={reviewingTask}
+              childName={reviewingTask.childName}
+              loading={loading}
+              onCancel={() => setReviewingTaskId(null)}
+              onSubmit={async (input) => {
+                await onReviewCompletion(reviewingTask.childId, reviewingTask.id, input);
+                setResolvedCompletionIds((ids) => new Set(ids).add(reviewingTask.id));
+                setReviewingTaskId(null);
+              }}
+            />
+          </section>
+        </div>
+      ), document.body)}
     </div>
   );
 }
