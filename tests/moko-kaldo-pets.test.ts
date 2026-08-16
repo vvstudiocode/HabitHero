@@ -49,7 +49,7 @@ test('ships Moko and Kaldo as compact animated pet shop assets', async () => {
 test('uses canonical local model paths for Moko and Kaldo', () => {
   for (const pet of suppliedPets) {
     assert.equal(
-      getPetModelUrl({ assetKey: pet.key, metadata: {} }, '/assets/starlight-sprout-pet.glb'),
+      getPetModelUrl({ assetKey: pet.key, metadata: {} }),
       `/assets/pets/${pet.stem}.glb`,
     );
   }

@@ -63,10 +63,10 @@ describe('child game panel decoration editing', () => {
     assert.match(childGamePanelSource, /onPurchase=\{kind === 'shop' \? handlePreviewPurchase : undefined\}/);
   });
 
-  it('keeps direct inventory decoration placement inside catalog bounds', () => {
-    assert.match(childGamePanelSource, /decorationDrafts\[newDraftKey\] \?\? createDecorationPlacementDraft\(item\)/);
+  it('starts every new inventory decoration in the world placement mode', () => {
     assert.match(childGamePanelSource, /isDecorationPlacementValid\(draft, item,/);
-    assert.match(childGamePanelSource, /const newDraftValid = isDecorationDraftValid\(inventory\.id, newDraft\)/);
+    assert.match(childGamePanelSource, /closePreview\(\);\s*onStartDecorationPlacement\(inventory\.id, item\.id\)/);
+    assert.doesNotMatch(childGamePanelSource, /void placeDecoration\(inventory\.id, newDraft\)/);
   });
 
   it('closes the shop item lightbox before starting the purchase placement flow', () => {
@@ -87,13 +87,13 @@ describe('child game panel decoration editing', () => {
     assert.match(inventorySection, /openInventoryPreview/);
     assert.match(childGamePanelSource, /actionContent=\{previewInventoryActions\}/);
     assert.match(childGamePanelSource, /onEquipCharacter/);
-    assert.match(childGamePanelSource, /onPlaceDecoration/);
     assert.match(childGamePanelSource, /onStartDecorationPlacement/);
-    assert.match(childGamePanelSource, /entities\.length === 0/);
+    assert.match(childGamePanelSource, /放置\{entities\.length > 0 \? '一份' : ''\}/);
   });
 
   it('moves the wallet balance to the shared child modal bar and keeps layout controls', () => {
-    assert.match(childGamePanelSource, /hh-game-wallet-row[\s\S]*GameCatalogLayoutControls/);
+    assert.match(childGamePanelSource, /hh-game-panel-title-row[\s\S]*GameCatalogLayoutControls/);
+    assert.doesNotMatch(childGamePanelSource, /hh-game-wallet-row--controls-only/);
     assert.doesNotMatch(childGamePanelSource, /aria-label=\{`目前有 \$\{gameData\.walletBalance\} 張卷軸`\}/);
     assert.doesNotMatch(childGamePanelSource, /Coins size=\{20\}/);
     assert.match(childDashboardSource, /heroFeature === 'inventory' \|\| heroFeature === 'shop'/);
@@ -104,6 +104,23 @@ describe('child game panel decoration editing', () => {
     assert.match(childGamePanelSource, /hh-game-lightbox-pet-rename-row/);
     assert.doesNotMatch(childGamePanelSource, /hh-game-inventory-heading/);
     assert.doesNotMatch(childGamePanelSource, /用卷軸交換/);
+  });
+
+  it('starts the child shop in the four-column layout', () => {
+    assert.match(childGamePanelSource, /const \[inventoryColumns, setInventoryColumns\] = useState<GameCatalogLayoutColumns>\(4\)/);
+    assert.match(childGamePanelSource, /const \[shopColumns, setShopColumns\] = useState<GameCatalogLayoutColumns>\(4\)/);
+    assert.match(childGamePanelSource, /hh-game-catalog-grid hh-game-catalog-grid--\$\{shopColumns\}/);
+  });
+
+  it('keeps the backpack layout control on the same title row', () => {
+    const titleRow = childGamePanelSource.match(/className="hh-game-panel-title-row"[\s\S]*?<\/div>/)?.[0] ?? '';
+    assert.match(titleRow, /<h2 id="hh-game-panel-title">\{title\}<\/h2>/);
+    assert.match(titleRow, /GameCatalogLayoutControls columns=\{inventoryColumns\}/);
+  });
+
+  it('removes the redundant adventure-world eyebrow', () => {
+    assert.doesNotMatch(childGamePanelSource, /hh-game-panel-eyebrow|冒險世界/);
+    assert.doesNotMatch(childGamePanelSource, /Compass/);
   });
 
   it('keeps every active entity for a stackable inventory item addressable by entity id', () => {
@@ -220,6 +237,27 @@ describe('child game panel decoration editing', () => {
     assert.match(terrainWorldLayerSource, /重新擺放/);
     assert.match(runtimeSource, /onDecorationSelect/);
     assert.match(runtimeSource, /decorationRaycaster/);
+  });
+
+  it('offers reposition and collect actions for the selected world decoration', () => {
+    assert.match(terrainWorldLayerSource, /onCollectDecoration/);
+    assert.match(terrainWorldLayerSource, /aria-label=\{`收回\$\{selectedItem\.name\}`\}/);
+    assert.match(terrainWorldLayerSource, /hh-world-decoration-actions/);
+    const terrainLayerUsage = childDashboardSource.match(/<TerrainWorldLayer[\s\S]*?\/>/)?.[0] ?? '';
+    assert.match(terrainLayerUsage, /onCollectDecoration=\{collectSelectedDecoration\}/);
+    assert.match(childDashboardSource, /removeWorldEntity\(activeChild\.id/);
+  });
+
+  it('dismisses the selected-decoration actions when another control receives input', () => {
+    assert.match(terrainWorldLayerSource, /document\.addEventListener\('pointerdown', dismissDecorationSelection\)/);
+    assert.match(terrainWorldLayerSource, /document\.addEventListener\('focusin', dismissDecorationSelection\)/);
+  });
+
+  it('keeps selected-decoration actions translucent, crisp, and monochrome', () => {
+    assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?color:\s*#202124/);
+    assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?background:\s*rgb\(255 255 255 \/ 84%\)/);
+    assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?backdrop-filter:\s*none/);
+    assert.match(worldControlsSource, /\.hh-world-decoration-action:hover,[\s\S]*?background:\s*rgb\(255 255 255 \/ 94%\)/);
   });
 
   it('uses the 0.1 minimum size and optimistic placement state', () => {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import type { GameCatalogItem, GameItemType } from '../contracts';
+import { isLocalGameItemShopSupported } from '../game-content-assets';
 import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 
@@ -30,13 +31,13 @@ function isValidPrice(value: string) {
 
 export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave, onReset }: ParentGamePricePanelProps) {
   const items = useMemo(
-    () => catalog.filter((item) => item.isActive && !item.isStarter).sort((a, b) => a.sortOrder - b.sortOrder),
+    () => catalog.filter((item) => item.isActive && !item.isStarter && isLocalGameItemShopSupported(item)).sort((a, b) => a.sortOrder - b.sortOrder),
     [catalog],
   );
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [activeType, setActiveType] = useState<GameItemType>('character');
   const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
-  const [layoutColumns, setLayoutColumns] = useState<GameCatalogLayoutColumns>(2);
+  const [layoutColumns, setLayoutColumns] = useState<GameCatalogLayoutColumns>(4);
   const [editingPrices, setEditingPrices] = useState(false);
   const [savingDrafts, setSavingDrafts] = useState(false);
   const [layoutNotice, setLayoutNotice] = useState<{ id: number; message: string } | null>(null);
@@ -149,8 +150,14 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
 
   return (
     <section className="hh-world-price-panel space-y-3" aria-labelledby="game-price-heading">
-      <div>
+      <div className="hh-game-store-heading">
         <h2 id="game-price-heading" className="text-xl font-black text-gray-900">商店</h2>
+        {catalog.length > 0 && <div className="hh-game-store-heading-actions">
+          <GameCatalogLayoutControls columns={layoutColumns} onChange={handleLayoutChange} />
+          <button type="button" className="hh-game-action-button hh-game-action-button--primary hh-game-price-edit-button" aria-pressed={editingPrices} onClick={toggleEditingPrices}>
+            {editingPrices ? '完成編輯' : '編輯價格'}
+          </button>
+        </div>}
       </div>
       {catalog.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-700" role="status">
@@ -159,12 +166,6 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
         </div>
       ) : (
         <>
-          <div className="hh-game-store-toolbar hh-game-store-toolbar--parent">
-            <GameCatalogLayoutControls columns={layoutColumns} onChange={handleLayoutChange} />
-            <button type="button" className="hh-game-action-button hh-game-action-button--primary hh-game-price-edit-button" aria-pressed={editingPrices} onClick={toggleEditingPrices}>
-              {editingPrices ? '完成編輯' : '編輯價格'}
-            </button>
-          </div>
           {layoutNotice && <div key={layoutNotice.id} className="hh-game-layout-notice" role="status">{layoutNotice.message}</div>}
           <div className="hh-game-tabs" role="tablist" aria-label="商店分類">
             {(['character', 'pet', 'decoration'] as const).map((type) => (

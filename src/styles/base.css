@@ -115,6 +115,10 @@
   scroll-padding-bottom: 160px;
 }
 
+.hh-form-modal-panel.hh-point-ledger-modal-panel {
+  max-height: calc(100dvh - 32px);
+}
+
 .hh-form-modal-panel.hh-modal-exit,
 .hh-consent-modal-panel.hh-modal-exit,
 .hh-parent-confirm-panel.hh-modal-exit,

@@ -91,24 +91,34 @@
   transform: translate(-50%, -100%);
 }
 
+.hh-world-decoration-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
 .hh-world-decoration-action {
   min-height: 44px;
   padding: 8px 14px;
-  color: #2f644f;
+  color: #202124;
   font-size: 12px;
   font-weight: 900;
   white-space: nowrap;
-  background: rgb(255 253 241 / 96%);
-  border: 1px solid rgb(255 255 255 / 80%);
+  background: rgb(255 255 255 / 84%);
+  border: 1px solid rgb(255 255 255 / 72%);
   border-radius: 999px;
-  box-shadow: 0 10px 22px rgb(35 78 59 / 24%);
+  box-shadow: 0 8px 16px rgb(32 33 36 / 18%);
   pointer-events: auto;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   transition: transform 160ms ease, background 160ms ease;
 }
 
 .hh-world-decoration-action:hover,
 .hh-world-decoration-action:focus-visible {
-  background: #d8ebcb;
+  color: #202124;
+  background: rgb(255 255 255 / 94%);
 }
 
 .hh-world-decoration-action:active {

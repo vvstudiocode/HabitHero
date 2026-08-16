@@ -60,8 +60,8 @@ body,
   filter: none !important;
 }
 
-.hh-sprite-theme header:not(.hh-adventure-detail-header),
-.hh-sprite-theme .hh-dashboard-screen header:not(.hh-adventure-detail-header),
+.hh-sprite-theme header:not(.hh-adventure-detail-header):not(.hh-document-header),
+.hh-sprite-theme .hh-dashboard-screen header:not(.hh-adventure-detail-header):not(.hh-document-header),
 .hh-character-dashboard-header,
 .hh-sprite-theme .hh-dashboard-screen > .hh-character-dashboard-header {
   background: var(--hh-neutral-surface) !important;

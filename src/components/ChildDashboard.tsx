@@ -626,6 +626,22 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     });
   };
 
+  const collectSelectedDecoration = async (entityId: string) => {
+    if (!activeChildId) return;
+    const entity = gameData.worldEntities.find((candidate) => candidate.id === entityId && candidate.entityKind === 'decoration' && candidate.isActive);
+    if (!entity) return;
+    try {
+      await removeWorldEntity(activeChildId, {
+        entityId: entity.id,
+        inventoryItemId: entity.inventoryItemId,
+        expectedRevision: gameData.worldRevision,
+      });
+      showToast('裝飾已收回背包。');
+    } catch (error) {
+      showToast(toWorldMutationErrorMessage(error, '收回裝飾失敗，請再試一次。'));
+    }
+  };
+
   const leaveDecorationInInventory = () => {
     setDecorationPurchasePrompt(null);
     closeChildFeature(() => showToast('裝飾已放進背包，之後想放再來找它。'));
@@ -809,6 +825,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onCompletePlacement={() => void completeDecorationPlacement()}
               onCancelPlacement={cancelDecorationPlacement}
               onStartDecorationPlacement={startExistingDecorationPlacement}
+              onCollectDecoration={collectSelectedDecoration}
             />
           </Suspense>
         )}
@@ -882,9 +899,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 <strong>{displayedScrolls}</strong>
               </div>
             )}
-            <button type="button" onClick={() => closeChildFeature()} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
-              <X size={20} />
-            </button>
             {heroFeature === 'wishlist' && (
               <button
                 type="button"
@@ -897,6 +911,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 <span>告訴爸媽</span>
               </button>
             )}
+            <button type="button" onClick={() => closeChildFeature()} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
+              <X size={20} />
+            </button>
           </div>
         )}
         {isOffline && (
@@ -922,7 +939,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onSetRoamingPets={(inventoryItemIds): Promise<WorldMutationResult> => setRoamingPets(activeChild.id, inventoryItemIds)}
               onStartDecorationPlacement={startOwnedDecorationPlacement}
               onStartExistingDecorationPlacement={startExistingDecorationPlacement}
-              onPlaceDecoration={(payload) => placeWorldEntity(activeChild.id, payload)}
               onUpdateDecoration={(payload) => updateWorldEntityTransform(activeChild.id, payload)}
               onRemoveDecoration={(entityId, inventoryItemId, expectedRevision) => removeWorldEntity(activeChild.id, { entityId, inventoryItemId, expectedRevision })}
               onCollectAllDecorations={(expectedRevision) => collectAllWorldDecorations(activeChild.id, expectedRevision)}

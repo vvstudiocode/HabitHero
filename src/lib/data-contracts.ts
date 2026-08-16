@@ -264,6 +264,7 @@ export const pointLedgerRowToViewModel = (
 ): PointLedgerViewModel => ({
   id: row.id,
   childProfileId: row.child_profile_id,
+  taskId: row.task_id,
   pointsDelta: row.points_delta,
   entryType: row.entry_type,
   note: row.note,

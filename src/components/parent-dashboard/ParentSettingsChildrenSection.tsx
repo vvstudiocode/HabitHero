@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff, KeyRound, Plus, Trash2, Users, X } from 'lucide-react';
 import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } from '../../features/characters/world-character-catalog';
+import { GameItemLightbox } from '../../features/world/components/GameItemImagePreview';
 import type { ChildGender } from '../../types';
 import { dismissWithAnimation } from '../../lib/utils';
 
@@ -49,17 +50,25 @@ interface ParentSettingsChildrenSectionProps {
 
 export function ParentSettingsChildrenSection({ children, childNameDrafts, onChildNameDraftChange, onChildNameBlur, onDeleteChild, onResetPassword, onSetupAccount, newChildName, newChildUsername, newChildPassword, newChildPasswordConfirmation, showNewChildPassword, showNewChildPasswordConfirmation, newChildError, loading, childAccountSubmitting, onNewChildNameChange, onNewChildUsernameChange, onNewChildPasswordChange, onNewChildPasswordConfirmationChange, onToggleNewChildPassword, onToggleNewChildPasswordConfirmation, onAddChild, newChildGender, newChildCharacterId, onNewChildGenderChange, onNewChildCharacterChange, showNewChildForm, onNewChildFormChange }: ParentSettingsChildrenSectionProps) {
   const [localGender, setLocalGender] = useState<ChildGender | ''>('');
+  const [previewCharacterId, setPreviewCharacterId] = useState<string | null>(null);
   const selectedGender = newChildGender ?? localGender;
   const selectedCharacterId = newChildCharacterId || WORLD_CHARACTER_CATALOG[0].id || CURRENT_WORLD_CHARACTER_ID;
+  const previewCharacter = WORLD_CHARACTER_CATALOG.find((character) => character.id === previewCharacterId) ?? null;
 
   const closeNewChildForm = () => {
+    setPreviewCharacterId(null);
     dismissWithAnimation(() => onNewChildFormChange(false), '.hh-new-child-drawer', 300);
   };
 
   useEffect(() => {
     if (!showNewChildForm) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeNewChildForm();
+      if (event.key !== 'Escape') return;
+      if (previewCharacterId) {
+        setPreviewCharacterId(null);
+        return;
+      }
+      closeNewChildForm();
     };
     document.addEventListener('keydown', onKeyDown);
     const previousOverflow = document.body.style.overflow;
@@ -68,7 +77,7 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [showNewChildForm]);
+  }, [previewCharacterId, showNewChildForm]);
 
   const selectGender = (gender: ChildGender) => {
     setLocalGender(gender);
@@ -77,6 +86,7 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
 
   const selectCharacter = (characterId: string) => {
     onNewChildCharacterChange?.(characterId);
+    setPreviewCharacterId(characterId);
   };
 
   const handleAddChild = async () => {
@@ -132,6 +142,8 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
                 type="button"
                 role="radio"
                 aria-checked={selectedCharacterId === character.id}
+                aria-haspopup="dialog"
+                aria-expanded={previewCharacterId === character.id}
                 aria-label={character.name}
                 onClick={() => selectCharacter(character.id)}
                 className="hh-world-character-option"
@@ -142,6 +154,7 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
             ))}
           </div>
         </fieldset>
+        <GameItemLightbox item={previewCharacter} onClose={() => setPreviewCharacterId(null)} />
         <input type="text" autoComplete="username" placeholder="小孩帳號名稱，例如 leo123" value={newChildUsername} onChange={e => onNewChildUsernameChange(e.target.value)} className="mb-2 w-full rounded-xl border border-blue-200 p-2.5 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" />
         <div className="relative mb-2"><input type={showNewChildPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="小孩密碼（至少 6 碼英數）" value={newChildPassword} onChange={e => onNewChildPasswordChange(e.target.value)} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" /><button type="button" onClick={onToggleNewChildPassword} aria-label={showNewChildPassword ? '隱藏小孩密碼' : '顯示小孩密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">{showNewChildPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
         <div className="relative mb-2"><input type={showNewChildPasswordConfirmation ? 'text' : 'password'} autoComplete="new-password" placeholder="再次輸入小孩密碼" value={newChildPasswordConfirmation} onChange={e => onNewChildPasswordConfirmationChange(e.target.value)} className="w-full rounded-xl border border-blue-200 p-2.5 pr-11 outline-none focus:ring-2 focus:ring-blue-400 min-w-0" /><button type="button" onClick={onToggleNewChildPasswordConfirmation} aria-label={showNewChildPasswordConfirmation ? '隱藏確認密碼' : '顯示確認密碼'} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-gray-700">{showNewChildPasswordConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>

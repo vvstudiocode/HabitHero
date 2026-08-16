@@ -20,6 +20,26 @@ World character models share the `warm-hand-painted` runtime material preset: th
 
 The replacement migration (`20260812101223_replace_legacy_pets_with_starlight_sprout.sql`) removes all previous pet catalog rows, prices, inventory, world entities, purchases, and purchase ledger entries before inserting the single active pet. The rename migration (`20260812103059_rename_starlight_sprout_to_forest_guardian.sql`) updates the display name, while `20260812104044_update_forest_guardian_thumbnail.sql` points the catalog at the supplied transparent thumbnail. The supplied model's original source/license provenance should be recorded before a production distribution.
 
+## Static furniture and world decorations
+
+臥室家具與世界裝飾是可直接放入世界裝飾系統的靜態 GLB。使用既有 catalog key 與 metadata，不要為同一個模型建立另一組名稱或路徑；AI 要新增家具時，先查 `game_catalog_items` 的 `item_type='decoration'`，再依 `asset_key` 載入模型。
+
+| Catalog key | 名稱 | Model | Thumbnail | 三角面 | 檔案大小 | 預設縮放 | 允許縮放 | Ground offset | 碰撞半徑 | Scroll price |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `decoration.bed` | 木製床 | `public/assets/decorations/bed.glb` | `public/assets/decorations/bed-thumbnail.png` | 15,505 | 約 511 KB | `0.82` | `0.35–1.15` | `0.426` | `1.05` | 10 |
+| `decoration.nightstand` | 床頭櫃 | `public/assets/decorations/nightstand.glb` | `public/assets/decorations/nightstand-thumbnail.png` | 8,511 | 約 177 KB | `0.5` | `0.25–0.8` | `1` | `0.52` | 6 |
+| `decoration.adventure-table` | 冒險桌 | `public/assets/decorations/adventure-table.glb` | `public/assets/decorations/adventure-table-thumbnail.png` | 12,697 | 約 414 KB | `0.5` | `0.25–0.9` | `0.5455` | `0.78` | 9 |
+| `decoration.fountain` | 噴泉 | `public/assets/decorations/fountain.glb` | `public/assets/decorations/fountain-thumbnail.png` | 10,991 | 約 405 KB | `0.45` | `0.25–0.75` | `1` | `0.68` | 8 |
+
+### AI decoration loading rules
+
+- `model` 與 `thumbnail` 路徑以 catalog metadata 為準；目前路徑分別是上表的 `/assets/decorations/*.glb` 與 `/assets/decorations/*-thumbnail.png`。
+- 這些 GLB 是靜態家具／場景裝飾，沒有角色骨架或動畫，不要套用 character/pet 的 `SkeletonUtils.clone()`、walk、idle 或 root-motion 流程。
+- 放置時沿用 catalog 的 `defaultScale`、`groundOffset`、`collision_radius`、`min_scale` 與 `max_scale`；不要在 UI 或 runtime 另外加固定偏移。
+- GLB 內含 Draco geometry、1024px WebP textures、`NORMAL`、`TEXCOORD_0` 與 MikkTSpace `TANGENT`。若重新優化，必須保留 UV／法線接縫並重新產生 tangents；不要使用會跨越材質或 UV seam 的 permissive simplification。
+- 目前已用 `20260816045548_add_bedroom_decorations.sql` 建立臥室家具 rows、`20260816052206_improve_bedroom_decoration_assets.sql` 記錄床與床頭櫃新版面數，並用 `20260816053842_add_adventure_table_fountain_decorations.sql` 建立冒險桌與噴泉 rows。修改家具模型後，同步更新 migration metadata、對應資產測試與本節數值。
+- `/Users/studio.vv/Downloads/床.glb`、`/Users/studio.vv/Downloads/床頭櫃.glb`、`/Users/studio.vv/Downloads/冒險桌.glb` 與 `/Users/studio.vv/Downloads/噴泉.glb` 是原始來源備份，不是 runtime asset；世界與商店只能使用 `public/assets/decorations/` 內的新版檔案。
+
 ## Big Tree
 
 `terrain-prototype/assets/big-tree.glb` remains the high-quality source master, while production runtime loads `terrain-prototype/assets/big-tree-optimized.glb`. The optimized GLB keeps the same mesh, UVs, material, and three texture channels, but resamples the three embedded 4096px PNG textures to 2048px; it is 10.72 MB instead of 31.21 MB (about 65.7% smaller). Both quality tiers load the optimized asset because it is part of the browser-visible world; an Anime Maiden GLB is also loaded when that catalog character is equipped, while other characters remain procedural. High quality preserves the prototype visual budget: viewport-aware grass with an outer-density multiplier of 36 plus a 10-layer walkable-edge grass band spread across a wider soft boundary, a fuller base population across the large outer field, the full flower budget, a soft near-white afternoon sun, and a 360-degree ring of softened distant tree silhouettes and hills, pixel ratio capped at 2, and 2048px soft shadows. Low quality (reduced motion, `deviceMemory <= 2`, or `hardwareConcurrency <= 2`) scales the viewport-aware grass and flower budgets down, keeps a reduced outer grass density of 24 with a 6-layer walkable-edge band and a fuller outer-field base population, keeps the 360-degree distant tree silhouettes at low density, caps pixel ratio at 1, reduces sway, and disables renderer shadows. Aborted or disposed loads release their GLTF roots, materials, and textures; failed loads surface the runtime error while the UI keeps its static fallback available. The source master SHA-256 is `c806f86b9b37d13306ef4691cbade2f0c9998bccb78b525900cd3484ff327328`; the optimized asset SHA-256 is `92bb81cc84f168ee5ce1bd5f12b43334e0a432c2ae4567cc58aa58455a1a2746`.
@@ -39,7 +59,11 @@ The repository does not currently contain provenance or a license notice for thi
 ## 奧利安
 
 `public/assets/pets/orian.glb` 與 `public/assets/pets/orian-thumbnail.png` 由使用者提供的 `奧利安.fbx`／`奧利安idle.fbx` 合併而成，商店 key 為 `pet.orian`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、WebP 與 0.2 網格簡化，約 1.90 MB／118,615 triangles；透明縮圖為 512×512 RGBA。它沿用 `groundOffset=-0.22`、關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機，模型顯示尺寸為原設定的 2 倍。
-`public/assets/pets/oum.glb` 與 `public/assets/pets/oum-thumbnail.webp` 由使用者提供的 `歐姆.fbx`／`歐姆 Idle.fbx` 合併而成，商店 key 為 `pet.oum`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、1024px WebP 貼圖與 0.12 網格簡化，約 1.12 MB／78,832 render vertices；透明縮圖為 512×512 WebP。它沿用 `groundOffset=-0.22`、關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機。
+`public/assets/pets/oum.glb` 與 `public/assets/pets/oum-thumbnail.webp` 由使用者提供的 `歐姆.fbx`／`歐姆 Idle.fbx` 合併而成，商店 key 為 `pet.oum`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、1024px WebP 貼圖與 0.12 網格簡化，約 1.12 MB／78,832 render vertices；透明縮圖為 512×512 WebP。它沿用 `groundOffset=-0.32`、關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機。
+
+## 阿卡迪亞
+
+`public/assets/pets/arcadia.glb` 與 `public/assets/pets/arcadia-thumbnail.webp` 由使用者提供的 `阿卡迪亞.fbx`／`阿卡迪亞Idle.fbx` 合併而成，商店 key 為 `pet.arcadia`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、1024px WebP 貼圖與 0.16 網格簡化，約 862 KB／47,103 triangles；透明縮圖為 512×512 WebP。它使用 `groundOffset=-0.50`、顯示尺寸倍率 6.8、關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機。6.8 倍設定會同時套用到巡遊與跟隨 actor，兩者仍共用原本的模型快取、碰撞與追蹤距離計算。對應 catalog migrations 為 `20260816065247_add_arcadia_pet.sql`、`20260816075304_tune_arcadia_pet_visual_scale.sql`、`20260816075918_tune_arcadia_pet_visual_scale_6_8.sql`、`20260816080341_lower_arcadia_to_grass.sql` 與 `20260816081707_tune_arcadia_oum_ground_contact.sql`。
 
 ## 寵物浮空、陰影與巡遊隨機化心得
 

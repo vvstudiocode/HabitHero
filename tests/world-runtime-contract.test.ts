@@ -175,8 +175,9 @@ describe('prototype world runtime contracts', () => {
   });
 
   it('renders the supplied animated GLB pet and keeps movement animation state explicit', () => {
-    assert.match(runtimeSource, /PET_MODEL_URL/);
-    assert.match(runtimeSource, /starlight-sprout-pet\.glb/);
+    assert.match(runtimeSource, /getRequiredWorldPetCatalogItems/);
+    assert.match(runtimeSource, /getLocalGameModelUrl/);
+    assert.doesNotMatch(runtimeSource, /PET_MODEL_URL/);
     assert.match(runtimeSource, /loadGltfSafely[\s\S]*petModel/);
     assert.match(runtimeSource, /cloneSkinnedObject/);
     assert.match(runtimeSource, /new THREE\.AnimationMixer\(model/);

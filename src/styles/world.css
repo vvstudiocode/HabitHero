@@ -208,15 +208,18 @@
   margin-bottom: 20px;
 }
 
-.hh-game-panel-eyebrow {
+.hh-game-panel-title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 4px;
-  color: #5e8c73;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: .08em;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.hh-game-panel-title-row > h2 {
+  min-width: 0;
 }
 
 .hh-game-panel h2 {
@@ -256,10 +259,6 @@
 
 .hh-game-wallet-row > .hh-game-wallet {
   margin-bottom: 0;
-}
-
-.hh-game-wallet-row--controls-only {
-  justify-content: flex-end;
 }
 
 .hh-game-panel-section {
@@ -319,8 +318,20 @@
   flex-wrap: wrap;
 }
 
-.hh-game-store-toolbar--parent {
-  justify-content: flex-start;
+.hh-game-store-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.hh-game-store-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .hh-game-price-edit-button {
@@ -988,15 +999,6 @@
   .hh-game-price-save-bar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .hh-game-store-toolbar--parent {
-    align-items: center;
-    flex-direction: row;
-  }
-
-  .hh-game-store-toolbar--parent .hh-game-price-edit-button {
-    width: fit-content;
   }
 
   .hh-game-layout-controls {

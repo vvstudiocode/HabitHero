@@ -57,6 +57,8 @@ import {
   PET_FOLLOW_SPEED,
 } from './pet-following';
 import { getPetModelUrl as getCatalogPetModelUrl, resolvePetCatalogItem } from './pet-model-assets';
+import { getLocalGameModelUrl } from './game-content-assets';
+import { getRequiredWorldDecorationCatalogItems, getRequiredWorldPetCatalogItems } from './world-scene-data';
 import {
   advancePetIdleCycle,
   getPetAnimationClipName,
@@ -66,7 +68,7 @@ import {
   queuePetMoveAfterIdleCycle,
 } from './pet-animation';
 import { getFollowingPetInventoryIds } from './following-pet-state';
-import { shouldMovePlacementDecoration } from './world-placement';
+import { getPlacementStartPosition, shouldMovePlacementDecoration } from './world-placement';
 import {
   applyPicturebookPetMaterial,
   applyWarmHandPaintedCharacterMaterial,
@@ -204,7 +206,6 @@ export function getPetWorldScale({
   return Math.min(safeRequestedScale, heightScale, dimensionScale);
 }
 
-export const PET_MODEL_URL = '/assets/starlight-sprout-pet.glb';
 export const PET_WORLD_SCALE_MULTIPLIER = 1.3;
 export const PET_NAME_LABEL_WORLD_SCALE = 0.11;
 export const PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER = 0.55;
@@ -579,8 +580,7 @@ function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineA
 }
 
 function getDecorationModelUrl(item: GameCatalogItem | undefined): string | undefined {
-  const model = item?.metadata.model;
-  return typeof model === 'string' && model.toLowerCase().endsWith('.glb') ? model : undefined;
+  return getLocalGameModelUrl(item?.itemType === 'decoration' ? item : undefined) ?? undefined;
 }
 
 function getDecorationGroundOffset(item: GameCatalogItem | undefined): number {
@@ -659,8 +659,8 @@ function getCharacterFootNodes(source: Object3D): Object3D[] {
   return footNodes;
 }
 
-function getPetModelUrl(item: GameCatalogItem | undefined): string {
-  return getCatalogPetModelUrl(item, PET_MODEL_URL);
+function getPetModelUrl(item: GameCatalogItem | undefined): string | undefined {
+  return getCatalogPetModelUrl(item);
 }
 
 interface PetModelInstance {
@@ -1134,15 +1134,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const registerPetModel = (item: GameCatalogItem | undefined, assetKey?: string) => {
         const resolvedItem = item ?? (assetKey ? petCatalogByAssetKey.get(assetKey) : undefined);
         const resolvedAssetKey = resolvedItem?.assetKey ?? assetKey;
-        if (resolvedAssetKey) petModelEntries.set(resolvedAssetKey, getPetModelUrl(resolvedItem));
+        const modelUrl = getPetModelUrl(resolvedItem);
+        if (resolvedAssetKey && modelUrl) petModelEntries.set(resolvedAssetKey, modelUrl);
       };
-      followingPetInventoryIds.forEach((inventoryId) => {
-        const inventory = options.gameData.inventory.find((item) => item.id === inventoryId);
-        registerPetModel(inventory ? petCatalogById.get(inventory.catalogItemId) : undefined);
-      });
-      options.gameData.worldEntities
-        .filter((entity) => entity.entityKind === 'pet')
-        .forEach((entity) => registerPetModel(entity.catalogItemId ? petCatalogById.get(entity.catalogItemId) : undefined, entity.assetKey));
+      getRequiredWorldPetCatalogItems(options.gameData).forEach((item) => registerPetModel(item));
       const petModelSources = new Map<string, { scene: Object3D; animations: AnimationClip[] }>();
       const petModelLoads = new Map<string, Promise<{ scene: Object3D; animations: AnimationClip[] } | undefined>>();
       const loadPetModelSource = (modelUrl: string, loadSignal: AbortSignal) => {
@@ -1195,9 +1190,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         decorationModelLoads.set(item.id, load);
         return load;
       };
-      const decorationModelItems = [...options.gameData.catalog, options.placement?.item]
-        .filter((item): item is GameCatalogItem => Boolean(item) && item.itemType === 'decoration' && Boolean(getDecorationModelUrl(item)))
-        .filter((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index);
+      const decorationModelItems = getRequiredWorldDecorationCatalogItems(options.gameData, options.placement?.item)
+        .filter((item) => Boolean(getDecorationModelUrl(item)));
       if (decorationModelItems.length > 0) {
         options.onProgress(68, '讀取世界家具模型…');
         await Promise.all(decorationModelItems.map((item) => loadDecorationModelSource(item, signal)));
@@ -1483,7 +1477,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               ?.catalogItemId
               ? catalogById.get(options.gameData.inventory.find((inventory) => inventory.id === entity.inventoryItemId)!.catalogItemId)
               : undefined;
-        const petModelSource = isPet ? petModelSources.get(getPetModelUrl(catalogItem)) : undefined;
+        const petModelUrl = isPet ? getPetModelUrl(catalogItem) : undefined;
+        const petModelSource = petModelUrl ? petModelSources.get(petModelUrl) : undefined;
         const petWorldScale = Math.max(entity.scale, 0.01) * getPetVisualScaleMultiplier(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata);
         const petGroundOffset = isPet
           ? getPetGroundOffset(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata)
@@ -1545,7 +1540,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const followingPet = followingInventory
           ? petCatalogById.get(followingInventory.catalogItemId)
           : undefined;
-        const petModelSource = petModelSources.get(getPetModelUrl(followingPet));
+        const petModelUrl = getPetModelUrl(followingPet);
+        const petModelSource = petModelUrl ? petModelSources.get(petModelUrl) : undefined;
         if (petModelSource) {
           const petVisualMultiplier = getPetVisualScaleMultiplier(followingPet?.assetKey, followingPet?.metadata);
           const petMovementSpeedMultiplier = getPetMovementSpeedMultiplier(followingPet?.assetKey, followingPet?.metadata);
@@ -1743,8 +1739,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             return;
           }
           if (pendingPetActors.has(inventoryItemId)) return;
-          pendingPetActors.add(inventoryItemId);
           const modelUrl = getPetModelUrl(catalogItem);
+          if (!modelUrl) return;
+          pendingPetActors.add(inventoryItemId);
           void loadPetModelSource(modelUrl, signal).then((petModelSource) => {
             if (!petModelSource || disposed) return;
             const latest = latestPetData;
@@ -1986,15 +1983,25 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
 
       const controller = options.controller;
-      let placementActive = Boolean(latestRuntimeUpdate.placement);
+      let cameraYaw = PROTOTYPE_WORLD_CONFIG.initialCameraYaw;
+      let cameraPitch: number = PROTOTYPE_WORLD_CONFIG.initialCameraPitch;
+      let cameraDistance: number = PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault;
+      let placementActive = false;
       const placementPointers = new Map<number, { point: { x: number; y: number }; startedOnDecoration: boolean }>();
       let placementGesture: { previousDistance: number; previousAngle: number } | null = null;
       updateScene = (next) => {
+        const wasPlacementActive = placementActive;
         placementActive = Boolean(next.placement);
         if (placementActive) controller?.reset();
         else {
           placementPointers.clear();
           placementGesture = null;
+        }
+        if (!wasPlacementActive && next.placement && !next.placement.entityId) {
+          options.onPlacementPositionChange?.(getPlacementStartPosition(
+            { x: playerRoot.position.x, z: playerRoot.position.z },
+            cameraYaw,
+          ));
         }
         queueCharacterUpdate(next);
         ensurePlacementModel(next.placement);
@@ -2004,9 +2011,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       updateScene(latestRuntimeUpdate);
 
-      let cameraYaw = PROTOTYPE_WORLD_CONFIG.initialCameraYaw;
-      let cameraPitch: number = PROTOTYPE_WORLD_CONFIG.initialCameraPitch;
-      let cameraDistance: number = PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault;
       let sceneElapsedTime = 0;
       const keys = new Set<string>();
       const clock = new THREE.Clock();

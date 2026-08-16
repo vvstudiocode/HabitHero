@@ -5,6 +5,7 @@ import {
   applyDecorationPlacementControl,
   createDecorationPlacementDraft,
   getPlacementRotationDelta,
+  getPlacementStartPosition,
   getPlacementGridCells,
   isDecorationPlacementValid,
   shouldMovePlacementDecoration,
@@ -48,6 +49,17 @@ describe('decoration placement flow', () => {
     assert.equal(createDecorationPlacementDraft({ minScale: 0.25, maxScale: 0.8, metadata: { defaultScale: 1.4 } }).scale, 0.8);
     const studyDesk = { collisionRadius: 0.95, minScale: 0.25, maxScale: 0.8, metadata: { defaultScale: 0.62 } };
     assert.equal(isDecorationPlacementValid(createDecorationPlacementDraft(studyDesk), studyDesk), true);
+  });
+
+  it('starts new furniture in front of the character from the current camera angle', () => {
+    assert.deepEqual(getPlacementStartPosition({ x: 0, z: 2.2 }, Math.PI / 2), {
+      x: -1.8,
+      z: 2.2,
+    });
+    assert.deepEqual(getPlacementStartPosition({ x: 1.5, z: -0.5 }, 0), {
+      x: 1.5,
+      z: -2.3,
+    });
   });
 
   it('adjusts rotation and scale with child-friendly controls', () => {

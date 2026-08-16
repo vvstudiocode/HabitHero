@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Compass, Crown, Flower2, PawPrint, Settings, Sparkles, X } from 'lucide-react';
-import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem, GamePurchaseResult, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
+import { Check, Crown, Flower2, PawPrint, Settings, Sparkles, X } from 'lucide-react';
+import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem, GamePurchaseResult, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
 import { degreesToRadians, getActiveDecorationEntities, getWorldRevisionAfterMutation, radiansToDegrees, toDecorationDraft, type DecorationDraft } from './decoration-editing';
 import { buildCollisionCircles } from '../world-collision';
 import { toWorldMutationErrorMessage } from '../world-errors';
-import { createDecorationPlacementDraft, isDecorationPlacementValid } from '../world-placement';
+import { isDecorationPlacementValid } from '../world-placement';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
 import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
+import { isLocalGameItemShopSupported } from '../game-content-assets';
 import { GameItemLightbox } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
@@ -31,7 +32,6 @@ interface ChildGamePanelProps {
   onSetRoamingPets: (inventoryItemIds: string[]) => Promise<WorldMutationResult>;
   onStartDecorationPlacement: (inventoryItemId: string, catalogItemId: string) => void;
   onStartExistingDecorationPlacement: (entityId: string) => void;
-  onPlaceDecoration: (payload: WorldMutationPayload) => Promise<WorldMutationResult>;
   onUpdateDecoration: (payload: WorldTransformMutationPayload) => Promise<WorldMutationResult>;
   onRemoveDecoration: (entityId: string, inventoryItemId: string, expectedRevision: number) => Promise<WorldMutationResult>;
   onCollectAllDecorations: (expectedRevision: number) => Promise<WorldMutationResult>;
@@ -66,7 +66,6 @@ export function ChildGamePanel({
   onSetRoamingPets,
   onStartDecorationPlacement,
   onStartExistingDecorationPlacement,
-  onPlaceDecoration,
   onUpdateDecoration,
   onRemoveDecoration,
   onCollectAllDecorations,
@@ -84,8 +83,8 @@ export function ChildGamePanel({
   const [followingPets, setFollowingPets] = useState<string[]>(initialFollowingPetSnapshot);
   const [inventorySection, setInventorySection] = useState<'character' | 'pet' | 'decoration'>('character');
   const [shopSection, setShopSection] = useState<'character' | 'pet' | 'decoration'>('character');
-  const [inventoryColumns, setInventoryColumns] = useState<GameCatalogLayoutColumns>(2);
-  const [shopColumns, setShopColumns] = useState<GameCatalogLayoutColumns>(2);
+  const [inventoryColumns, setInventoryColumns] = useState<GameCatalogLayoutColumns>(4);
+  const [shopColumns, setShopColumns] = useState<GameCatalogLayoutColumns>(4);
   const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
   const [previewInventory, setPreviewInventory] = useState<ChildInventoryItem | null>(null);
   const [decorationDrafts, setDecorationDrafts] = useState<Record<string, DecorationDraft>>({});
@@ -280,22 +279,6 @@ export function ChildGamePanel({
       : commitDecorationEntity(inventoryId, entity, draft)
   );
 
-  const placeDecoration = (inventoryId: string, draft: DecorationDraft) => {
-    if (!isDecorationDraftValid(inventoryId, draft)) {
-      setFeedback('這裡不能放置，請把裝飾移回可遊玩草地。');
-      return;
-    }
-    return commitWorldMutation(
-      (expectedRevision) => onPlaceDecoration({
-        inventoryItemId: inventoryId,
-        expectedRevision,
-        transform: { x: draft.x, y: 0, z: draft.z, rotationX: 0, rotationY: draft.rotationY, rotationZ: 0, scale: draft.scale },
-        behaviorMode: 'static',
-      }),
-      '裝飾已放入世界。',
-    );
-  };
-
   const toggleRoamingPet = (inventoryItemId: string) => {
     if (roamingMutationPendingRef.current) return;
     const currentRoamingPets = roamingPetsRef.current;
@@ -456,9 +439,6 @@ export function ChildGamePanel({
     }
 
     const entities = getActiveDecorationEntities(gameData.worldEntities, inventory.id);
-    const newDraftKey = `${inventory.id}:new`;
-    const newDraft = decorationDrafts[newDraftKey] ?? createDecorationPlacementDraft(item);
-    const newDraftValid = isDecorationDraftValid(inventory.id, newDraft);
     const hasRoom = item.isStackable ? entities.length < inventory.quantity : entities.length === 0;
     return (
       <>
@@ -483,14 +463,10 @@ export function ChildGamePanel({
         {hasRoom && <button
           type="button"
           className="hh-game-action-button hh-game-action-button--primary"
-          disabled={mutationPending || (entities.length > 0 && !newDraftValid)}
+          disabled={mutationPending}
           onClick={() => {
-            if (entities.length === 0) {
-              closePreview();
-              onStartDecorationPlacement(inventory.id, item.id);
-              return;
-            }
-            void placeDecoration(inventory.id, newDraft);
+            closePreview();
+            onStartDecorationPlacement(inventory.id, item.id);
           }}
         >放置{entities.length > 0 ? '一份' : ''}</button>}
       </>
@@ -500,18 +476,12 @@ export function ChildGamePanel({
   return (
     <section className="hh-game-panel" aria-labelledby="hh-game-panel-title">
       <div className="hh-game-panel-header">
-        <div>
-          <p className="hh-game-panel-eyebrow"><Compass size={15} /> 冒險世界</p>
+        <div className="hh-game-panel-title-row">
           <h2 id="hh-game-panel-title">{title}</h2>
+          {kind === 'inventory' && <GameCatalogLayoutControls columns={inventoryColumns} onChange={setInventoryColumns} />}
+          {kind === 'shop' && <GameCatalogLayoutControls columns={shopColumns} onChange={setShopColumns} />}
         </div>
       </div>
-
-              {kind !== 'settings' && (
-                <div className="hh-game-wallet-row hh-game-wallet-row--controls-only">
-                  {kind === 'inventory' && <GameCatalogLayoutControls columns={inventoryColumns} onChange={setInventoryColumns} />}
-                  {kind === 'shop' && <GameCatalogLayoutControls columns={shopColumns} onChange={setShopColumns} />}
-                </div>
-      )}
 
       {kind === 'inventory' && (
         <div className={`hh-game-panel-section${kind === 'inventory' ? ' hh-game-panel-section--inventory' : ''}`}>
@@ -565,7 +535,7 @@ export function ChildGamePanel({
             ))}
           </div>
           <div className={`hh-game-catalog-grid hh-game-catalog-grid--${shopColumns}`}>
-            {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection).map((item) => {
+            {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection && isLocalGameItemShopSupported(item)).map((item) => {
               const price = gameData.prices[item.id] ?? item.scrollPrice;
               return (
                 <GameItemCard

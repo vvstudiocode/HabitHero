@@ -564,6 +564,7 @@ export interface RewardRedemptionViewModel {
 export interface PointLedgerViewModel {
   id: Id;
   childProfileId: Id;
+  taskId: Id | null;
   pointsDelta: Points;
   entryType: PointLedgerEntryType;
   note: string | null;

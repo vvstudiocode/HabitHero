@@ -234,9 +234,9 @@ describe('terrain prototype procedural grass', () => {
     );
   });
 
-  it('scatters a restrained mix of short five-color flowers', () => {
-    assert.equal(getProceduralFlowerCount({ width: 375 }), 84);
-    assert.equal(getProceduralFlowerCount({ width: 1440 }), 156);
+  it('scatters a dense mix of short five-color flowers across the walkable area', () => {
+    assert.equal(getProceduralFlowerCount({ width: 375 }), 252);
+    assert.equal(getProceduralFlowerCount({ width: 1440 }), 468);
 
     const options = { count: 96, walkableSize: 9.9, baseHeight: 0.006, seed: 24 };
     const first = createProceduralFlowerLayout(options);
@@ -248,6 +248,10 @@ describe('terrain prototype procedural grass', () => {
     assert.deepEqual(FLOWER_COLORS, ['yellow', 'red', 'white', 'blue', 'purple']);
     assert.equal(first.every(flower => Math.abs(flower.x) <= 4.55), true);
     assert.equal(first.every(flower => Math.abs(flower.z) <= 4.55), true);
+    assert.equal(
+      first.some(flower => Math.hypot(flower.x, flower.z) < options.walkableSize * 0.12),
+      true,
+    );
     assert.equal(first.every(flower => flower.height >= 0.052 && flower.height <= 0.105), true);
     assert.equal(first.every(flower => flower.y === 0.006), true);
   });

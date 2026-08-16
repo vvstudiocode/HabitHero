@@ -29,7 +29,7 @@ test('ships Orian as a compact animated pet shop asset', async () => {
   assert.equal(thumbnailContents.toString('ascii', 1, 4), 'PNG');
   assert.equal(thumbnailContents[25], 6, 'Orian thumbnail must use RGBA color type');
   assert.equal(
-    getPetModelUrl({ assetKey: 'pet.orian', metadata: {} }, '/assets/starlight-sprout-pet.glb'),
+    getPetModelUrl({ assetKey: 'pet.orian', metadata: {} }),
     '/assets/pets/orian.glb',
   );
   assert.match(migration, /pet\.orian/);

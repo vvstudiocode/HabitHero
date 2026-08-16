@@ -30,7 +30,7 @@ test('ships Oum as a compact animated pet shop asset', async () => {
   assert.equal(thumbnailContents.toString('ascii', 0, 4), 'RIFF');
   assert.equal(thumbnailContents.toString('ascii', 8, 12), 'WEBP');
   assert.equal(
-    getPetModelUrl({ assetKey: 'pet.oum', metadata: {} }, '/assets/starlight-sprout-pet.glb'),
+    getPetModelUrl({ assetKey: 'pet.oum', metadata: {} }),
     '/assets/pets/oum.glb',
   );
   assert.equal(getPetVisualScaleMultiplier('pet.oum', {}), 1.3 * 4);

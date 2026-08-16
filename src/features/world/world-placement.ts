@@ -28,6 +28,20 @@ export interface PlacementGridCell {
 const ROTATION_STEP = Math.PI / 8;
 const SCALE_STEP = 0.1;
 const ROTATION_DRAG_RADIANS_PER_PIXEL = Math.PI / 240;
+const PLACEMENT_START_DISTANCE = 1.8;
+
+export function getPlacementStartPosition(
+  characterPosition: { x: number; z: number },
+  cameraYaw: number,
+  distance = PLACEMENT_START_DISTANCE,
+): { x: number; z: number } {
+  const safeYaw = Number.isFinite(cameraYaw) ? cameraYaw : 0;
+  const safeDistance = Number.isFinite(distance) ? Math.max(0.5, distance) : PLACEMENT_START_DISTANCE;
+  return {
+    x: characterPosition.x - Math.sin(safeYaw) * safeDistance,
+    z: characterPosition.z - Math.cos(safeYaw) * safeDistance,
+  };
+}
 
 export function getPlacementRotationDelta(previousX: number, currentX: number): number {
   if (!Number.isFinite(previousX) || !Number.isFinite(currentX)) return 0;

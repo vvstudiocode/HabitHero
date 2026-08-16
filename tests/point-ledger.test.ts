@@ -8,6 +8,7 @@ import {
   validatePointLedgerAdjustment,
 } from '../src/lib/point-ledger';
 import { buildAdjustChildPointsPayload, createDataRepository } from '../src/lib/data-access';
+import { pointLedgerRowToViewModel } from '../src/lib/data-contracts';
 import type { PointLedgerRow } from '../src/types';
 
 const now = '2026-08-16T08:00:00.000Z';
@@ -108,6 +109,7 @@ describe('point ledger repository contract', () => {
     assert.deepEqual(page.entries[0], {
       id: 'ledger-1',
       childProfileId: 'child-1',
+      taskId: null,
       pointsDelta: 20,
       entryType: 'manual_adjustment',
       note: '主動整理餐桌',
@@ -115,6 +117,15 @@ describe('point ledger repository contract', () => {
     });
     assert.deepEqual(calls.at(-1), { method: 'range', args: [40, 59] });
     assert.deepEqual(calls.find((call) => call.method === 'select')?.args, ['*', { count: 'exact' }]);
+  });
+
+  it('keeps the approved task id available for the Chinese task name in the ledger UI', () => {
+    assert.equal(pointLedgerRowToViewModel({
+      ...ledgerRow,
+      task_id: 'task-1',
+      entry_type: 'task_approved',
+      note: 'task approved',
+    }).taskId, 'task-1');
   });
 
   it('calls the atomic manual adjustment RPC and maps its server result', async () => {

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createWorldSceneGameDataSnapshot } from '../src/features/world/world-scene-data';
+import {
+  createWorldSceneGameDataSnapshot,
+  getRequiredWorldDecorationCatalogItems,
+  getRequiredWorldPetCatalogItems,
+} from '../src/features/world/world-scene-data';
 import type { ChildGameData, GameCatalogItem } from '../src/features/world/contracts';
 
 function pet(id: string, assetKey: string): GameCatalogItem {
@@ -58,6 +62,45 @@ function gameData(catalog: GameCatalogItem[], worldEntities: ChildGameData['worl
 }
 
 describe('world scene game data snapshot', () => {
+  it('returns only following and active pet catalog items for model loading', () => {
+    const data = gameData(
+      [
+        pet('pet-silf', 'pet.silf-owl'),
+        pet('pet-yaoguang', 'pet.yaoguang-deer'),
+        pet('pet-unused', 'pet.murphy-bear'),
+      ],
+      [{
+        id: 'entity-yaoguang', inventoryItemId: 'inventory-yaoguang', entityKind: 'pet', worldLayoutVersion: 1,
+        x: 0, y: 0, z: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1,
+        behaviorMode: 'wander', roamingSlot: 1, isActive: true, catalogItemId: 'pet-yaoguang', assetKey: 'pet.yaoguang-deer',
+      }],
+    );
+
+    assert.deepEqual(
+      getRequiredWorldPetCatalogItems(data).map((item) => item.assetKey),
+      ['pet.silf-owl', 'pet.yaoguang-deer'],
+    );
+  });
+
+  it('returns only active decorations plus the current placement item', () => {
+    const placed = decoration('decoration-placed', 'decoration.study-desk');
+    const unused = decoration('decoration-unused', 'decoration.bookcase');
+    const placement = decoration('decoration-preview', 'decoration.study-chair');
+    const data = gameData(
+      [pet('pet-silf', 'pet.silf-owl'), placed, unused],
+      [{
+        id: 'entity-placed', inventoryItemId: 'inventory-placed', entityKind: 'decoration', worldLayoutVersion: 1,
+        x: 1, y: 0, z: -1, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1,
+        behaviorMode: 'static', roamingSlot: null, isActive: true, catalogItemId: placed.id,
+      }],
+    );
+
+    assert.deepEqual(
+      getRequiredWorldDecorationCatalogItems(data, placement).map((item) => item.assetKey),
+      ['decoration.study-desk', 'decoration.study-chair'],
+    );
+  });
+
   it('keeps every active roaming pet catalog item alongside the following pet', () => {
     const snapshot = createWorldSceneGameDataSnapshot(
       gameData(

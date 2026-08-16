@@ -31,7 +31,7 @@ export function GameItemPreview({ item, onOpen }: GameItemPreviewProps) {
 }
 
 interface GameItemLightboxProps {
-  item: GameCatalogItem | null;
+  item: Pick<GameCatalogItem, 'name' | 'description' | 'thumbnailUrl'> | null;
   onClose: () => void;
   price?: number;
   purchaseDisabled?: boolean;

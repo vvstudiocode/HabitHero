@@ -8,6 +8,9 @@ const FLOWER_COLOR_VALUES = Object.freeze({
   purple: 0xb58be8,
 });
 
+const WALKABLE_FLOWER_DENSITY_MULTIPLIER = 3;
+const WALKABLE_FLOWER_CENTER_CLEARANCE_RATIO = 0.06;
+
 function createRandom(seed) {
   let state = seed >>> 0;
   return () => {
@@ -21,9 +24,9 @@ function createRandom(seed) {
 
 export function getProceduralFlowerCount({ width }) {
   const safeWidth = Number.isFinite(width) ? width : 375;
-  if (safeWidth <= 480) return 84;
-  if (safeWidth <= 900) return 116;
-  return 156;
+  if (safeWidth <= 480) return 84 * WALKABLE_FLOWER_DENSITY_MULTIPLIER;
+  if (safeWidth <= 900) return 116 * WALKABLE_FLOWER_DENSITY_MULTIPLIER;
+  return 156 * WALKABLE_FLOWER_DENSITY_MULTIPLIER;
 }
 
 export function createProceduralFlowerLayout({
@@ -48,7 +51,7 @@ export function createProceduralFlowerLayout({
     do {
       x = (random() * 2 - 1) * halfSpread;
       z = (random() * 2 - 1) * halfSpread;
-    } while (Math.hypot(x, z) < walkableSize * 0.13);
+    } while (Math.hypot(x, z) < walkableSize * WALKABLE_FLOWER_CENTER_CLEARANCE_RATIO);
 
     const color = FLOWER_COLORS[(index + Math.floor(random() * FLOWER_COLORS.length)) % FLOWER_COLORS.length];
     return {

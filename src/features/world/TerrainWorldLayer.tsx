@@ -50,6 +50,7 @@ interface TerrainWorldLayerProps {
   onCompletePlacement?: () => void;
   onCancelPlacement?: () => void;
   onStartDecorationPlacement?: (entityId: string) => void;
+  onCollectDecoration?: (entityId: string) => void;
 }
 
 type ThreeNamespace = typeof import('three');
@@ -259,6 +260,7 @@ export function TerrainWorldLayer({
   onCompletePlacement,
   onCancelPlacement,
   onStartDecorationPlacement,
+  onCollectDecoration,
 }: TerrainWorldLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<PointerInputController | null>(null);
@@ -319,6 +321,21 @@ export function TerrainWorldLayer({
   useEffect(() => {
     if (placement) setSelectedDecoration(null);
   }, [placement]);
+
+  useEffect(() => {
+    if (!selectedDecoration) return undefined;
+    const dismissDecorationSelection = (event: PointerEvent | FocusEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('[data-world-decoration-action]')) return;
+      setSelectedDecoration(null);
+    };
+    document.addEventListener('pointerdown', dismissDecorationSelection);
+    document.addEventListener('focusin', dismissDecorationSelection);
+    return () => {
+      document.removeEventListener('pointerdown', dismissDecorationSelection);
+      document.removeEventListener('focusin', dismissDecorationSelection);
+    };
+  }, [selectedDecoration]);
 
   const stopPlacementRotationDrag = (event?: ReactPointerEvent<HTMLButtonElement>) => {
     const drag = placementRotationDragRef.current;
@@ -437,26 +454,50 @@ export function TerrainWorldLayer({
           data-world-decoration-action
           style={{ left: selectedDecorationCanvasRect.left + selectedDecoration.x, top: selectedDecorationCanvasRect.top + selectedDecoration.y }}
         >
-          <button
-            type="button"
-            className="hh-world-decoration-action"
-            aria-label={`重新擺放${selectedItem.name}`}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setSelectedDecoration(null);
-              onStartDecorationPlacement(selectedEntity.id);
-            }}
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return;
-              event.preventDefault();
-              event.stopPropagation();
-              setSelectedDecoration(null);
-              onStartDecorationPlacement(selectedEntity.id);
-            }}
-          >
-            重新擺放
-          </button>
+          <div className="hh-world-decoration-actions">
+            <button
+              type="button"
+              className="hh-world-decoration-action"
+              aria-label={`重新擺放${selectedItem.name}`}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setSelectedDecoration(null);
+                onStartDecorationPlacement(selectedEntity.id);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                event.stopPropagation();
+                setSelectedDecoration(null);
+                onStartDecorationPlacement(selectedEntity.id);
+              }}
+            >
+              重新擺放
+            </button>
+            {onCollectDecoration && (
+              <button
+                type="button"
+                className="hh-world-decoration-action"
+                aria-label={`收回${selectedItem.name}`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setSelectedDecoration(null);
+                  onCollectDecoration(selectedEntity.id);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setSelectedDecoration(null);
+                  onCollectDecoration(selectedEntity.id);
+                }}
+              >
+                收回
+              </button>
+            )}
+          </div>
         </div>,
         document.body,
       )}

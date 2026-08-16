@@ -1,5 +1,46 @@
-import type { ChildGameData } from './contracts';
+import type { ChildGameData, GameCatalogItem } from './contracts';
 import { getFollowingPetInventoryIds } from './following-pet-state';
+
+function uniqueCatalogItems(items: readonly (GameCatalogItem | undefined)[]): GameCatalogItem[] {
+  const seen = new Set<string>();
+  return items.filter((item): item is GameCatalogItem => {
+    if (!item || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+export function getRequiredWorldPetCatalogItems(gameData: ChildGameData): GameCatalogItem[] {
+  const catalogById = new Map(gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => [item.id, item]));
+  const catalogByAssetKey = new Map(gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => [item.assetKey, item]));
+  const inventoryById = new Map(gameData.inventory.map((item) => [item.id, item]));
+  const followingItems = getFollowingPetInventoryIds(gameData).map((inventoryId) => {
+    const inventory = inventoryById.get(inventoryId);
+    return inventory ? catalogById.get(inventory.catalogItemId) : undefined;
+  });
+  const activeWorldItems = gameData.worldEntities
+    .filter((entity) => entity.entityKind === 'pet' && entity.isActive)
+    .map((entity) => {
+      const inventory = inventoryById.get(entity.inventoryItemId);
+      const catalogItemId = entity.catalogItemId ?? inventory?.catalogItemId;
+      return (catalogItemId ? catalogById.get(catalogItemId) : undefined)
+        ?? (entity.assetKey ? catalogByAssetKey.get(entity.assetKey) : undefined);
+    });
+  return uniqueCatalogItems([...followingItems, ...activeWorldItems]);
+}
+
+export function getRequiredWorldDecorationCatalogItems(
+  gameData: ChildGameData,
+  placementItem?: GameCatalogItem,
+): GameCatalogItem[] {
+  const activeDecorationIds = new Set(
+    gameData.worldEntities
+      .filter((entity) => entity.entityKind === 'decoration' && entity.isActive && entity.catalogItemId)
+      .map((entity) => entity.catalogItemId),
+  );
+  const activeItems = gameData.catalog.filter((item) => item.itemType === 'decoration' && activeDecorationIds.has(item.id));
+  return uniqueCatalogItems([...activeItems, placementItem?.itemType === 'decoration' ? placementItem : undefined]);
+}
 
 export function createWorldSceneGameDataSnapshot(gameData: ChildGameData): ChildGameData {
   const followingPetInventoryIds = getFollowingPetInventoryIds(gameData);

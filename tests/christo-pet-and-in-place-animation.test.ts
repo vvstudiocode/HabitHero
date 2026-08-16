@@ -131,7 +131,7 @@ describe('pet animation delivery rules', () => {
 
   it('keeps the Christo model canonical and removes the retired Teddy Sou payload', () => {
     assert.equal(
-      getPetModelUrl(makePet('pet.christo', '/assets/pets/wrong.glb'), '/assets/starlight-sprout-pet.glb'),
+      getPetModelUrl(makePet('pet.christo', '/assets/pets/wrong.glb')),
       '/assets/pets/christo.glb',
     );
     assert.equal(existsSync(new URL('public/assets/pets/teddy-sou.glb', root)), false);

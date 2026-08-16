@@ -3,8 +3,6 @@ import { describe, it } from 'node:test';
 import type { GameCatalogItem } from '../src/features/world/contracts';
 import { getPetModelUrl, resolvePetCatalogItem } from '../src/features/world/pet-model-assets';
 
-const fallbackUrl = '/assets/starlight-sprout-pet.glb';
-
 function pet(assetKey: string, model: string): GameCatalogItem {
   return {
     id: assetKey,
@@ -31,10 +29,10 @@ describe('pet model asset resolution', () => {
     const swappedMetadataChristo = pet('pet.christo', '/assets/pets/wrong.glb');
 
     assert.equal(
-      getPetModelUrl(swappedMetadataStar, fallbackUrl),
+      getPetModelUrl(swappedMetadataStar),
       '/assets/pets/star-diver.glb',
     );
-    assert.equal(getPetModelUrl(swappedMetadataChristo, fallbackUrl), '/assets/pets/christo.glb');
+    assert.equal(getPetModelUrl(swappedMetadataChristo), '/assets/pets/christo.glb');
   });
 
   it('resolves a roaming pet by asset key when its legacy entity has no catalog id', () => {
@@ -59,14 +57,14 @@ describe('pet model asset resolution', () => {
       forest,
     );
     assert.equal(
-      getPetModelUrl(rabbit, fallbackUrl),
+      getPetModelUrl(rabbit),
       '/assets/pets/magellan-rabbit.glb',
     );
   });
 
-  it('uses the safe fallback only when the catalog has no usable model path', () => {
+  it('does not fall back to a different pet model when the app has no asset', () => {
     const invalid = pet('pet.invalid', 'https://example.com/not-local.glb');
-    assert.equal(getPetModelUrl(invalid, fallbackUrl), fallbackUrl);
-    assert.equal(getPetModelUrl(undefined, fallbackUrl), fallbackUrl);
+    assert.equal(getPetModelUrl(invalid), undefined);
+    assert.equal(getPetModelUrl(undefined), undefined);
   });
 });

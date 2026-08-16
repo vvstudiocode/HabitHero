@@ -15,7 +15,8 @@ describe('world dashboard navigation contract', () => {
     assert.match(worldCatalog, /WORLD_CHARACTER_CATALOG/);
     assert.match(settings, /WORLD_CHARACTER_CATALOG/);
     assert.match(settings, /onNewChildCharacterChange/);
-    assert.doesNotMatch(settings, /CHARACTER_CATEGORIES|getCharactersForCategory|hh-character-preview-backdrop/);
+    assert.doesNotMatch(settings, /CHARACTER_CATEGORIES|getCharactersForCategory/);
+    assert.match(settings, /GameItemLightbox/);
     assert.match(dashboard, /useState\(WORLD_CHARACTER_CATALOG\[0\]/);
   });
 

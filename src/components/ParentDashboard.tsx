@@ -1639,12 +1639,13 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             title={`${historyChild.name}的點數明細`}
             closeLabel="關閉點數明細"
             onClose={() => setPointHistoryChildId(null)}
-            panelClassName="max-h-[calc(100dvh-32px)] max-w-lg overflow-y-auto"
+            panelClassName="hh-point-ledger-modal-panel max-h-[calc(100dvh-32px)] max-w-lg overflow-y-auto"
           >
             <PointLedgerHistory
               childProfileId={historyChild.id}
               childName={historyChild.name}
               loadPage={loadPointLedgerPage}
+              getTaskName={(taskId) => historyChild.tasks.find((task) => task.id === taskId)?.name ?? null}
             />
           </ModalShell>
         );
@@ -1697,7 +1698,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                   placeholder={isGrant ? '例如：主動整理餐桌' : '例如：未完成今天的約定'}
                   className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 outline-none focus:ring-2 focus:ring-amber-400"
                 />
-                <p className="mt-1 text-xs font-bold text-gray-400">這段原因會顯示在小孩的點數明細中。</p>
               </div>
               {pointAdjustmentError && <p className="text-sm font-bold text-red-600" role="alert">{pointAdjustmentError}</p>}
               <button

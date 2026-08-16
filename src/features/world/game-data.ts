@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { emptyChildGameData, type ChildGameData, type ChildWorldEntity, type GameCatalogItem } from './contracts';
+import { getLocalGameThumbnailUrl } from './game-content-assets';
 
 interface CatalogRow {
   id: string;
@@ -99,7 +100,8 @@ function toCatalogItem(row: CatalogRow): GameCatalogItem {
     description: row.description,
     scrollPrice: row.scroll_price,
     assetKey: row.asset_key,
-    thumbnailUrl: row.thumbnail_url,
+    // SQL describes the product, but only packaged App assets may enter the UI.
+    thumbnailUrl: getLocalGameThumbnailUrl({ itemType: row.item_type, assetKey: row.asset_key }),
     isActive: row.is_active,
     isStarter: row.is_starter,
     isStackable: row.is_stackable,

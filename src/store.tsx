@@ -897,6 +897,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const optimisticEntry: PointLedgerViewModel = {
         id: localLedgerId,
         childProfileId: childId,
+        taskId: null,
         pointsDelta,
         entryType: 'manual_adjustment',
         note: note.trim(),

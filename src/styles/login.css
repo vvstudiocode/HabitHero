@@ -50,6 +50,13 @@
   z-index: 2;
 }
 
+.hh-loading-title {
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: clamp(1.75rem, 8vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+
 .hh-login-canvas {
   position: fixed;
   inset: 0;

@@ -23,11 +23,15 @@ test('adventure abandonment has no extra card wrapper', () => {
 test('child feature header places points and scrolls before the close control', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
   const headerStart = dashboard.indexOf('hh-parent-content-modal-bar hh-parent-content-modal-bar--child');
-  const headerEnd = dashboard.indexOf("heroFeature === 'wishlist'", headerStart);
+  const headerEnd = dashboard.indexOf('        {isOffline', headerStart);
   const header = dashboard.slice(headerStart, headerEnd);
+  const wishlistActionIndex = dashboard.indexOf('aria-label="告訴爸媽我想要什麼"', headerStart);
+  const closeControlIndex = dashboard.indexOf('aria-label="關閉功能頁面"', headerStart);
 
   assert.ok(header.indexOf('displayedScrolls') < header.indexOf('關閉功能頁面'));
   assert.ok(header.indexOf('childPoints') < header.indexOf('關閉功能頁面'));
+  assert.ok(dashboard.indexOf('childPoints', headerStart) < wishlistActionIndex);
+  assert.ok(wishlistActionIndex < closeControlIndex);
   assert.match(header, /onClick=\{\(\) => closeChildFeature\(\)\}/);
-  assert.doesNotMatch(header, /onClick=\{closeChildFeature\}/);
+  assert.doesNotMatch(header, /onClick=\{\s*closeChildFeature\s*\}/);
 });

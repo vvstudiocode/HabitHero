@@ -11,6 +11,7 @@ interface PointLedgerHistoryProps {
   childProfileId: string;
   childName: string;
   loadPage: (childId: string, page: number, pageSize?: number) => Promise<PointLedgerPage>;
+  getTaskName?: (taskId: string) => string | null;
   pageSize?: number;
   title?: string;
   className?: string;
@@ -20,6 +21,15 @@ function getEntryLabel(entry: PointLedgerViewModel): string {
   if (entry.entryType === 'task_approved') return '完成任務';
   if (entry.entryType === 'reward_redemption') return '兌換獎勵';
   return entry.pointsDelta > 0 ? '家長贈點' : '家長扣點';
+}
+
+export function getEntryDescription(
+  entry: PointLedgerViewModel,
+  getTaskName?: (taskId: string) => string | null,
+): string | null {
+  if (entry.entryType !== 'task_approved') return entry.note;
+  const taskName = entry.taskId ? getTaskName?.(entry.taskId)?.trim() : null;
+  return taskName || '任務已完成';
 }
 
 function getEntryIcon(entryType: PointLedgerEntryType, pointsDelta: number) {
@@ -42,6 +52,7 @@ export function PointLedgerHistory({
   childProfileId,
   childName,
   loadPage,
+  getTaskName,
   pageSize = DEFAULT_POINT_LEDGER_PAGE_SIZE,
   title = '點數明細',
   className = '',
@@ -113,6 +124,7 @@ export function PointLedgerHistory({
           <div className="space-y-2">
             {result.entries.map((entry) => {
               const positive = entry.pointsDelta > 0;
+              const description = getEntryDescription(entry, getTaskName);
               return (
                 <article key={entry.id} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${positive ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`} aria-hidden="true">
@@ -123,7 +135,7 @@ export function PointLedgerHistory({
                       <h4 className="font-black text-gray-900">{getEntryLabel(entry)}</h4>
                       <time className="text-xs font-bold text-gray-400" dateTime={new Date(entry.createdAt).toISOString()}>{formatEntryDate(entry.createdAt)}</time>
                     </div>
-                    {entry.note && <p className="mt-1 break-words text-sm font-bold text-gray-500">{entry.note}</p>}
+                    {description && <p className="mt-1 break-words text-sm font-bold text-gray-500">{description}</p>}
                   </div>
                   <div className={`shrink-0 text-right text-base font-black ${positive ? 'text-amber-700' : 'text-rose-700'}`}>
                     <span aria-hidden="true">{positive ? '+' : ''}</span>

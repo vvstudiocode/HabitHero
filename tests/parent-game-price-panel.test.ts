@@ -26,13 +26,13 @@ describe('parent world price panel', () => {
 
   it('renders catalog thumbnails in the store price cards', () => {
     const item: GameCatalogItem = {
-      id: 'character.preview',
+      id: 'character.arthur',
       itemType: 'character',
-      name: '棕熊玩偶',
-      description: '柔軟可靠的棕熊玩偶夥伴。',
+      name: '亞瑟',
+      description: '勇敢可靠的冒險夥伴。',
       scrollPrice: 6,
-      assetKey: 'character.preview',
-      thumbnailUrl: '/assets/animal-plushies/bear-thumbnail.png',
+      assetKey: 'character.arthur',
+      thumbnailUrl: '/assets/characters/arthur-thumbnail.webp',
       isActive: true,
       isStarter: false,
       isStackable: false,
@@ -51,9 +51,9 @@ describe('parent world price panel', () => {
     }));
 
     assert.match(html, />商店</);
-    assert.match(html, /src="\/assets\/animal-plushies\/bear-thumbnail\.png"/);
+    assert.match(html, /src="\/assets\/characters\/arthur-thumbnail\.webp"/);
     assert.match(html, /class="hh-game-price-card/);
-    assert.match(html, /aria-label="商品版面欄數：目前 2 欄"/);
+    assert.match(html, /aria-label="商品版面欄數：目前 4 欄"/);
     assert.match(html, /編輯價格/);
     assert.doesNotMatch(html, /家庭自訂/);
   });
@@ -70,8 +70,12 @@ describe('parent world price panel', () => {
   });
 
   it('keeps parent layout controls beside the compact price editor trigger', () => {
-    assert.match(parentPanelSource, /hh-game-store-toolbar--parent/);
     assert.match(parentPanelSource, /hh-game-price-edit-button/);
+    assert.match(parentPanelSource, /useState<GameCatalogLayoutColumns>\(4\)/);
+    const heading = parentPanelSource.match(/<div className="hh-game-store-heading">[\s\S]*?<\/div>/)?.[0] ?? '';
+    assert.match(heading, /<h2 id="game-price-heading"[\s\S]*?>商店<\/h2>/);
+    assert.match(heading, /className="hh-game-store-heading-actions"[\s\S]*?GameCatalogLayoutControls columns=\{layoutColumns\}[\s\S]*?hh-game-price-edit-button/);
+    assert.doesNotMatch(parentPanelSource, /hh-game-store-toolbar--parent/);
     assert.doesNotMatch(parentPanelSource, /調整這個家庭看到的任務捲價格/);
   });
 });

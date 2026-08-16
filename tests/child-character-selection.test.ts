@@ -85,7 +85,8 @@ test('new child flow exposes the ten supplied walkable GLB characters', () => {
   assert.match(source, /onNewChildCharacterChange/);
   assert.match(source, /role="radiogroup" aria-label="冒險人物"/);
   assert.doesNotMatch(source, /固定使用 3D 人物/);
-  assert.doesNotMatch(source, /getCharactersForCategory|CHARACTER_CATEGORIES|hh-character-preview-modal/);
+  assert.doesNotMatch(source, /getCharactersForCategory|CHARACTER_CATEGORIES/);
+  assert.match(source, /GameItemLightbox/);
   assert.match(catalogSource, /character\.arthur/);
   assert.match(catalogSource, /character\.elina/);
   assert.match(catalogSource, /character\.sia/);
@@ -118,7 +119,22 @@ test('gender controls are keyboard and touch accessible', () => {
   assert.match(source, /type="button"/);
   assert.match(source, /hh-gender-option/);
   assert.match(source, /hh-world-character-option/);
-  assert.doesNotMatch(source, /hh-character-selection-trigger|aria-haspopup="dialog"/);
+  assert.match(source, /aria-haspopup="dialog"/);
+  assert.match(source, /aria-expanded=\{previewCharacterId === character\.id\}/);
+});
+
+test('character cards open the shared store-style portrait lightbox with selected details', () => {
+  const source = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
+  const styles = read('../src/styles/modals.css');
+
+  assert.match(source, /previewCharacterId/);
+  assert.match(source, /setPreviewCharacterId\(characterId\)/);
+  assert.match(source, /<GameItemLightbox item=\{previewCharacter\}/);
+  assert.match(source, /onClose=\{\(\) => setPreviewCharacterId\(null\)\}/);
+  assert.match(styles, /\.hh-game-item-lightbox-backdrop\s*\{[\s\S]*?background:\s*rgb\(0 0 0 \/ 68%\)/);
+  assert.match(styles, /\.hh-game-item-lightbox-content img\s*\{[\s\S]*?object-fit:\s*contain/);
+  assert.match(styles, /\.hh-game-item-lightbox-copy\s*\{/);
+  assert.doesNotMatch(source, /expandedCharacterId|is-expanded|hh-character-preview-/);
 });
 
 test('child account provisioning sends the selected identity to the RPC', () => {
