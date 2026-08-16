@@ -1,0 +1,30 @@
+[ -104226ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  625886ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  738913ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  790478ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  841702ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 1136317ms] TypeError: afterClose is not a function
+    at http://localhost:3000/src/components/ChildDashboard.tsx?t=1786849497332:454:19
+[ 1564400ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 1733867ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 2200918ms] Error: useAppStore must be used within an AppProvider
+    at useAppStore (http://localhost:3000/src/store.tsx?t=1786850461757:827:23)
+    at MainApp (http://localhost:3000/src/App.tsx?t=1786850461757:23:150)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:8525:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:12424:43)
+    at renderRootSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:12408:13)
+[ 2199433ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainApp> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965
+[ 2238031ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 2247735ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 2271691ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 2662515ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 2726116ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366

@@ -1,0 +1,14 @@
+[  -20895ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[  -17875ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  170943ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[  173827ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  224874ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[  227428ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  254464ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[  257414ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  282990ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[  285818ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[  544165ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[  546773ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
+[ 1004923ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 1007403ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onSelectStart @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2366
