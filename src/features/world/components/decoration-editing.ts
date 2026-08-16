@@ -7,6 +7,14 @@ export interface DecorationDraft {
   scale: number;
 }
 
+export function radiansToDegrees(radians: number): number {
+  return Number(((radians * 180) / Math.PI).toFixed(1));
+}
+
+export function degreesToRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
 export function getActiveDecorationEntities(entities: ChildWorldEntity[], inventoryItemId: string): ChildWorldEntity[] {
   return entities.filter((entity) => entity.isActive && entity.entityKind === 'decoration' && entity.inventoryItemId === inventoryItemId);
 }

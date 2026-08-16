@@ -149,6 +149,8 @@ export const taskRowToViewModel = (row: TaskRow): TaskViewModel => ({
   feedbackTone: row.feedback_tone ?? null,
   revisionNote: row.revision_note ?? null,
   completedAt: row.completed_at,
+  ...(row.cancelled_at !== undefined ? { cancelledAt: row.cancelled_at ?? null } : {}),
+  ...(row.cancelled_by !== undefined ? { cancelledBy: row.cancelled_by ?? null } : {}),
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   ...(row.description !== undefined ? { description: row.description } : {}),

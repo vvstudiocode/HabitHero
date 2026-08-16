@@ -25,6 +25,8 @@ import type {
   AppState,
   Child,
   FeedbackTone,
+  PointLedgerAdjustmentResult,
+  PointLedgerPage,
   Reward,
   Task,
   TaskCategory,
@@ -33,6 +35,12 @@ import type {
   TaskTemplate,
   TaskTimerSession,
 } from '../types';
+import {
+  createPointLedgerPage,
+  DEFAULT_POINT_LEDGER_PAGE_SIZE,
+  normalizePointLedgerPagination,
+  validatePointLedgerAdjustment,
+} from './point-ledger';
 import { validateRewardPoints } from './reward-validation';
 import {
   buildAdventureCompletionPayload,
@@ -47,10 +55,34 @@ import {
 import { loadChildGameData } from '../features/world/game-data';
 import type {
   GamePurchaseResult,
+  ChildWorldEntity,
   WorldMutationResult,
   WorldMutationPayload,
   WorldTransformMutationPayload,
 } from '../features/world/contracts';
+
+export function toWorldMutationResult(value: unknown): WorldMutationResult {
+  const result = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const rawEntity = result.entity && typeof result.entity === 'object' ? result.entity as Record<string, unknown> : undefined;
+  if (!rawEntity) return { revision: Number(result.revision ?? 0) };
+  const entity: ChildWorldEntity = {
+    id: String(rawEntity.id),
+    inventoryItemId: String(rawEntity.inventory_item_id),
+    entityKind: rawEntity.entity_kind === 'pet' ? 'pet' : 'decoration',
+    worldLayoutVersion: Number(rawEntity.world_layout_version ?? 1),
+    x: Number(rawEntity.position_x ?? 0),
+    y: Number(rawEntity.position_y ?? 0),
+    z: Number(rawEntity.position_z ?? 0),
+    rotationX: Number(rawEntity.rotation_x ?? 0),
+    rotationY: Number(rawEntity.rotation_y ?? 0),
+    rotationZ: Number(rawEntity.rotation_z ?? 0),
+    scale: Number(rawEntity.scale ?? 1),
+    behaviorMode: rawEntity.behavior_mode === 'wander' ? 'wander' : rawEntity.behavior_mode === 'idle' ? 'idle' : 'static',
+    roamingSlot: rawEntity.roaming_slot == null ? null : Number(rawEntity.roaming_slot),
+    isActive: rawEntity.is_active !== false,
+  };
+  return { revision: Number(result.revision ?? 0), entity };
+}
 export {
   buildAdventureCompletionPayload,
   buildAdventureSchedulePayload,
@@ -90,6 +122,7 @@ const emptyState = (): AppState => ({
 // This can later become a server-side cursor when history grows substantially.
 const CHILD_COMPLETED_TASK_HISTORY_LIMIT = 300;
 const FAMILY_COMPLETED_TASK_HISTORY_LIMIT = 300;
+const INITIAL_POINT_LEDGER_LIMIT = DEFAULT_POINT_LEDGER_PAGE_SIZE;
 
 function check<T>(result: { data: T; error: { message: string } | null }): T {
   if (result.error) throw new Error(result.error.message);
@@ -134,6 +167,28 @@ export interface ReviewTaskCompletionInput {
   correction?: string | null;
   tone?: FeedbackTone | null;
   revisionNote?: string | null;
+}
+
+export const buildAdjustChildPointsPayload = (
+  childProfileId: string,
+  pointsDelta: number,
+  note: string,
+) => ({
+  target_child_profile_id: childProfileId,
+  points_delta: pointsDelta,
+  adjustment_note: note,
+});
+
+function pointLedgerAdjustmentResultFromRpc(value: unknown): PointLedgerAdjustmentResult {
+  const result = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const ledgerEntry = result.ledger_entry && typeof result.ledger_entry === 'object'
+    ? result.ledger_entry as PointLedgerRow
+    : null;
+  if (!ledgerEntry) throw new Error('點數調整回應格式錯誤，請重試。');
+  return {
+    ledgerEntry: pointLedgerRowToViewModel(ledgerEntry),
+    pointsBalance: Number(result.points_balance ?? 0),
+  };
 }
 
 export interface CreateChildAccountInput {
@@ -294,7 +349,7 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
       client.from('rewards').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('sort_order').then((result) => asRows<RewardRow>(check(result))),
       client.from('wishlist_items').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at').then((result) => asRows<WishlistItemRow>(check(result))),
       client.from('reward_redemptions').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at', { ascending: false }).then((result) => asRows<RewardRedemptionRow>(check(result))),
-      client.from('point_ledger').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at', { ascending: false }).then((result) => asRows<PointLedgerRow>(check(result))),
+      client.from('point_ledger').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at', { ascending: false }).order('id', { ascending: false }).range(0, INITIAL_POINT_LEDGER_LIMIT - 1).then((result) => asRows<PointLedgerRow>(check(result))),
     ]);
     tasks = [...activeTasks, ...completedHistory];
     rewards = loadedRewards;
@@ -319,7 +374,7 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
       client.from('rewards').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<RewardRow>(check(result))),
       client.from('wishlist_items').select('*').eq('family_id', familyId).order('created_at').then((result) => asRows<WishlistItemRow>(check(result))),
       client.from('reward_redemptions').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).then((result) => asRows<RewardRedemptionRow>(check(result))),
-      client.from('point_ledger').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).then((result) => asRows<PointLedgerRow>(check(result))),
+      client.from('point_ledger').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).order('id', { ascending: false }).range(0, INITIAL_POINT_LEDGER_LIMIT - 1).then((result) => asRows<PointLedgerRow>(check(result))),
     ]);
     state.taskTemplates = loadedTemplates;
     tasks = [...activeTasks, ...completedHistory];
@@ -382,6 +437,7 @@ export interface DataRepository {
   reviewTaskCompletion(taskId: string, review: ReviewTaskCompletionInput): Promise<void>;
   ensureDailyAdventureOccurrences(childProfileId: string, date?: string): Promise<void>;
   submitAdventureCompletion(taskId: string, submission: AdventureCompletionInput): Promise<void>;
+  abandonChildAdventure(taskId: string): Promise<void>;
   reviewAdventureCompletion(taskId: string, review: ReviewTaskCompletionInput): Promise<void>;
   createAdventureSchedule(familyId: string, schedule: AdventureScheduleInput): Promise<string[]>;
   updateAdventureSchedule(scheduleId: string, updates: AdventureScheduleUpdateInput): Promise<TaskSchedule>;
@@ -398,6 +454,8 @@ export interface DataRepository {
   insertWishlist(familyId: string, childId: string, name: string): Promise<void>;
   deleteWishlist(wishlistId: string): Promise<void>;
   approveWishlist(familyId: string, childId: string, wishlistId: string, points: number): Promise<void>;
+  listPointLedger(familyId: string, childProfileId: string, page?: number, pageSize?: number): Promise<PointLedgerPage>;
+  adjustChildPoints(familyId: string, childProfileId: string, pointsDelta: number, note: string): Promise<PointLedgerAdjustmentResult>;
   redeemReward(rewardId: string): Promise<void>;
   fulfillTicket(ticketId: string): Promise<void>;
   recordParentConsent(familyId: string, consentVersion: string): Promise<void>;
@@ -598,6 +656,9 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     async submitAdventureCompletion(taskId, submission) {
       check(await client.rpc('submit_adventure_completion', buildAdventureCompletionPayload(taskId, submission)));
     },
+    async abandonChildAdventure(taskId) {
+      check(await client.rpc('abandon_child_adventure', { target_task_id: taskId }));
+    },
     async reviewAdventureCompletion(taskId, review) {
       check(await client.rpc('review_adventure_completion', buildReviewTaskCompletionPayload(taskId, review)));
     },
@@ -700,6 +761,31 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
         target_points: points,
       }));
     },
+    async listPointLedger(familyId, childProfileId, page = 1, pageSize = DEFAULT_POINT_LEDGER_PAGE_SIZE) {
+      const pagination = normalizePointLedgerPagination(page, pageSize);
+      const query = client
+        .from('point_ledger')
+        .select('*', { count: 'exact' })
+        .eq('family_id', familyId)
+        .eq('child_profile_id', childProfileId)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(pagination.from, pagination.to);
+      const result = await query;
+      if (result.error) throw new Error(result.error.message);
+      const entries = asRows<PointLedgerRow>(result.data).map(pointLedgerRowToViewModel);
+      return createPointLedgerPage(entries, result.count ?? 0, pagination);
+    },
+    async adjustChildPoints(familyId, childProfileId, pointsDelta, note) {
+      const validation = validatePointLedgerAdjustment(pointsDelta, note);
+      if (validation.ok === false) throw new Error(validation.message);
+      const result = check(await client.rpc('adjust_child_points', buildAdjustChildPointsPayload(
+        childProfileId,
+        pointsDelta,
+        validation.note,
+      )));
+      return pointLedgerAdjustmentResultFromRpc(result);
+    },
     async redeemReward(rewardId) { check(await client.rpc('redeem_reward', { target_reward_id: rewardId })); },
     async fulfillTicket(ticketId) { check(await client.from('reward_redemptions').update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() }).eq('id', ticketId)); },
     async recordParentConsent(familyId, consentVersion) {
@@ -755,16 +841,16 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
       return { revision: Number(result.revision) };
     },
     async placeWorldEntity(childId, payload) {
-      return check(await client.rpc('place_world_entity', {
+      return toWorldMutationResult(check(await client.rpc('place_world_entity', {
         ...toWorldPlacementRpcArgs(payload),
         target_child_profile_id: childId,
-      })) as WorldMutationResult;
+      })));
     },
     async updateWorldEntityTransform(childId, payload) {
-      return check(await client.rpc('update_world_entity_transform', {
+      return toWorldMutationResult(check(await client.rpc('update_world_entity_transform', {
         ...toWorldTransformRpcArgs(payload),
         target_child_profile_id: childId,
-      })) as WorldMutationResult;
+      })));
     },
     async removeWorldEntity(childId, payload) {
       return check(await client.rpc('remove_world_entity', {

@@ -29,8 +29,24 @@ const terrainWorldLayerSource = readFileSync(
   new URL('../src/features/world/TerrainWorldLayer.tsx', import.meta.url),
   'utf8',
 );
+const runtimeSource = readFileSync(
+  new URL('../src/features/world/prototype-world-runtime.ts', import.meta.url),
+  'utf8',
+);
+const worldPlacementSource = readFileSync(
+  new URL('../src/features/world/world-placement.ts', import.meta.url),
+  'utf8',
+);
 const modalSourceForOverflow = readFileSync(
   new URL('../src/styles/modals.css', import.meta.url),
+  'utf8',
+);
+const characterStylesSource = readFileSync(
+  new URL('../src/styles/character.css', import.meta.url),
+  'utf8',
+);
+const worldControlsSource = readFileSync(
+  new URL('../src/styles/world-controls.css', import.meta.url),
   'utf8',
 );
 
@@ -72,6 +88,8 @@ describe('child game panel decoration editing', () => {
     assert.match(childGamePanelSource, /actionContent=\{previewInventoryActions\}/);
     assert.match(childGamePanelSource, /onEquipCharacter/);
     assert.match(childGamePanelSource, /onPlaceDecoration/);
+    assert.match(childGamePanelSource, /onStartDecorationPlacement/);
+    assert.match(childGamePanelSource, /entities\.length === 0/);
   });
 
   it('keeps child layout controls beside the wallet and uses icon-only category tabs', () => {
@@ -126,11 +144,10 @@ describe('child game panel decoration editing', () => {
     });
   });
 
-  it('converts the child-facing rotation control between degrees and world radians', () => {
+  it('keeps the shared rotation conversion utilities available for world controls', () => {
     assert.equal(radiansToDegrees(Math.PI), 180);
     assert.equal(degreesToRadians(180), Math.PI);
-    assert.match(childGamePanelSource, /radiansToDegrees\(draft\.rotationY\)/);
-    assert.match(childGamePanelSource, /degreesToRadians\(Number\(event\.target\.value\)\)/);
+    assert.match(terrainWorldLayerSource, /onPlacementControl/);
   });
 
   it('exposes explicit transform actions and queues retries with the latest world revision', () => {
@@ -138,9 +155,11 @@ describe('child game panel decoration editing', () => {
     assert.ok(childDashboardSource.includes('collectAllWorldDecorations,'));
     assert.ok(childDashboardSource.includes('onCollectAllDecorations={(expectedRevision) => collectAllWorldDecorations(activeChild.id, expectedRevision)}'));
 
-    for (const label of ['X', 'Z', '旋轉Y', '大小', '套用', '取消', '重試', '全部收回']) {
+    for (const label of ['重新擺放', '收回', '全部收回']) {
       assert.ok(childGamePanelSource.includes(label), `missing decoration UI label: ${label}`);
     }
+    assert.doesNotMatch(childGamePanelSource, /<label className="hh-game-lightbox-field">X<input/);
+    assert.doesNotMatch(childGamePanelSource, /<label className="hh-game-lightbox-field">Z<input/);
 
     assert.ok(childGamePanelSource.includes('worldMutationQueueRef.current'));
     assert.ok(childGamePanelSource.includes('worldRevisionRef.current'));
@@ -148,6 +167,20 @@ describe('child game panel decoration editing', () => {
     assert.ok(childGamePanelSource.includes('entityId: entity.id'));
     assert.ok(childGamePanelSource.includes('onUpdateDecoration({'));
     assert.equal(childGamePanelSource.includes('onBlur'), false);
+  });
+
+  it('keeps placed decoration actions compact with only reposition and collect buttons', () => {
+    const entityActionsStart = childGamePanelSource.indexOf('{entities.map((entity) => {');
+    const entityActionsEnd = childGamePanelSource.indexOf('{hasRoom &&', entityActionsStart);
+    const entityActions = childGamePanelSource.slice(entityActionsStart, entityActionsEnd);
+
+    assert.ok(entityActionsStart >= 0);
+    assert.ok(entityActionsEnd > entityActionsStart);
+    assert.doesNotMatch(entityActions, /第 \{entityIndex \+ 1\} 份裝飾/);
+    assert.doesNotMatch(entityActions, /回到世界點選家具/);
+    assert.doesNotMatch(entityActions, /hh-game-lightbox-action-group/);
+    assert.match(entityActions, /重新擺放/);
+    assert.match(entityActions, /收回/);
   });
 
   it('keeps decoration inventory controls available alongside the layout control', () => {
@@ -173,12 +206,23 @@ describe('child game panel decoration editing', () => {
     assert.match(childDashboardSource, /placement={decorationPlacement/);
     assert.match(childDashboardSource, /onCompletePlacement/);
     assert.match(terrainWorldLayerSource, /裝飾放置工具/);
-    assert.match(terrainWorldLayerSource, /拖曳或點一下草地來選位置/);
+    assert.match(terrainWorldLayerSource, /按住裝飾並拖曳來移動位置；雙指捏合可縮放與旋轉/);
+    assert.doesNotMatch(terrainWorldLayerSource, /拖曳或點擊草地來選擇裝飾位置/);
     assert.match(terrainWorldLayerSource, /完成放置/);
   });
 
+  it('lets children select an existing furniture item in the world and re-place it', () => {
+    assert.match(childDashboardSource, /onStartDecorationPlacement={startExistingDecorationPlacement}/);
+    assert.match(childDashboardSource, /draft:\s*\{\s*x:\s*entity\.x/);
+    assert.match(terrainWorldLayerSource, /onStartDecorationPlacement/);
+    assert.match(terrainWorldLayerSource, /重新擺放/);
+    assert.match(runtimeSource, /onDecorationSelect/);
+    assert.match(runtimeSource, /decorationRaycaster/);
+  });
+
   it('uses the 0.1 minimum size and optimistic placement state', () => {
-    assert.match(childGamePanelSource, /<input type="number" min="0\.1" max="3" step="0\.1" value=\{draft\.scale\}/);
+    assert.match(worldPlacementSource, /Math\.max\(0\.1, bounds\?\.minScale \?\? 0\.1\)/);
+    assert.match(terrainWorldLayerSource, /縮小/);
     assert.match(storeSource, /patchPlacedWorldEntity/);
     assert.match(childDashboardSource, /const placementSession = decorationPlacement;/);
     assert.match(childDashboardSource, /setDecorationPlacement\(null\);[\s\S]*?placeWorldEntity/);
@@ -186,5 +230,74 @@ describe('child game panel decoration editing', () => {
 
   it('keeps the furniture lightbox free of a visible page scrollbar', () => {
     assert.match(modalSourceForOverflow, /\.hh-game-item-lightbox-content[\s\S]*?scrollbar-width:\s*none/);
+  });
+
+  it('keeps the child world pinned to the viewport after placement controls close', () => {
+    assert.match(childDashboardSource, /hh-dashboard-screen--child/);
+    assert.match(characterStylesSource, /\.hh-dashboard-screen--child\s*\{[\s\S]*?position:\s*fixed/);
+    assert.doesNotMatch(childDashboardSource, /hh-dashboard-screen--child[^\"]*pb-24/);
+  });
+
+  it('removes the placement grid while keeping the placement preview', () => {
+    assert.match(terrainWorldLayerSource, /裝飾放置工具/);
+    assert.match(runtimeSource, /updatePlacementPreview/);
+    assert.doesNotMatch(runtimeSource, /getPlacementGridCells|placementGrid|decoration-placement-grid/);
+  });
+
+  it('uses compact floating furniture controls with one lower rotate action', () => {
+    const placementControlsStart = terrainWorldLayerSource.indexOf('className="hh-world-placement-controls"');
+    const placementControlsEnd = terrainWorldLayerSource.indexOf('{status ===', placementControlsStart);
+    const placementControls = terrainWorldLayerSource.slice(placementControlsStart, placementControlsEnd);
+    const controlOrder = [
+      'hh-world-placement-scale-down',
+      'hh-world-placement-scale-up',
+      'hh-world-placement-rotate-bottom',
+      'aria-label="完成放置"',
+      'aria-label="取消"',
+    ].map((marker) => placementControls.indexOf(marker));
+
+    assert.ok(controlOrder.every((index) => index >= 0));
+    assert.ok(controlOrder.every((index, position) => position === 0 || index > controlOrder[position - 1]));
+    assert.match(terrainWorldLayerSource, /hh-world-placement-rotate-bottom/);
+    assert.doesNotMatch(terrainWorldLayerSource, /hh-world-placement-rotate-top/);
+    assert.match(terrainWorldLayerSource, /aria-label="縮小"/);
+    assert.match(terrainWorldLayerSource, /aria-label="放大"/);
+    assert.match(terrainWorldLayerSource, /aria-label="完成放置"/);
+    assert.match(terrainWorldLayerSource, /aria-label="取消"/);
+    assert.match(runtimeSource, /onPlacementGestureChange/);
+    assert.match(runtimeSource, /placementPointers/);
+    assert.match(runtimeSource, /scaleFactor/);
+    assert.match(runtimeSource, /rotationDelta/);
+    assert.match(worldControlsSource, /.hh-world-placement-controls\s*\{[\s\S]*?position:\s*fixed/);
+    assert.match(worldControlsSource, /.hh-world-placement-controls\s*\{[\s\S]*?display:\s*flex/);
+    assert.match(worldControlsSource, /.hh-world-placement-rotate-bottom\s*\{[\s\S]*?touch-action:\s*none/);
+    assert.doesNotMatch(worldControlsSource, /\.hh-world-placement-copy/);
+  });
+
+  it('supports press-and-drag rotation with left and right direction control', () => {
+    assert.match(terrainWorldLayerSource, /startPlacementRotationDrag/);
+    assert.match(terrainWorldLayerSource, /updatePlacementRotationDrag/);
+    assert.match(terrainWorldLayerSource, /finishPlacementRotationDrag/);
+    assert.match(terrainWorldLayerSource, /onPointerDown=\{startPlacementRotationDrag\}/);
+    assert.match(terrainWorldLayerSource, /onPointerMove=\{updatePlacementRotationDrag\}/);
+    assert.match(terrainWorldLayerSource, /onPointerUp=\{finishPlacementRotationDrag\}/);
+    assert.match(terrainWorldLayerSource, /clientX/);
+    assert.match(terrainWorldLayerSource, /onPlacementGestureChange\?\.\(\{ scaleFactor: 1, rotationDelta/);
+  });
+
+  it('clears dashboard chrome and docks placement controls at the bottom', () => {
+    assert.match(childDashboardSource, /is-decoration-placement/);
+    assert.match(characterStylesSource, /is-decoration-placement[\s\S]*?\.hh-character-stats/);
+    assert.match(characterStylesSource, /is-decoration-placement[\s\S]*?\.hh-child-adventure-board/);
+    assert.match(worldControlsSource, /is-decoration-placement[\s\S]*?\.hh-world-joystick/);
+    assert.match(worldControlsSource, /\.hh-world-placement-controls\s*\{[\s\S]*?bottom:/);
+    assert.match(worldControlsSource, /transform:\s*translateX\(-50%\)/);
+  });
+
+  it('labels the placement exit as cancel and keeps invalid-position guidance clear', () => {
+    assert.match(terrainWorldLayerSource, /aria-label="取消"/);
+    assert.doesNotMatch(terrainWorldLayerSource, /先放背包/);
+    assert.match(terrainWorldLayerSource, /此位置不能放置，請換一個地方/);
+    assert.doesNotMatch(terrainWorldLayerSource, /這裡不能放，換一個草地位置/);
   });
 });

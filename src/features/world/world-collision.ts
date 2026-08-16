@@ -21,6 +21,11 @@ export interface WorldPoint2D {
 
 export const WORLD_LAYOUT_VERSION = 1;
 export const WORLD_BOUNDARY = 4.8;
+// The outer meadow plane is 26.95 units wide (9 walkable tiles plus the
+// 8-unit scene padding on each side, with the grass field's 0.98 inset).
+// Decorations may use this visible meadow while characters remain inside
+// WORLD_BOUNDARY.
+export const VISIBLE_GRASS_BOUNDARY = 13.475;
 export const CHARACTER_SPAWN = { x: 0, z: 2.2, radius: 0.8 };
 // The visual tree is placed from its loaded GLB bounds outside the walkable
 // edge. Keep this legacy collision proxy beyond the movement boundary too.
@@ -40,13 +45,15 @@ export function isTransformWithinWorld(
   transform: WorldTransform,
   collisionRadius: number,
   existing: CollisionCircle[] = [],
+  boundary = WORLD_BOUNDARY,
 ): boolean {
   if (!Number.isFinite(transform.x) || !Number.isFinite(transform.y) || !Number.isFinite(transform.z)) return false;
-  if (!Number.isFinite(transform.scale) || transform.scale < 0.25 || transform.scale > 3) return false;
+  if (!Number.isFinite(transform.scale) || transform.scale < 0.1 || transform.scale > 3) return false;
   if ([transform.rotationX, transform.rotationY, transform.rotationZ].some((value) => !Number.isFinite(value))) return false;
+  if (!Number.isFinite(boundary) || boundary <= 0) return false;
   const radius = collisionRadius * transform.scale;
   const circle = { x: transform.x, z: transform.z, radius };
-  if (Math.abs(transform.x) + radius > WORLD_BOUNDARY || Math.abs(transform.z) + radius > WORLD_BOUNDARY) return false;
+  if (Math.abs(transform.x) + radius > boundary || Math.abs(transform.z) + radius > boundary) return false;
   if (circlesOverlap(circle, CHARACTER_SPAWN) || circlesOverlap(circle, CENTRAL_TREE_KEEP_OUT)) return false;
   return existing.every((other) => !circlesOverlap(circle, other));
 }

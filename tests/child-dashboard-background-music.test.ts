@@ -26,6 +26,9 @@ test('background music retries from app interactions after autoplay is blocked',
 
   assert.match(backgroundMusicSource, /document\.addEventListener\('pointerdown'/);
   assert.match(backgroundMusicSource, /document\.addEventListener\('keydown'/);
-  assert.match(backgroundMusicSource, /startWorldBackgroundMusic/);
-  assert.match(backgroundMusicSource, /stopWorldBackgroundMusic/);
+  assert.match(backgroundMusicSource, /bindWorldBackgroundMusicVisibility/);
+  assert.match(backgroundMusicSource, /visibilityState/);
+  assert.match(backgroundMusicSource, /createWorldBackgroundMusicCrossfadePlayer/);
+  assert.match(backgroundMusicSource, /player\.start\(\)/);
+  assert.match(backgroundMusicSource, /player\.stop\(\)/);
 });

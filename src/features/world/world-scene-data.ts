@@ -17,11 +17,17 @@ export function createWorldSceneGameDataSnapshot(gameData: ChildGameData): Child
       .filter((entity) => entity.entityKind === 'pet' && entity.isActive && entity.assetKey)
       .map((entity) => entity.assetKey),
   );
+  const activeDecorationCatalogIds = new Set(
+    gameData.worldEntities
+      .filter((entity) => entity.entityKind === 'decoration' && entity.isActive && entity.catalogItemId)
+      .map((entity) => entity.catalogItemId),
+  );
   const sceneCatalog = gameData.catalog.filter((item) => item.itemType === 'pet' && (
     followingPetCatalogIds.has(item.id)
     || activePetCatalogIds.has(item.id)
     || activePetAssetKeys.has(item.assetKey)
-  ));
+  ))
+    .concat(gameData.catalog.filter((item) => item.itemType === 'decoration' && activeDecorationCatalogIds.has(item.id)));
 
   return {
     walletBalance: 0,

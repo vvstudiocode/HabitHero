@@ -25,7 +25,8 @@ export type AdventureTaskVisualState =
   | 'syncing'
   | 'submitted'
   | 'completed'
-  | 'revision';
+  | 'revision'
+  | 'cancelled';
 
 export interface AdventureCompletionInput {
   idempotencyKey: string;

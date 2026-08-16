@@ -151,10 +151,21 @@
 }
 
 .hh-dashboard-screen--child {
+  position: fixed;
+  inset: 0;
+  width: 100%;
   height: 100vh;
   min-height: 100vh;
   max-height: 100vh;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.hh-dashboard-screen--child.is-decoration-placement .hh-character-stats,
+.hh-dashboard-screen--child.is-decoration-placement .hh-character-dashboard-actions,
+.hh-dashboard-screen--child.is-decoration-placement .hh-character-menu,
+.hh-dashboard-screen--child.is-decoration-placement .hh-child-adventure-board {
+  display: none;
 }
 
 .hh-child-adventure-board {

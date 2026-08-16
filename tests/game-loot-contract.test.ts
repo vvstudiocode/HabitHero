@@ -29,7 +29,7 @@ describe('game loot removal contract', () => {
   });
 
   it('does not load, render, animate, or pick up stars and scrolls in the world', () => {
-    assert.doesNotMatch(runtime, /loot|Loot|Raycaster/);
+    assert.doesNotMatch(runtime, /loot|Loot/);
     assert.doesNotMatch(dashboard, /loot|Loot|onLoot/);
     assert.doesNotMatch(contracts, /GameLoot|lootDrops/);
     assert.equal(existsSync(new URL('../src/features/world/game-loot.ts', import.meta.url)), false);

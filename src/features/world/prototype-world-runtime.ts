@@ -1,5 +1,5 @@
 import type { AnimationClip, Object3D } from 'three';
-import type { ChildGameData, ChildWorldEntity, GameCatalogItem, PetBehaviorMode } from './contracts';
+import type { ChildGameData, ChildWorldEntity, GameCatalogItem, PetBehaviorMode, WorldTransform } from './contracts';
 import {
   buildCollisionCircles,
   CENTRAL_TREE_KEEP_OUT,
@@ -66,6 +66,7 @@ import {
   queuePetMoveAfterIdleCycle,
 } from './pet-animation';
 import { getFollowingPetInventoryIds } from './following-pet-state';
+import { shouldMovePlacementDecoration } from './world-placement';
 import {
   applyPicturebookPetMaterial,
   applyWarmHandPaintedCharacterMaterial,
@@ -322,6 +323,12 @@ export function getPetModelScale({
 type ThreeNamespace = typeof import('three');
 type RuntimeStatus = 'loading' | 'ready' | 'failed';
 
+export interface DecorationSelection {
+  entityId: string;
+  x: number;
+  y: number;
+}
+
 export interface PrototypeWorldRuntimeOptions {
   canvas: HTMLCanvasElement;
   gameData: ChildGameData;
@@ -330,6 +337,10 @@ export interface PrototypeWorldRuntimeOptions {
   characterModelUrl?: string;
   createProceduralCharacter: (THREE: ThreeNamespace, item?: GameCatalogItem) => Object3D;
   showPetNames: boolean;
+  placement?: PrototypeWorldRuntimePlacement;
+  onPlacementPositionChange?: (position: { x: number; z: number }) => void;
+  onPlacementGestureChange?: (gesture: { scaleFactor: number; rotationDelta: number }) => void;
+  onDecorationSelect?: (selection: DecorationSelection | null) => void;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
   onStatus: (status: RuntimeStatus) => void;
@@ -344,6 +355,14 @@ export interface PrototypeWorldRuntimeUpdate {
   characterRenderMode: 'anime-maiden' | 'world-glb' | 'procedural';
   characterModelUrl?: string;
   showPetNames: boolean;
+  placement?: PrototypeWorldRuntimePlacement;
+}
+
+export interface PrototypeWorldRuntimePlacement {
+  item: GameCatalogItem;
+  entityId?: string;
+  transform: WorldTransform;
+  isValid: boolean;
 }
 
 export interface PrototypeWorldRuntime {
@@ -557,6 +576,79 @@ function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineA
   wrapper.scale.setScalar(scale);
   wrapper.add(model);
   return wrapper;
+}
+
+function getDecorationModelUrl(item: GameCatalogItem | undefined): string | undefined {
+  const model = item?.metadata.model;
+  return typeof model === 'string' && model.toLowerCase().endsWith('.glb') ? model : undefined;
+}
+
+function getDecorationGroundOffset(item: GameCatalogItem | undefined): number {
+  const groundOffset = item?.metadata.groundOffset;
+  return typeof groundOffset === 'number' && Number.isFinite(groundOffset) ? groundOffset : 0;
+}
+
+interface DecorationMaterialLike {
+  clone?: () => DecorationMaterialLike;
+  transparent?: boolean;
+  opacity?: number;
+  depthWrite?: boolean;
+}
+
+function prepareDecorationMaterials(root: Object3D, opacity: number) {
+  root.traverse((object) => {
+    const mesh = object as {
+      isMesh?: boolean;
+      material?: DecorationMaterialLike | DecorationMaterialLike[];
+      castShadow?: boolean;
+      receiveShadow?: boolean;
+    };
+    if (!mesh.isMesh || !mesh.material) return;
+    const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const materials = opacity < 1
+      ? sourceMaterials.map((material) => {
+        const previewMaterial = material.clone?.() ?? material;
+        previewMaterial.transparent = true;
+        previewMaterial.opacity = opacity;
+        previewMaterial.depthWrite = false;
+        return previewMaterial;
+      })
+      : sourceMaterials;
+    mesh.material = materials.length === 1 ? materials[0] : materials;
+    mesh.castShadow = opacity >= 1;
+    mesh.receiveShadow = opacity >= 1;
+  });
+}
+
+function createDecorationObject(
+  THREE: ThreeNamespace,
+  item: GameCatalogItem | undefined,
+  opacity = 1,
+  modelSource?: Object3D,
+): Object3D {
+  if (modelSource) {
+    const group = new THREE.Group();
+    const model = modelSource.clone(true);
+    model.position.y = getDecorationGroundOffset(item);
+    group.add(model);
+    prepareDecorationMaterials(group, opacity);
+    return group;
+  }
+
+  const transparent = opacity < 1;
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x9a7560,
+    roughness: 0.78,
+    transparent,
+    opacity,
+    depthWrite: !transparent,
+  });
+  const group = new THREE.Group();
+  const fallback = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.55, 8), material);
+  fallback.position.y = 0.275;
+  group.add(fallback);
+  prepareDecorationMaterials(group, opacity);
+  return group;
 }
 
 function getCharacterFootNodes(source: Object3D): Object3D[] {
@@ -856,6 +948,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     characterRenderMode: options.characterRenderMode,
     characterModelUrl: options.characterModelUrl,
     showPetNames: options.showPetNames,
+    placement: options.placement,
   };
   const disposalTracker = createDisposalTracker();
   const resourceRoots: DisposableScene[] = [];
@@ -1034,6 +1127,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       if (roamingCharacterSource) applyWarmHandPaintedCharacterStyle(roamingCharacterSource);
 
       const followingPetInventoryIds = getFollowingPetInventoryIds(options.gameData);
+      const catalogById = new Map(options.gameData.catalog.map((item) => [item.id, item]));
       const petCatalogById = new Map(options.gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => [item.id, item]));
       const petCatalogByAssetKey = new Map(options.gameData.catalog.filter((item) => item.itemType === 'pet').map((item) => [item.assetKey, item]));
       const petModelEntries = new Map<string, string>();
@@ -1075,6 +1169,38 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       if (petModelUrls.length > 0) {
         options.onProgress(64, '讀取星芽獸木偶模型…');
         await Promise.all(petModelUrls.map((modelUrl) => loadPetModelSource(modelUrl, signal)));
+      }
+      if (disposed) return;
+
+      const decorationModelSources = new Map<string, Object3D>();
+      const decorationModelLoads = new Map<string, Promise<Object3D | undefined>>();
+      const loadDecorationModelSource = (item: GameCatalogItem, loadSignal: AbortSignal) => {
+        const modelUrl = getDecorationModelUrl(item);
+        if (!modelUrl) return Promise.resolve(undefined);
+        const cached = decorationModelSources.get(item.id);
+        if (cached) return Promise.resolve(cached);
+        const pending = decorationModelLoads.get(item.id);
+        if (pending) return pending;
+        const load = loadGltfSafely<{ scene: Object3D }>(loader, modelUrl, loadSignal)
+          .then((decorationResult) => {
+            if (!trackResourceRoot(decorationResult.scene)) return undefined;
+            decorationModelSources.set(item.id, decorationResult.scene);
+            return decorationResult.scene;
+          })
+          .catch((error: unknown) => {
+            if (!disposed && !loadSignal.aborted) console.warn(`Unable to load decoration model ${modelUrl}; using a compact fallback.`, error);
+            return undefined;
+          })
+          .finally(() => decorationModelLoads.delete(item.id));
+        decorationModelLoads.set(item.id, load);
+        return load;
+      };
+      const decorationModelItems = [...options.gameData.catalog, options.placement?.item]
+        .filter((item): item is GameCatalogItem => Boolean(item) && item.itemType === 'decoration' && Boolean(getDecorationModelUrl(item)))
+        .filter((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index);
+      if (decorationModelItems.length > 0) {
+        options.onProgress(68, '讀取世界家具模型…');
+        await Promise.all(decorationModelItems.map((item) => loadDecorationModelSource(item, signal)));
       }
       if (disposed) return;
 
@@ -1320,6 +1446,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const petSpawnObstacles = [CHARACTER_SPAWN, ...wanderObstacles];
       let petSpawnIndex = 0;
       const characterWorldHeight = characterDefinition.size.y * characterScale;
+      const decorationObjects: Array<{ entityId: string; object: Object3D }> = [];
       const petActors: Array<{
         entityId: string;
         inventoryItemId: string;
@@ -1349,7 +1476,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const isPet = entity.entityKind === 'pet';
         const catalogItem = isPet
           ? resolvePetCatalogItem(entity, petCatalogById, petCatalogByAssetKey)
-          : undefined;
+          : entity.catalogItemId
+            ? catalogById.get(entity.catalogItemId)
+            : options.gameData.inventory
+              .find((inventory) => inventory.id === entity.inventoryItemId)
+              ?.catalogItemId
+              ? catalogById.get(options.gameData.inventory.find((inventory) => inventory.id === entity.inventoryItemId)!.catalogItemId)
+              : undefined;
         const petModelSource = isPet ? petModelSources.get(getPetModelUrl(catalogItem)) : undefined;
         const petWorldScale = Math.max(entity.scale, 0.01) * getPetVisualScaleMultiplier(catalogItem?.assetKey ?? entity.assetKey, catalogItem?.metadata);
         const petGroundOffset = isPet
@@ -1379,15 +1512,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           )
           : undefined;
         if (isPet && !petModel) return;
+        const decorationModelSource = !isPet && catalogItem
+          ? decorationModelSources.get(catalogItem.id)
+          : undefined;
         const object = isPet
           ? petModel!.root
-          : new THREE.Mesh(
-            new THREE.CylinderGeometry(0.22, 0.3, 0.55, 8),
-            new THREE.MeshStandardMaterial({ color: 0xe87972, roughness: 0.9 }),
-          );
+          : createDecorationObject(THREE, catalogItem, 1, decorationModelSource);
         if (!isPet) {
-          object.position.set(entity.x, entity.y + 0.3, entity.z);
-          object.rotation.y = entity.rotationY;
+          object.position.set(entity.x, entity.y, entity.z);
+          object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
           object.scale.setScalar(entity.scale);
         } else {
           const spawn = getDistributedPetSpawnPosition(petSpawnIndex, petRadius, petSpawnObstacles);
@@ -1398,6 +1531,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         }
         if (!isPet) (object as Object3D & { castShadow?: boolean }).castShadow = true;
         worldScene.add(object);
+        if (!isPet) decorationObjects.push({ entityId: entity.id, object });
         if (isPet) {
           const followIndex = followingPetInventoryIds.indexOf(entity.inventoryItemId);
           const follow = followIndex >= 0;
@@ -1652,6 +1786,146 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         });
       };
 
+      const updateDecorationObjects = (nextGameData: ChildGameData) => {
+        const activeDecorations = new Map(
+          nextGameData.worldEntities
+            .filter((entity) => entity.entityKind === 'decoration' && entity.isActive)
+            .map((entity) => [entity.id, entity] as const),
+        );
+
+        for (let index = decorationObjects.length - 1; index >= 0; index -= 1) {
+          const entry = decorationObjects[index];
+          if (activeDecorations.has(entry.entityId)) continue;
+          worldScene.remove(entry.object);
+          disposeObject3D(entry.object, disposalTracker);
+          decorationObjects.splice(index, 1);
+        }
+
+        const getDecorationCatalogItem = (entity: ChildWorldEntity) => {
+          const catalogItemId = entity.catalogItemId
+            ?? nextGameData.inventory.find((inventory) => inventory.id === entity.inventoryItemId)?.catalogItemId;
+          return catalogItemId
+            ? nextGameData.catalog.find((item) => item.id === catalogItemId && item.itemType === 'decoration')
+            : undefined;
+        };
+        const updateObjectTransform = (object: Object3D, entity: ChildWorldEntity) => {
+          object.visible = true;
+          object.position.set(entity.x, entity.y, entity.z);
+          object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
+          object.scale.setScalar(entity.scale);
+        };
+        const replaceDecorationModel = (entityId: string, previousObject: Object3D, item: GameCatalogItem, modelSource: Object3D) => {
+          const entry = decorationObjects.find((candidate) => candidate.entityId === entityId && candidate.object === previousObject);
+          const entity = activeDecorations.get(entityId);
+          if (!entry || !entity || disposed) return;
+          const replacement = createDecorationObject(THREE, item, 1, modelSource);
+          replacement.userData.entityId = entityId;
+          replacement.userData.catalogItemId = item.id;
+          (replacement as Object3D & { castShadow?: boolean }).castShadow = true;
+          updateObjectTransform(replacement, entity);
+          worldScene.remove(previousObject);
+          disposeObject3D(previousObject, disposalTracker);
+          worldScene.add(replacement);
+          entry.object = replacement;
+        };
+
+        activeDecorations.forEach((entity) => {
+          const existing = decorationObjects.find((candidate) => candidate.entityId === entity.id);
+          if (existing) {
+            updateObjectTransform(existing.object, entity);
+            return;
+          }
+          const item = getDecorationCatalogItem(entity);
+          if (!item) return;
+          const modelSource = decorationModelSources.get(item.id);
+          const object = createDecorationObject(THREE, item, 1, modelSource);
+          object.userData.entityId = entity.id;
+          object.userData.catalogItemId = item.id;
+          (object as Object3D & { castShadow?: boolean }).castShadow = true;
+          updateObjectTransform(object, entity);
+          worldScene.add(object);
+          decorationObjects.push({ entityId: entity.id, object });
+          if (!modelSource && getDecorationModelUrl(item)) {
+            void loadDecorationModelSource(item, signal).then((loadedModel) => {
+              if (loadedModel) replaceDecorationModel(entity.id, object, item, loadedModel);
+            });
+          }
+        });
+
+        const nextCollisions = buildCollisionCircles([...activeDecorations.values()].map((entity) => ({
+          positionX: entity.x,
+          positionZ: entity.z,
+          collisionRadius: entity.collisionRadius ?? 0.3,
+          scale: entity.scale,
+        })));
+        decorationCollisions.splice(0, decorationCollisions.length, ...nextCollisions);
+        wanderObstacles.splice(1, wanderObstacles.length - 1, ...nextCollisions);
+      };
+
+      let placementPreview: Object3D | undefined;
+      const updatePlacementPreview = (placement?: PrototypeWorldRuntimePlacement) => {
+        if (!placement) {
+          if (placementPreview) {
+            worldScene.remove(placementPreview);
+            disposeObject3D(placementPreview, disposalTracker);
+            placementPreview = undefined;
+          }
+          return;
+        }
+
+        const modelSource = decorationModelSources.get(placement.item.id);
+        if (
+          !placementPreview
+          || placementPreview.userData.catalogItemId !== placement.item.id
+          || placementPreview.userData.usesCatalogModel !== Boolean(modelSource)
+        ) {
+          if (placementPreview) {
+            worldScene.remove(placementPreview);
+            disposeObject3D(placementPreview, disposalTracker);
+          }
+          const preview = createDecorationObject(
+            THREE,
+            placement.item,
+            0.5,
+            modelSource,
+          );
+          preview.name = 'decoration-placement-preview';
+          const footprint = new THREE.Mesh(
+            new THREE.RingGeometry(0.72, 0.82, 40),
+            new THREE.MeshBasicMaterial({
+              color: 0x9cdda4,
+              transparent: true,
+              opacity: 0.72,
+              depthWrite: false,
+            }),
+          );
+          footprint.name = 'decoration-placement-footprint';
+          footprint.rotation.x = -Math.PI / 2;
+          footprint.position.y = 0.008;
+          preview.add(footprint);
+          worldScene.add(preview);
+          placementPreview = preview;
+          preview.userData.catalogItemId = placement.item.id;
+          preview.userData.usesCatalogModel = Boolean(modelSource);
+        }
+
+        placementPreview.position.set(placement.transform.x, placement.transform.y, placement.transform.z);
+        placementPreview.rotation.set(placement.transform.rotationX, placement.transform.rotationY, placement.transform.rotationZ);
+        placementPreview.scale.setScalar(placement.transform.scale);
+        const footprint = placementPreview.getObjectByName('decoration-placement-footprint') as import('three').Mesh | undefined;
+        if (footprint?.material && !Array.isArray(footprint.material) && 'color' in footprint.material) {
+          footprint.material.color.set(placement.isValid ? 0x9cdda4 : 0xef8b83);
+        }
+      };
+      const ensurePlacementModel = (placement?: PrototypeWorldRuntimePlacement) => {
+        if (!placement || decorationModelSources.has(placement.item.id) || !getDecorationModelUrl(placement.item)) return;
+        void loadDecorationModelSource(placement.item, signal).then(() => {
+          if (!disposed && latestRuntimeUpdate.placement?.item.id === placement.item.id) {
+            updatePlacementPreview(latestRuntimeUpdate.placement);
+          }
+        });
+      };
+
       let activeCharacterUpdateKey = getCharacterUpdateKey({
         gameData: options.gameData,
         equippedCatalogItem: options.equippedCatalogItem,
@@ -1711,9 +1985,22 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         })();
       };
 
+      const controller = options.controller;
+      let placementActive = Boolean(latestRuntimeUpdate.placement);
+      const placementPointers = new Map<number, { point: { x: number; y: number }; startedOnDecoration: boolean }>();
+      let placementGesture: { previousDistance: number; previousAngle: number } | null = null;
       updateScene = (next) => {
+        placementActive = Boolean(next.placement);
+        if (placementActive) controller?.reset();
+        else {
+          placementPointers.clear();
+          placementGesture = null;
+        }
         queueCharacterUpdate(next);
-        updatePetActors(next.gameData);
+        ensurePlacementModel(next.placement);
+        updatePlacementPreview(next.placement);
+        if (next.gameData !== latestPetData) updatePetActors(next.gameData);
+        updateDecorationObjects(next.gameData);
       };
       updateScene(latestRuntimeUpdate);
 
@@ -1723,7 +2010,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let sceneElapsedTime = 0;
       const keys = new Set<string>();
       const clock = new THREE.Clock();
-      const controller = options.controller;
       let lastRenderedAt = Number.NEGATIVE_INFINITY;
 
       const resize = () => {
@@ -1734,13 +2020,97 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         camera.updateProjectionMatrix();
         rendererInstance.setSize(width, height, false);
       };
+      const placementRaycaster = new THREE.Raycaster();
+      const placementNdc = new THREE.Vector2();
+      const placementGround = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const placementHit = new THREE.Vector3();
+      const decorationRaycaster = new THREE.Raycaster();
+      const decorationNdc = new THREE.Vector2();
       const pointFromEvent = (event: PointerEvent) => {
         const rect = options.canvas.getBoundingClientRect();
         return { x: event.clientX - rect.left, y: event.clientY - rect.top };
       };
+      const decorationSelectionFromEvent = (event: PointerEvent): DecorationSelection | null => {
+        const point = pointFromEvent(event);
+        const rect = options.canvas.getBoundingClientRect();
+        decorationNdc.set(
+          (point.x / Math.max(rect.width, 1)) * 2 - 1,
+          -(point.y / Math.max(rect.height, 1)) * 2 + 1,
+        );
+        decorationRaycaster.setFromCamera(decorationNdc, camera);
+        const hit = decorationRaycaster.intersectObjects(decorationObjects.map(({ object }) => object), true)[0];
+        if (!hit) return null;
+        const selected = decorationObjects.find(({ object }) => {
+          let current: Object3D | null = hit.object;
+          while (current) {
+            if (current === object) return true;
+            current = current.parent;
+          }
+          return false;
+        });
+        if (!selected) return null;
+        selected.object.updateMatrixWorld(true);
+        const bounds = new THREE.Box3().setFromObject(selected.object);
+        const worldPoint = selected.object.getWorldPosition(new THREE.Vector3());
+        worldPoint.y = Math.max(bounds.max.y + 0.2, 0.7);
+        worldPoint.project(camera);
+        const rawX = ((worldPoint.x + 1) / 2) * rect.width;
+        const rawY = ((-worldPoint.y + 1) / 2) * rect.height;
+        return {
+          entityId: selected.entityId,
+          x: Math.min(Math.max(rawX, 36), Math.max(36, rect.width - 36)),
+          y: Math.min(Math.max(rawY, 52), Math.max(52, rect.height - 28)),
+        };
+      };
+      const worldPointFromEvent = (event: PointerEvent) => {
+        const point = pointFromEvent(event);
+        const rect = options.canvas.getBoundingClientRect();
+        placementNdc.set(
+          (point.x / Math.max(rect.width, 1)) * 2 - 1,
+          -(point.y / Math.max(rect.height, 1)) * 2 + 1,
+        );
+        placementRaycaster.setFromCamera(placementNdc, camera);
+        const hit = placementRaycaster.ray.intersectPlane(placementGround, placementHit);
+        return hit ? { x: hit.x, z: hit.z } : undefined;
+      };
+      const getPlacementGestureMetrics = (first: { x: number; y: number }, second: { x: number; y: number }) => ({
+        distance: Math.max(Math.hypot(second.x - first.x, second.y - first.y), 1),
+        angle: Math.atan2(second.y - first.y, second.x - first.x),
+      });
+      const placementPreviewHitFromEvent = (event: PointerEvent) => {
+        if (!placementPreview) return false;
+        const point = pointFromEvent(event);
+        const rect = options.canvas.getBoundingClientRect();
+        placementNdc.set(
+          (point.x / Math.max(rect.width, 1)) * 2 - 1,
+          -(point.y / Math.max(rect.height, 1)) * 2 + 1,
+        );
+        placementRaycaster.setFromCamera(placementNdc, camera);
+        return placementRaycaster.intersectObject(placementPreview, true).length > 0;
+      };
+      const normalizePlacementAngle = (angle: number) => Math.atan2(Math.sin(angle), Math.cos(angle));
+      let pendingDecorationSelection: { pointerId: number; point: { x: number; y: number }; selection: DecorationSelection | null } | null = null;
       const onPointerDown = (event: PointerEvent) => {
         if (options.pausedRef.current || isInteractiveTarget(event.target)) return;
+        if (placementActive) {
+          const point = pointFromEvent(event);
+          const worldPoint = worldPointFromEvent(event);
+          if (!worldPoint) return;
+          event.preventDefault();
+          placementPointers.set(event.pointerId, {
+            point,
+            startedOnDecoration: placementPreviewHitFromEvent(event),
+          });
+          options.canvas.setPointerCapture(event.pointerId);
+          if (placementPointers.size === 2) {
+            const [first, second] = [...placementPointers.values()].map(({ point: pointerPoint }) => pointerPoint);
+            const metrics = getPlacementGestureMetrics(first, second);
+            placementGesture = { previousDistance: metrics.distance, previousAngle: metrics.angle };
+          }
+          return;
+        }
         const point = pointFromEvent(event);
+        pendingDecorationSelection = { pointerId: event.pointerId, point, selection: decorationSelectionFromEvent(event) };
         event.preventDefault();
         options.canvas.setPointerCapture(event.pointerId);
         const rect = options.canvas.getBoundingClientRect();
@@ -1754,23 +2124,59 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       const onPointerMove = (event: PointerEvent) => {
         if (options.pausedRef.current) return;
+        if (placementActive) {
+          const pointer = placementPointers.get(event.pointerId);
+          if (!pointer) return;
+          event.preventDefault();
+          pointer.point = pointFromEvent(event);
+          if (placementPointers.size === 2 && placementGesture) {
+            const [first, second] = [...placementPointers.values()].map(({ point }) => point);
+            const metrics = getPlacementGestureMetrics(first, second);
+            options.onPlacementGestureChange?.({
+              scaleFactor: metrics.distance / placementGesture.previousDistance,
+              rotationDelta: normalizePlacementAngle(metrics.angle - placementGesture.previousAngle),
+            });
+            placementGesture = { previousDistance: metrics.distance, previousAngle: metrics.angle };
+            return;
+          }
+          const worldPoint = worldPointFromEvent(event);
+          if (worldPoint && shouldMovePlacementDecoration(placementPointers.size, pointer.startedOnDecoration)) {
+            options.onPlacementPositionChange?.(worldPoint);
+          }
+          return;
+        }
         const point = pointFromEvent(event);
+        if (pendingDecorationSelection?.pointerId === event.pointerId) {
+          const distance = Math.hypot(point.x - pendingDecorationSelection.point.x, point.y - pendingDecorationSelection.point.y);
+          if (distance > 8) pendingDecorationSelection = null;
+        }
         controller?.dispatch({ type: 'pointer-move', pointerId: event.pointerId, point });
       };
       const onPointerEnd = (event: PointerEvent) => {
+        if (placementActive && placementPointers.has(event.pointerId)) {
+          placementPointers.delete(event.pointerId);
+          placementGesture = placementPointers.size === 2 ? placementGesture : null;
+          if (options.canvas.hasPointerCapture(event.pointerId)) options.canvas.releasePointerCapture(event.pointerId);
+          return;
+        }
+        if (pendingDecorationSelection?.pointerId === event.pointerId) {
+          const selection = pendingDecorationSelection.selection;
+          pendingDecorationSelection = null;
+          if (event.type === 'pointerup') options.onDecorationSelect?.(selection);
+        }
         controller?.dispatch({ type: event.type === 'pointercancel' ? 'pointer-cancel' : 'pointer-up', pointerId: event.pointerId });
         if (options.canvas.hasPointerCapture(event.pointerId)) options.canvas.releasePointerCapture(event.pointerId);
       };
       const onKeyDown = (event: KeyboardEvent) => {
         const key = event.key.toLowerCase();
-        if (options.pausedRef.current || isInteractiveTarget(event.target) || (!isWorldMovementKey(key) && !isWorldCameraKey(key))) return;
+        if (options.pausedRef.current || placementActive || isInteractiveTarget(event.target) || (!isWorldMovementKey(key) && !isWorldCameraKey(key))) return;
         keys.add(key);
         event.preventDefault();
       };
       const onKeyUp = (event: KeyboardEvent) => keys.delete(event.key.toLowerCase());
-      const resetInput = () => { keys.clear(); controller?.reset(); };
+      const resetInput = () => { keys.clear(); placementPointers.clear(); placementGesture = null; pendingDecorationSelection = null; controller?.reset(); };
       options.canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
-      options.canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+      options.canvas.addEventListener('pointermove', onPointerMove, { passive: false });
       options.canvas.addEventListener('pointerup', onPointerEnd);
       options.canvas.addEventListener('pointercancel', onPointerEnd);
       window.addEventListener('keydown', onKeyDown);
@@ -1810,7 +2216,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         sceneElapsedTime += delta;
         const currentInput = controller?.getSnapshot();
         let isPlayerMoving = false;
-        if (currentInput && !options.pausedRef.current) {
+        if (currentInput && !options.pausedRef.current && !placementActive) {
           const cameraDelta = controller?.consumeCameraDeltas();
           if (cameraDelta && (cameraDelta.cameraDelta.x !== 0 || cameraDelta.cameraDelta.y !== 0)) {
             const nextCamera = applySinglePointerCameraDrag(

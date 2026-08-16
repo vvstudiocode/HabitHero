@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { dismissWithAnimation } from '../lib/utils';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
-import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, Plus, ShoppingBag, Star, Users, X, Trash2, Edit2, PlayCircle, Settings } from 'lucide-react';
+import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, MinusCircle, Plus, PlusCircle, ShoppingBag, Star, Users, X, Trash2, Edit2, PlayCircle, Settings } from 'lucide-react';
 import { TaskStatus, Task, Reward, type ChildGender } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -26,12 +26,12 @@ import { ParentSettingsChildrenSection, type NewChildProfile } from './parent-da
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
 import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
 import { PointValue } from './shared/PointValue';
+import { PointLedgerHistory } from './PointLedgerHistory';
 import { PushNotificationSettings } from './PushNotificationSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import {
   preventNativeAppContextMenu,
   preventNativeAppDragStart,
-  preventNativeAppTextSelection,
 } from '../lib/mobile-interaction';
 import type { GoalConfirmationInput, GoalReviewInput, GrowthTask, GrowthTaskTemplate, GrowthTaskWithChild, TaskCategory } from '../features/growth/types';
 import { getTodayInTaipei, type ParentCalendarAdventureTask } from '../features/adventures/components/ParentAdventureCalendar';
@@ -43,6 +43,7 @@ import {
 import { ParentGamePricePanel } from '../features/world/components/ParentGamePricePanel';
 import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } from '../features/characters/world-character-catalog';
 import { getParentBackgroundMusicPreference, setParentBackgroundMusicPreference } from '../lib/parent-background-music-preference';
+import { validatePointLedgerAdjustment } from '../lib/point-ledger';
 
 interface ParentDashboardProps {
   onSwitchToChild: (childId?: string) => void;
@@ -92,7 +93,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     disableAdventureSchedule: (scheduleId: string) => Promise<void>;
     revokeTaskApproval?: (taskId: string) => Promise<void>;
   };
-  const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent, revokeTaskApproval, setFamilyGameItemPrice, resetFamilyGameItemPrice } = appStore;
+  const { state, familyId, loading, error, retry, isOffline, mutationPending, updateTaskStatus, addTask, deleteTask, updateTask, addReward, deleteReward, updateReward, fulfillTicket, approveWishlist, loadPointLedgerPage, adjustChildPoints, addChild, updateChildPassword, updateChildName, deleteChild, addTaskTemplate, updateTaskTemplate, deleteTaskTemplate, recordParentConsent, revokeTaskApproval, setFamilyGameItemPrice, resetFamilyGameItemPrice } = appStore;
   const [activeTab, setActiveTab] = useState<ParentTab>('review');
   const [parentBackgroundMusicEnabled, setParentBackgroundMusicEnabled] = useState(() => getParentBackgroundMusicPreference(familyId ?? ''));
   const [heroFeature, setHeroFeature] = useState<ParentTab | null>(null);
@@ -210,6 +211,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [newRewardPoints, setNewRewardPoints] = useState<number | ''>(50);
   const [rewardFormError, setRewardFormError] = useState('');
   const [newRewardTargetChildIds, setNewRewardTargetChildIds] = useState<string[]>([]);
+  const [pointAdjustment, setPointAdjustment] = useState<{ childId: string; mode: 'grant' | 'deduct' } | null>(null);
+  const [pointAmount, setPointAmount] = useState<number | ''>(10);
+  const [pointReason, setPointReason] = useState('');
+  const [pointAdjustmentError, setPointAdjustmentError] = useState('');
+  const [pointHistoryChildId, setPointHistoryChildId] = useState<string | null>(null);
 
   // Templates
   const [showTemplateForm, setShowTemplateForm] = useState(false);
@@ -661,6 +667,52 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     } catch { /* provider error is rendered above the tabs; keep form values intact */ }
   };
 
+  const openPointAdjustment = (childId: string, mode: 'grant' | 'deduct') => {
+    setPointAdjustment({ childId, mode });
+    setPointAmount(mode === 'grant' ? 10 : 5);
+    setPointReason('');
+    setPointAdjustmentError('');
+  };
+
+  const closePointAdjustment = () => {
+    if (mutationPending) return;
+    setPointAdjustment(null);
+    setPointReason('');
+    setPointAdjustmentError('');
+  };
+
+  const handleAdjustPoints = async () => {
+    if (!pointAdjustment) return;
+    const amount = pointAmount;
+    if (typeof amount !== 'number') {
+      setPointAdjustmentError('請輸入點數。');
+      return;
+    }
+    const child = state.children.find((candidate) => candidate.id === pointAdjustment.childId);
+    if (!child) {
+      setPointAdjustmentError('找不到這位小孩，請重新整理後再試。');
+      return;
+    }
+    if (pointAdjustment.mode === 'deduct' && amount > child.points) {
+      setPointAdjustmentError(`目前最多只能扣除 ${child.points} 點。`);
+      return;
+    }
+    const delta = pointAdjustment.mode === 'grant' ? amount : -amount;
+    const validation = validatePointLedgerAdjustment(delta, pointReason);
+    if (validation.ok === false) {
+      setPointAdjustmentError(validation.message);
+      return;
+    }
+    try {
+      await adjustChildPoints(child.id, delta, validation.note);
+      setPointAdjustment(null);
+      setPointReason('');
+      setPointAdjustmentError('');
+    } catch (adjustmentError) {
+      setPointAdjustmentError(adjustmentError instanceof Error ? adjustmentError.message : '點數調整失敗，請重試。');
+    }
+  };
+
   const handleDeleteRewardGroup = (group: GroupedReward) => {
     group.children.forEach(c => deleteReward(c.childId, c.rewardId));
   };
@@ -835,7 +887,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     <div
       className="hh-dashboard-screen hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-gray-50"
       onContextMenu={preventNativeAppContextMenu}
-      onSelectStart={preventNativeAppTextSelection}
       onDragStart={preventNativeAppDragStart}
     >
       <ParentDashboardBackgroundMusic enabled={parentBackgroundMusicEnabled} />
@@ -1046,6 +1097,60 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
         {activeTab === 'rewards' && (
           <div className="space-y-6">
+            <section className="space-y-3" aria-labelledby="parent-child-points-title">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <h2 id="parent-child-points-title" className="flex items-center gap-2 text-lg font-black text-gray-900">
+                    <Star size={20} className="text-amber-500" aria-hidden="true" />
+                    孩子點數
+                  </h2>
+                  <p className="mt-1 text-sm font-bold text-gray-500">從這裡贈點或扣點，所有變動都會留下紀錄。</p>
+                </div>
+              </div>
+              {state.children.length === 0 ? (
+                <EmptyState className="rounded-2xl bg-white">請先到設定新增小孩，才能管理點數。</EmptyState>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {state.children.map((child) => (
+                    <article key={child.id} className="rounded-3xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-lg font-black text-gray-900">{child.name}</h3>
+                          <p className="mt-1 text-sm font-bold text-gray-500">目前餘額</p>
+                        </div>
+                        <PointValue value={child.points} className="shrink-0 text-lg font-black text-amber-700" />
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openPointAdjustment(child.id, 'grant')}
+                          disabled={mutationPending}
+                          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-3 text-sm font-black text-amber-950 transition-colors hover:bg-amber-500 disabled:cursor-wait disabled:opacity-50"
+                        >
+                          <PlusCircle size={17} aria-hidden="true" /> 贈點
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openPointAdjustment(child.id, 'deduct')}
+                          disabled={mutationPending || child.points === 0}
+                          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 text-sm font-black text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <MinusCircle size={17} aria-hidden="true" /> 扣點
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPointHistoryChildId(child.id)}
+                        className="mt-2 flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-200 bg-white px-3 text-sm font-black text-amber-800 transition-colors hover:bg-amber-100"
+                      >
+                        查看點數明細
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
             <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
@@ -1527,6 +1632,88 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             </div>
         </ModalShell>
       )}
+
+      {pointHistoryChildId && (() => {
+        const historyChild = state.children.find((child) => child.id === pointHistoryChildId);
+        if (!historyChild) return null;
+        return (
+          <ModalShell
+            title={`${historyChild.name}的點數明細`}
+            closeLabel="關閉點數明細"
+            onClose={() => setPointHistoryChildId(null)}
+            panelClassName="max-h-[calc(100dvh-32px)] max-w-lg overflow-y-auto"
+          >
+            <PointLedgerHistory
+              childProfileId={historyChild.id}
+              childName={historyChild.name}
+              loadPage={loadPointLedgerPage}
+            />
+          </ModalShell>
+        );
+      })()}
+
+      {pointAdjustment && (() => {
+        const adjustmentChild = state.children.find((child) => child.id === pointAdjustment.childId);
+        if (!adjustmentChild) return null;
+        const isGrant = pointAdjustment.mode === 'grant';
+        return (
+          <ModalShell
+            title={`${isGrant ? '贈點給' : '扣除'}${adjustmentChild.name}`}
+            closeLabel="關閉點數調整"
+            onClose={closePointAdjustment}
+            panelClassName="max-w-sm"
+          >
+            <div className="space-y-4">
+              <div className="rounded-2xl p-4">
+                <p className="text-sm font-bold text-gray-600">目前餘額</p>
+                <PointValue value={adjustmentChild.points} className={`mt-1 text-2xl font-black ${isGrant ? 'text-amber-700' : 'text-rose-700'}`} />
+              </div>
+              <div>
+                <label htmlFor="point-adjustment-amount" className="mb-1 block text-sm font-bold text-gray-700">點數</label>
+                <input
+                  id="point-adjustment-amount"
+                  type="number"
+                  min="1"
+                  max={isGrant ? 10000 : adjustmentChild.points}
+                  step="1"
+                  inputMode="numeric"
+                  value={pointAmount}
+                  onChange={(event) => {
+                    setPointAmount(event.target.value === '' ? '' : Number(event.target.value));
+                    setPointAdjustmentError('');
+                  }}
+                  className="min-h-12 w-full rounded-xl border border-gray-200 p-3 text-lg font-black outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label htmlFor="point-adjustment-reason" className="mb-1 block text-sm font-bold text-gray-700">原因</label>
+                <textarea
+                  id="point-adjustment-reason"
+                  rows={3}
+                  maxLength={200}
+                  value={pointReason}
+                  onChange={(event) => {
+                    setPointReason(event.target.value);
+                    setPointAdjustmentError('');
+                  }}
+                  placeholder={isGrant ? '例如：主動整理餐桌' : '例如：未完成今天的約定'}
+                  className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <p className="mt-1 text-xs font-bold text-gray-400">這段原因會顯示在小孩的點數明細中。</p>
+              </div>
+              {pointAdjustmentError && <p className="text-sm font-bold text-red-600" role="alert">{pointAdjustmentError}</p>}
+              <button
+                type="button"
+                onClick={() => void handleAdjustPoints()}
+                disabled={mutationPending}
+                className={`min-h-12 w-full rounded-xl px-4 text-base font-black text-white transition-colors disabled:cursor-wait disabled:opacity-50 ${isGrant ? 'bg-amber-500 hover:bg-amber-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+              >
+                {mutationPending ? '儲存中…' : isGrant ? '確認贈點' : '確認扣點'}
+              </button>
+            </div>
+          </ModalShell>
+        );
+      })()}
 
       {showRewardForm && (
         <ModalShell

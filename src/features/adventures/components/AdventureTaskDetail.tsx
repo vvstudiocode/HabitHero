@@ -7,6 +7,7 @@ import {
   getAdventureTimerState,
   getAdventureType,
   canToggleAdventureTimer,
+  canAbandonChildAdventure,
 } from '../adventure-progress';
 import type { AdventureCompletionInput, AdventureTask } from '../types';
 import { AdventureCompletionForm } from './AdventureCompletionForm';
@@ -20,6 +21,7 @@ interface AdventureTaskDetailProps {
   loading?: boolean;
   onTimerToggle: (task: AdventureTask) => void;
   onComplete: (task: AdventureTask, input: AdventureCompletionInput) => Promise<void>;
+  onAbandon?: (task: AdventureTask) => Promise<void>;
   onRequestClose: () => void;
 }
 
@@ -36,21 +38,35 @@ export function AdventureTaskDetail({
   loading = false,
   onTimerToggle,
   onComplete,
+  onAbandon,
   onRequestClose,
 }: AdventureTaskDetailProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [closing, setClosing] = useState(false);
+  const [abandonConfirmOpen, setAbandonConfirmOpen] = useState(false);
+  const [abandonLoading, setAbandonLoading] = useState(false);
   const visualState = getAdventureTaskState(task);
-  const readOnly = visualState === 'syncing' || visualState === 'submitted' || visualState === 'completed' || visualState === 'waiting';
+  const readOnly = visualState === 'syncing' || visualState === 'submitted' || visualState === 'completed' || visualState === 'waiting' || visualState === 'cancelled';
   const secondsLeft = getAdventureTaskRemainingSeconds(task, now);
   const { hasTimer, complete: timerComplete } = getAdventureTimerState(task, secondsLeft);
   const canSubmit = !readOnly && canExecute && timerComplete;
   const canToggleTimer = canToggleAdventureTimer(task, secondsLeft, canExecute);
+  const canAbandon = Boolean(onAbandon && canAbandonChildAdventure(task));
   const completionAlarmActive = task.timerIsRunning && timerComplete;
   const dueTime = task.dueTime?.slice(0, 5);
   const endTime = task.endTime?.slice(0, 5);
   const requestClose = () => setClosing(true);
+  const confirmAbandon = async () => {
+    if (!onAbandon || !canAbandon || abandonLoading) return;
+    setAbandonLoading(true);
+    try {
+      await onAbandon(task);
+      requestClose();
+    } finally {
+      setAbandonLoading(false);
+    }
+  };
 
   useEffect(() => {
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -127,6 +143,42 @@ export function AdventureTaskDetail({
           <p className="hh-adventure-detail-notice" role="status">
             家長請你補充：{task.revisionNote}
           </p>
+        )}
+
+        {canAbandon && (
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+            {!abandonConfirmOpen ? (
+              <button
+                type="button"
+                className="min-h-11 w-full rounded-xl border border-amber-300 bg-white px-4 text-sm font-bold text-amber-800 transition-colors hover:bg-amber-100"
+                onClick={() => setAbandonConfirmOpen(true)}
+              >
+                放棄這個冒險
+              </button>
+            ) : (
+              <div role="alertdialog" aria-label="確認放棄冒險" className="space-y-3">
+                <p className="text-sm font-bold leading-6 text-amber-950">放棄後不會得到點數，家長仍看得到紀錄。</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-xl bg-white px-3 text-sm font-bold text-gray-700"
+                    disabled={abandonLoading}
+                    onClick={() => setAbandonConfirmOpen(false)}
+                  >
+                    先不要
+                  </button>
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-xl bg-amber-500 px-3 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60"
+                    disabled={abandonLoading}
+                    onClick={() => void confirmAbandon()}
+                  >
+                    {abandonLoading ? '處理中…' : '確認放棄'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {hasTimer && !readOnly && (

@@ -1,5 +1,7 @@
 import type { WorldTransform } from './world-collision';
 
+export type { WorldTransform } from './world-collision';
+
 export type GameItemType = 'character' | 'pet' | 'decoration';
 export type GameEntityKind = 'pet' | 'decoration';
 export type PetBehaviorMode = 'static' | 'idle' | 'wander';
@@ -71,6 +73,7 @@ export interface GamePurchaseResult {
 
 export interface WorldMutationResult {
   revision: number;
+  entity?: ChildWorldEntity;
 }
 
 export const emptyChildGameData = (): ChildGameData => ({

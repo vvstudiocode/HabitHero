@@ -45,7 +45,7 @@ describe('terrain world scene dependencies', () => {
       }, 'high'),
       getTerrainWorldSceneKey(baseGameData, 'high'),
     );
-    assert.notEqual(
+    assert.equal(
       getTerrainWorldSceneKey({
         ...baseGameData,
         worldEntities: [{ id: 'entity-1', inventoryItemId: 'inventory-decoration', entityKind: 'decoration', worldLayoutVersion: 1, x: 1, y: 0, z: -1, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1, behaviorMode: 'static', roamingSlot: null, isActive: true }],
@@ -53,6 +53,25 @@ describe('terrain world scene dependencies', () => {
       getTerrainWorldSceneKey(baseGameData, 'high'),
     );
     assert.notEqual(getTerrainWorldSceneKey(baseGameData, 'low'), getTerrainWorldSceneKey(baseGameData, 'high'));
+  });
+
+  it('keeps the mounted world stable while an existing decoration moves', () => {
+    const before = {
+      ...baseGameData,
+      worldEntities: [{
+        id: 'entity-decoration', inventoryItemId: 'inventory-decoration', entityKind: 'decoration' as const,
+        worldLayoutVersion: 1, x: 1, y: 0, z: -1, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 0.4,
+        behaviorMode: 'static' as const, roamingSlot: null, isActive: true,
+        catalogItemId: 'decoration-chair', assetKey: 'decoration.study-chair',
+      }],
+    };
+    const after = {
+      ...before,
+      worldEntities: before.worldEntities.map((entity) => ({
+        ...entity, x: -2, z: 2, rotationY: 1.2, scale: 0.5,
+      })),
+    };
+    assert.equal(getTerrainWorldSceneKey(after, 'high'), getTerrainWorldSceneKey(before, 'high'));
   });
 
   it('keeps pet presentation changes out of the remount key', () => {

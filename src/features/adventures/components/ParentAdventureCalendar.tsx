@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, Circle, Clock } from 'lucide-react';
 import { sortAdventureTasksByStartTime } from '../adventure-progress';
 
-export type ParentCalendarTaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed';
+export type ParentCalendarTaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed' | 'cancelled';
 
 export interface ParentCalendarAdventureTask {
   id: string;
@@ -83,6 +83,7 @@ const statusView = {
   pending: { label: '等待家長確認', icon: Clock, className: 'text-blue-600' },
   revision_requested: { label: '需要孩子補充', icon: AlertCircle, className: 'text-orange-600' },
   completed: { label: '已完成', icon: Check, className: 'text-green-600' },
+  cancelled: { label: '孩子放棄', icon: AlertCircle, className: 'text-amber-700' },
 } satisfies Record<ParentCalendarTaskStatus, { label: string; icon: typeof Check; className: string }>;
 
 const monthTitle = (year: number, monthIndex: number) => `${year} 年 ${monthIndex + 1} 月`;

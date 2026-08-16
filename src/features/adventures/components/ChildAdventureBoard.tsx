@@ -16,6 +16,7 @@ interface ChildAdventureBoardProps {
   onCreateGeneral: () => void;
   onTimerToggle: (task: AdventureTask) => void;
   onComplete: (task: AdventureTask, input: AdventureCompletionInput) => Promise<void>;
+  onAbandon?: (task: AdventureTask) => Promise<void>;
 }
 
 export function ChildAdventureBoard({
@@ -29,6 +30,7 @@ export function ChildAdventureBoard({
   onCreateGeneral,
   onTimerToggle,
   onComplete,
+  onAbandon,
 }: ChildAdventureBoardProps) {
   const boardRef = useRef<HTMLElement>(null);
   const [openCard, setOpenCard] = useState<AdventureType | null>(null);
@@ -125,6 +127,7 @@ export function ChildAdventureBoard({
           loading={loading}
           onTimerToggle={onTimerToggle}
           onComplete={onComplete}
+          onAbandon={onAbandon}
           onRequestClose={() => setSelectedTaskId(null)}
         />
       )}

@@ -91,6 +91,7 @@ export const getTaskStatusLabel = (status: GrowthTaskStatus) => {
     pending: '等待審核',
     revision_requested: '需要補充',
     completed: '已完成',
+    cancelled: '孩子放棄',
   };
   return labels[status];
 };

@@ -6,8 +6,10 @@ import {
   patchRemovedWorldEntity,
   patchUpdatedWorldEntity,
   reconcilePlacedWorldEntity,
+  reconcileUpdatedWorldEntity,
 } from '../src/features/world/world-optimistic';
 import type { ChildGameData, ChildWorldEntity } from '../src/features/world/contracts';
+import { toWorldMutationResult } from '../src/lib/data-access';
 
 const catalogItem = {
   id: 'decoration.chair',
@@ -49,6 +51,32 @@ function createGameData(worldEntities: ChildWorldEntity[] = []): ChildGameData {
 }
 
 describe('optimistic decoration world mutations', () => {
+  it('normalizes the snake_case entity returned by the world RPC', () => {
+    const result = toWorldMutationResult({
+      revision: 6,
+      entity: {
+        id: 'server-decoration-1',
+        inventory_item_id: inventory.id,
+        entity_kind: 'decoration',
+        world_layout_version: 1,
+        position_x: 2,
+        position_y: 0,
+        position_z: -1.5,
+        rotation_x: 0,
+        rotation_y: 0.5,
+        rotation_z: 0,
+        scale: 0.1,
+        behavior_mode: 'static',
+        roaming_slot: null,
+        is_active: true,
+      },
+    });
+    assert.equal(result.entity?.inventoryItemId, inventory.id);
+    assert.equal(result.entity?.x, 2);
+    assert.equal(result.entity?.isActive, true);
+    assert.equal(result.entity?.scale, 0.1);
+  });
+
   it('shows a newly placed decoration immediately and reconciles its server id', () => {
     const optimistic = patchPlacedWorldEntity(createGameData(), {
       inventoryItemId: inventory.id,
@@ -95,5 +123,61 @@ describe('optimistic decoration world mutations', () => {
     }, 'local-decoration-2');
     const collected = patchCollectedWorldDecorations(second);
     assert.equal(collected.worldEntities.every((entity) => !entity.isActive), true);
+  });
+
+  it('reconciles an updated decoration without dropping its scene metadata', () => {
+    const existingEntity: ChildWorldEntity = {
+      id: 'server-decoration-1',
+      inventoryItemId: inventory.id,
+      entityKind: 'decoration',
+      worldLayoutVersion: 1,
+      x: 2,
+      y: 0,
+      z: -1.5,
+      rotationX: 0,
+      rotationY: 0,
+      rotationZ: 0,
+      scale: 0.36,
+      behaviorMode: 'static',
+      roamingSlot: null,
+      isActive: true,
+      catalogItemId: catalogItem.id,
+      collisionRadius: catalogItem.collisionRadius,
+      assetKey: catalogItem.assetKey,
+      name: catalogItem.name,
+    };
+    const optimistic = patchUpdatedWorldEntity(createGameData([existingEntity]), {
+      inventoryItemId: inventory.id,
+      entityId: existingEntity.id,
+      expectedRevision: 4,
+      transform: { x: -2, y: 0, z: -2, rotationX: 0, rotationY: 1, rotationZ: 0, scale: 0.5 },
+    });
+    const serverResult = toWorldMutationResult({
+      revision: 6,
+      entity: {
+        id: existingEntity.id,
+        inventory_item_id: inventory.id,
+        entity_kind: 'decoration',
+        world_layout_version: 1,
+        position_x: -2,
+        position_y: 0,
+        position_z: -2,
+        rotation_x: 0,
+        rotation_y: 1,
+        rotation_z: 0,
+        scale: 0.5,
+        behavior_mode: 'static',
+        roaming_slot: null,
+        is_active: true,
+      },
+    });
+    const reconciled = reconcileUpdatedWorldEntity(optimistic, serverResult);
+    assert.equal(reconciled.worldRevision, 6);
+    assert.equal(reconciled.worldEntities[0].x, -2);
+    assert.equal(reconciled.worldEntities[0].scale, 0.5);
+    assert.equal(reconciled.worldEntities[0].catalogItemId, catalogItem.id);
+    assert.equal(reconciled.worldEntities[0].assetKey, catalogItem.assetKey);
+    assert.equal(reconciled.worldEntities[0].collisionRadius, catalogItem.collisionRadius);
+    assert.equal(reconciled.worldEntities[0].name, catalogItem.name);
   });
 });

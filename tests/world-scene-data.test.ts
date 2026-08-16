@@ -23,6 +23,26 @@ function pet(id: string, assetKey: string): GameCatalogItem {
   };
 }
 
+function decoration(id: string, assetKey: string): GameCatalogItem {
+  return {
+    id,
+    itemType: 'decoration',
+    name: id,
+    description: '',
+    scrollPrice: 0,
+    assetKey,
+    thumbnailUrl: null,
+    isActive: true,
+    isStarter: false,
+    isStackable: true,
+    collisionRadius: 0.38,
+    minScale: 0.7,
+    maxScale: 1.5,
+    sortOrder: 1,
+    metadata: { primitive: 'lantern' },
+  };
+}
+
 function gameData(catalog: GameCatalogItem[], worldEntities: ChildGameData['worldEntities']): ChildGameData {
   return {
     walletBalance: 0,
@@ -86,5 +106,20 @@ describe('world scene game data snapshot', () => {
     );
 
     assert.deepEqual(snapshot.catalog.map((item) => item.assetKey), ['pet.silf-owl', 'pet.murphy-bear']);
+  });
+
+  it('keeps active decoration catalog rows available to the world renderer', () => {
+    const snapshot = createWorldSceneGameDataSnapshot(
+      gameData(
+        [pet('pet-silf', 'pet.silf-owl'), decoration('decoration-lantern', 'decoration.flower-lantern')],
+        [{
+          id: 'entity-lantern', inventoryItemId: 'inventory-lantern', entityKind: 'decoration', worldLayoutVersion: 1,
+          x: 1, y: 0, z: -1, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1,
+          behaviorMode: 'static', roamingSlot: null, isActive: true, catalogItemId: 'decoration-lantern',
+        }],
+      ),
+    );
+
+    assert.deepEqual(snapshot.catalog.map((item) => item.assetKey), ['pet.silf-owl', 'decoration.flower-lantern']);
   });
 });

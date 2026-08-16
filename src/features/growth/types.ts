@@ -1,6 +1,6 @@
 import type { FeedbackTone as AppFeedbackTone, Task, TaskTemplate, TaskCategory as AppTaskCategory, TaskOrigin as AppTaskOrigin } from '../../types';
 
-export type GrowthTaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed';
+export type GrowthTaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed' | 'cancelled';
 export type TaskCategory = AppTaskCategory;
 export type TaskOrigin = AppTaskOrigin;
 export type FeedbackTone = Extract<AppFeedbackTone, 'encouraging' | 'coaching' | 'corrective' | 'celebratory'>;

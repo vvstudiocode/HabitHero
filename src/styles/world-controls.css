@@ -76,6 +76,127 @@
   transform-origin: center;
 }
 
+.hh-terrain-world.is-placement-mode .hh-world-joystick {
+  display: none;
+}
+
+.hh-dashboard-screen--child.is-decoration-placement .hh-world-joystick {
+  display: none;
+}
+
+.hh-world-decoration-selection {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+
+.hh-world-decoration-action {
+  min-height: 44px;
+  padding: 8px 14px;
+  color: #2f644f;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  background: rgb(255 253 241 / 96%);
+  border: 1px solid rgb(255 255 255 / 80%);
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgb(35 78 59 / 24%);
+  pointer-events: auto;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.hh-world-decoration-action:hover,
+.hh-world-decoration-action:focus-visible {
+  background: #d8ebcb;
+}
+
+.hh-world-decoration-action:active {
+  transform: scale(0.96);
+}
+
+.hh-world-placement-controls {
+  position: fixed;
+  z-index: 30;
+  bottom: max(18px, calc(env(safe-area-inset-bottom, 0px) + 18px));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.hh-world-placement-control,
+.hh-world-placement-cancel,
+.hh-world-placement-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 74%);
+  border-radius: 50%;
+  font-weight: 900;
+  pointer-events: auto;
+  touch-action: manipulation;
+  box-shadow: 0 7px 14px rgb(35 78 59 / 18%);
+  transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+}
+
+.hh-world-placement-control {
+  color: #356454;
+  background: #e8f2df;
+}
+
+.hh-world-placement-rotate-bottom {
+  color: #356454;
+  background: #f5edd2;
+  touch-action: none;
+}
+
+.hh-world-placement-control:hover,
+.hh-world-placement-control:focus-visible {
+  background: #d8ebcb;
+}
+
+.hh-world-placement-rotate-bottom:hover,
+.hh-world-placement-rotate-bottom:focus-visible {
+  background: #eee1b9;
+}
+
+.hh-world-placement-cancel {
+  color: #a95a56;
+  background: #fae2de;
+}
+
+.hh-world-placement-confirm {
+  color: #fffdf4;
+  background: #5b9c69;
+  box-shadow: 0 7px 14px rgb(70 128 81 / 22%);
+}
+
+.hh-world-placement-controls[data-placement-valid='false'] .hh-world-placement-confirm {
+  color: #a95a56;
+  background: #f4d9d4;
+}
+
+.hh-world-placement-control:active,
+.hh-world-placement-cancel:active,
+.hh-world-placement-confirm:active {
+  transform: scale(0.97);
+}
+
+.hh-world-placement-control:disabled,
+.hh-world-placement-cancel:disabled,
+.hh-world-placement-confirm:disabled {
+  cursor: wait;
+  opacity: 0.48;
+}
+
 @media (hover: none) and (pointer: coarse) {
   .hh-world-joystick--fixed {
     display: block;

@@ -15,6 +15,10 @@ export interface DecorationPlacementGestureDelta {
   rotationDelta: number;
 }
 
+export function shouldMovePlacementDecoration(pointerCount: number, startedOnDecoration: boolean): boolean {
+  return pointerCount === 1 && startedOnDecoration;
+}
+
 export interface PlacementGridCell {
   x: number;
   z: number;
@@ -23,6 +27,12 @@ export interface PlacementGridCell {
 
 const ROTATION_STEP = Math.PI / 8;
 const SCALE_STEP = 0.1;
+const ROTATION_DRAG_RADIANS_PER_PIXEL = Math.PI / 240;
+
+export function getPlacementRotationDelta(previousX: number, currentX: number): number {
+  if (!Number.isFinite(previousX) || !Number.isFinite(currentX)) return 0;
+  return (currentX - previousX) * ROTATION_DRAG_RADIANS_PER_PIXEL;
+}
 
 /**
  * Three.js treats rotations that differ by a full turn as the same visual

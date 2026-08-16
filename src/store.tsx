@@ -3,6 +3,9 @@ import {
   AppState,
   ChildGender,
   FeedbackTone,
+  PointLedgerAdjustmentResult,
+  PointLedgerPage,
+  PointLedgerViewModel,
   Task,
   Reward,
   TaskCategory,
@@ -39,6 +42,14 @@ import {
   type OptimisticPurchaseDraft,
 } from './features/world/game-loadout';
 import { patchPetDisplayName } from './features/world/pet-name-optimistic';
+import {
+  patchCollectedWorldDecorations,
+  patchPlacedWorldEntity,
+  patchRemovedWorldEntity,
+  patchUpdatedWorldEntity,
+  reconcilePlacedWorldEntity,
+  reconcileUpdatedWorldEntity,
+} from './features/world/world-optimistic';
 import { patchDeletedChild, rollbackDeletedChild } from './lib/optimistic-app-state';
 
 export interface AppContextType {
@@ -102,6 +113,7 @@ export interface AppContextType {
   }) => Promise<void>;
   ensureDailyAdventureOccurrences: (childId: string, date?: string) => Promise<void>;
   submitAdventureCompletion: (taskId: string, submission: AdventureCompletionInput) => Promise<void>;
+  abandonChildAdventure: (taskId: string) => Promise<void>;
   reviewAdventureCompletion: (taskId: string, review: ReviewTaskCompletionInput) => Promise<void>;
   createAdventureSchedule: (input: AdventureScheduleInput) => Promise<void>;
   updateAdventureSchedule: (scheduleId: string, updates: AdventureScheduleUpdateInput) => Promise<void>;
@@ -121,6 +133,8 @@ export interface AppContextType {
   addWishlist: (childId: string, name: string) => Promise<void>;
   deleteWishlist: (childId: string, wishlistId: string) => Promise<void>;
   approveWishlist: (childId: string, wishlistId: string, points: number) => Promise<void>;
+  loadPointLedgerPage: (childId: string, page?: number, pageSize?: number) => Promise<PointLedgerPage>;
+  adjustChildPoints: (childId: string, pointsDelta: number, note: string) => Promise<PointLedgerAdjustmentResult>;
   redeemReward: (childId: string, reward: Reward) => Promise<void>;
   fulfillTicket: (childId: string, ticketId: string) => Promise<void>;
   resetData: () => Promise<void>;
@@ -498,6 +512,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ...previous,
     children: previous.children.map((child) => ({ ...child, tasks: child.tasks.map((task) => task.id === taskId ? update(task) : task) })),
   });
+  const patchGameData = (previous: AppState, childId: string, update: (gameData: ReturnType<typeof emptyChildGameData>) => ReturnType<typeof emptyChildGameData>) => {
+    const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+    return {
+      ...previous,
+      gameDataByChildId: {
+        ...previous.gameDataByChildId,
+        [childId]: update(currentGameData),
+      },
+    };
+  };
+  const reconcileWorldMutation = (childId: string, result: WorldMutationResult, localEntityId?: string) => {
+    setState((current) => {
+      const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+      const nextGameData = localEntityId
+        ? reconcilePlacedWorldEntity(currentGameData, localEntityId, result)
+        : reconcileUpdatedWorldEntity(currentGameData, result);
+      const next = {
+        ...current,
+        gameDataByChildId: { ...current.gameDataByChildId, [childId]: nextGameData },
+      };
+      stateRef.current = next;
+      return next;
+    });
+  };
 
   const updateState = (updates: Partial<AppState>) => setState((previous) => ({ ...previous, ...updates }));
   const setParentPin = (parentPin: string) => updateState({ parentPin });
@@ -693,10 +731,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       },
     ),
-    placeWorldEntity: (childId: string, payload: WorldMutationPayload) => mutate((repo) => repo.placeWorldEntity(childId, payload)),
-    updateWorldEntityTransform: (childId: string, payload: WorldTransformMutationPayload) => mutate((repo) => repo.updateWorldEntityTransform(childId, payload)),
-    removeWorldEntity: (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => mutate((repo) => repo.removeWorldEntity(childId, payload)),
-    collectAllWorldDecorations: (childId: string, expectedRevision: number) => mutate((repo) => repo.collectAllWorldDecorations(childId, expectedRevision)),
+    placeWorldEntity: async (childId: string, payload: WorldMutationPayload) => {
+      const localEntityId = createLocalId();
+      const result = await mutate(
+        (repo) => repo.placeWorldEntity(childId, payload),
+        (previous) => patchGameData(previous, childId, (gameData) => patchPlacedWorldEntity(gameData, payload, localEntityId)),
+      );
+      reconcileWorldMutation(childId, result, localEntityId);
+      return result;
+    },
+    updateWorldEntityTransform: async (childId: string, payload: WorldTransformMutationPayload) => {
+      const result = await mutate(
+        (repo) => repo.updateWorldEntityTransform(childId, payload),
+        (previous) => patchGameData(previous, childId, (gameData) => patchUpdatedWorldEntity(gameData, payload)),
+      );
+      reconcileWorldMutation(childId, result);
+      return result;
+    },
+    removeWorldEntity: async (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => {
+      const result = await mutate(
+        (repo) => repo.removeWorldEntity(childId, payload),
+        (previous) => patchGameData(previous, childId, (gameData) => patchRemovedWorldEntity(gameData, payload.inventoryItemId, payload.entityId)),
+      );
+      reconcileWorldMutation(childId, result);
+      return result;
+    },
+    collectAllWorldDecorations: async (childId: string, expectedRevision: number) => {
+      const result = await mutate(
+        (repo) => repo.collectAllWorldDecorations(childId, expectedRevision),
+        (previous) => patchGameData(previous, childId, patchCollectedWorldDecorations),
+      );
+      reconcileWorldMutation(childId, result);
+      return result;
+    },
     setFamilyGameItemPrice: (catalogItemId: string, scrollPrice: number) => mutate((repo) => repo.setFamilyGameItemPrice(catalogItemId, scrollPrice)),
     resetFamilyGameItemPrice: (catalogItemId: string) => mutate((repo) => repo.resetFamilyGameItemPrice(catalogItemId)),
     revokeTaskApproval: (taskId: string) => mutate((repo) => repo.revokeTaskApproval(taskId)),
@@ -816,6 +883,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     deleteWishlist: (childId: string, wishlistId: string) => mutate((repo) => repo.deleteWishlist(wishlistId), (previous) => patchChild(previous, childId, (child) => ({ ...child, wishlist: child.wishlist.filter((item) => item.id !== wishlistId) }))),
     approveWishlist: (childId: string, wishlistId: string, points: number) => mutate((repo, id) => repo.approveWishlist(id, childId, wishlistId, points), (previous) => patchChild(previous, childId, (child) => ({ ...child, wishlist: child.wishlist.filter((item) => item.id !== wishlistId) }))),
+    loadPointLedgerPage: async (childId: string, page = 1, pageSize = 10) => {
+      if (!familyId || !repository) {
+        throw new Error('尚未載入家庭資料，請先登入後重試。');
+      }
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('目前離線，點數紀錄暫時無法載入。');
+      }
+      return repository.listPointLedger(familyId, childId, page, pageSize);
+    },
+    adjustChildPoints: async (childId: string, pointsDelta: number, note: string) => {
+      const localLedgerId = createLocalId();
+      const optimisticEntry: PointLedgerViewModel = {
+        id: localLedgerId,
+        childProfileId: childId,
+        pointsDelta,
+        entryType: 'manual_adjustment',
+        note: note.trim(),
+        createdAt: Date.now(),
+      };
+      const result = await mutate(
+        (repo, id) => repo.adjustChildPoints(id, childId, pointsDelta, note),
+        (previous) => ({
+          ...previous,
+          children: previous.children.map((child) => child.id === childId
+            ? { ...child, points: child.points + pointsDelta }
+            : child),
+          ledger: [optimisticEntry, ...previous.ledger].slice(0, 50),
+        }),
+      );
+      setState((current) => {
+        const next: AppState = {
+          ...current,
+          children: current.children.map((child) => child.id === childId
+            ? { ...child, points: result.pointsBalance }
+            : child),
+          ledger: current.ledger.map((entry) => entry.id === localLedgerId ? result.ledgerEntry : entry),
+        };
+        stateRef.current = next;
+        return next;
+      });
+      return result;
+    },
     redeemReward: (childId: string, reward: Reward) => {
       const localId = createLocalId();
       return mutate((repo) => repo.redeemReward(reward.id), (previous) => patchChild(previous, childId, (child) => ({ ...child, points: child.points - reward.points, tickets: [...child.tickets, { id: localId, rewardId: reward.id, rewardName: reward.name, rewardIcon: reward.icon, status: 'pending', createdAt: Date.now() }] })));

@@ -1,27 +1,33 @@
 import { useEffect, useRef } from 'react';
 import {
-  startWorldBackgroundMusic,
-  stopWorldBackgroundMusic,
+  bindWorldBackgroundMusicVisibility,
+  createWorldBackgroundMusicCrossfadePlayer,
+  WorldBackgroundMusicCrossfadePlayer,
   WORLD_BACKGROUND_MUSIC_SRC,
 } from '../lib/world-background-music';
 
 export function ChildDashboardBackgroundMusic({ enabled }: { enabled: boolean }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerRef = useRef<WorldBackgroundMusicCrossfadePlayer | null>(null);
 
   useEffect(() => {
     if (!enabled) {
-      if (audioRef.current) stopWorldBackgroundMusic(audioRef.current);
-      audioRef.current = null;
+      playerRef.current?.stop();
+      playerRef.current?.dispose();
+      playerRef.current = null;
       return undefined;
     }
 
-    const audio = new Audio(WORLD_BACKGROUND_MUSIC_SRC);
-    audio.preload = 'auto';
-    audioRef.current = audio;
+    const player = createWorldBackgroundMusicCrossfadePlayer({
+      src: WORLD_BACKGROUND_MUSIC_SRC,
+    });
+    playerRef.current = player;
 
     const tryStartMusic = () => {
-      void startWorldBackgroundMusic(audio);
+      if (document.visibilityState === 'hidden') return;
+      void player.start();
     };
+
+    const removeVisibilityListener = bindWorldBackgroundMusicVisibility(player, tryStartMusic);
 
     document.addEventListener('pointerdown', tryStartMusic, { passive: true });
     document.addEventListener('keydown', tryStartMusic);
@@ -30,8 +36,10 @@ export function ChildDashboardBackgroundMusic({ enabled }: { enabled: boolean })
     return () => {
       document.removeEventListener('pointerdown', tryStartMusic);
       document.removeEventListener('keydown', tryStartMusic);
-      stopWorldBackgroundMusic(audio);
-      if (audioRef.current === audio) audioRef.current = null;
+      removeVisibilityListener();
+      player.stop();
+      player.dispose();
+      if (playerRef.current === player) playerRef.current = null;
     };
   }, [enabled]);
 

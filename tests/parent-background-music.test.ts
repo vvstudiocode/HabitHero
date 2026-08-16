@@ -26,9 +26,12 @@ test('parent dashboard owns piano background music across parent feature pages',
   assert.match(parentDashboardSource, /getParentBackgroundMusicPreference/);
   assert.match(parentDashboardSource, /setParentBackgroundMusicPreference/);
   assert.match(parentMusicSource, /PARENT_DASHBOARD_BACKGROUND_MUSIC_SRC/);
-  assert.match(parentMusicSource, /startWorldBackgroundMusic/);
-  assert.match(parentMusicSource, /stopWorldBackgroundMusic/);
-  assert.match(parentMusicLibrarySource, /paulyudin-piano-piano-music-508963\.mp3/);
+  assert.match(parentMusicSource, /createWorldBackgroundMusicCrossfadePlayer/);
+  assert.match(parentMusicSource, /player\.start\(\)/);
+  assert.match(parentMusicSource, /player\.stop\(\)/);
+  assert.match(parentMusicLibrarySource, /alex-morgan-piano-lounge-sunny-cafe-music-564271\.mp3/);
+  assert.match(parentMusicSource, /bindWorldBackgroundMusicVisibility/);
+  assert.match(parentMusicSource, /visibilityState/);
 });
 
 test('parent settings expose a family-scoped music switch', () => {

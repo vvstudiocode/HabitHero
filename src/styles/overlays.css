@@ -409,6 +409,10 @@
   min-height: 48px;
 }
 
+.hh-parent-content-modal-bar--child:has([aria-label="告訴爸媽我想要什麼"]) {
+  flex-direction: row-reverse;
+}
+
 .hh-adventure-detail-overlay {
   position: fixed;
   z-index: 70;

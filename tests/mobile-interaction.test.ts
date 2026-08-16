@@ -22,9 +22,9 @@ test('parent and child dashboards guard app surfaces without blocking editable f
 
   for (const source of [parent, child]) {
     assert.match(source, /preventNativeAppContextMenu/);
-    assert.match(source, /preventNativeAppTextSelection/);
     assert.match(source, /preventNativeAppDragStart/);
     assert.match(source, /hh-app-interaction-surface/);
+    assert.doesNotMatch(source, /onSelectStart/);
   }
 });
 

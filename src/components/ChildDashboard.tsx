@@ -7,7 +7,6 @@ import { dismissWithAnimation } from '../lib/utils';
 import {
   preventNativeAppContextMenu,
   preventNativeAppDragStart,
-  preventNativeAppTextSelection,
 } from '../lib/mobile-interaction';
 import { Reward } from '../types';
 import { GoalProposalForm } from '../features/growth/components/GoalProposalForm';
@@ -64,6 +63,7 @@ import {
 import { getTodayAdventureSummary } from '../features/adventures/today-adventure-summary';
 import type { AdventureCompletionInput, AdventureTask } from '../features/adventures/types';
 import { PointValue } from './shared/PointValue';
+import { PointLedgerHistory } from './PointLedgerHistory';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -112,6 +112,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     familyId,
     addTask,
     redeemReward,
+    abandonChildAdventure,
+    loadPointLedgerPage,
     addWishlist,
     deleteWishlist,
     startTaskTimer,
@@ -224,6 +226,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastLeaving, setToastLeaving] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousPointsRef = useRef<{ childId: string; points: number } | null>(null);
   const [actionPending, setActionPending] = useState(false);
   const [now, setNow] = useState(Date.now());
   const completionMusicTaskIdRef = useRef<string | null>(null);
@@ -246,6 +249,16 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       }, 280);
     }, 2720);
   };
+
+  useEffect(() => {
+    if (!activeChild) return;
+    const previous = previousPointsRef.current;
+    if (previous && previous.childId === activeChild.id && previous.points !== activeChild.points) {
+      const delta = activeChild.points - previous.points;
+      showToast(delta > 0 ? `點數增加 ${delta} 點！` : `點數減少 ${Math.abs(delta)} 點`);
+    }
+    previousPointsRef.current = { childId: activeChild.id, points: activeChild.points };
+  }, [activeChild?.id, activeChild?.points]);
 
   const notificationSettings = useNotificationSettings({
     familyId,
@@ -453,6 +466,19 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           taskName: task.name,
           pendingStars: Math.max(0, Math.trunc(task.points)),
         });
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleAbandonAdventure = async (task: AdventureTask) => {
+    setActionPending(true);
+    try {
+      await abandonChildAdventure(task.id);
+      showToast('已放棄這個冒險，家長仍看得到紀錄。');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '放棄冒險失敗，請再試一次。');
+      throw error;
     } finally {
       setActionPending(false);
     }
@@ -754,7 +780,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       className={`hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50${decorationPlacement ? ' is-decoration-placement' : ''}`}
       style={{ '--hh-character-theme-color': '#202124' } as React.CSSProperties}
       onContextMenu={preventNativeAppContextMenu}
-      onSelectStart={preventNativeAppTextSelection}
       onDragStart={preventNativeAppDragStart}
     >
       <ChildDashboardBackgroundMusic enabled={backgroundMusicEnabled} />
@@ -830,6 +855,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           void toggleTimer(task).catch(() => showToast('計時狀態更新失敗，請再試一次。'));
         }}
         onComplete={handleAdventureCompletion}
+        onAbandon={handleAbandonAdventure}
       />
 
       {/* Main Content */}
@@ -848,6 +874,22 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             <button type="button" onClick={closeChildFeature} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
               <X size={20} />
             </button>
+            <div className="flex min-h-11 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-sm font-black text-amber-800">
+              <span className="sr-only">我的點數</span>
+              <PointValue value={childPoints} iconSize={15} />
+            </div>
+            {heroFeature === 'wishlist' && (
+              <button
+                type="button"
+                onClick={() => setShowWishlistForm(true)}
+                aria-label="告訴爸媽我想要什麼"
+                title="告訴爸媽我想要什麼"
+                className="flex min-h-11 items-center gap-1 rounded-full border-2 border-dashed border-yellow-300 bg-white px-3 text-sm font-black text-yellow-600 transition-colors hover:bg-yellow-50"
+              >
+                <Plus size={18} aria-hidden="true" />
+                <span>告訴爸媽</span>
+              </button>
+            )}
           </div>
         )}
         {isOffline && (
@@ -937,13 +979,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
         {!isGameFeature && activeTab === 'wishlist' && (
           <div className="space-y-6">
-            <button
-              onClick={() => setShowWishlistForm(true)}
-              className="w-full bg-white border-2 border-dashed border-yellow-300 text-yellow-600 p-5 rounded-3xl font-bold flex items-center justify-center gap-2 hover:bg-yellow-50 transition-colors"
-            >
-              <Plus size={24} /> 告訴爸媽我想要什麼...
-            </button>
-
             <section className="space-y-3" aria-labelledby="pending-wishlist-title">
               <div className="flex items-center justify-between px-2">
                 <div>
@@ -1002,6 +1037,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                 );
               })}
             </div>
+
+            <PointLedgerHistory
+              childProfileId={activeChild.id}
+              childName={activeChild.name}
+              loadPage={loadPointLedgerPage}
+            />
 
             <section className="space-y-4" aria-labelledby="child-redemption-history-title">
               <h2 id="child-redemption-history-title" className="flex items-center gap-2 px-2 text-lg font-bold text-gray-900">

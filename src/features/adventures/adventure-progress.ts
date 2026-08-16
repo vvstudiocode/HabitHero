@@ -6,6 +6,15 @@ import type {
 } from './types';
 import { ADVENTURE_ACTIVE_STATUSES } from './types';
 
+export function canAbandonChildAdventure(
+  task: Pick<AdventureTask, 'origin' | 'adventureType' | 'status' | 'submittedAt' | 'timerIsRunning' | 'timerRemainingMs'>,
+): boolean {
+  if (task.origin !== 'child_proposed' || task.adventureType !== 'general') return false;
+  if (!['proposed', 'proposal_revision_requested', 'todo'].includes(task.status)) return false;
+  if (task.submittedAt) return false;
+  return task.timerIsRunning !== true && task.timerRemainingMs == null;
+}
+
 export function getAdventureType(task: Pick<AdventureTask, 'adventureType' | 'isDaily'>): AdventureType {
   if (task.adventureType === 'daily' || task.adventureType === 'general') {
     return task.adventureType;
@@ -26,6 +35,8 @@ export function getAdventureTaskState(
   switch (task.status) {
     case 'completed':
       return 'completed';
+    case 'cancelled':
+      return 'cancelled';
     case 'pending':
       return 'submitted';
     case 'revision_requested':
@@ -114,6 +125,8 @@ export function getAdventureStatusLabel(state: AdventureTaskVisualState): string
       return '等待同步，點數尚未發放';
     case 'revision':
       return '需要補充';
+    case 'cancelled':
+      return '孩子放棄';
     case 'waiting':
       return '等待家長確認';
     default:

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import type { Object3D } from 'three';
+import { Check, Minus, Plus, RotateCw, X } from 'lucide-react';
 import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
 import {
   CENTRAL_TREE_KEEP_OUT,
@@ -14,6 +17,13 @@ import { mountPrototypeWorld, type PrototypeWorldRuntime } from './prototype-wor
 import { getWorldQuality, type WorldQuality } from './world-quality';
 import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
 import { createWorldSceneGameDataSnapshot } from './world-scene-data';
+import {
+  getPlacementRotationDelta,
+  toDecorationPlacementTransform,
+  type DecorationPlacementControl,
+  type DecorationPlacementDraft,
+  type DecorationPlacementGestureDelta,
+} from './world-placement';
 
 export {
   WORLD_QUALITY_SETTINGS,
@@ -26,6 +36,20 @@ interface TerrainWorldLayerProps {
   gameData: ChildGameData;
   showPetNames?: boolean;
   paused?: boolean;
+  placement?: {
+    inventoryItemId: string;
+    catalogItemId: string;
+    entityId?: string;
+    draft: DecorationPlacementDraft;
+  };
+  placementValid?: boolean;
+  placementPending?: boolean;
+  onPlacementPositionChange?: (position: { x: number; z: number }) => void;
+  onPlacementControl?: (control: DecorationPlacementControl) => void;
+  onPlacementGestureChange?: (gesture: DecorationPlacementGestureDelta) => void;
+  onCompletePlacement?: () => void;
+  onCancelPlacement?: () => void;
+  onStartDecorationPlacement?: (entityId: string) => void;
 }
 
 type ThreeNamespace = typeof import('three');
@@ -86,6 +110,15 @@ export function getCharacterRenderMode(item: GameCatalogItem | undefined): Chara
 
 export function getWorldCharacterModelUrl(item: GameCatalogItem | undefined): string | undefined {
   return item?.itemType === 'character' ? getWorldCharacterByAssetKey(item.assetKey)?.modelUrl : undefined;
+}
+
+function decorationCatalogItemForEntity(gameData: ChildGameData, entityId: string) {
+  const entity = gameData.worldEntities.find((candidate) => candidate.id === entityId);
+  if (!entity) return undefined;
+  const catalogItemId = entity.catalogItemId ?? gameData.inventory.find((item) => item.id === entity.inventoryItemId)?.catalogItemId;
+  return catalogItemId
+    ? gameData.catalog.find((item) => item.id === catalogItemId && item.itemType === 'decoration')
+    : undefined;
 }
 
 function getProceduralCharacterColors(item: GameCatalogItem | undefined) {
@@ -154,23 +187,16 @@ function getEquippedCatalogItem(gameData: ChildGameData): GameCatalogItem | unde
 
 function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
   return [...gameData.worldEntities]
-    // Decorations change the collision map and need a world rebuild. Pet
-    // actors are updated by the mounted runtime so follow/roam never flashes
-    // the whole terrain scene.
-    .filter((entity) => entity.entityKind !== 'pet')
+    // Both pets and decorations are synchronized by the mounted runtime. Keep
+    // transforms and entity add/remove operations out of the remount key so a
+    // placement mutation never flashes the whole terrain scene.
+    .filter((entity) => entity.entityKind !== 'pet' && entity.entityKind !== 'decoration')
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((entity) => [
       entity.id,
       entity.inventoryItemId,
       entity.entityKind,
       entity.worldLayoutVersion,
-      entity.x,
-      entity.y,
-      entity.z,
-      entity.rotationX,
-      entity.rotationY,
-      entity.rotationZ,
-      entity.scale,
       entity.behaviorMode,
       entity.roamingSlot,
       entity.isActive,
@@ -219,7 +245,21 @@ function useWorldQuality() {
   return quality;
 }
 
-export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paused = false }: TerrainWorldLayerProps) {
+export function TerrainWorldLayer({
+  childId,
+  gameData,
+  showPetNames = true,
+  paused = false,
+  placement,
+  placementValid = false,
+  placementPending = false,
+  onPlacementPositionChange,
+  onPlacementControl,
+  onPlacementGestureChange,
+  onCompletePlacement,
+  onCancelPlacement,
+  onStartDecorationPlacement,
+}: TerrainWorldLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<PointerInputController | null>(null);
   const pausedRef = useRef(paused);
@@ -229,19 +269,31 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
   const [loadingDetail, setLoadingDetail] = useState('讀取草地與大樹模型…');
   const [showStaticFallback, setShowStaticFallback] = useState(false);
   const [runtimeAttempt, setRuntimeAttempt] = useState(0);
+  const [selectedDecoration, setSelectedDecoration] = useState<{ entityId: string; x: number; y: number } | null>(null);
+  const placementRotationDragRef = useRef<{ pointerId: number; startX: number; lastX: number; moved: boolean } | null>(null);
   const runtimeRef = useRef<PrototypeWorldRuntime | null>(null);
   const worldQuality = useWorldQuality();
   const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames);
+  const sceneGameData = useMemo(() => createWorldSceneGameDataSnapshot(gameData), [gameData]);
   const sceneInput = useMemo(() => {
     const equippedCatalogItem = getEquippedCatalogItem(gameData);
+    const placementItem = placement
+      ? gameData.catalog.find((item) => item.id === placement.catalogItemId && item.itemType === 'decoration')
+      : undefined;
     return {
-      gameData: createWorldSceneGameDataSnapshot(gameData),
+      gameData: sceneGameData,
       equippedCatalogItem,
       characterRenderMode: getCharacterRenderMode(equippedCatalogItem),
       characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
       showPetNames,
+      placement: placement && placementItem ? {
+        item: placementItem,
+        entityId: placement.entityId,
+        transform: toDecorationPlacementTransform(placement.draft),
+        isValid: placementValid,
+      } : undefined,
     };
-  }, [gameData, showPetNames]);
+  }, [gameData, placement, placementValid, sceneGameData, showPetNames]);
   pausedRef.current = paused;
 
   useEffect(() => {
@@ -265,6 +317,55 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
   }, [paused]);
 
   useEffect(() => {
+    if (placement) setSelectedDecoration(null);
+  }, [placement]);
+
+  const stopPlacementRotationDrag = (event?: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = placementRotationDragRef.current;
+    if (event && drag?.pointerId === event.pointerId && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    placementRotationDragRef.current = null;
+  };
+
+  const startPlacementRotationDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    placementRotationDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      lastX: event.clientX,
+      moved: false,
+    };
+  };
+
+  const updatePlacementRotationDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = placementRotationDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const previousX = drag.lastX;
+    const deltaX = event.clientX - previousX;
+    drag.lastX = event.clientX;
+    drag.moved = drag.moved || Math.abs(event.clientX - drag.startX) >= 5;
+    if (deltaX !== 0) onPlacementGestureChange?.({ scaleFactor: 1, rotationDelta: getPlacementRotationDelta(previousX, event.clientX) });
+  };
+
+  const cancelPlacementRotationDrag = () => {
+    placementRotationDragRef.current = null;
+  };
+
+  const finishPlacementRotationDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = placementRotationDragRef.current;
+    if (drag?.pointerId === event.pointerId && !drag.moved) onPlacementControl?.('rotate-right');
+    stopPlacementRotationDrag(event);
+  };
+
+  useEffect(() => {
+    if (!placement) cancelPlacementRotationDrag();
+    return cancelPlacementRotationDrag;
+  }, [placement]);
+
+  useEffect(() => {
     setShowStaticFallback(false);
   }, [childId]);
 
@@ -282,6 +383,10 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
       characterRenderMode: sceneInput.characterRenderMode,
       characterModelUrl: sceneInput.characterModelUrl,
       showPetNames: sceneInput.showPetNames,
+      placement: sceneInput.placement,
+      onPlacementPositionChange,
+      onPlacementGestureChange,
+      onDecorationSelect: setSelectedDecoration,
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,
@@ -310,18 +415,84 @@ export function TerrainWorldLayer({ childId, gameData, showPetNames = true, paus
   const equippedCatalogItem = getEquippedCatalogItem(gameData);
   const staticCharacterName = equippedCatalogItem?.name ?? '冒險旅人';
   const staticCharacterAccent = equippedCatalogItem?.assetKey === 'character.starlight-adventurer' ? '#7f8cff' : '#6ca477';
+  const selectedEntity = selectedDecoration
+    ? gameData.worldEntities.find((entity) => entity.id === selectedDecoration.entityId && entity.entityKind === 'decoration' && entity.isActive)
+    : undefined;
+  const selectedItem = selectedEntity ? decorationCatalogItemForEntity(gameData, selectedEntity.id) : undefined;
+  const selectedDecorationCanvasRect = selectedDecoration ? canvasRef.current?.getBoundingClientRect() : undefined;
 
   return (
-    <div className="hh-terrain-world" data-world-status={status} data-child-id={childId} data-world-input-layout="portrait-control-band">
+    <div className={`hh-terrain-world${placement ? ' is-placement-mode' : ''}`} data-world-status={status} data-child-id={childId} data-world-input-layout="portrait-control-band">
       <canvas
         ref={canvasRef}
         className="hh-terrain-world-canvas"
         tabIndex={0}
-        aria-label="習慣冒險島立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。"
+        aria-label={placement ? '裝飾放置模式。按住裝飾並拖曳來移動位置；雙指捏合可縮放與旋轉。' : '習慣冒險島立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。'}
         hidden={showStaticFallback}
         aria-hidden={showStaticFallback}
       />
+      {selectedDecoration && selectedEntity && selectedItem && !placement && onStartDecorationPlacement && selectedDecorationCanvasRect && createPortal(
+        <div
+          className="hh-world-decoration-selection"
+          data-world-decoration-action
+          style={{ left: selectedDecorationCanvasRect.left + selectedDecoration.x, top: selectedDecorationCanvasRect.top + selectedDecoration.y }}
+        >
+          <button
+            type="button"
+            className="hh-world-decoration-action"
+            aria-label={`重新擺放${selectedItem.name}`}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setSelectedDecoration(null);
+              onStartDecorationPlacement(selectedEntity.id);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              event.stopPropagation();
+              setSelectedDecoration(null);
+              onStartDecorationPlacement(selectedEntity.id);
+            }}
+          >
+            重新擺放
+          </button>
+        </div>,
+        document.body,
+      )}
       <DynamicJoystick input={input} />
+      {placement && (
+        <section
+          className="hh-world-placement-controls"
+          aria-label="裝飾放置工具"
+          data-placement-valid={placementValid}
+        >
+          <button type="button" className="hh-world-placement-control hh-world-placement-scale-down" aria-label="縮小" title="縮小" disabled={placementPending} onClick={() => onPlacementControl?.('scale-down')}><Minus size={21} aria-hidden="true" /></button>
+          <button type="button" className="hh-world-placement-control hh-world-placement-scale-up" aria-label="放大" title="放大" disabled={placementPending} onClick={() => onPlacementControl?.('scale-up')}><Plus size={21} aria-hidden="true" /></button>
+          <button
+            type="button"
+            className="hh-world-placement-control hh-world-placement-rotate-bottom"
+            aria-label="旋轉"
+            title="旋轉（按住後左右拖曳）"
+            disabled={placementPending}
+            onPointerDown={startPlacementRotationDrag}
+            onPointerMove={updatePlacementRotationDrag}
+            onPointerUp={finishPlacementRotationDrag}
+            onPointerCancel={cancelPlacementRotationDrag}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              if (!event.repeat) onPlacementControl?.('rotate-right');
+            }}
+            onBlur={cancelPlacementRotationDrag}
+          >
+            <RotateCw size={20} aria-hidden="true" />
+          </button>
+          <button type="button" className="hh-world-placement-confirm" aria-label="完成放置" title="完成放置" disabled={!placementValid || placementPending} onClick={onCompletePlacement}><Check size={19} aria-hidden="true" /></button>
+          <button type="button" className="hh-world-placement-cancel" aria-label="取消" title="取消" disabled={placementPending} onClick={onCancelPlacement}><X size={19} aria-hidden="true" /></button>
+          <span className="sr-only" role="status">{placementValid ? '目前位置可以放置' : '此位置不能放置，請換一個地方'}</span>
+        </section>
+      )}
       {status === 'loading' && (
         <div className="hh-terrain-world-loading-panel" role="status">
           <strong>正在準備冒險地圖</strong>

@@ -179,6 +179,17 @@ export function createAdventureStoreActions({
       return result;
     },
 
+    abandonChildAdventure: (taskId: string) =>
+      mutate(
+        (repository) => repository.abandonChildAdventure(taskId),
+        (previous) => patchTask(previous, taskId, (task) => ({
+          ...task,
+          status: 'cancelled',
+          cancelledAt: new Date().toISOString(),
+          cancelledBy: 'child',
+        })),
+      ),
+
     flushAdventureCompletionQueue: async () => {
       if (!authenticatedUserId || !isOnline()) return;
       const result = await drainAdventureCompletionQueue(

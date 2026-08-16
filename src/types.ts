@@ -17,7 +17,8 @@ export type SortOrder = number;
 export type Role = 'parent' | 'child' | null;
 export type MemberRole = 'parent' | 'child';
 export type ChildGender = 'boy' | 'girl';
-export type TaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed';
+export type TaskStatus = 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed' | 'cancelled';
+export type TaskCancellationActor = 'child' | 'parent';
 export type TaskCategory = 'life_habit' | 'learning' | 'health' | 'relationship' | 'family_contribution' | 'creativity';
 export type TaskOrigin = 'child_proposed' | 'parent_suggested' | 'parent_assigned' | 'system_template';
 export type FeedbackTone = 'encouraging' | 'coaching' | 'corrective' | 'correction' | 'celebrating' | 'celebration' | 'celebratory';
@@ -124,6 +125,8 @@ export interface TaskRow {
   feedback_tone: FeedbackTone | null;
   revision_note: string | null;
   completed_at: Timestamp | null;
+  cancelled_at?: Timestamp | null;
+  cancelled_by?: TaskCancellationActor | null;
   created_at: Timestamp;
   updated_at: Timestamp;
   description?: string | null;
@@ -470,6 +473,8 @@ export interface TaskViewModel {
   feedbackTone: FeedbackTone | null;
   revisionNote: string | null;
   completedAt: Timestamp | null;
+  cancelledAt?: Timestamp | null;
+  cancelledBy?: TaskCancellationActor | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   description?: string | null;
@@ -565,6 +570,21 @@ export interface PointLedgerViewModel {
   createdAt: UnixMilliseconds;
 }
 
+export interface PointLedgerPage {
+  entries: PointLedgerViewModel[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+export interface PointLedgerAdjustmentResult {
+  ledgerEntry: PointLedgerViewModel;
+  pointsBalance: Points;
+}
+
 // Legacy localStorage view types. Keep these aliases until the storage adapter is replaced.
 export interface TaskTemplate extends Omit<TaskTemplateViewModel, 'duration' | 'category' | 'suggestedEvidence' | 'dueTime' | 'endTime' | 'requiresReviewBeforeNextTask'> {
   duration?: number;
@@ -634,6 +654,8 @@ export interface Task extends Omit<
   parentCorrection?: string | null;
   feedbackTone?: FeedbackTone | string | null;
   revisionNote?: string | null;
+  cancelledAt?: Timestamp | null;
+  cancelledBy?: TaskCancellationActor | null;
   completedAt?: Timestamp | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
