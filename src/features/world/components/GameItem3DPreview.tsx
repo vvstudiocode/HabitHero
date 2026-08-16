@@ -5,12 +5,17 @@ import type { GameCatalogItem } from '../contracts';
 import { applyPicturebookPetMaterial, type PicturebookPetMaterial } from '../character-material-style';
 import { getLocalGameModelUrl } from '../game-content-assets';
 import { getPetAnimationClipName } from '../pet-animation';
+import {
+  DEFAULT_PREVIEW_ZOOM,
+  clampPreviewZoom,
+  getPreviewFitDistance,
+  getPreviewMaxZoom,
+  getPreviewModelScale,
+  getPreviewModelOffset,
+  type PreviewModelOffset,
+} from './game-item-preview-framing';
 
 const WORLD_SKYBOX_URL = new URL('../../../../terrain-prototype/assets/sky-equirectangular-day.png', import.meta.url).href;
-const PREVIEW_MODEL_DIMENSION = 2.7625 * 0.325;
-const DEFAULT_PREVIEW_ZOOM = 1;
-const MIN_PREVIEW_ZOOM = 0.72;
-const MAX_PREVIEW_ZOOM = 1.8;
 
 interface GameItem3DPreviewProps {
   item: Pick<GameCatalogItem, 'name' | 'itemType' | 'assetKey' | 'thumbnailUrl'>;
@@ -52,14 +57,52 @@ function disposeObject3D(root: Object3D) {
   });
 }
 
-function setModelToGround(THREE: typeof import('three'), model: Object3D) {
+function centerAndScaleModelForPreview(
+  THREE: typeof import('three'),
+  model: Object3D,
+  offset: PreviewModelOffset,
+): number {
+  model.updateMatrixWorld(true);
   const bounds = new THREE.Box3().setFromObject(model);
   const size = bounds.getSize(new THREE.Vector3());
-  const center = bounds.getCenter(new THREE.Vector3());
-  const largestDimension = Math.max(size.x, size.y, size.z, 0.01);
 
-  model.position.set(-center.x, -bounds.min.y, -center.z);
-  model.scale.setScalar(PREVIEW_MODEL_DIMENSION / largestDimension);
+  model.scale.setScalar(getPreviewModelScale({ x: size.x, y: size.y, z: size.z }));
+  model.updateMatrixWorld(true);
+
+  const scaledBounds = new THREE.Box3().setFromObject(model);
+  const scaledCenter = scaledBounds.getCenter(new THREE.Vector3());
+  model.position.set(
+    -scaledCenter.x + offset.x,
+    -scaledCenter.y + offset.y,
+    -scaledCenter.z + offset.z,
+  );
+  model.updateMatrixWorld(true);
+
+  const fittedBounds = new THREE.Box3().setFromObject(model);
+  const fittedSphere = fittedBounds.getBoundingSphere(new THREE.Sphere());
+  return fittedSphere.radius;
+}
+
+function recenterAnimatedPreviewModel(
+  THREE: typeof import('three'),
+  parent: Object3D,
+  model: Object3D,
+  offset: PreviewModelOffset,
+) {
+  parent.updateMatrixWorld(true);
+  model.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(model);
+  const worldCenter = bounds.getCenter(new THREE.Vector3());
+  const parentCenter = parent.worldToLocal(worldCenter);
+  model.position.sub(parentCenter).add(offset);
+}
+
+function fitPreviewCamera(camera: import('three').PerspectiveCamera, radius: number): number {
+  const fitDistance = getPreviewFitDistance(radius, camera.fov, camera.aspect);
+  camera.position.set(0, 0, fitDistance);
+  camera.lookAt(0, 0, 0);
+  camera.updateProjectionMatrix();
+  return fitDistance;
 }
 
 function applyPreviewPetMaterialStyle(source: Object3D) {
@@ -81,6 +124,8 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
   const pointerDragRef = useRef<PointerDragState | null>(null);
   const activePointersRef = useRef(new Map<number, PointerPoint>());
   const pinchDistanceRef = useRef<number | null>(null);
+  const previewRadiusRef = useRef<number | null>(null);
+  const previewMaxZoomRef = useRef(getPreviewMaxZoom());
   const [status, setStatus] = useState<PreviewStatus>('loading');
 
   const modelUrl = getLocalGameModelUrl(item);
@@ -99,10 +144,12 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
     let camera: import('three').PerspectiveCamera | undefined;
     let mixer: AnimationMixer | undefined;
     let modelRoot: Object3D | undefined;
+    let previewModel: Object3D | undefined;
     let resizeObserver: ResizeObserver | undefined;
     let removeWindowResize: (() => void) | undefined;
     let dracoDecoderLoader: { setDecoderPath: (path: string) => unknown; dispose: () => void } | undefined;
     let environmentTexture: import('three').Texture | undefined;
+    const previewOffset = getPreviewModelOffset(item);
     const prefersReducedMotion = typeof window.matchMedia === 'function'
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -151,8 +198,8 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
         });
 
         camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
-        camera.position.set(0, 1.27, 4.6);
-        camera.lookAt(0, 1.12, 0);
+        camera.position.set(0, 0, 4.6);
+        camera.lookAt(0, 0, 0);
         cameraRef.current = camera;
 
         const resize = () => {
@@ -161,6 +208,8 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
           const height = Math.max(canvas.clientHeight, 1);
           renderer.setSize(width, height, false);
           camera.aspect = width / height;
+          if (previewRadiusRef.current !== null) fitPreviewCamera(camera, previewRadiusRef.current);
+          camera.zoom = clampPreviewZoom(camera.zoom, previewMaxZoomRef.current);
           camera.updateProjectionMatrix();
         };
 
@@ -180,6 +229,7 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
           if (!prefersReducedMotion) {
             if (modelRoot && !pointerDragRef.current) modelRoot.rotation.y += delta * 0.3;
             mixer?.update(delta);
+            if (modelRoot && previewModel) recenterAnimatedPreviewModel(THREE, modelRoot, previewModel, previewOffset);
           }
           renderer.render(scene, camera);
           animationFrame = requestAnimationFrame(renderFrame);
@@ -199,7 +249,14 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
             }
 
             modelRoot = new THREE.Group();
-            setModelToGround(THREE, gltf.scene);
+            previewModel = gltf.scene;
+            previewRadiusRef.current = centerAndScaleModelForPreview(THREE, gltf.scene, previewOffset);
+            previewMaxZoomRef.current = getPreviewMaxZoom();
+            if (camera && previewRadiusRef.current !== null) {
+              fitPreviewCamera(camera, previewRadiusRef.current);
+              camera.zoom = clampPreviewZoom(DEFAULT_PREVIEW_ZOOM, previewMaxZoomRef.current);
+              camera.updateProjectionMatrix();
+            }
             applyPreviewPetMaterialStyle(gltf.scene);
             modelRoot.add(gltf.scene);
             scene?.add(modelRoot);
@@ -246,14 +303,17 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
       dracoDecoderLoader?.dispose();
       renderer?.dispose();
       renderer = undefined;
-          modelRoot = undefined;
-          cameraRef.current = null;
-          modelRef.current = null;
-          pointerDragRef.current = null;
-          activePointersRef.current.clear();
-          pinchDistanceRef.current = null;
-        };
-  }, [item.assetKey, modelUrl]);
+      modelRoot = undefined;
+      previewModel = undefined;
+      cameraRef.current = null;
+      previewRadiusRef.current = null;
+      previewMaxZoomRef.current = getPreviewMaxZoom();
+      modelRef.current = null;
+      pointerDragRef.current = null;
+      activePointersRef.current.clear();
+      pinchDistanceRef.current = null;
+    };
+  }, [item.assetKey, item.itemType, modelUrl]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (status !== 'ready') return;
@@ -277,7 +337,7 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
       const camera = cameraRef.current;
       if (camera && previousDistance && previousDistance > 0) {
         const zoomScale = pinchDistance / previousDistance;
-        camera.zoom = Math.min(MAX_PREVIEW_ZOOM, Math.max(MIN_PREVIEW_ZOOM, camera.zoom * zoomScale));
+        camera.zoom = clampPreviewZoom(camera.zoom * zoomScale, previewMaxZoomRef.current);
         camera.updateProjectionMatrix();
       }
       pinchDistanceRef.current = pinchDistance;
@@ -317,7 +377,7 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
       modelRef.current.rotation.x = 0;
       modelRef.current.rotation.y = 0;
       if (cameraRef.current) {
-        cameraRef.current.zoom = DEFAULT_PREVIEW_ZOOM;
+        cameraRef.current.zoom = clampPreviewZoom(DEFAULT_PREVIEW_ZOOM, previewMaxZoomRef.current);
         cameraRef.current.updateProjectionMatrix();
       }
     }

@@ -2,10 +2,20 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { isLocalGameItem3DPreviewEnabled } from '../src/features/world/game-content-assets';
+import {
+  PREVIEW_CAMERA_PADDING,
+  PREVIEW_MODEL_DIMENSION,
+  clampPreviewZoom,
+  getPreviewFitDistance,
+  getPreviewMaxZoom,
+  getPreviewModelScale,
+  getPreviewModelOffset,
+} from '../src/features/world/components/game-item-preview-framing';
 import type { GameCatalogItem } from '../src/features/world/contracts';
 const previewSource = readFileSync(new URL('../src/features/world/components/GameItemImagePreview.tsx', import.meta.url), 'utf8');
 const childPanelSource = readFileSync(new URL('../src/features/world/components/ChildGamePanel.tsx', import.meta.url), 'utf8');
 const parentPanelSource = readFileSync(new URL('../src/features/world/components/ParentGamePricePanel.tsx', import.meta.url), 'utf8');
+const framingSource = readFileSync(new URL('../src/features/world/components/game-item-preview-framing.ts', import.meta.url), 'utf8');
 const worldStyles = readFileSync(new URL('../src/styles/world.css', import.meta.url), 'utf8');
 const modalStyles = readFileSync(new URL('../src/styles/modals.css', import.meta.url), 'utf8');
 
@@ -48,8 +58,7 @@ test('3D previews support pinch zoom and horizontal drag rotation only', () => {
   assert.match(modelPreviewSource, /model\.rotation\.y/);
   assert.doesNotMatch(modelPreviewSource, /MAX_PREVIEW_PITCH/);
   assert.doesNotMatch(modelPreviewSource, /model\.rotation\.x\s*=\s*Math/);
-  assert.match(modelPreviewSource, /camera\.position\.set\(0, 1\.27, 4\.6\)/);
-  assert.match(modelPreviewSource, /camera\.lookAt\(0, 1\.12, 0\)/);
+  assert.match(modelPreviewSource, /camera\.lookAt\(0, 0, 0\)/);
   assert.match(modelPreviewSource, /可拖曳左右旋轉，雙指縮放/);
   assert.match(modalStyles, /\.hh-game-item-lightbox \{[^}]*place-items: center;/);
   assert.match(modalStyles, /\.hh-game-item-lightbox \{[\s\S]*padding: max\(20px, env\(safe-area-inset-top, 0px\)\) 0 max\(20px, env\(safe-area-inset-bottom, 0px\)\) 0;/);
@@ -62,6 +71,33 @@ test('3D previews support pinch zoom and horizontal drag rotation only', () => {
   assert.match(modalStyles, /\.hh-game-item-lightbox-close \{[^}]*top: 42px;[^}]*right: 23px;[^}]*z-index: 2/);
 });
 
+test('all 3D item types use centered framing instead of ground alignment', () => {
+  const modelPreviewSource = readFileSync(new URL('../src/features/world/components/GameItem3DPreview.tsx', import.meta.url), 'utf8');
+  assert.match(modelPreviewSource, /getPreviewFitDistance/);
+  assert.match(modelPreviewSource, /model\.position\.set\([\s\S]*-scaledCenter\.x[\s\S]*-scaledCenter\.y[\s\S]*-scaledCenter\.z/);
+  assert.doesNotMatch(modelPreviewSource, /model\.position\.set\(-center\.x, -bounds\.min\.y, -center\.z\)/);
+  assert.match(modelPreviewSource, /recenterAnimatedPreviewModel/);
+  assert.match(modelPreviewSource, /camera\.position\.set\(0, 0, fitDistance\)/);
+  assert.match(modelPreviewSource, /previewMaxZoomRef/);
+  assert.doesNotMatch(modelPreviewSource, /camera\.position\.set\(0, 1\.27, 4\.6\)/);
+});
+
+test('preview framing derives a safe fit distance and zoom limit from the model bounds', () => {
+  assert.equal(getPreviewModelScale({ x: 1, y: 2, z: 1 }), PREVIEW_MODEL_DIMENSION / 2);
+  assert.ok(getPreviewFitDistance(0.45, 30, 0.74) > getPreviewFitDistance(0.45, 30, 1.7));
+  assert.equal(getPreviewMaxZoom(), PREVIEW_CAMERA_PADDING);
+  assert.equal(clampPreviewZoom(1.5), PREVIEW_CAMERA_PADDING);
+  assert.equal(clampPreviewZoom(0.5), 0.72);
+});
+
+test('preview framing applies only the requested Mixamo and character visual offset', () => {
+  assert.deepEqual(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.silf-owl' }), { x: 0, y: 0, z: 0 });
+  assert.deepEqual(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.belilos-fox' }), { x: 0, y: 0, z: 0 });
+  assert.ok(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.star-diver' }).y < 0);
+  assert.ok(getPreviewModelOffset({ itemType: 'character', assetKey: 'character.arthur' }).y < 0);
+  assert.deepEqual(getPreviewModelOffset({ itemType: 'decoration', assetKey: 'decoration.study-desk' }), { x: 0, y: 0, z: 0 });
+});
+
 test('the Arcadia preview matches the world palette without a ground shadow or visible instructions', () => {
   const modelPreviewSource = readFileSync(new URL('../src/features/world/components/GameItem3DPreview.tsx', import.meta.url), 'utf8');
   assert.match(modelPreviewSource, /applyPicturebookPetMaterial/);
@@ -72,7 +108,7 @@ test('the Arcadia preview matches the world palette without a ground shadow or v
   assert.match(modelPreviewSource, /HemisphereLight\(0xffebdf, 0x777265, 1\.86\)/);
   assert.match(modelPreviewSource, /DirectionalLight\(0xffd4b2, 3\.3\)/);
   assert.match(modelPreviewSource, /environmentIntensity = 0\.31/);
-  assert.match(modelPreviewSource, /PREVIEW_MODEL_DIMENSION = 2\.7625 \* 0\.325/);
+  assert.match(framingSource, /PREVIEW_MODEL_DIMENSION = 2\.7625 \* 0\.325/);
   assert.doesNotMatch(modelPreviewSource, /CircleGeometry/);
   assert.doesNotMatch(modelPreviewSource, /hh-game-item-lightbox-3d-status|hh-game-item-lightbox-3d-hint/);
   assert.match(modalStyles, /\.hh-game-item-lightbox-3d \{[\s\S]*background: transparent;/);
