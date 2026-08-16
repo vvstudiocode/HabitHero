@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Compass, Crown, Flower2, PawPrint, ScrollText, Settings, Sparkles, X } from 'lucide-react';
+import { Check, Compass, Crown, Flower2, PawPrint, Settings, Sparkles, X } from 'lucide-react';
 import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem, GamePurchaseResult, WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
 import { degreesToRadians, getActiveDecorationEntities, getWorldRevisionAfterMutation, radiansToDegrees, toDecorationDraft, type DecorationDraft } from './decoration-editing';
 import { buildCollisionCircles } from '../world-collision';
@@ -506,16 +506,11 @@ export function ChildGamePanel({
         </div>
       </div>
 
-      {kind !== 'settings' && (
-        <div className="hh-game-wallet-row">
-          <div className="hh-game-wallet" aria-label={`目前有 ${gameData.walletBalance} 張卷軸`}>
-            <ScrollText size={17} strokeWidth={2.5} aria-hidden="true" />
-            <span>卷軸</span>
-            <strong>{gameData.walletBalance}</strong>
-          </div>
-          {kind === 'inventory' && <GameCatalogLayoutControls columns={inventoryColumns} onChange={setInventoryColumns} />}
-          {kind === 'shop' && <GameCatalogLayoutControls columns={shopColumns} onChange={setShopColumns} />}
-        </div>
+              {kind !== 'settings' && (
+                <div className="hh-game-wallet-row hh-game-wallet-row--controls-only">
+                  {kind === 'inventory' && <GameCatalogLayoutControls columns={inventoryColumns} onChange={setInventoryColumns} />}
+                  {kind === 'shop' && <GameCatalogLayoutControls columns={shopColumns} onChange={setShopColumns} />}
+                </div>
       )}
 
       {kind === 'inventory' && (

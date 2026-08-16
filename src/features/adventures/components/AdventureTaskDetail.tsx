@@ -146,7 +146,7 @@ export function AdventureTaskDetail({
         )}
 
         {canAbandon && (
-          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <div className="mt-5">
             {!abandonConfirmOpen ? (
               <button
                 type="button"

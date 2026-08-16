@@ -361,7 +361,7 @@ test('child feature pages omit the duplicate modal title while keeping the close
   const overlays = read('../src/styles/overlays.css');
   const characterStyles = read('../src/styles/character.css');
 
-  assert.match(dashboard, /<div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">\s*<button/);
+  assert.match(dashboard, /<div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">\s*<div className="hh-child-feature-balance-pill">[\s\S]*?<button/);
   assert.match(overlays, /\.hh-parent-content-modal-bar--child[\s\S]*?justify-content: flex-end[\s\S]*?min-height: 48px/);
   assert.match(characterStyles, /\.hh-dashboard-screen\s*\{[\s\S]*?--hh-character-top-offset:\s*44px/);
   assert.match(overlays, /\.hh-parent-content-modal-bar--child\s*\{[\s\S]*?top:\s*0[\s\S]*?justify-content: flex-end/);

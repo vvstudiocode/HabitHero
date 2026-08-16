@@ -8,7 +8,8 @@ import {
 import { createDataRepository } from '../src/lib/data-access';
 import type { AdventureTask } from '../src/features/adventures/types';
 
-const migrationUrl = new URL('../supabase/migrations/20260816130000_child_abandon_general_adventures.sql', import.meta.url);
+const migrationUrl = new URL('../supabase/migrations/20260816044557_allow_parent_child_mode_abandonment.sql', import.meta.url);
+const schemaMigrationUrl = new URL('../supabase/migrations/20260816043106_child_abandon_general_adventures.sql', import.meta.url);
 
 const task = (overrides: Partial<AdventureTask> = {}): AdventureTask => ({
   id: 'task-1',
@@ -66,14 +67,15 @@ test('repository uses the child-only abandonment RPC', async () => {
   }]);
 });
 
-test('abandonment migration preserves history and rejects parent-assigned deletion', () => {
+test('abandonment migration preserves history and supports parent child-mode authorization', () => {
   const sql = readFileSync(migrationUrl, 'utf8');
+  const schemaSql = readFileSync(schemaMigrationUrl, 'utf8');
 
-  assert.match(sql, /status in \('proposed', 'proposal_revision_requested', 'todo', 'pending', 'revision_requested', 'completed', 'cancelled'\)/i);
+  assert.match(schemaSql, /status in \('proposed', 'proposal_revision_requested', 'todo', 'pending', 'revision_requested', 'completed', 'cancelled'\)/i);
   assert.match(sql, /create or replace function public\.abandon_child_adventure\(target_task_id uuid\)/i);
   assert.match(sql, /security definer/i);
   assert.match(sql, /set search_path = pg_catalog, public/i);
-  assert.match(sql, /private\.is_child_owner\(task_row\.family_id, task_row\.child_profile_id\)/i);
+  assert.match(sql, /private\.is_child_owner\(task_row\.family_id, task_row\.child_profile_id\)[\s\S]*?or private\.is_family_parent\(task_row\.family_id\)/i);
   assert.match(sql, /task_row\.origin = 'child_proposed'/i);
   assert.match(sql, /task_row\.adventure_type = 'general'/i);
   assert.match(sql, /task_row\.status in \('proposed', 'proposal_revision_requested', 'todo'\)/i);
@@ -90,6 +92,11 @@ test('child detail exposes a confirmation action without making it available to 
   assert.match(source, /放棄後不會得到點數，家長仍看得到紀錄/);
   assert.match(source, /onAbandon/);
   assert.match(source, /canAbandonChildAdventure/);
+
+  const confirmStart = source.indexOf('const confirmAbandon');
+  const confirmEnd = source.indexOf('\n\n  useEffect', confirmStart);
+  const confirmHandler = source.slice(confirmStart, confirmEnd);
+  assert.ok(confirmHandler.indexOf('await onAbandon(task)') < confirmHandler.indexOf('requestClose()'));
 });
 
 test('parent calendar keeps abandoned adventures visible with the child-abandoned label', () => {

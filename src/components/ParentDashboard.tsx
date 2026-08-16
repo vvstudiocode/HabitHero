@@ -1104,7 +1104,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                     <Star size={20} className="text-amber-500" aria-hidden="true" />
                     孩子點數
                   </h2>
-                  <p className="mt-1 text-sm font-bold text-gray-500">從這裡贈點或扣點，所有變動都會留下紀錄。</p>
                 </div>
               </div>
               {state.children.length === 0 ? (
@@ -1116,7 +1115,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <h3 className="truncate text-lg font-black text-gray-900">{child.name}</h3>
-                          <p className="mt-1 text-sm font-bold text-gray-500">目前餘額</p>
                         </div>
                         <PointValue value={child.points} className="shrink-0 text-lg font-black text-amber-700" />
                       </div>

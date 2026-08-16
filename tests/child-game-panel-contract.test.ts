@@ -92,10 +92,12 @@ describe('child game panel decoration editing', () => {
     assert.match(childGamePanelSource, /entities\.length === 0/);
   });
 
-  it('keeps child layout controls beside the wallet and uses icon-only category tabs', () => {
+  it('moves the wallet balance to the shared child modal bar and keeps layout controls', () => {
     assert.match(childGamePanelSource, /hh-game-wallet-row[\s\S]*GameCatalogLayoutControls/);
-    assert.match(childGamePanelSource, /ScrollText size=\{17\} strokeWidth=\{2\.5\}/);
+    assert.doesNotMatch(childGamePanelSource, /aria-label=\{`目前有 \$\{gameData\.walletBalance\} 張卷軸`\}/);
     assert.doesNotMatch(childGamePanelSource, /Coins size=\{20\}/);
+    assert.match(childDashboardSource, /heroFeature === 'inventory' \|\| heroFeature === 'shop'/);
+    assert.match(childDashboardSource, /目前有 \$\{displayedScrolls\} 張卷軸/);
     assert.match(childGamePanelSource, /hh-game-tabs hh-game-tabs--icons/);
     assert.match(childGamePanelSource, /aria-label=\{label\}/);
     assert.match(childGamePanelSource, /title=\{label\}/);

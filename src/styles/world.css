@@ -258,6 +258,10 @@
   margin-bottom: 0;
 }
 
+.hh-game-wallet-row--controls-only {
+  justify-content: flex-end;
+}
+
 .hh-game-panel-section {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -149,7 +149,7 @@ describe('point ledger repository contract', () => {
 
 describe('manual point adjustment migration contract', () => {
   it('keeps the balance mutation parent-only, atomic, and append-only', () => {
-    const migration = readFileSync(resolve('supabase/migrations/20260816111942_manual_point_adjustments.sql'), 'utf8');
+    const migration = readFileSync(resolve('supabase/migrations/20260816043045_manual_point_adjustments.sql'), 'utf8');
     assert.match(migration, /security definer/);
     assert.match(migration, /private\.is_family_parent\(child_row\.family_id\)/);
     assert.match(migration, /for update/);

@@ -871,13 +871,20 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       >
         {heroFeature && (
           <div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">
-            <button type="button" onClick={closeChildFeature} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
-              <X size={20} />
-            </button>
-            <div className="flex min-h-11 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-sm font-black text-amber-800">
+            <div className="hh-child-feature-balance-pill">
               <span className="sr-only">我的點數</span>
               <PointValue value={childPoints} iconSize={15} />
             </div>
+            {(heroFeature === 'inventory' || heroFeature === 'shop') && (
+              <div className="hh-child-feature-balance-pill" aria-label={`目前有 ${displayedScrolls} 張卷軸`}>
+                <ScrollText size={15} strokeWidth={2.5} aria-hidden="true" />
+                <span className="sr-only">我的卷軸</span>
+                <strong>{displayedScrolls}</strong>
+              </div>
+            )}
+            <button type="button" onClick={() => closeChildFeature()} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
+              <X size={20} />
+            </button>
             {heroFeature === 'wishlist' && (
               <button
                 type="button"

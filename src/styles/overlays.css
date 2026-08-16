@@ -409,8 +409,22 @@
   min-height: 48px;
 }
 
-.hh-parent-content-modal-bar--child:has([aria-label="告訴爸媽我想要什麼"]) {
-  flex-direction: row-reverse;
+.hh-child-feature-balance-pill {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--hh-reward-card-line);
+  border-radius: 999px;
+  color: var(--hh-reward-card-ink);
+  background: var(--hh-reward-card-gold-soft);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.hh-child-feature-balance-pill strong {
+  font-size: 20px;
 }
 
 .hh-adventure-detail-overlay {
