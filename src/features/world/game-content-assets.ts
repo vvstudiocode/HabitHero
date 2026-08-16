@@ -70,6 +70,10 @@ export function getLocalGameModelUrl(item: Pick<GameCatalogItem, 'itemType' | 'a
   return item ? getLocalGameAsset(item.itemType, item.assetKey).modelUrl : null;
 }
 
+export function isLocalGameItem3DPreviewEnabled(item: Pick<GameCatalogItem, 'itemType' | 'assetKey'>): boolean {
+  return getLocalGameModelUrl(item) !== null;
+}
+
 export function isLocalGameItemShopSupported(item: Pick<GameCatalogItem, 'itemType' | 'assetKey'>): boolean {
   return getLocalGameThumbnailUrl(item) !== null;
 }

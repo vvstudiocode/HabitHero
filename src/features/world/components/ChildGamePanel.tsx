@@ -7,7 +7,7 @@ import { toWorldMutationErrorMessage } from '../world-errors';
 import { isDecorationPlacementValid } from '../world-placement';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
 import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
-import { isLocalGameItemShopSupported } from '../game-content-assets';
+import { isLocalGameItem3DPreviewEnabled, isLocalGameItemShopSupported } from '../game-content-assets';
 import { GameItemLightbox } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
@@ -106,6 +106,7 @@ export function ChildGamePanel({
   const activeDecorationCount = gameData.worldEntities.filter((entity) => entity.entityKind === 'decoration' && entity.isActive).length;
   const title = kind === 'inventory' ? '我的背包' : kind === 'shop' ? '冒險商店' : '世界設定';
   const previewPrice = kind === 'shop' && previewItem ? gameData.prices[previewItem.id] ?? previewItem.scrollPrice : undefined;
+  const use3DPreview = kind === 'shop' && previewItem !== null && isLocalGameItem3DPreviewEnabled(previewItem);
   const previewOwned = previewItem !== null
     && ownedCatalogIds.has(previewItem.id)
     && previewItem.itemType !== 'pet'
@@ -586,6 +587,7 @@ export function ChildGamePanel({
       {feedback && <p className="hh-game-feedback" role="status">{feedback}</p>}
       <GameItemLightbox
         item={previewItem}
+        use3DPreview={use3DPreview}
         price={previewPrice}
         purchaseDisabled={previewPurchaseDisabled}
         purchaseLabel={previewPurchaseLabel}

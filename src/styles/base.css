@@ -116,6 +116,8 @@
 }
 
 .hh-form-modal-panel.hh-point-ledger-modal-panel {
+  box-sizing: border-box;
+  height: calc(100dvh - 32px);
   max-height: calc(100dvh - 32px);
 }
 

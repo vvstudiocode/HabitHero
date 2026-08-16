@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Crown, Flower2, PawPrint, ScrollText, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { GameCatalogItem } from '../contracts';
+import { GameItem3DPreview } from './GameItem3DPreview';
 
 interface GameItemPreviewProps {
   item: GameCatalogItem;
@@ -30,9 +31,13 @@ export function GameItemPreview({ item, onOpen }: GameItemPreviewProps) {
       : <Flower2 size={24} aria-hidden="true" />;
 }
 
+type GameItemLightboxItem = Pick<GameCatalogItem, 'name' | 'description' | 'thumbnailUrl'>
+  & Partial<Pick<GameCatalogItem, 'itemType' | 'assetKey'>>;
+
 interface GameItemLightboxProps {
-  item: Pick<GameCatalogItem, 'name' | 'description' | 'thumbnailUrl'> | null;
+  item: GameItemLightboxItem | null;
   onClose: () => void;
+  use3DPreview?: boolean;
   price?: number;
   purchaseDisabled?: boolean;
   purchaseLabel?: string;
@@ -43,6 +48,7 @@ interface GameItemLightboxProps {
 export function GameItemLightbox({
   item,
   onClose,
+  use3DPreview = false,
   price,
   purchaseDisabled = false,
   purchaseLabel = '兌換',
@@ -67,13 +73,20 @@ export function GameItemLightbox({
     };
   }, [item, onClose]);
 
-  if (!item?.thumbnailUrl || typeof document === 'undefined') return null;
+  if (!item || typeof document === 'undefined') return null;
+  const modelPreviewItem = item.itemType && item.assetKey
+    ? { name: item.name, itemType: item.itemType, assetKey: item.assetKey, thumbnailUrl: item.thumbnailUrl }
+    : null;
   return createPortal(
     <div className="hh-game-item-lightbox" role="dialog" aria-modal="true" aria-label={`${item.name} 商品詳情`}>
-      <button type="button" className="hh-game-item-lightbox-backdrop" aria-label="關閉圖片預覽" onClick={onClose} />
+      <button type="button" className="hh-game-item-lightbox-backdrop" aria-label="關閉商品詳情" onClick={onClose} />
       <div className="hh-game-item-lightbox-content">
-        <button type="button" className="hh-game-item-lightbox-close" aria-label="關閉圖片預覽" onClick={onClose}><X size={24} /></button>
-        <img src={item.thumbnailUrl} alt={`${item.name} 放大預覽`} />
+        <button type="button" className="hh-game-item-lightbox-close" aria-label="關閉商品詳情" onClick={onClose}><X size={24} /></button>
+        {use3DPreview && modelPreviewItem ? (
+          <GameItem3DPreview item={modelPreviewItem} />
+        ) : item.thumbnailUrl ? (
+          <img src={item.thumbnailUrl} alt={`${item.name} 放大預覽`} />
+        ) : null}
         <div className="hh-game-item-lightbox-copy">
           <strong>{item.name}</strong>
           <p>{item.description}</p>

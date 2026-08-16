@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import type { GameCatalogItem, GameItemType } from '../contracts';
-import { isLocalGameItemShopSupported } from '../game-content-assets';
+import { isLocalGameItem3DPreviewEnabled, isLocalGameItemShopSupported } from '../game-content-assets';
 import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 
@@ -139,6 +139,7 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
       return isValidPrice(value) ? Number(value) : persistedPrice(previewItem);
     })()
     : undefined;
+  const use3DPreview = previewItem !== null && isLocalGameItem3DPreviewEnabled(previewItem);
 
   const toggleEditingPrices = () => {
     if (editingPrices && hasUnsavedDrafts) {
@@ -236,7 +237,7 @@ export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave
           )}
         </>
       )}
-      <GameItemLightbox item={previewItem} price={previewPrice} onClose={() => setPreviewItem(null)} />
+      <GameItemLightbox item={previewItem} use3DPreview={use3DPreview} price={previewPrice} onClose={() => setPreviewItem(null)} />
     </section>
   );
 }

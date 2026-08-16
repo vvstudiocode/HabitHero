@@ -1,9 +1,84 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { isLocalGameItem3DPreviewEnabled } from '../src/features/world/game-content-assets';
+import type { GameCatalogItem } from '../src/features/world/contracts';
 const previewSource = readFileSync(new URL('../src/features/world/components/GameItemImagePreview.tsx', import.meta.url), 'utf8');
+const childPanelSource = readFileSync(new URL('../src/features/world/components/ChildGamePanel.tsx', import.meta.url), 'utf8');
+const parentPanelSource = readFileSync(new URL('../src/features/world/components/ParentGamePricePanel.tsx', import.meta.url), 'utf8');
 const worldStyles = readFileSync(new URL('../src/styles/world.css', import.meta.url), 'utf8');
 const modalStyles = readFileSync(new URL('../src/styles/modals.css', import.meta.url), 'utf8');
+
+function previewItem(itemType: GameCatalogItem['itemType'], assetKey: string): Pick<GameCatalogItem, 'itemType' | 'assetKey'> {
+  return { itemType, assetKey };
+}
+
+test('all local shop characters, pets, and decorations opt into the 3D preview', () => {
+  assert.equal(isLocalGameItem3DPreviewEnabled(previewItem('pet', 'pet.arcadia')), true);
+  assert.equal(isLocalGameItem3DPreviewEnabled(previewItem('pet', 'pet.oum')), true);
+  assert.equal(isLocalGameItem3DPreviewEnabled(previewItem('character', 'character.arthur')), true);
+  assert.equal(isLocalGameItem3DPreviewEnabled(previewItem('decoration', 'decoration.study-desk')), true);
+  assert.equal(isLocalGameItem3DPreviewEnabled(previewItem('pet', 'pet.not-in-this-app')), false);
+  assert.match(childPanelSource, /isLocalGameItem3DPreviewEnabled/);
+  assert.match(childPanelSource, /use3DPreview=\{use3DPreview\}/);
+  assert.match(parentPanelSource, /isLocalGameItem3DPreviewEnabled/);
+  assert.match(parentPanelSource, /use3DPreview=\{use3DPreview\}/);
+});
+
+test('the detail modal can render a model preview while keeping the image fallback', () => {
+  assert.match(previewSource, /GameItem3DPreview/);
+  assert.match(previewSource, /use3DPreview/);
+  assert.match(previewSource, /item\.thumbnailUrl/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-3d/);
+});
+
+test('the first 3D preview configures the shared Draco decoder for compressed GLBs', () => {
+  const modelPreviewSource = readFileSync(new URL('../src/features/world/components/GameItem3DPreview.tsx', import.meta.url), 'utf8');
+  assert.match(modelPreviewSource, /DRACOLoader/);
+  assert.match(modelPreviewSource, /setDecoderPath\('\/draco\/'\)/);
+  assert.match(modelPreviewSource, /setDRACOLoader/);
+});
+
+test('3D previews support pinch zoom and horizontal drag rotation only', () => {
+  const modelPreviewSource = readFileSync(new URL('../src/features/world/components/GameItem3DPreview.tsx', import.meta.url), 'utf8');
+  assert.match(modelPreviewSource, /activePointersRef/);
+  assert.match(modelPreviewSource, /pinchDistanceRef/);
+  assert.match(modelPreviewSource, /cameraRef\.current\.zoom/);
+  assert.match(modelPreviewSource, /setPointerCapture/);
+  assert.match(modelPreviewSource, /model\.rotation\.y/);
+  assert.doesNotMatch(modelPreviewSource, /MAX_PREVIEW_PITCH/);
+  assert.doesNotMatch(modelPreviewSource, /model\.rotation\.x\s*=\s*Math/);
+  assert.match(modelPreviewSource, /camera\.position\.set\(0, 1\.27, 4\.6\)/);
+  assert.match(modelPreviewSource, /camera\.lookAt\(0, 1\.12, 0\)/);
+  assert.match(modelPreviewSource, /可拖曳左右旋轉，雙指縮放/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox \{[^}]*place-items: center;/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox \{[\s\S]*padding: max\(20px, env\(safe-area-inset-top, 0px\)\) 0 max\(20px, env\(safe-area-inset-bottom, 0px\)\) 0;/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-3d \{[\s\S]*touch-action: none/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-3d \{[\s\S]*width: 100%;/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-3d \{[\s\S]*height: min\(520px, calc\(100dvh/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-content \{[\s\S]*width: 100%;/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-content \{[\s\S]*max-width: 100%;/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-content \{[\s\S]*padding: 0 0 12px/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-close \{[^}]*top: 42px;[^}]*right: 23px;[^}]*z-index: 2/);
+});
+
+test('the Arcadia preview matches the world palette without a ground shadow or visible instructions', () => {
+  const modelPreviewSource = readFileSync(new URL('../src/features/world/components/GameItem3DPreview.tsx', import.meta.url), 'utf8');
+  assert.match(modelPreviewSource, /applyPicturebookPetMaterial/);
+  assert.match(modelPreviewSource, /0xffebdf/);
+  assert.match(modelPreviewSource, /0x777265/);
+  assert.match(modelPreviewSource, /0xffd4b2/);
+  assert.match(modelPreviewSource, /toneMappingExposure = 1\.12/);
+  assert.match(modelPreviewSource, /HemisphereLight\(0xffebdf, 0x777265, 1\.86\)/);
+  assert.match(modelPreviewSource, /DirectionalLight\(0xffd4b2, 3\.3\)/);
+  assert.match(modelPreviewSource, /environmentIntensity = 0\.31/);
+  assert.match(modelPreviewSource, /PREVIEW_MODEL_DIMENSION = 2\.7625 \* 0\.325/);
+  assert.doesNotMatch(modelPreviewSource, /CircleGeometry/);
+  assert.doesNotMatch(modelPreviewSource, /hh-game-item-lightbox-3d-status|hh-game-item-lightbox-3d-hint/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-3d \{[\s\S]*background: transparent;/);
+  assert.doesNotMatch(modalStyles, /\.hh-game-item-lightbox-3d-status/);
+  assert.doesNotMatch(modalStyles, /\.hh-game-item-lightbox-3d-hint/);
+});
 
 test('pet previews no longer apply pixel-only rendering', () => {
   assert.doesNotMatch(previewSource, /hh-game-item-preview--pixel/);
@@ -61,8 +136,8 @@ test('lightbox images preserve their transparent asset background', () => {
   assert.match(modalStyles, /\.hh-game-item-lightbox-content img \{[^}]*background: transparent;/);
 });
 
-test('item detail close control sits at the top edge of the content', () => {
-  assert.match(modalStyles, /\.hh-game-item-lightbox-close[\s\S]*top: 0/);
+test('item detail close control sits inside the preview frame', () => {
+  assert.match(modalStyles, /\.hh-game-item-lightbox-close \{[^}]*top: 42px;[^}]*right: 23px;[^}]*z-index: 2/);
 });
 
 test('pet rename keeps its action row on one line', () => {

@@ -46,6 +46,6 @@ describe('point ledger UI contracts', () => {
 
   it('keeps the point ledger drawer below the mobile safe-area edge', () => {
     assert.match(parentDashboardSource, /hh-point-ledger-modal-panel/);
-    assert.match(read('src/styles/base.css'), /\.hh-form-modal-panel\.hh-point-ledger-modal-panel[\s\S]*?max-height:\s*calc\(100dvh - 32px\)/);
+    assert.match(read('src/styles/base.css'), /\.hh-form-modal-panel\.hh-point-ledger-modal-panel[\s\S]*?\n  height:\s*calc\(100dvh - 32px\)/);
   });
 });
