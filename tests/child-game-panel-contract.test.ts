@@ -91,6 +91,10 @@ describe('child game panel decoration editing', () => {
     assert.match(childGamePanelSource, /放置\{entities\.length > 0 \? '一份' : ''\}/);
   });
 
+  it('applies the packaged-asset compatibility gate to the child inventory', () => {
+    assert.match(childGamePanelSource, /!isLocalGameItemInventorySupported\(item\)/);
+  });
+
   it('moves the wallet balance to the shared child modal bar and keeps layout controls', () => {
     assert.match(childGamePanelSource, /hh-game-panel-title-row[\s\S]*GameCatalogLayoutControls/);
     assert.doesNotMatch(childGamePanelSource, /hh-game-wallet-row--controls-only/);
@@ -147,7 +151,7 @@ describe('child game panel decoration editing', () => {
     assert.doesNotMatch(dataAccessSource, /setFollowingPet\(childId: string, inventoryItemId: string \| null\): Promise<void>/);
     assert.doesNotMatch(dataAccessSource, /setRoamingPets\(childId: string, inventoryItemIds: string\[\]\): Promise<void>/);
     assert.match(storeSource, /setFollowingPet: \(childId: string, inventoryItemId: string \| null\) => Promise<WorldMutationResult>/);
-    assert.match(storeSource, /setRoamingPets: \(childId: string, inventoryItemIds: string\[\]\) => Promise<WorldMutationResult>/);
+    assert.match(storeSource, /setRoamingPets: \(childId: string, inventoryItemIds: string\[\], positionOverrides\?/);
     assert.match(childGamePanelSource, /onSetFollowingPets: \(inventoryItemIds: string\[\]\) => Promise<WorldMutationResult>/);
     assert.match(childGamePanelSource, /onSetRoamingPets: \(inventoryItemIds: string\[\]\) => Promise<WorldMutationResult>/);
     assert.match(childGamePanelSource, /commitWorldMutation\(\(\) => onSetFollowingPets\(next\)/);

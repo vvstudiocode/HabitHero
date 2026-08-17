@@ -126,16 +126,11 @@ function createNaturalGroundMaterial(THREE, { walkableSize = 1, fieldSize = 1 } 
         `#include <color_fragment>
          vec3 groundEdgeColor = vec3(0.16, 0.43, 0.12);
          vec3 groundMiddleColor = vec3(0.16, 0.43, 0.12);
-         vec3 groundDistantColor = vec3(0.28, 0.36, 0.24);
+         vec3 groundDistantColor = vec3(0.16, 0.43, 0.12);
          vec3 groundLayerColor = mix(groundMiddleColor, groundEdgeColor, vHabitHeroGroundEdgeFactor);
          groundLayerColor = mix(groundLayerColor, groundDistantColor, vHabitHeroGroundDistantFactor);
-         float groundMiddleFactor = clamp(
-           1.0 - vHabitHeroGroundEdgeFactor - vHabitHeroGroundDistantFactor,
-           0.0,
-           1.0
-         );
          diffuseColor.rgb = mix(diffuseColor.rgb, groundLayerColor, 0.34);
-         diffuseColor.rgb *= 1.0 + groundMiddleFactor * 0.08;`,
+         diffuseColor.rgb *= 1.08;`,
       );
   };
   material.customProgramCacheKey = () => 'habit-hero-natural-ground-v2';
@@ -287,7 +282,7 @@ function createGrassMaterial(THREE, {
         color = mix(color, tipColor, smoothstep(0.64, 1.0, vBladeHeight));
         vec3 edgeLayerColor = vec3(0.15, 0.47, 0.12);
         vec3 middleLayerColor = vec3(0.15, 0.47, 0.12);
-        vec3 distantLayerColor = vec3(0.27, 0.37, 0.23);
+        vec3 distantLayerColor = vec3(0.15, 0.47, 0.12);
         vec3 distanceLayerColor = mix(middleLayerColor, edgeLayerColor, vGrassEdgeFactor);
         distanceLayerColor = mix(distanceLayerColor, distantLayerColor, vGrassDistantFactor);
         float middleLayerFactor = clamp(
@@ -382,7 +377,9 @@ export function createProceduralGrassField(THREE, {
   outerGround.name = 'procedural-meadow-outer-ground';
   outerGround.rotation.x = -Math.PI / 2;
   outerGround.position.y = baseHeight - 0.006;
-  outerGround.receiveShadow = false;
+  // Match the playable ground's lighting so the outer green meadow does not
+  // read as a brighter, separate surface.
+  outerGround.receiveShadow = true;
 
   const walkableGround = new THREE.Mesh(
     new THREE.PlaneGeometry(walkableSize, walkableSize),

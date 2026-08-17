@@ -35,7 +35,7 @@ const boundaryScenerySource = read('../terrain-prototype/natural-boundary-scener
 const eastFairytaleSource = read('../terrain-prototype/east-fairytale-scenery.js');
 
 describe('prototype world runtime contracts', () => {
-  it('keeps high-quality prototype parity while reducing every expensive low-quality budget', () => {
+  it('keeps the original outer grass density budgets while retaining quality scaling', () => {
     assert.equal(getWorldQuality({ prefersReducedMotion: false, deviceMemory: 8, hardwareConcurrency: 8 }), 'high');
     assert.equal(getWorldQuality({ prefersReducedMotion: true, deviceMemory: 8, hardwareConcurrency: 8 }), 'low');
     assert.equal(scaleWorldBudget(1000, 'high', 'grass'), 1000);
@@ -73,7 +73,7 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /createSunlightPatchField/);
     assert.match(runtimeSource, /createButterflyField/);
     assert.match(grassSceneSource, /createNaturalGroundMaterial/);
-    assert.match(grassSceneSource, /outerGround\.receiveShadow = false/);
+    assert.match(grassSceneSource, /outerGround\.receiveShadow = true/);
     assert.match(grassSceneSource, /walkableGround\.receiveShadow = true/);
     assert.match(grassSceneSource, /ground\.add\(outerGround, walkableGround\)/);
     assert.match(grassSceneSource, /mesh\.castShadow = false/);

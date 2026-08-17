@@ -1,4 +1,7 @@
 export type PetAnimationState = 'idle' | 'walk';
+export type PetAnimationAction = 'sit' | 'wave' | 'dance';
+
+export const PET_ANIMATION_ACTIONS: readonly PetAnimationAction[] = ['sit', 'wave', 'dance'];
 
 export interface PetPauseDurationRange {
   min: number;
@@ -58,4 +61,20 @@ export function getPetAnimationClipName(
 ): string | undefined {
   const statePattern = state === 'walk' ? /walk|run/i : /idle|iddle|stand|rest/i;
   return clipNames.find((name) => statePattern.test(name));
+}
+
+export function getPetAnimationActionClipName(
+  clipNames: readonly string[],
+  action: PetAnimationAction,
+): string | undefined {
+  const actionPattern = {
+    sit: /sit/i,
+    wave: /wave|greet|salute/i,
+    dance: /dance/i,
+  }[action];
+  return clipNames.find((name) => actionPattern.test(name));
+}
+
+export function getAvailablePetAnimationActions(clipNames: readonly string[]): PetAnimationAction[] {
+  return PET_ANIMATION_ACTIONS.filter((action) => Boolean(getPetAnimationActionClipName(clipNames, action)));
 }

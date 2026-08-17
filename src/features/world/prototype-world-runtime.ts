@@ -64,11 +64,14 @@ import { getLocalGameModelUrl } from './game-content-assets';
 import { getRequiredWorldDecorationCatalogItems, getRequiredWorldPetCatalogItems } from './world-scene-data';
 import {
   advancePetIdleCycle,
+  getAvailablePetAnimationActions,
+  getPetAnimationActionClipName,
   getPetAnimationClipName,
   PET_ANIMATION_CROSSFADE_SECONDS,
   PET_IDLE_PAUSE_DURATION_RANGE,
   PET_WALK_ONLY_PAUSE_DURATION_RANGE,
   queuePetMoveAfterIdleCycle,
+  type PetAnimationAction,
 } from './pet-animation';
 import { getFollowingPetInventoryIds } from './following-pet-state';
 import { getPlacementStartPosition, shouldMovePlacementDecoration } from './world-placement';
@@ -354,6 +357,18 @@ export interface DecorationSelection {
   y: number;
 }
 
+export interface PetSelection {
+  inventoryItemId: string;
+  x: number;
+  y: number;
+  worldPosition: { x: number; z: number };
+  rotationY: number;
+  scale: number;
+  following: boolean;
+  behaviorMode: PetBehaviorMode;
+  availableActions: readonly PetAnimationAction[];
+}
+
 export interface PrototypeWorldRuntimeOptions {
   canvas: HTMLCanvasElement;
   gameData: ChildGameData;
@@ -366,6 +381,7 @@ export interface PrototypeWorldRuntimeOptions {
   onPlacementPositionChange?: (position: { x: number; z: number }) => void;
   onPlacementGestureChange?: (gesture: { scaleFactor: number; rotationDelta: number }) => void;
   onDecorationSelect?: (selection: DecorationSelection | null) => void;
+  onPetSelect?: (selection: PetSelection | null) => void;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
   onStatus: (status: RuntimeStatus) => void;
@@ -393,6 +409,10 @@ export interface PrototypeWorldRuntimePlacement {
 export interface PrototypeWorldRuntime {
   dispose: () => void;
   update: (next: PrototypeWorldRuntimeUpdate) => void;
+  optimisticallySetPetIdle: (selection: PetSelection) => void;
+  clearOptimisticPetIdle: (inventoryItemId: string) => void;
+  playPetAnimation: (inventoryItemId: string, action: PetAnimationAction) => boolean;
+  stopPetAnimation: (inventoryItemId: string) => void;
 }
 
 type DisposableScene = { traverse: (callback: (object: unknown) => void) => void };
@@ -694,6 +714,7 @@ interface PetModelInstance {
   walkAction?: import('three').AnimationAction;
   idleAction?: import('three').AnimationAction;
   activeAction?: import('three').AnimationAction;
+  petActionActions: Partial<Record<PetAnimationAction, import('three').AnimationAction>>;
 }
 
 function createPetNameLabel(
@@ -803,6 +824,7 @@ function createPetModel(
   let walkAction: import('three').AnimationAction | undefined;
   let idleAction: import('three').AnimationAction | undefined;
   let activeAction: import('three').AnimationAction | undefined;
+  const petActionActions: Partial<Record<PetAnimationAction, import('three').AnimationAction>> = {};
   if (animations.length > 0) {
     mixer = new THREE.AnimationMixer(model);
     const walkClip = getWalkAnimationClip(animations);
@@ -820,8 +842,17 @@ function createPetModel(
     }
     activeAction = idleAction ?? walkAction;
     if (walkAction) pauseAnimationAtIdlePose(walkAction, mixer);
+    for (const actionName of getAvailablePetAnimationActions(animations.map((clip) => clip.name))) {
+      const clipName = getPetAnimationActionClipName(animations.map((clip) => clip.name), actionName);
+      const clip = clipName ? animations.find((candidate) => candidate.name === clipName) : undefined;
+      if (!clip) continue;
+      const action = mixer.clipAction(createInPlaceAnimationClip(clip));
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      petActionActions[actionName] = action;
+    }
   }
-  return { root, model, mixer, walkAction, idleAction, activeAction };
+  return { root, model, mixer, walkAction, idleAction, activeAction, petActionActions };
 }
 
 function pauseAnimationAtIdlePose(action: import('three').AnimationAction, mixer: import('three').AnimationMixer) {
@@ -846,12 +877,25 @@ function updatePetAnimation(
     movementSpeedMultiplier: number;
     baseY: number;
     walkingGroundOffset: number;
+    petActionActions?: Partial<Record<PetAnimationAction, import('three').AnimationAction>>;
+    petAction?: PetAnimationAction;
   },
   isWalking: boolean,
   delta: number,
   prefersReducedMotion: boolean,
 ) {
   const mixerDelta = delta * (prefersReducedMotion ? 0.75 : 1);
+  if (actor.petAction && actor.mixer) {
+    const petAction = actor.petActionActions?.[actor.petAction];
+    if (petAction) {
+      actor.mixer.update(mixerDelta);
+      actor.object.position.y = actor.baseY;
+      actor.model.rotation.z = 0;
+      return;
+    } else {
+      actor.petAction = undefined;
+    }
+  }
   actor.animationTime += delta * (isWalking ? 8 * actor.movementSpeedMultiplier : 2.4);
   let nextAction = isWalking ? actor.walkAction : actor.idleAction;
   if (isWalking && actor.idleAction && actor.activeAction === actor.idleAction) {
@@ -966,6 +1010,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let characterSwapAbortController: AbortController | undefined;
   let characterSwapSequence = 0;
   let updateScene: (next: PrototypeWorldRuntimeUpdate) => void = () => undefined;
+  let playPetAnimation: (inventoryItemId: string, action: PetAnimationAction) => boolean = () => false;
+  let stopPetAnimation: (inventoryItemId: string) => void = () => undefined;
+  let optimisticPetActorsDirty = false;
+  const optimisticPetIdles = new Map<string, PetSelection>();
   let latestRuntimeUpdate: PrototypeWorldRuntimeUpdate = {
     gameData: options.gameData,
     equippedCatalogItem: options.equippedCatalogItem,
@@ -1487,10 +1535,31 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         followIndex: number;
         movementSpeedMultiplier: number;
         walkingGroundOffset: number;
+        petActionActions: Partial<Record<PetAnimationAction, import('three').AnimationAction>>;
+        petAction?: PetAnimationAction;
         target: { x: number; z: number } | null;
         wanderState: WanderState;
         active: boolean;
       }> = [];
+      playPetAnimation = (inventoryItemId, actionName) => {
+        const actor = petActors.find((candidate) => candidate.inventoryItemId === inventoryItemId && candidate.active);
+        const action = actor?.petActionActions[actionName];
+        if (!actor || !action || !actor.mixer) return false;
+        const previousAction = actor.activeAction;
+        action.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).play();
+        if (previousAction && previousAction !== action) {
+          action.crossFadeFrom(previousAction, PET_ANIMATION_CROSSFADE_SECONDS, true);
+        }
+        actor.activeAction = action;
+        actor.petAction = actionName;
+        return true;
+      };
+      stopPetAnimation = (inventoryItemId) => {
+        const actor = petActors.find((candidate) => candidate.inventoryItemId === inventoryItemId && candidate.active);
+        if (!actor || !actor.petAction) return;
+        actor.petActionActions[actor.petAction]?.stop();
+        actor.petAction = undefined;
+      };
       options.gameData.worldEntities.filter((entity) => entity.isActive).forEach((entity) => {
         const isPet = entity.entityKind === 'pet';
         const catalogItem = isPet
@@ -1556,7 +1625,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const followIndex = followingPetInventoryIds.indexOf(entity.inventoryItemId);
           const follow = followIndex >= 0;
           const initialFacing = { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) };
-          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, idleAction: petModel!.idleAction, activeAction: petModel!.activeAction, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
+          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, idleAction: petModel!.idleAction, activeAction: petModel!.activeAction, petActionActions: petModel!.petActionActions, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
         }
       });
       followingPetInventoryIds.forEach((inventoryId, followIndex) => {
@@ -1598,7 +1667,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             playerRoot.position.z - initialFacing.z * initialFollowDistance,
           );
           worldScene.add(object);
-          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, idleAction: petModel.idleAction, activeAction: petModel.activeAction, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: getPetNavigationRadius(followingPet?.collisionRadius ?? 0.28, followingPet?.maxScale ?? 1), baseY: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
+          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, idleAction: petModel.idleAction, activeAction: petModel.activeAction, petActionActions: petModel.petActionActions, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: getPetNavigationRadius(followingPet?.collisionRadius ?? 0.28, followingPet?.maxScale ?? 1), baseY: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
         }
       });
 
@@ -1684,6 +1753,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           walkAction: petModel.walkAction,
           idleAction: petModel.idleAction,
           activeAction: petModel.activeAction,
+          petActionActions: petModel.petActionActions,
           behaviorMode: entity.behaviorMode,
           follow: following,
           radius: getPetNavigationRadius(entity.collisionRadius ?? catalogItem.collisionRadius, following ? (catalogItem.maxScale ?? 1) : entity.scale),
@@ -1708,7 +1778,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const updatePetActors = (nextGameData: ChildGameData) => {
         latestPetData = nextGameData;
         refreshPetCatalogMaps(nextGameData);
-        const followingIds = getFollowingPetInventoryIds(nextGameData);
+        const followingIds = getFollowingPetInventoryIds(nextGameData)
+          .filter((inventoryItemId) => !optimisticPetIdles.has(inventoryItemId));
         const desired = new Map<string, { entity: ChildWorldEntity; catalogItem: GameCatalogItem; followIndex: number }>();
         followingIds.forEach((inventoryItemId, followIndex) => {
           const inventory = nextGameData.inventory.find((item) => item.id === inventoryItemId);
@@ -1746,6 +1817,39 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const catalogItem = resolvePetCatalogItem(entity, petCatalogById, petCatalogByAssetKey);
           if (catalogItem) desired.set(entity.inventoryItemId, { entity, catalogItem, followIndex: -1 });
         });
+        optimisticPetIdles.forEach((selection, inventoryItemId) => {
+          const inventory = nextGameData.inventory.find((item) => item.id === inventoryItemId);
+          const catalogItem = inventory ? petCatalogById.get(inventory.catalogItemId) : undefined;
+          if (!inventory || !catalogItem) {
+            optimisticPetIdles.delete(inventoryItemId);
+            return;
+          }
+          desired.set(inventoryItemId, {
+            entity: {
+              id: `local-optimistic-idle-${inventoryItemId}`,
+              inventoryItemId,
+              entityKind: 'pet',
+              worldLayoutVersion: 1,
+              x: selection.worldPosition.x,
+              y: 0,
+              z: selection.worldPosition.z,
+              rotationX: 0,
+              rotationY: selection.rotationY,
+              rotationZ: 0,
+              scale: selection.scale,
+              behaviorMode: 'idle',
+              roamingSlot: null,
+              isActive: true,
+              catalogItemId: catalogItem.id,
+              collisionRadius: catalogItem.collisionRadius,
+              assetKey: catalogItem.assetKey,
+              name: catalogItem.name,
+              displayName: inventory.displayName ?? undefined,
+            },
+            catalogItem,
+            followIndex: -1,
+          });
+        });
 
         petActors.forEach((actor) => {
           if (!desired.has(actor.inventoryItemId)) {
@@ -1770,7 +1874,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           void loadPetModelSource(modelUrl, signal).then((petModelSource) => {
             if (!petModelSource || disposed) return;
             const latest = latestPetData;
-            const latestFollowingIds = getFollowingPetInventoryIds(latest);
+            const latestFollowingIds = getFollowingPetInventoryIds(latest)
+              .filter((latestInventoryItemId) => !optimisticPetIdles.has(latestInventoryItemId));
             const latestEntity = latest.worldEntities.find((candidate) => candidate.entityKind === 'pet' && candidate.inventoryItemId === inventoryItemId && candidate.isActive);
             const latestInventory = latest.inventory.find((item) => item.id === inventoryItemId);
             const latestCatalogItem = latestInventory ? petCatalogById.get(latestInventory.catalogItemId) : undefined;
@@ -1801,6 +1906,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               latestFollowingIds.indexOf(inventoryItemId),
               petModelSource,
             );
+            // A model loaded after the initial scene build must join the live
+            // actor list; otherwise it renders once but never receives
+            // follow movement, hit testing, or later state transitions.
+            petActors.push(actor);
             if (!latestFollowingIds.includes(inventoryItemId)) {
               updatePetActorState(actor, latestEntity!, latestCatalogItem, -1, true);
             }
@@ -2020,7 +2129,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         queueCharacterUpdate(next);
         ensurePlacementModel(next.placement);
         updatePlacementPreview(next.placement);
-        if (next.gameData !== latestPetData) updatePetActors(next.gameData);
+        if (next.gameData !== latestPetData || optimisticPetActorsDirty) {
+          updatePetActors(next.gameData);
+          optimisticPetActorsDirty = false;
+        }
         updateDecorationObjects(next.gameData);
       };
       updateScene(latestRuntimeUpdate);
@@ -2044,6 +2156,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const placementHit = new THREE.Vector3();
       const decorationRaycaster = new THREE.Raycaster();
       const decorationNdc = new THREE.Vector2();
+      const petRaycaster = new THREE.Raycaster();
+      const petNdc = new THREE.Vector2();
       const pointFromEvent = (event: PointerEvent) => {
         const rect = options.canvas.getBoundingClientRect();
         return { x: event.clientX - rect.left, y: event.clientY - rect.top };
@@ -2080,6 +2194,50 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           y: Math.min(Math.max(rawY, 52), Math.max(52, rect.height - 28)),
         };
       };
+      const petSelectionFromEvent = (event: PointerEvent): PetSelection | null => {
+        const point = pointFromEvent(event);
+        const rect = options.canvas.getBoundingClientRect();
+        petNdc.set(
+          (point.x / Math.max(rect.width, 1)) * 2 - 1,
+          -(point.y / Math.max(rect.height, 1)) * 2 + 1,
+        );
+        petRaycaster.setFromCamera(petNdc, camera);
+        const activePetObjects = petActors.filter((actor) => actor.active && actor.object.visible).map((actor) => actor.object);
+        const hit = petRaycaster.intersectObjects(activePetObjects, true)[0];
+        if (!hit) return null;
+        const selected = petActors.find((actor) => {
+          let current: Object3D | null = hit.object;
+          while (current) {
+            if (current === actor.object) return true;
+            current = current.parent;
+          }
+          return false;
+        });
+        if (!selected) return null;
+        selected.object.updateMatrixWorld(true);
+        const bounds = new THREE.Box3().setFromObject(selected.object);
+        const worldPoint = selected.object.getWorldPosition(new THREE.Vector3());
+        worldPoint.y = Math.max(bounds.max.y + 0.22, 0.7);
+        worldPoint.project(camera);
+        const rawX = ((worldPoint.x + 1) / 2) * rect.width;
+        const rawY = ((-worldPoint.y + 1) / 2) * rect.height;
+        const entity = latestPetData.worldEntities.find((candidate) => (
+          candidate.entityKind === 'pet'
+          && candidate.inventoryItemId === selected.inventoryItemId
+          && candidate.isActive
+        ));
+        return {
+          inventoryItemId: selected.inventoryItemId,
+          x: Math.min(Math.max(rawX, 128), Math.max(128, rect.width - 128)),
+          y: Math.min(Math.max(rawY, 60), Math.max(60, rect.height - 30)),
+          worldPosition: { x: selected.object.position.x, z: selected.object.position.z },
+          rotationY: selected.object.rotation.y,
+          scale: entity?.scale ?? 1,
+          following: selected.follow,
+          behaviorMode: selected.behaviorMode,
+          availableActions: Object.keys(selected.petActionActions) as PetAnimationAction[],
+        };
+      };
       const worldPointFromEvent = (event: PointerEvent) => {
         const point = pointFromEvent(event);
         const rect = options.canvas.getBoundingClientRect();
@@ -2108,6 +2266,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       const normalizePlacementAngle = (angle: number) => Math.atan2(Math.sin(angle), Math.cos(angle));
       let pendingDecorationSelection: { pointerId: number; point: { x: number; y: number }; selection: DecorationSelection | null } | null = null;
+      let pendingPetSelection: { pointerId: number; selection: PetSelection | null } | null = null;
       const onPointerDown = (event: PointerEvent) => {
         if (options.pausedRef.current || isInteractiveTarget(event.target)) return;
         if (placementActive) {
@@ -2129,6 +2288,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         }
         const point = pointFromEvent(event);
         pendingDecorationSelection = { pointerId: event.pointerId, point, selection: decorationSelectionFromEvent(event) };
+        pendingPetSelection = { pointerId: event.pointerId, selection: petSelectionFromEvent(event) };
         event.preventDefault();
         options.canvas.setPointerCapture(event.pointerId);
         const rect = options.canvas.getBoundingClientRect();
@@ -2166,7 +2326,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const point = pointFromEvent(event);
         if (pendingDecorationSelection?.pointerId === event.pointerId) {
           const distance = Math.hypot(point.x - pendingDecorationSelection.point.x, point.y - pendingDecorationSelection.point.y);
-          if (distance > 8) pendingDecorationSelection = null;
+          if (distance > 8) {
+            pendingDecorationSelection = null;
+            pendingPetSelection = null;
+          }
         }
         controller?.dispatch({ type: 'pointer-move', pointerId: event.pointerId, point });
       };
@@ -2179,8 +2342,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         }
         if (pendingDecorationSelection?.pointerId === event.pointerId) {
           const selection = pendingDecorationSelection.selection;
+          const petSelection = pendingPetSelection?.pointerId === event.pointerId
+            ? pendingPetSelection.selection
+            : null;
           pendingDecorationSelection = null;
-          if (event.type === 'pointerup') options.onDecorationSelect?.(selection);
+          pendingPetSelection = null;
+          if (event.type === 'pointerup') {
+            if (petSelection) options.onPetSelect?.(petSelection);
+            else options.onDecorationSelect?.(selection);
+          }
         }
         controller?.dispatch({ type: event.type === 'pointercancel' ? 'pointer-cancel' : 'pointer-up', pointerId: event.pointerId });
         if (options.canvas.hasPointerCapture(event.pointerId)) options.canvas.releasePointerCapture(event.pointerId);
@@ -2192,7 +2362,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         event.preventDefault();
       };
       const onKeyUp = (event: KeyboardEvent) => keys.delete(event.key.toLowerCase());
-      const resetInput = () => { keys.clear(); placementPointers.clear(); placementGesture = null; pendingDecorationSelection = null; controller?.reset(); };
+      const resetInput = () => { keys.clear(); placementPointers.clear(); placementGesture = null; pendingDecorationSelection = null; pendingPetSelection = null; controller?.reset(); };
       options.canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
       options.canvas.addEventListener('pointermove', onPointerMove, { passive: false });
       options.canvas.addEventListener('pointerup', onPointerEnd);
@@ -2331,6 +2501,12 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         });
         petActors.forEach((actor) => {
           if (!actor.active) return;
+          if (actor.petAction) {
+            actor.target = null;
+            actor.state = 'idle';
+            updatePetAnimation(actor, false, delta, prefersReducedMotion);
+            return;
+          }
           const current = { x: actor.object.position.x, z: actor.object.position.z };
           if (actor.follow) {
             actor.state = 'following';
@@ -2445,5 +2621,17 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       latestRuntimeUpdate = next;
       updateScene(next);
     },
+    optimisticallySetPetIdle: (selection) => {
+      optimisticPetIdles.set(selection.inventoryItemId, selection);
+      optimisticPetActorsDirty = true;
+      updateScene(latestRuntimeUpdate);
+    },
+    clearOptimisticPetIdle: (inventoryItemId) => {
+      if (!optimisticPetIdles.delete(inventoryItemId)) return;
+      optimisticPetActorsDirty = true;
+      updateScene(latestRuntimeUpdate);
+    },
+    playPetAnimation: (inventoryItemId, action) => playPetAnimation(inventoryItemId, action),
+    stopPetAnimation: (inventoryItemId) => stopPetAnimation(inventoryItemId),
   };
 }

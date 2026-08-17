@@ -26,6 +26,10 @@ import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
 import { emptyChildGameData, type GameCatalogItem, type GamePurchaseResult, type WorldMutationResult } from '../features/world/contracts';
+import { getFollowingPetInventoryIds } from '../features/world/following-pet-state';
+import { getPetActionPlan, type PetAction } from '../features/world/pet-action-state';
+import { getRoamingPetSnapshot } from '../features/world/components/roaming-pet-state';
+import type { PetSelection } from '../features/world/prototype-world-runtime';
 import { getPetNameDisplayPreference, setPetNameDisplayPreference } from '../features/world/pet-name-display-preference';
 import {
   CLEAN_MODE_DOUBLE_TAP_MAX_INTERVAL_MS,
@@ -97,6 +101,10 @@ interface DecorationPlacementSession {
   catalogItemId: string;
   draft: DecorationPlacementDraft;
   entityId?: string;
+}
+
+function haveSameIds(left: readonly string[], right: readonly string[]) {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 const HERO_MENU_EXIT_MS = 1200;
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
@@ -800,6 +808,108 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }
   };
 
+  const handlePetAction = async (selection: PetSelection, action: PetAction) => {
+    if (!activeChildId || mutationPending) return false;
+
+    const currentFollowingIds = getFollowingPetInventoryIds(gameData);
+    const currentRoamingIds = getRoamingPetSnapshot(gameData);
+    const plan = getPetActionPlan({
+      action,
+      inventoryItemId: selection.inventoryItemId,
+      followingIds: currentFollowingIds,
+      roamingIds: currentRoamingIds,
+    });
+    const existingActivePetEntity = action === 'idle' && selection.following
+      ? gameData.worldEntities.find((entity) => (
+        entity.entityKind === 'pet'
+        && entity.inventoryItemId === selection.inventoryItemId
+        && entity.isActive
+      ))
+      : undefined;
+    const transform = {
+      x: selection.worldPosition.x,
+      y: 0,
+      z: selection.worldPosition.z,
+      rotationX: 0,
+      rotationY: selection.rotationY,
+      rotationZ: 0,
+      scale: selection.scale,
+    };
+
+    try {
+      let expectedRevision = gameData.worldRevision;
+      if (action === 'idle' && selection.following && existingActivePetEntity) {
+        const result = await removeWorldEntity(activeChildId, {
+          inventoryItemId: selection.inventoryItemId,
+          entityId: existingActivePetEntity.id,
+          expectedRevision,
+        });
+        expectedRevision = result.revision;
+      }
+      const syncFollowing = async () => {
+        if (haveSameIds(currentFollowingIds, plan.followingIds)) return;
+        const result = await setFollowingPets(activeChildId, plan.followingIds);
+        expectedRevision = result.revision;
+      };
+      const syncRoaming = async () => {
+        if (haveSameIds(currentRoamingIds, plan.roamingIds)) return;
+        const positionOverrides = action === 'wander'
+          ? { [selection.inventoryItemId]: transform }
+          : undefined;
+        const result = await setRoamingPets(
+          activeChildId,
+          plan.roamingIds,
+          positionOverrides,
+        );
+        expectedRevision = result.revision;
+      };
+
+      // A pet cannot be in both queues. Remove it from roaming before adding
+      // it to following, otherwise the database guard rejects the transition.
+      if (action === 'follow') {
+        await syncRoaming();
+        await syncFollowing();
+      } else {
+        await syncFollowing();
+        await syncRoaming();
+      }
+
+      if (action === 'wander') {
+        const result = await updateWorldEntityTransform(activeChildId, {
+          inventoryItemId: selection.inventoryItemId,
+          expectedRevision,
+          transform,
+        });
+        expectedRevision = result.revision;
+        showToast('寵物開始巡遊了。');
+        return true;
+      }
+
+      if (action === 'follow') {
+        showToast('寵物加入跟隨隊列了。');
+        return true;
+      }
+
+      if (action === 'idle' && plan.shouldPlaceIdleEntity) {
+        await placeWorldEntity(activeChildId, {
+          inventoryItemId: selection.inventoryItemId,
+          expectedRevision,
+          transform,
+          behaviorMode: 'idle',
+          roamingSlot: null,
+        });
+        showToast('寵物已在這裡待機。');
+        return true;
+      }
+
+      showToast('寵物會在這裡待機。');
+      return true;
+    } catch (error) {
+      showToast(toWorldMutationErrorMessage(error, '寵物動作更新失敗，請再試一次。'));
+      return false;
+    }
+  };
+
   const leaveDecorationInInventory = () => {
     setDecorationPurchasePrompt(null);
     closeChildFeature(() => showToast('裝飾已放進背包，之後想放再來找它。'));
@@ -984,6 +1094,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onCancelPlacement={cancelDecorationPlacement}
               onStartDecorationPlacement={startExistingDecorationPlacement}
               onCollectDecoration={collectSelectedDecoration}
+              onPetAction={handlePetAction}
               cleanMode={cleanMode}
               cleanModeHintVisible={cleanModeHintVisible}
               onCleanModeToggle={toggleCleanMode}

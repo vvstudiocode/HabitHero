@@ -47,6 +47,14 @@ export function createWorldSceneGameDataSnapshot(gameData: ChildGameData): Child
   const followingPetInventories = followingPetInventoryIds
     .map((inventoryId) => gameData.inventory.find((inventory) => inventory.id === inventoryId))
     .filter((inventory): inventory is NonNullable<typeof inventory> => Boolean(inventory));
+  const activeWorldPetInventoryIds = new Set(
+    gameData.worldEntities
+      .filter((entity) => entity.entityKind === 'pet' && entity.isActive)
+      .map((entity) => entity.inventoryItemId),
+  );
+  const sceneInventory = gameData.inventory.filter((inventory) => (
+    followingPetInventoryIds.includes(inventory.id) || activeWorldPetInventoryIds.has(inventory.id)
+  ));
   const followingPetCatalogIds = new Set(followingPetInventories.map((inventory) => inventory.catalogItemId));
   const activePetCatalogIds = new Set(
     gameData.worldEntities
@@ -74,7 +82,7 @@ export function createWorldSceneGameDataSnapshot(gameData: ChildGameData): Child
     walletBalance: 0,
     catalog: sceneCatalog,
     prices: {},
-    inventory: followingPetInventories,
+    inventory: sceneInventory.length > 0 ? sceneInventory : followingPetInventories,
     loadout: {
       equippedCharacterInventoryId: null,
       followingPetInventoryId: followingPetInventoryIds[0] ?? null,

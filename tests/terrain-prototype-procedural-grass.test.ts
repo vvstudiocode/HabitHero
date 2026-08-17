@@ -137,7 +137,7 @@ describe('terrain prototype procedural grass', () => {
     assert.match(grassSceneSource, /getInteractionOffset/);
   });
 
-  it('maps meadow distance into deep edge, bright middle, and muted distant color layers', () => {
+  it('maps meadow distance into edge, middle, and distant rendering layers', () => {
     const zone = { walkableHalf: 5, fieldHalf: 13 };
 
     assert.equal(getGrassColorLayer({ distanceFromCenter: 4.8, ...zone }), 'middle');
@@ -152,8 +152,11 @@ describe('terrain prototype procedural grass', () => {
 
     assert.match(grassSceneSource, /vec3 groundEdgeColor = vec3\(0\.16, 0\.43, 0\.12\);/);
     assert.match(grassSceneSource, /vec3 groundMiddleColor = vec3\(0\.16, 0\.43, 0\.12\);/);
+    assert.match(grassSceneSource, /vec3 groundDistantColor = vec3\(0\.16, 0\.43, 0\.12\);/);
     assert.match(grassSceneSource, /vec3 edgeLayerColor = vec3\(0\.15, 0\.47, 0\.12\);/);
     assert.match(grassSceneSource, /vec3 middleLayerColor = vec3\(0\.15, 0\.47, 0\.12\);/);
+    assert.match(grassSceneSource, /vec3 distantLayerColor = vec3\(0\.15, 0\.47, 0\.12\);/);
+    assert.match(grassSceneSource, /diffuseColor\.rgb \*= 1\.08;/);
   });
 
   it('integrates the procedural meadow scenery into the original prototype', () => {

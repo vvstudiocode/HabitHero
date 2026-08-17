@@ -192,6 +192,10 @@
   display: none;
 }
 
+.hh-dashboard-screen--child.is-clean-mode .hh-world-pet-selection {
+  display: none;
+}
+
 .hh-terrain-world.is-placement-mode .hh-world-joystick {
   display: none;
 }
@@ -239,6 +243,63 @@
 
 .hh-world-decoration-action:active {
   transform: scale(0.96);
+}
+
+.hh-world-pet-selection {
+  position: fixed;
+  z-index: 21;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+
+.hh-world-pet-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.hh-world-pet-action {
+  display: inline-flex;
+  min-width: 76px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  color: #356454;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  background: rgb(255 253 241 / 92%);
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 999px;
+  box-shadow: 0 8px 16px rgb(32 33 36 / 18%);
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.hh-world-pet-action:hover,
+.hh-world-pet-action:focus-visible {
+  color: #285746;
+  background: #fffdf4;
+  box-shadow: 0 10px 18px rgb(32 33 36 / 22%);
+}
+
+.hh-world-pet-action:active {
+  transform: scale(0.96);
+}
+
+.hh-world-pet-action.is-selected {
+  color: #fffdf4;
+  background: #5b9c69;
+  box-shadow: 0 8px 16px rgb(70 128 81 / 24%);
+}
+
+.hh-world-pet-action:disabled {
+  cursor: default;
+  opacity: 0.82;
 }
 
 .hh-world-placement-controls {
@@ -345,6 +406,10 @@
   }
 
   .hh-world-clean-mode-confirm {
+    transition: none;
+  }
+
+  .hh-world-pet-action {
     transition: none;
   }
 

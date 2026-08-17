@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   getLocalGameAsset,
   getLocalGameThumbnailUrl,
+  isLocalGameItemInventorySupported,
   isLocalGameItemShopSupported,
 } from '../src/features/world/game-content-assets';
 import { createChildGameDataMap } from '../src/features/world/game-data';
@@ -36,6 +37,24 @@ describe('local game content assets', () => {
       itemType: 'pet',
       assetKey: 'pet.not-in-this-app',
     }), false);
+  });
+
+  it('keeps the procedural starter character while filtering unsupported owned items', () => {
+    assert.equal(isLocalGameItemInventorySupported({
+      itemType: 'character',
+      assetKey: 'character.anime-maiden',
+      isStarter: true,
+    }), true);
+    assert.equal(isLocalGameItemInventorySupported({
+      itemType: 'pet',
+      assetKey: 'pet.not-in-this-app',
+      isStarter: false,
+    }), false);
+    assert.equal(isLocalGameItemInventorySupported({
+      itemType: 'pet',
+      assetKey: 'pet.oum',
+      isStarter: false,
+    }), true);
   });
 
   it('strips unknown SQL thumbnail paths while keeping the catalog row', () => {

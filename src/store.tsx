@@ -30,7 +30,7 @@ import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/t
 import { notifyAdventureCreated, notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
-import type { WorldMutationPayload, WorldMutationResult, WorldTransformMutationPayload } from './features/world/contracts';
+import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
 import {
   patchEquippedCharacter,
@@ -144,7 +144,7 @@ export interface AppContextType {
   setPetDisplayName: (childId: string, inventoryItemId: string, displayName: string | null) => Promise<void>;
   setFollowingPets: (childId: string, inventoryItemIds: string[]) => Promise<WorldMutationResult>;
   setFollowingPet: (childId: string, inventoryItemId: string | null) => Promise<WorldMutationResult>;
-  setRoamingPets: (childId: string, inventoryItemIds: string[]) => Promise<WorldMutationResult>;
+  setRoamingPets: (childId: string, inventoryItemIds: string[], positionOverrides?: Readonly<Record<string, WorldTransform>>) => Promise<WorldMutationResult>;
   placeWorldEntity: (childId: string, payload: WorldMutationPayload) => Promise<WorldMutationResult>;
   updateWorldEntityTransform: (childId: string, payload: WorldTransformMutationPayload) => Promise<WorldMutationResult>;
   removeWorldEntity: (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => Promise<WorldMutationResult>;
@@ -707,7 +707,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       },
     ),
-    setRoamingPets: (childId: string, inventoryItemIds: string[]) => mutate(
+    setRoamingPets: (childId: string, inventoryItemIds: string[], positionOverrides?: Readonly<Record<string, WorldTransform>>) => mutate(
       (repo) => repo.setRoamingPets(childId, inventoryItemIds),
       (previous) => {
         const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
@@ -715,7 +715,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...previous,
           gameDataByChildId: {
             ...previous.gameDataByChildId,
-            [childId]: patchRoamingPets(currentGameData, inventoryItemIds),
+            [childId]: patchRoamingPets(currentGameData, inventoryItemIds, positionOverrides),
           },
         };
       },

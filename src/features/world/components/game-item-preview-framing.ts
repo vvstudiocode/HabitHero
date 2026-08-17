@@ -12,6 +12,7 @@ const MIXAMO_PET_PREVIEW_ASSET_KEYS = new Set([
   'pet.christo',
   'pet.moko',
   'pet.kaldo',
+  'pet.jasmine',
   'pet.orian',
   'pet.oum',
   'pet.arcadia',

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { Object3D } from 'three';
-import { Camera, Check, Minus, Plus, RotateCw, X } from 'lucide-react';
+import { Armchair, Camera, Check, Footprints, Hand, Minus, Music2, Pause, Plus, RotateCw, UserRoundPlus, X } from 'lucide-react';
 import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
 import {
   CENTRAL_TREE_KEEP_OUT,
@@ -13,7 +13,9 @@ import {
 import { PointerInputController } from './input/pointer-input-controller';
 import type { WorldInputState } from './input/world-input-types';
 import { DynamicJoystick } from './components/DynamicJoystick';
-import { mountPrototypeWorld, type PrototypeWorldRuntime } from './prototype-world-runtime';
+import { mountPrototypeWorld, type PetSelection, type PrototypeWorldRuntime } from './prototype-world-runtime';
+import type { PetAction } from './pet-action-state';
+import type { PetAnimationAction } from './pet-animation';
 import { getWorldQuality, type WorldQuality } from './world-quality';
 import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
 import { createWorldSceneGameDataSnapshot } from './world-scene-data';
@@ -51,6 +53,7 @@ interface TerrainWorldLayerProps {
   onCancelPlacement?: () => void;
   onStartDecorationPlacement?: (entityId: string) => void;
   onCollectDecoration?: (entityId: string) => void;
+  onPetAction?: (selection: PetSelection, action: PetAction) => boolean | Promise<boolean>;
   cleanMode?: boolean;
   cleanModeHintVisible?: boolean;
   onCleanModeToggle?: () => void;
@@ -265,6 +268,7 @@ export function TerrainWorldLayer({
   onCancelPlacement,
   onStartDecorationPlacement,
   onCollectDecoration,
+  onPetAction,
   cleanMode = false,
   cleanModeHintVisible = false,
   onCleanModeToggle,
@@ -280,6 +284,7 @@ export function TerrainWorldLayer({
   const [showStaticFallback, setShowStaticFallback] = useState(false);
   const [runtimeAttempt, setRuntimeAttempt] = useState(0);
   const [selectedDecoration, setSelectedDecoration] = useState<{ entityId: string; x: number; y: number } | null>(null);
+  const [selectedPet, setSelectedPet] = useState<PetSelection | null>(null);
   const placementRotationDragRef = useRef<{ pointerId: number; startX: number; lastX: number; moved: boolean } | null>(null);
   const runtimeRef = useRef<PrototypeWorldRuntime | null>(null);
   const worldQuality = useWorldQuality();
@@ -327,15 +332,19 @@ export function TerrainWorldLayer({
   }, [paused]);
 
   useEffect(() => {
-    if (placement) setSelectedDecoration(null);
+    if (placement) {
+      setSelectedDecoration(null);
+      setSelectedPet(null);
+    }
   }, [placement]);
 
   useEffect(() => {
-    if (!selectedDecoration) return undefined;
+    if (!selectedDecoration && !selectedPet) return undefined;
     const dismissDecorationSelection = (event: PointerEvent | FocusEvent) => {
       const target = event.target;
-      if (target instanceof Element && target.closest('[data-world-decoration-action]')) return;
+      if (target instanceof Element && target.closest('[data-world-decoration-action], [data-world-pet-action]')) return;
       setSelectedDecoration(null);
+      setSelectedPet(null);
     };
     document.addEventListener('pointerdown', dismissDecorationSelection);
     document.addEventListener('focusin', dismissDecorationSelection);
@@ -343,7 +352,7 @@ export function TerrainWorldLayer({
       document.removeEventListener('pointerdown', dismissDecorationSelection);
       document.removeEventListener('focusin', dismissDecorationSelection);
     };
-  }, [selectedDecoration]);
+  }, [selectedDecoration, selectedPet]);
 
   const stopPlacementRotationDrag = (event?: ReactPointerEvent<HTMLButtonElement>) => {
     const drag = placementRotationDragRef.current;
@@ -411,7 +420,14 @@ export function TerrainWorldLayer({
       placement: sceneInput.placement,
       onPlacementPositionChange,
       onPlacementGestureChange,
-      onDecorationSelect: setSelectedDecoration,
+      onDecorationSelect: (selection) => {
+        setSelectedDecoration(selection);
+        setSelectedPet(null);
+      },
+      onPetSelect: (selection) => {
+        setSelectedPet(selection);
+        setSelectedDecoration(null);
+      },
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,
@@ -445,6 +461,36 @@ export function TerrainWorldLayer({
     : undefined;
   const selectedItem = selectedEntity ? decorationCatalogItemForEntity(gameData, selectedEntity.id) : undefined;
   const selectedDecorationCanvasRect = selectedDecoration ? canvasRef.current?.getBoundingClientRect() : undefined;
+  const selectedPetInventory = selectedPet
+    ? gameData.inventory.find((inventory) => inventory.id === selectedPet.inventoryItemId)
+    : undefined;
+  const selectedPetItem = selectedPetInventory
+    ? gameData.catalog.find((item) => item.id === selectedPetInventory.catalogItemId && item.itemType === 'pet')
+    : undefined;
+  const selectedPetCanvasRect = selectedPet ? canvasRef.current?.getBoundingClientRect() : undefined;
+  const commitPetAction = (action: PetAction) => {
+    if (!selectedPet || !onPetAction) return;
+    const selection = selectedPet;
+    setSelectedPet(null);
+    runtimeRef.current?.stopPetAnimation(selection.inventoryItemId);
+    if (action === 'idle') runtimeRef.current?.optimisticallySetPetIdle(selection);
+    try {
+      void Promise.resolve(onPetAction(selection, action)).then(() => {
+        runtimeRef.current?.clearOptimisticPetIdle(selection.inventoryItemId);
+      }).catch(() => {
+        runtimeRef.current?.clearOptimisticPetIdle(selection.inventoryItemId);
+      });
+    } catch {
+      runtimeRef.current?.clearOptimisticPetIdle(selection.inventoryItemId);
+    }
+  };
+
+  const commitPetAnimation = (action: PetAnimationAction) => {
+    if (!selectedPet) return;
+    const inventoryItemId = selectedPet.inventoryItemId;
+    setSelectedPet(null);
+    runtimeRef.current?.playPetAnimation(inventoryItemId, action);
+  };
 
   return (
     <div className={`hh-terrain-world${placement ? ' is-placement-mode' : ''}`} data-world-status={status} data-child-id={childId} data-world-input-layout="portrait-control-band">
@@ -503,6 +549,139 @@ export function TerrainWorldLayer({
                 }}
               >
                 收回
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body,
+      )}
+      {selectedPet && selectedPetInventory && selectedPetItem && !placement && selectedPetCanvasRect && onPetAction && createPortal(
+        <div
+          className="hh-world-pet-selection"
+          data-world-pet-action
+          style={{ left: selectedPetCanvasRect.left + selectedPet.x, top: selectedPetCanvasRect.top + selectedPet.y }}
+        >
+          <div className="hh-world-pet-actions" role="group" aria-label={`${selectedPetItem.name}動作`}>
+            <button
+              type="button"
+              className="hh-world-pet-action"
+              aria-label={`讓${selectedPetItem.name}待機`}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                commitPetAction('idle');
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                event.stopPropagation();
+                commitPetAction('idle');
+              }}
+            >
+              <Pause size={16} aria-hidden="true" />
+              待機
+            </button>
+            <button
+              type="button"
+              className="hh-world-pet-action"
+              aria-label={`讓${selectedPetItem.name}巡遊`}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                commitPetAction('wander');
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                event.stopPropagation();
+                commitPetAction('wander');
+              }}
+            >
+              <Footprints size={16} aria-hidden="true" />
+              巡遊
+            </button>
+            <button
+              type="button"
+              className={`hh-world-pet-action${selectedPet.following ? ' is-selected' : ''}`}
+              aria-label={selectedPet.following ? `${selectedPetItem.name}跟隨中` : `讓${selectedPetItem.name}跟隨`}
+              aria-pressed={selectedPet.following}
+              disabled={selectedPet.following}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                commitPetAction('follow');
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                event.stopPropagation();
+                commitPetAction('follow');
+              }}
+            >
+              <UserRoundPlus size={16} aria-hidden="true" />
+              {selectedPet.following ? '跟隨中' : '跟隨'}
+            </button>
+            {selectedPet.availableActions.includes('wave') && (
+              <button
+                type="button"
+                className="hh-world-pet-action"
+                aria-label={`讓${selectedPetItem.name}揮手`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  commitPetAnimation('wave');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  commitPetAnimation('wave');
+                }}
+              >
+                <Hand size={16} aria-hidden="true" />
+                揮手
+              </button>
+            )}
+            {selectedPet.availableActions.includes('sit') && (
+              <button
+                type="button"
+                className="hh-world-pet-action"
+                aria-label={`讓${selectedPetItem.name}坐下`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  commitPetAnimation('sit');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  commitPetAnimation('sit');
+                }}
+              >
+                <Armchair size={16} aria-hidden="true" />
+                坐下
+              </button>
+            )}
+            {selectedPet.availableActions.includes('dance') && (
+              <button
+                type="button"
+                className="hh-world-pet-action"
+                aria-label={`讓${selectedPetItem.name}跳舞`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  commitPetAnimation('dance');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  commitPetAnimation('dance');
+                }}
+              >
+                <Music2 size={16} aria-hidden="true" />
+                跳舞
               </button>
             )}
           </div>

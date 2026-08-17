@@ -136,6 +136,24 @@ describe('world scene game data snapshot', () => {
     );
   });
 
+  it('keeps active non-following pet inventory available for in-place runtime updates', () => {
+    const snapshot = createWorldSceneGameDataSnapshot(
+      {
+        ...gameData([pet('pet-silf', 'pet.silf-owl'), pet('pet-yaoguang', 'pet.yaoguang-deer')], [{
+          id: 'entity-yaoguang', inventoryItemId: 'inventory-yaoguang', entityKind: 'pet', worldLayoutVersion: 1,
+          x: 1, y: 0, z: -2, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1,
+          behaviorMode: 'idle', roamingSlot: null, isActive: true, catalogItemId: 'pet-yaoguang', assetKey: 'pet.yaoguang-deer',
+        }]),
+        inventory: [
+          { id: 'inventory-following', catalogItemId: 'pet-silf', quantity: 1, acquiredVia: 'purchase', acquiredAt: '' },
+          { id: 'inventory-yaoguang', catalogItemId: 'pet-yaoguang', quantity: 1, acquiredVia: 'purchase', acquiredAt: '' },
+        ],
+      },
+    );
+
+    assert.deepEqual(snapshot.inventory.map((item) => item.id), ['inventory-following', 'inventory-yaoguang']);
+  });
+
   it('keeps legacy active roaming entities resolvable by asset key', () => {
     const snapshot = createWorldSceneGameDataSnapshot(
       gameData(

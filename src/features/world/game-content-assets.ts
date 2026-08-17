@@ -26,6 +26,7 @@ const PET_ASSETS: Readonly<Record<string, LocalGameAsset>> = {
   'pet.christo': { modelUrl: '/assets/pets/christo.glb', thumbnailUrl: '/assets/pets/christo-thumbnail.png' },
   'pet.chrono-rabbit': { modelUrl: '/assets/pets/chrono-rabbit.glb', thumbnailUrl: '/assets/pets/chrono-rabbit-thumbnail.png' },
   'pet.forest-guardian': { modelUrl: '/assets/starlight-sprout-pet.glb', thumbnailUrl: '/assets/forest-guardian-thumbnail.png' },
+  'pet.jasmine': { modelUrl: '/assets/pets/jasmine.glb', thumbnailUrl: '/assets/pets/jasmine-thumbnail.png' },
   'pet.kaldo': { modelUrl: '/assets/pets/kaldo.glb', thumbnailUrl: '/assets/pets/kaldo-thumbnail.png' },
   'pet.magellan-rabbit': { modelUrl: '/assets/pets/magellan-rabbit.glb', thumbnailUrl: '/assets/pets/magellan-rabbit-thumbnail.png' },
   'pet.moko': { modelUrl: '/assets/pets/moko.glb', thumbnailUrl: '/assets/pets/moko-thumbnail.png' },
@@ -78,4 +79,16 @@ export function isLocalGameItem3DPreviewEnabled(item: Pick<GameCatalogItem, 'ite
 
 export function isLocalGameItemShopSupported(item: Pick<GameCatalogItem, 'itemType' | 'assetKey'>): boolean {
   return getLocalGameThumbnailUrl(item) !== null;
+}
+
+/**
+ * Starter characters may use the built-in procedural renderer, while every
+ * other owned item must be present in the current app's packaged asset map.
+ * This is the same compatibility gate used by the shop, extended for the
+ * free starter item that does not have a shop thumbnail.
+ */
+export function isLocalGameItemInventorySupported(
+  item: Pick<GameCatalogItem, 'itemType' | 'assetKey' | 'isStarter'>,
+): boolean {
+  return item.isStarter || isLocalGameItemShopSupported(item);
 }

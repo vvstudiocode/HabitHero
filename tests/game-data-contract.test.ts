@@ -52,7 +52,7 @@ describe('child game data mapping', () => {
     assert.equal(data['child-b'].inventory.length, 0);
   });
 
-  it('resolves an inactive catalog item still referenced by inventory and world state', () => {
+  it('does not expose an owned item that has no packaged app asset', () => {
     const data = createChildGameDataMap(
       ['child-a'],
       [{ id: 'retired-decoration', item_type: 'decoration', name: '已下架裝飾', description: '', scroll_price: 2, asset_key: 'decoration.retired', thumbnail_url: null, is_active: false, is_starter: false, is_stackable: true, collision_radius: 0.3, min_scale: 0.75, max_scale: 1.25, sort_order: 2, metadata: {} }],
@@ -64,9 +64,9 @@ describe('child game data mapping', () => {
       [{ id: 'entity-a', child_profile_id: 'child-a', inventory_item_id: 'inventory-a', world_layout_version: 1, position_x: 1, position_y: 0, position_z: -1, rotation_x: 0, rotation_y: 0, rotation_z: 0, scale: 1, behavior_mode: 'static', roaming_slot: null, is_active: true, entity_kind: 'decoration' }],
     );
 
-    assert.equal(data['child-a'].inventory[0].catalogItemId, 'retired-decoration');
-    assert.equal(data['child-a'].worldEntities[0].catalogItemId, 'retired-decoration');
-    assert.equal(data['child-a'].worldEntities[0].name, '已下架裝飾');
+    assert.equal(data['child-a'].inventory.length, 0);
+    assert.equal(data['child-a'].loadout, null);
+    assert.equal(data['child-a'].worldEntities.length, 0);
   });
 
   it('returns an empty per-child fallback when game tables are not deployed yet', async () => {

@@ -7,7 +7,7 @@ import { toWorldMutationErrorMessage } from '../world-errors';
 import { isDecorationPlacementValid } from '../world-placement';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
 import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
-import { isLocalGameItem3DPreviewEnabled, isLocalGameItemShopSupported } from '../game-content-assets';
+import { isLocalGameItem3DPreviewEnabled, isLocalGameItemInventorySupported, isLocalGameItemShopSupported } from '../game-content-assets';
 import { GameItemLightbox } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
@@ -381,7 +381,7 @@ export function ChildGamePanel({
 
   const visibleInventory = gameData.inventory.flatMap((inventory) => {
     const item = gameData.catalog.find((catalog) => catalog.id === inventory.catalogItemId);
-    if (!item || item.itemType !== inventorySection || (inventorySection === 'pet' && !item.isActive)) return [];
+    if (!item || item.itemType !== inventorySection || !isLocalGameItemInventorySupported(item) || (inventorySection === 'pet' && !item.isActive)) return [];
     return [{ inventory, item }];
   });
 

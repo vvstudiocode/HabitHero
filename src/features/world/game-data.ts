@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { emptyChildGameData, type ChildGameData, type ChildWorldEntity, type GameCatalogItem } from './contracts';
-import { getLocalGameThumbnailUrl } from './game-content-assets';
+import { getLocalGameThumbnailUrl, isLocalGameItemInventorySupported } from './game-content-assets';
 
 interface CatalogRow {
   id: string;
@@ -128,26 +128,40 @@ export function createChildGameDataMap(
   const prices = Object.fromEntries(priceRows.map((row) => [row.catalog_item_id, row.scroll_price]));
   return Object.fromEntries(childIds.map((childId) => {
     const data = emptyChildGameData();
+    const supportedInventoryRows = inventoryRows.filter((row) => {
+      const item = catalogById.get(row.catalog_item_id);
+      return item ? isLocalGameItemInventorySupported(item) : false;
+    });
+    const supportedInventoryIds = new Set(
+      supportedInventoryRows
+        .filter((row) => row.child_profile_id === childId)
+        .map((row) => row.id),
+    );
     data.catalog = catalog;
     data.prices = prices;
     data.walletBalance = Number(walletRows.find((row) => row.child_profile_id === childId)?.scroll_balance ?? 0);
-    data.inventory = inventoryRows
+    data.inventory = supportedInventoryRows
       .filter((row) => row.child_profile_id === childId)
       .map((row) => ({ id: row.id, catalogItemId: row.catalog_item_id, quantity: Number(row.quantity), acquiredVia: row.acquired_via, acquiredAt: row.acquired_at, displayName: row.display_name ?? null }));
     const loadout = loadoutRows.find((row) => row.child_profile_id === childId);
     const followingPetInventoryIds = Array.isArray(loadout?.following_pet_inventory_ids)
-      ? loadout.following_pet_inventory_ids.filter((value): value is string => typeof value === 'string')
+      ? loadout.following_pet_inventory_ids.filter((value): value is string => typeof value === 'string' && supportedInventoryIds.has(value))
       : [];
+    const legacyFollowingPetInventoryId = loadout?.following_pet_inventory_id && supportedInventoryIds.has(loadout.following_pet_inventory_id)
+      ? loadout.following_pet_inventory_id
+      : null;
     data.loadout = loadout
       ? {
-        equippedCharacterInventoryId: loadout.equipped_character_inventory_id,
-        followingPetInventoryId: followingPetInventoryIds[0] ?? loadout.following_pet_inventory_id,
+        equippedCharacterInventoryId: loadout.equipped_character_inventory_id && supportedInventoryIds.has(loadout.equipped_character_inventory_id)
+          ? loadout.equipped_character_inventory_id
+          : null,
+        followingPetInventoryId: followingPetInventoryIds[0] ?? legacyFollowingPetInventoryId,
         followingPetInventoryIds,
       }
       : null;
     data.worldRevision = Number(worldStateRows.find((row) => row.child_profile_id === childId)?.revision ?? 0);
-    data.worldEntities = entityRows.filter((row) => row.child_profile_id === childId && row.is_active).map((row) => {
-      const inventory = inventoryRows.find((item) => item.id === row.inventory_item_id);
+    data.worldEntities = entityRows.filter((row) => row.child_profile_id === childId && row.is_active && supportedInventoryIds.has(row.inventory_item_id)).map((row) => {
+      const inventory = supportedInventoryRows.find((item) => item.id === row.inventory_item_id);
       const item = inventory ? catalogById.get(inventory.catalog_item_id) : undefined;
       return {
         id: row.id,
@@ -182,9 +196,9 @@ export async function loadChildGameData(
   includeInactiveCatalog = false,
 ): Promise<Record<string, ChildGameData>> {
   if (childIds.length === 0) return {};
-  // Keep retired catalog rows available to resolve owned inventory/loadout/
-  // world references. The catalog RLS policy still limits which inactive rows
-  // a child can see; the shop filters inactive rows at render time.
+  // Keep retired catalog rows available so supported historical inventory,
+  // loadout, and world references can still resolve. Unsupported references
+  // are filtered after the catalog is mapped against packaged app assets.
   const catalogQuery = client.from('game_catalog_items').select('*').order('sort_order');
   const [catalog, prices, wallets, inventory, loadouts, worldStates, entities] = await Promise.all([
     loadOptionalGameData(catalogQuery, []),

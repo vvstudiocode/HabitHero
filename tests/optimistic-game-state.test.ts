@@ -188,6 +188,64 @@ describe('optimistic game state', () => {
     assert.equal(patched.worldEntities[1]?.isActive, true);
   });
 
+  it('also removes an existing idle entity when its pet becomes a follower', () => {
+    const patched = patchFollowingPets({
+      ...gameData(),
+      loadout: { equippedCharacterInventoryId: null, followingPetInventoryId: null, followingPetInventoryIds: [] },
+      worldEntities: [{
+        id: 'entity-idle-following',
+        inventoryItemId: 'inventory-following',
+        entityKind: 'pet',
+        worldLayoutVersion: 1,
+        x: 1,
+        y: 0,
+        z: -1,
+        rotationX: 0,
+        rotationY: 0,
+        rotationZ: 0,
+        scale: 1,
+        behaviorMode: 'idle',
+        roamingSlot: null,
+        isActive: true,
+        catalogItemId: 'pet-fox',
+        assetKey: 'pet.fox',
+        name: '小狐',
+      }],
+    }, ['inventory-following']);
+
+    assert.equal(patched.worldEntities[0]?.isActive, false);
+    assert.equal(patched.worldEntities[0]?.behaviorMode, 'idle');
+  });
+
+  it("keeps another pet's idle entity when adding a different follower", () => {
+    const patched = patchFollowingPets({
+      ...gameData(),
+      loadout: { equippedCharacterInventoryId: null, followingPetInventoryId: null, followingPetInventoryIds: [] },
+      worldEntities: [{
+        id: 'entity-idle-one',
+        inventoryItemId: 'inventory-one',
+        entityKind: 'pet',
+        worldLayoutVersion: 1,
+        x: 1,
+        y: 0,
+        z: -1,
+        rotationX: 0,
+        rotationY: 0,
+        rotationZ: 0,
+        scale: 1,
+        behaviorMode: 'idle',
+        roamingSlot: null,
+        isActive: true,
+        catalogItemId: 'pet-fox',
+        assetKey: 'pet.fox',
+        name: '一號',
+      }],
+    }, ['inventory-two']);
+
+    assert.equal(patched.worldEntities[0]?.inventoryItemId, 'inventory-one');
+    assert.equal(patched.worldEntities[0]?.isActive, true);
+  });
+
   it('updates roaming entities immediately, including creating a local entity for a new roaming pet', () => {
     const patched = patchRoamingPets({
       ...gameData(),
@@ -200,6 +258,104 @@ describe('optimistic game state', () => {
     assert.equal(roaming?.roamingSlot, 1);
     assert.equal(patched.worldEntities.find((entity) => entity.inventoryItemId === 'inventory-old')?.isActive, false);
     assert.equal(patched.worldEntities.find((entity) => entity.entityKind === 'decoration')?.isActive, true);
+  });
+
+  it('keeps an existing roaming pet at its current position during a queue update', () => {
+    const patched = patchRoamingPets({
+      ...gameData(),
+      inventory: [{ id: 'inventory-fox', catalogItemId: 'pet-fox', quantity: 1, acquiredVia: 'purchase', acquiredAt: '', displayName: null }],
+      worldEntities: [{
+        id: 'entity-fox',
+        inventoryItemId: 'inventory-fox',
+        entityKind: 'pet',
+        worldLayoutVersion: 1,
+        x: 2.25,
+        y: 0.15,
+        z: -1.75,
+        rotationX: 0,
+        rotationY: 0.4,
+        rotationZ: 0,
+        scale: 1,
+        behaviorMode: 'idle',
+        roamingSlot: null,
+        isActive: true,
+        catalogItemId: 'pet-fox',
+        assetKey: 'pet.fox',
+        name: '小狐',
+      }],
+    }, ['inventory-fox']);
+
+    assert.equal(patched.worldEntities[0]?.x, 2.25);
+    assert.equal(patched.worldEntities[0]?.y, 0.15);
+    assert.equal(patched.worldEntities[0]?.z, -1.75);
+    assert.equal(patched.worldEntities[0]?.rotationY, 0.4);
+  });
+
+  it('keeps another active idle pet in the world when the roaming queue changes', () => {
+    const patched = patchRoamingPets({
+      ...gameData(),
+      worldEntities: [
+        {
+          id: 'entity-idle-pet',
+          inventoryItemId: 'inventory-idle',
+          entityKind: 'pet',
+          worldLayoutVersion: 1,
+          x: 2,
+          y: 0,
+          z: -1,
+          rotationX: 0,
+          rotationY: 0.25,
+          rotationZ: 0,
+          scale: 1,
+          behaviorMode: 'idle',
+          roamingSlot: null,
+          isActive: true,
+          catalogItemId: 'pet-fox',
+          assetKey: 'pet.fox',
+          name: '待機夥伴',
+        },
+        ...gameData().worldEntities,
+      ],
+    }, ['inventory-old']);
+
+    const idlePet = patched.worldEntities.find((entity) => entity.inventoryItemId === 'inventory-idle');
+    assert.equal(idlePet?.isActive, true);
+    assert.equal(idlePet?.behaviorMode, 'idle');
+    assert.equal(idlePet?.x, 2);
+    assert.equal(idlePet?.z, -1);
+  });
+
+  it('applies the selected position when a following pet starts roaming', () => {
+    const patched = patchRoamingPets({
+      ...gameData(),
+      inventory: [{ id: 'inventory-fox', catalogItemId: 'pet-fox', quantity: 1, acquiredVia: 'purchase', acquiredAt: '', displayName: null }],
+      worldEntities: [{
+        id: 'entity-fox',
+        inventoryItemId: 'inventory-fox',
+        entityKind: 'pet',
+        worldLayoutVersion: 1,
+        x: -3.5,
+        y: 0,
+        z: -3.5,
+        rotationX: 0,
+        rotationY: 0,
+        rotationZ: 0,
+        scale: 1,
+        behaviorMode: 'idle',
+        roamingSlot: null,
+        isActive: false,
+        catalogItemId: 'pet-fox',
+        assetKey: 'pet.fox',
+        name: '小狐',
+      }],
+    }, ['inventory-fox'], {
+      'inventory-fox': { x: 2, y: 0, z: -1, rotationX: 0, rotationY: 0.6, rotationZ: 0, scale: 1 },
+    });
+
+    assert.equal(patched.worldEntities[0]?.x, 2);
+    assert.equal(patched.worldEntities[0]?.z, -1);
+    assert.equal(patched.worldEntities[0]?.rotationY, 0.6);
+    assert.equal(patched.worldEntities[0]?.behaviorMode, 'wander');
   });
 
   it('removes a deleted child and its game data while selecting a valid fallback child', () => {

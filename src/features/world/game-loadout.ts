@@ -1,4 +1,6 @@
-import type { ChildGameData, GamePurchaseResult } from './contracts';
+import type { ChildGameData, GamePurchaseResult, WorldTransform } from './contracts';
+
+export type RoamingPetPositionOverrides = Readonly<Record<string, WorldTransform>>;
 
 export interface OptimisticPurchaseDraft {
   catalogItemId: string;
@@ -133,7 +135,7 @@ export function patchFollowingPets(gameData: ChildGameData, inventoryItemIds: re
       followingPetInventoryIds,
     },
     worldEntities: gameData.worldEntities.map((entity) => entity.entityKind === 'pet'
-      && entity.behaviorMode === 'wander'
+      && entity.isActive
       && followingPetInventoryIdSet.has(entity.inventoryItemId)
       ? { ...entity, behaviorMode: 'idle', roamingSlot: null, isActive: false }
       : entity),
@@ -141,7 +143,11 @@ export function patchFollowingPets(gameData: ChildGameData, inventoryItemIds: re
 }
 
 /** Mirror set_roaming_pets locally, including entities created by the RPC. */
-export function patchRoamingPets(gameData: ChildGameData, inventoryItemIds: readonly string[]): ChildGameData {
+export function patchRoamingPets(
+  gameData: ChildGameData,
+  inventoryItemIds: readonly string[],
+  positionOverrides: RoamingPetPositionOverrides = {},
+): ChildGameData {
   const followingPetInventoryIds = gameData.loadout?.followingPetInventoryIds?.length
     ? gameData.loadout.followingPetInventoryIds
     : gameData.loadout?.followingPetInventoryId ? [gameData.loadout.followingPetInventoryId] : [];
@@ -156,16 +162,19 @@ export function patchRoamingPets(gameData: ChildGameData, inventoryItemIds: read
   const worldEntities = gameData.worldEntities.map((entity) => {
     if (entity.entityKind !== 'pet') return entity;
     const selectedIndex = selectedIds.indexOf(entity.inventoryItemId);
-    if (selectedIndex < 0) return { ...entity, behaviorMode: 'idle' as const, roamingSlot: null, isActive: false };
+    if (selectedIndex < 0) {
+      return entity.behaviorMode === 'wander'
+        ? { ...entity, behaviorMode: 'idle' as const, roamingSlot: null, isActive: false }
+        : entity;
+    }
     existingEntityIds.add(entity.inventoryItemId);
     const inventory = inventoryById.get(entity.inventoryItemId);
     const catalogItem = inventory ? catalogById.get(inventory.catalogItemId) : undefined;
     const slot = selectedIndex + 1;
+    const positionOverride = positionOverrides[entity.inventoryItemId];
     return {
       ...entity,
-      x: -3.5 + ((slot - 1) % 8),
-      y: 0,
-      z: -3.5 + (Math.floor((slot - 1) / 8) % 8),
+      ...positionOverride,
       behaviorMode: 'wander' as const,
       roamingSlot: slot,
       isActive: true,
@@ -183,18 +192,19 @@ export function patchRoamingPets(gameData: ChildGameData, inventoryItemIds: read
     const catalogItem = inventory ? catalogById.get(inventory.catalogItemId) : undefined;
     if (!inventory || !catalogItem || catalogItem.itemType !== 'pet') continue;
     const slot = selectedIndex + 1;
+    const positionOverride = positionOverrides[inventoryItemId];
     worldEntities.push({
       id: `local-roaming-${inventoryItemId}`,
       inventoryItemId,
       entityKind: 'pet',
       worldLayoutVersion: 1,
-      x: -3.5 + ((slot - 1) % 8),
-      y: 0,
-      z: -3.5 + (Math.floor((slot - 1) / 8) % 8),
-      rotationX: 0,
-      rotationY: 0,
-      rotationZ: 0,
-      scale: 1,
+      x: positionOverride?.x ?? -3.5 + ((slot - 1) % 8),
+      y: positionOverride?.y ?? 0,
+      z: positionOverride?.z ?? -3.5 + (Math.floor((slot - 1) / 8) % 8),
+      rotationX: positionOverride?.rotationX ?? 0,
+      rotationY: positionOverride?.rotationY ?? 0,
+      rotationZ: positionOverride?.rotationZ ?? 0,
+      scale: positionOverride?.scale ?? 1,
       behaviorMode: 'wander',
       roamingSlot: slot,
       isActive: true,

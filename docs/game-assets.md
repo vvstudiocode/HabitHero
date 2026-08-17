@@ -72,7 +72,7 @@ The repository does not currently contain provenance or a license notice for thi
 
 ## 莫可與卡爾多
 
-`public/assets/pets/moko.glb` 與 `public/assets/pets/kaldo.glb` 由使用者提供的 `莫可.fbx`／`莫可idle.fbx`、`卡爾多.fbx`／`卡爾多Idle.fbx` 合併而成，商店 keys 分別為 `pet.moko` 與 `pet.kaldo`。兩個 GLB 都包含 `Idle` 和原地 `Walk_InPlace`，匯出時固定 root／Hips 的水平位移，並在 GLB accessor 層再次固定 Walk clip 的 root x/z，避免 FBX/骨架取樣在轉檔後重新產生前進位移。模型使用 Draco 幾何壓縮、WebP 貼圖與行動版網格簡化；莫可約 1.84 MB／91,027 triangles，卡爾多約 1.61 MB／163,544 triangles。
+`public/assets/pets/moko.glb` 與 `public/assets/pets/kaldo.glb` 由使用者提供的 FBX 合併而成，商店 keys 分別為 `pet.moko` 與 `pet.kaldo`。莫可新版使用 `莫可Idle.fbx` 作為唯一模型 base，從 `莫可.fbx`、`莫可坐下.fbx`、`莫可揮手.fbx` 與 `莫可跳舞.fbx` 只取 animation；單一 GLB 共用一份 mesh／texture，包含 `Idle`、`Walk_InPlace`、`Sit`、`Wave`、`Dance`，約 1.46 MB／72,821 triangles。卡爾多仍包含 `Idle` 與原地 `Walk_InPlace`，約 1.61 MB／163,544 triangles。兩個 GLB 都使用 Draco 幾何壓縮與 WebP 貼圖，並固定 Walk clip 的水平 root／Hips 位移，避免 FBX/骨架取樣重新產生前進位移；莫可的可重複匯出腳本與驗證清單在 [`docs/moko-multi-animation-glb.md`](./moko-multi-animation-glb.md)。
 
 兩隻新寵物沿用目前人物放入世界的呈現規則：`hideGroundMarker=true`（關閉 runtime 自製橢圓標記）、`hideGroundShadow=false`（保留太陽投影）、地面陰影比例 0.22、名稱比例 0.55，以及有 authored Idle 時每次隨機待機 3–5 秒。莫可待機使用 `groundOffset=-0.22`，只有 Walk action 啟用時額外使用 `walkingGroundOffset=-0.04`，避免走路腳底稍微離開草地；卡爾多整體使用 `groundOffset=-0.36`。莫可現在使用 2 倍模型，卡爾多使用 4 倍模型；名稱仍維持統一的世界尺寸，不會因模型放大而變成巨大的浮字。兩個 GLB 的 root-motion 後處理只在原始 GLB binary chunk 內覆寫 Walk 的 root x/z，不重新封裝 JSON／BIN chunk；這是避免 Three.js 載入成功但模型不渲染的必要細節。新增人物或寵物時，先檢查來源動畫是否含 root motion，再以這套 GLB、metadata、場景 signature 與 Supabase migration 流程處理。
 
@@ -84,6 +84,14 @@ The repository does not currently contain provenance or a license notice for thi
 ## 阿卡迪亞
 
 `public/assets/pets/arcadia.glb` 與 `public/assets/pets/arcadia-thumbnail.webp` 由使用者提供的 `阿卡迪亞.fbx`／`阿卡迪亞Idle.fbx` 合併而成，商店 key 為 `pet.arcadia`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、1024px WebP 貼圖與 0.16 網格簡化，約 862 KB／47,103 triangles；透明縮圖為 512×512 WebP。它使用 `groundOffset=-0.50`、顯示尺寸倍率 6.8、關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機。6.8 倍設定會同時套用到巡遊與跟隨 actor，兩者仍共用原本的模型快取、碰撞與追蹤距離計算。對應 catalog migrations 為 `20260816065247_add_arcadia_pet.sql`、`20260816075304_tune_arcadia_pet_visual_scale.sql`、`20260816075918_tune_arcadia_pet_visual_scale_6_8.sql`、`20260816080341_lower_arcadia_to_grass.sql` 與 `20260816081707_tune_arcadia_oum_ground_contact.sql`。
+
+## 茉莉與克里斯多的多動作 GLB
+
+完整的可重複整合步驟請參考 [`docs/jasmine-multi-animation-glb.md`](./jasmine-multi-animation-glb.md)，包含 base FBX、action-only import、Walk root-motion 修正、Draco/WebP 壓縮與驗證清單。
+
+`public/assets/pets/jasmine.glb` 是商店寵物 `pet.jasmine`，由 `茉莉Idle.fbx`、`茉莉walk.fbx`、`茉莉坐下.fbx`、`茉莉揮手.fbx` 與 `茉莉跳舞.fbx` 合併而成；單一 GLB 共用一份網格與貼圖，包含 `Idle`、`Walk_InPlace`、`Sit`、`Wave`、`Dance` 五段 animation，約 786 KB。`public/assets/pets/jasmine-thumbnail.png` 是 512×512 RGBA 透明縮圖。
+
+`public/assets/pets/christo.glb` 同樣保留一份模型，並新增 `Sit`、`Wave`、`Dance` 三段 clip；加上既有的 `Idle` 與 `Walk_InPlace` 後，完整 GLB 約 1.28 MB。兩隻寵物的 Walk 都在匯出階段固定為原地走路，世界 steering 負責實際移動；不要把五段動作拆成五個重複模型，避免重複網格、材質與貼圖增加 app 容量。對應 catalog migration 為 `20260818080000_add_jasmine_and_christo_actions.sql`。
 
 ## 寵物浮空、陰影與巡遊隨機化心得
 
