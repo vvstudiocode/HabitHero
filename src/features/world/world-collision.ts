@@ -33,6 +33,22 @@ export const CENTRAL_TREE_KEEP_OUT = { x: 1.1, z: -8.9, radius: 2 };
 export const WORLD_EPSILON = 0.02;
 export const CHARACTER_COLLISION_RADIUS = 0.35;
 
+/**
+ * Decorations keep a positive, server-valid catalog radius, but their
+ * navigation proxy can be smaller than the full placement footprint. This
+ * lets the player approach the visible mesh without walking through it.
+ */
+export function getDecorationNavigationRadius(
+  metadata: Record<string, unknown> | undefined,
+  fallbackRadius: number,
+): number {
+  const configuredRadius = metadata?.navigationRadius;
+  if (typeof configuredRadius === 'number' && Number.isFinite(configuredRadius) && configuredRadius > 0) {
+    return configuredRadius;
+  }
+  return Number.isFinite(fallbackRadius) && fallbackRadius > 0 ? fallbackRadius : 0.3;
+}
+
 export function clampWorldPosition(value: number, radius: number, boundary = WORLD_BOUNDARY): number {
   return Math.min(boundary - radius, Math.max(-boundary + radius, value));
 }
@@ -50,6 +66,7 @@ export function isTransformWithinWorld(
   if (!Number.isFinite(transform.x) || !Number.isFinite(transform.y) || !Number.isFinite(transform.z)) return false;
   if (!Number.isFinite(transform.scale) || transform.scale < 0.1 || transform.scale > 3) return false;
   if ([transform.rotationX, transform.rotationY, transform.rotationZ].some((value) => !Number.isFinite(value))) return false;
+  if (!Number.isFinite(collisionRadius) || collisionRadius <= 0) return false;
   if (!Number.isFinite(boundary) || boundary <= 0) return false;
   const radius = collisionRadius * transform.scale;
   const circle = { x: transform.x, z: transform.z, radius };
@@ -61,7 +78,7 @@ export function isTransformWithinWorld(
 export function buildCollisionCircles(
   entities: Array<{ positionX: number; positionZ: number; collisionRadius: number; scale: number }>,
 ): CollisionCircle[] {
-  return entities.map((entity) => ({
+  return entities.filter((entity) => entity.collisionRadius > 0 && entity.scale > 0).map((entity) => ({
     x: entity.positionX,
     z: entity.positionZ,
     radius: entity.collisionRadius * entity.scale,
@@ -80,7 +97,7 @@ export function moveWorldCharacter(
 ): WorldPoint2D {
   const obstacles = [
     { x: CENTRAL_TREE_KEEP_OUT.x, z: CENTRAL_TREE_KEEP_OUT.z, radius: CENTRAL_TREE_KEEP_OUT.radius },
-    ...decorations,
+    ...decorations.filter((decoration) => decoration.radius > 0),
   ];
   let next = { x: clampWorldPosition(current.x, radius), z: clampWorldPosition(current.z, radius) };
   const xCandidate = { x: clampWorldPosition(desired.x, radius), z: next.z };

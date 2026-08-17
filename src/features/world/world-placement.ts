@@ -151,10 +151,13 @@ export function toDecorationPlacementTransform(draft: DecorationPlacementDraft):
 export function isDecorationPlacementValid(
   draft: DecorationPlacementDraft,
   item: Pick<GameCatalogItem, 'collisionRadius' | 'minScale' | 'maxScale'>,
-  existing: CollisionCircle[] = [],
+  _existing: CollisionCircle[] = [],
 ): boolean {
   const transform = toDecorationPlacementTransform(draft);
-  return isTransformWithinWorld(transform, item.collisionRadius, existing, VISIBLE_GRASS_BOUNDARY)
+  // Decoration-to-decoration overlap is intentional. The server keeps this
+  // exception scoped to decoration entities; other world-entity rules remain
+  // unchanged because this placement flow only accepts decoration items.
+  return isTransformWithinWorld(transform, item.collisionRadius, [], VISIBLE_GRASS_BOUNDARY)
     && draft.scale >= item.minScale
     && draft.scale <= item.maxScale;
 }

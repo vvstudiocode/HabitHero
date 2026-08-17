@@ -101,7 +101,7 @@ describe('decoration placement flow', () => {
     });
   });
 
-  it('allows outer meadow placement while keeping spawn, tree, overlap, and meadow-edge rules', () => {
+  it('allows decoration overlap while keeping spawn, tree, and meadow-edge rules', () => {
     assert.equal(isDecorationPlacementValid({ x: 2, z: -1.5, rotationY: 0, scale: 1 }, decoration), true);
     assert.equal(isDecorationPlacementValid({ x: 6, z: -1.5, rotationY: 0, scale: 1 }, decoration), true);
     assert.equal(isDecorationPlacementValid({ x: 0, z: 0, rotationY: 0, scale: 1 }, decoration), true);
@@ -112,10 +112,10 @@ describe('decoration placement flow', () => {
       { x: 2, z: -1.5, rotationY: 0, scale: 1 },
       decoration,
       [{ x: 2, z: -1.5, radius: 0.38 }],
-    ), false);
+    ), true);
   });
 
-  it('accepts the new 0.1 minimum scale and marks blocked grid cells', () => {
+  it('accepts the new 0.1 minimum scale and keeps decoration-overlap grid cells valid', () => {
     assert.equal(isDecorationPlacementValid({ x: 2, z: -1.5, rotationY: 0, scale: 0.1 }, decoration), true);
     const cells = getPlacementGridCells({
       item: decoration,
@@ -124,7 +124,7 @@ describe('decoration placement flow', () => {
       boundary: 2,
       existing: [{ x: -0.5, z: -0.5, radius: 0.1 }],
     });
-    assert.ok(cells.some((cell) => cell.x === -0.5 && cell.z === -0.5 && !cell.isValid));
+    assert.ok(cells.some((cell) => cell.x === -0.5 && cell.z === -0.5 && cell.isValid));
     assert.ok(cells.some((cell) => cell.x === -1.5 && cell.z === -1.5 && cell.isValid));
   });
 });

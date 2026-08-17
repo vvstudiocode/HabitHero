@@ -6,6 +6,7 @@ import {
   CHARACTER_COLLISION_RADIUS,
   CHARACTER_SPAWN,
   circlesOverlap,
+  getDecorationNavigationRadius,
   WORLD_BOUNDARY,
   moveWorldCharacter,
   type CollisionCircle,
@@ -89,6 +90,14 @@ export const PROTOTYPE_WORLD_ASSETS = {
 /** Ground contact for a visible foot reference, just above the meadow plane. */
 export const PLAYER_CHARACTER_GROUND_OFFSET = -0.12;
 export const CHARACTER_GROUND_CONTACT_Y = 0.055;
+
+function getDecorationCatalogItem(gameData: ChildGameData, entity: ChildWorldEntity): GameCatalogItem | undefined {
+  const catalogItemId = entity.catalogItemId
+    ?? gameData.inventory.find((inventory) => inventory.id === entity.inventoryItemId)?.catalogItemId;
+  return catalogItemId
+    ? gameData.catalog.find((item) => item.id === catalogItemId && item.itemType === 'decoration')
+    : undefined;
+}
 
 export function getCharacterGroundingReferenceY(
   boundsMinY: number,
@@ -1444,7 +1453,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
       const decorationCollisions = buildCollisionCircles(options.gameData.worldEntities
         .filter((entity) => entity.entityKind === 'decoration')
-        .map((entity) => ({ positionX: entity.x, positionZ: entity.z, collisionRadius: entity.collisionRadius ?? 0.3, scale: entity.scale })));
+        .map((entity) => {
+          const item = getDecorationCatalogItem(options.gameData, entity);
+          return {
+            positionX: entity.x,
+            positionZ: entity.z,
+            collisionRadius: getDecorationNavigationRadius(item?.metadata, entity.collisionRadius ?? 0.3),
+            scale: entity.scale,
+          };
+        }));
       const wanderObstacles = [CENTRAL_TREE_KEEP_OUT, ...decorationCollisions];
       const petSpawnObstacles = [CHARACTER_SPAWN, ...wanderObstacles];
       let petSpawnIndex = 0;
@@ -1807,13 +1824,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           decorationObjects.splice(index, 1);
         }
 
-        const getDecorationCatalogItem = (entity: ChildWorldEntity) => {
-          const catalogItemId = entity.catalogItemId
-            ?? nextGameData.inventory.find((inventory) => inventory.id === entity.inventoryItemId)?.catalogItemId;
-          return catalogItemId
-            ? nextGameData.catalog.find((item) => item.id === catalogItemId && item.itemType === 'decoration')
-            : undefined;
-        };
         const updateObjectTransform = (object: Object3D, entity: ChildWorldEntity) => {
           object.visible = true;
           object.position.set(entity.x, entity.y, entity.z);
@@ -1841,7 +1851,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             updateObjectTransform(existing.object, entity);
             return;
           }
-          const item = getDecorationCatalogItem(entity);
+          const item = getDecorationCatalogItem(nextGameData, entity);
           if (!item) return;
           const modelSource = decorationModelSources.get(item.id);
           const object = createDecorationObject(THREE, item, 1, modelSource);
@@ -1858,12 +1868,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           }
         });
 
-        const nextCollisions = buildCollisionCircles([...activeDecorations.values()].map((entity) => ({
-          positionX: entity.x,
-          positionZ: entity.z,
-          collisionRadius: entity.collisionRadius ?? 0.3,
-          scale: entity.scale,
-        })));
+        const nextCollisions = buildCollisionCircles([...activeDecorations.values()].map((entity) => {
+          const item = getDecorationCatalogItem(nextGameData, entity);
+          return {
+            positionX: entity.x,
+            positionZ: entity.z,
+            collisionRadius: getDecorationNavigationRadius(item?.metadata, entity.collisionRadius ?? 0.3),
+            scale: entity.scale,
+          };
+        }));
         decorationCollisions.splice(0, decorationCollisions.length, ...nextCollisions);
         wanderObstacles.splice(1, wanderObstacles.length - 1, ...nextCollisions);
       };

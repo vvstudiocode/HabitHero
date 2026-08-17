@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { CENTRAL_TREE_KEEP_OUT, CHARACTER_SPAWN, WORLD_BOUNDARY, isTransformWithinWorld, moveWorldCharacter } from '../src/features/world/world-collision';
+import { CENTRAL_TREE_KEEP_OUT, CHARACTER_SPAWN, WORLD_BOUNDARY, buildCollisionCircles, getDecorationNavigationRadius, isTransformWithinWorld, moveWorldCharacter } from '../src/features/world/world-collision';
 
 const valid = { x: 2, y: 0, z: 2, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1 };
 
@@ -20,6 +20,16 @@ describe('world collision contract', () => {
   it('rejects overlapping decoration footprints after scale is applied', () => {
     assert.equal(isTransformWithinWorld(valid, 0.5, [{ x: 2.45, z: 2, radius: 0.2 }]), false);
     assert.equal(isTransformWithinWorld(valid, 0.2, [{ x: 2.45, z: 2, radius: 0.2 }]), true);
+  });
+
+  it('uses a smaller positive navigation proxy without allowing a no-collision decoration', () => {
+    assert.equal(getDecorationNavigationRadius({ navigationRadius: 0.24 }, 1), 0.24);
+    assert.equal(getDecorationNavigationRadius({ navigationRadius: 0 }, 0.42), 0.42);
+    assert.equal(isTransformWithinWorld(valid, 0), false);
+    assert.deepEqual(buildCollisionCircles([
+      { positionX: 1, positionZ: 2, collisionRadius: 0, scale: 1.25 },
+      { positionX: 2, positionZ: 3, collisionRadius: 0.4, scale: 1 },
+    ]), [{ x: 2, z: 3, radius: 0.4 }]);
   });
 
   it('slides character movement around decorations and keeps it inside the boundary', () => {
