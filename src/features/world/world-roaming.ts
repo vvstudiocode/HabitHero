@@ -1,6 +1,8 @@
 import {
   clampWorldPosition,
   circlesOverlap,
+  getCollisionDistanceFromCenter,
+  getNavigationCollisionRadius,
   moveWorldCharacter,
   WORLD_BOUNDARY,
   type CollisionCircle,
@@ -140,10 +142,11 @@ function getObstacleForce(
   obstacles.forEach((obstacle, index) => {
     const away = { x: current.x - obstacle.x, z: current.z - obstacle.z };
     const distance = Math.hypot(away.x, away.z);
-    const collisionDistance = radius + obstacle.radius;
+    const outward = distance > 0.0001 ? { x: away.x / distance, z: away.z / distance } : { x: 1, z: 0 };
+    const collisionDistance = getNavigationCollisionRadius(radius, obstacle)
+      + getCollisionDistanceFromCenter(obstacle, outward);
     const influenceDistance = collisionDistance + Math.max(WANDER_OBSTACLE_MARGIN, radius * 2);
     if (distance >= influenceDistance) return;
-    const outward = distance > 0.0001 ? { x: away.x / distance, z: away.z / distance } : { x: 1, z: 0 };
     const proximity = clamp((influenceDistance - distance) / influenceDistance, 0, 1);
     const strength = proximity ** 2 * 3.2;
     force.x += outward.x * strength;

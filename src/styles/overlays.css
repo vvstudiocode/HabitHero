@@ -789,6 +789,10 @@ body {
   top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
 }
 
+.hh-dashboard-screen--child.is-clean-mode .hh-toast {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .hh-parent-feature-modal {
     padding-top: max(90px, calc(env(safe-area-inset-top, 0px) + 44px));

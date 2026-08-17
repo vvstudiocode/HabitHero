@@ -168,6 +168,13 @@
   display: none;
 }
 
+.hh-dashboard-screen--child.is-clean-mode .hh-character-stats,
+.hh-dashboard-screen--child.is-clean-mode .hh-character-dashboard-actions,
+.hh-dashboard-screen--child.is-clean-mode .hh-character-menu,
+.hh-dashboard-screen--child.is-clean-mode .hh-child-adventure-board {
+  display: none;
+}
+
 .hh-child-adventure-board {
   position: fixed;
   z-index: 7;

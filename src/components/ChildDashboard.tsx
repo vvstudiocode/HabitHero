@@ -27,6 +27,7 @@ import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
 import { emptyChildGameData, type GameCatalogItem, type GamePurchaseResult, type WorldMutationResult } from '../features/world/contracts';
 import { getPetNameDisplayPreference, setPetNameDisplayPreference } from '../features/world/pet-name-display-preference';
+import { isTwoFingerTapGesture } from '../features/world/clean-screen-mode';
 import { buildCollisionCircles } from '../features/world/world-collision';
 import { toWorldMutationErrorMessage } from '../features/world/world-errors';
 import {
@@ -147,9 +148,20 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [decorationPlacementPending, setDecorationPlacementPending] = useState(false);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
+  const [cleanMode, setCleanMode] = useState(false);
+  const [cleanModeHintVisible, setCleanModeHintVisible] = useState(false);
   const heroMenuOpenFrame = useRef<number | null>(null);
   const heroMenuCloseTimer = useRef<number | null>(null);
   const featureContentRef = useRef<HTMLElement>(null);
+  const cleanModeHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasShownCleanModeHint = useRef(false);
+  const cleanModeGestureRef = useRef<{
+    active: Map<number, { x: number; y: number }>;
+    maxConcurrentPointers: number;
+    startedAt: number;
+    maxMovementPx: number;
+    cancelled: boolean;
+  } | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -189,7 +201,85 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setBackgroundMusicEnabled(getBackgroundMusicPreference(activeChildId ?? ''));
     setDecorationPurchasePrompt(null);
     setDecorationPlacement(null);
+    setCleanMode(false);
+    setCleanModeHintVisible(false);
+    hasShownCleanModeHint.current = false;
+    if (cleanModeHintTimer.current) {
+      clearTimeout(cleanModeHintTimer.current);
+      cleanModeHintTimer.current = null;
+    }
   }, [activeChildId]);
+
+  useEffect(() => {
+    cleanModeGestureRef.current = null;
+    if (!cleanMode) return undefined;
+
+    const eventTime = (event: PointerEvent) => Number.isFinite(event.timeStamp) ? event.timeStamp : performance.now();
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== 'touch') return;
+      let gesture = cleanModeGestureRef.current;
+      if (!gesture || gesture.active.size === 0) {
+        gesture = {
+          active: new Map(),
+          maxConcurrentPointers: 0,
+          startedAt: eventTime(event),
+          maxMovementPx: 0,
+          cancelled: false,
+        };
+        cleanModeGestureRef.current = gesture;
+      }
+      if (gesture.active.has(event.pointerId)) return;
+      gesture.active.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      gesture.maxConcurrentPointers = Math.max(gesture.maxConcurrentPointers, gesture.active.size);
+      if (gesture.active.size > 2) gesture.cancelled = true;
+    };
+    const handlePointerMove = (event: PointerEvent) => {
+      const gesture = cleanModeGestureRef.current;
+      const start = gesture?.active.get(event.pointerId);
+      if (!gesture || !start) return;
+      gesture.maxMovementPx = Math.max(
+        gesture.maxMovementPx,
+        Math.hypot(event.clientX - start.x, event.clientY - start.y),
+      );
+    };
+    const handlePointerEnd = (event: PointerEvent, cancelled: boolean) => {
+      const gesture = cleanModeGestureRef.current;
+      if (!gesture || !gesture.active.has(event.pointerId)) return;
+      if (cancelled) gesture.cancelled = true;
+      gesture.active.delete(event.pointerId);
+      if (gesture.active.size > 0) return;
+
+      const shouldRestore = isTwoFingerTapGesture({
+        maxConcurrentPointers: gesture.maxConcurrentPointers,
+        durationMs: eventTime(event) - gesture.startedAt,
+        maxMovementPx: gesture.maxMovementPx,
+        cancelled: gesture.cancelled,
+      });
+      cleanModeGestureRef.current = null;
+      if (shouldRestore) {
+        setCleanMode(false);
+        setCleanModeHintVisible(false);
+      }
+    };
+
+    const handlePointerUp = (event: PointerEvent) => handlePointerEnd(event, false);
+    const handlePointerCancel = (event: PointerEvent) => handlePointerEnd(event, true);
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerCancel, { passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
+      cleanModeGestureRef.current = null;
+    };
+  }, [cleanMode]);
+
+  useEffect(() => () => {
+    if (cleanModeHintTimer.current) clearTimeout(cleanModeHintTimer.current);
+  }, []);
 
   const handleShowPetNamesChange = (visible: boolean) => {
     if (!activeChildId) return;
@@ -201,6 +291,27 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     if (!activeChildId) return;
     setBackgroundMusicEnabled(enabled);
     setBackgroundMusicPreference(activeChildId, enabled);
+  };
+
+  const toggleCleanMode = () => {
+    if (cleanMode) {
+      setCleanMode(false);
+      setCleanModeHintVisible(false);
+      if (cleanModeHintTimer.current) {
+        clearTimeout(cleanModeHintTimer.current);
+        cleanModeHintTimer.current = null;
+      }
+      return;
+    }
+    setCleanMode(true);
+    if (hasShownCleanModeHint.current) return;
+    hasShownCleanModeHint.current = true;
+    setCleanModeHintVisible(true);
+    if (cleanModeHintTimer.current) clearTimeout(cleanModeHintTimer.current);
+    cleanModeHintTimer.current = setTimeout(() => {
+      setCleanModeHintVisible(false);
+      cleanModeHintTimer.current = null;
+    }, 2200);
   };
   const activeGeneralAdventureGroup = state.adventureGroups?.find(
     (group) => group.childProfileId === activeChildId && group.status === 'active',
@@ -221,6 +332,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [wishlistToCancel, setWishlistToCancel] = useState<import('../types').WishlistItem | null>(null);
   const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
   const [adventureRewardNotice, setAdventureRewardNotice] = useState<ChildAdventureRewardNotice | null>(null);
+
+  useEffect(() => {
+    if (!heroFeature && !decorationPlacement && !adventureRewardNotice) return;
+    setCleanMode(false);
+    setCleanModeHintVisible(false);
+  }, [adventureRewardNotice, decorationPlacement, heroFeature]);
   
   // Toast Message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -793,7 +910,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   return (
     <div
-      className={`hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50${decorationPlacement ? ' is-decoration-placement' : ''}`}
+      className={`hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50${decorationPlacement ? ' is-decoration-placement' : ''}${cleanMode ? ' is-clean-mode' : ''}`}
       style={{ '--hh-character-theme-color': '#202124' } as React.CSSProperties}
       onContextMenu={preventNativeAppContextMenu}
       onDragStart={preventNativeAppDragStart}
@@ -826,6 +943,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onCancelPlacement={cancelDecorationPlacement}
               onStartDecorationPlacement={startExistingDecorationPlacement}
               onCollectDecoration={collectSelectedDecoration}
+              cleanMode={cleanMode}
+              cleanModeHintVisible={cleanModeHintVisible}
+              onCleanModeToggle={toggleCleanMode}
             />
           </Suspense>
         )}

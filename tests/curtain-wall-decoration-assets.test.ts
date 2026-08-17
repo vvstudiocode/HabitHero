@@ -8,6 +8,8 @@ const migration = readFileSync(new URL('supabase/migrations/20260817000000_add_c
 const placementMigration = readFileSync(new URL('supabase/migrations/20260817081546_tune_curtain_wall_placement.sql', root), 'utf8');
 const sizeMigration = readFileSync(new URL('supabase/migrations/20260817083653_increase_wall_decoration_sizes.sql', root), 'utf8');
 const boundaryMigration = readFileSync(new URL('supabase/migrations/20260817083834_allow_outer_grass_wall_placement.sql', root), 'utf8');
+const shapeMigration = readFileSync(new URL('supabase/migrations/20260817090819_configure_decoration_collision_shapes.sql', root), 'utf8');
+const clearanceMigration = readFileSync(new URL('supabase/migrations/20260817093348_increase_decoration_navigation_inset.sql', root), 'utf8');
 
 describe('curtain wall decoration assets', () => {
   it('ships the supplied GLB and transparent catalog thumbnail', () => {
@@ -84,5 +86,19 @@ describe('curtain wall decoration assets', () => {
     assert.match(boundaryMigration, /visible_grass_boundary numeric := 13\.475/);
     assert.match(boundaryMigration, /outside the visible meadow/);
     assert.doesNotMatch(boundaryMigration, /decorations cannot overlap/);
+  });
+
+  it('defines shape-specific navigation footprints for furniture', () => {
+    assert.match(shapeMigration, /decoration\.study-desk[\s\S]*collisionShape', 'rectangle'[\s\S]*collisionWidth', 2\.0[\s\S]*collisionDepth', 1\.08/);
+    assert.match(shapeMigration, /decoration\.bed[\s\S]*collisionShape', 'rectangle'[\s\S]*collisionWidth', 1\.74[\s\S]*collisionDepth', 1\.99/);
+    assert.match(shapeMigration, /decoration\.curtain-wall[\s\S]*collisionShape', 'rectangle'[\s\S]*collisionWidth', 2\.0[\s\S]*collisionDepth', 0\.30/);
+    assert.match(shapeMigration, /decoration\.wall[\s\S]*collisionShape', 'rectangle'[\s\S]*collisionWidth', 2\.0[\s\S]*collisionDepth', 0\.30/);
+    assert.match(shapeMigration, /decoration\.study-chair[\s\S]*collisionShape', 'circle'/);
+    assert.match(shapeMigration, /decoration\.fountain[\s\S]*collisionShape', 'circle'/);
+  });
+
+  it('keeps a small positive inset instead of disabling decoration collision', () => {
+    assert.match(clearanceMigration, /navigationInset', 0\.25/);
+    assert.match(clearanceMigration, /collider|collision/);
   });
 });

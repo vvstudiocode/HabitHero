@@ -410,6 +410,10 @@
   outline-offset: 2px;
 }
 
+.hh-dashboard-screen--child.is-clean-mode .hh-bottom-nav {
+  display: none;
+}
+
 .hh-login-panel label {
   display: block;
   margin: 13px 0 7px;

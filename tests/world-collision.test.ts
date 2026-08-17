@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { CENTRAL_TREE_KEEP_OUT, CHARACTER_SPAWN, WORLD_BOUNDARY, buildCollisionCircles, getDecorationNavigationRadius, isTransformWithinWorld, moveWorldCharacter } from '../src/features/world/world-collision';
+import { CENTRAL_TREE_KEEP_OUT, CHARACTER_SPAWN, WORLD_BOUNDARY, buildCollisionCircles, circlesOverlap, getCollisionDistanceFromCenter, getDecorationCollisionSpec, getDecorationNavigationRadius, isTransformWithinWorld, moveWorldCharacter } from '../src/features/world/world-collision';
 
 const valid = { x: 2, y: 0, z: 2, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1 };
 
@@ -30,6 +30,72 @@ describe('world collision contract', () => {
       { positionX: 1, positionZ: 2, collisionRadius: 0, scale: 1.25 },
       { positionX: 2, positionZ: 3, collisionRadius: 0.4, scale: 1 },
     ]), [{ x: 2, z: 3, radius: 0.4 }]);
+  });
+
+  it('builds a thin rotated rectangle collider for a wall', () => {
+    const spec = getDecorationCollisionSpec({
+      collisionShape: 'rectangle',
+      collisionWidth: 2,
+      collisionDepth: 0.3,
+    }, 0.28);
+    const [wall] = buildCollisionCircles([{
+      positionX: 0,
+      positionZ: 0,
+      collisionRadius: spec.collisionRadius,
+      collisionShape: spec.collisionShape,
+      collisionWidth: spec.collisionWidth,
+      collisionDepth: spec.collisionDepth,
+      rotationY: 0,
+      scale: 1,
+    }]);
+    assert.equal(wall.shape, 'rectangle');
+    assert.equal(wall.halfWidth, 1);
+    assert.equal(wall.halfDepth, 0.15);
+    assert.equal(getCollisionDistanceFromCenter(wall, { x: 1, z: 0 }), 1);
+    assert.equal(getCollisionDistanceFromCenter(wall, { x: 0, z: 1 }), 0.15);
+    assert.equal(circlesOverlap({ x: 0, z: 0.2, radius: 0.1 }, wall), true);
+    assert.equal(circlesOverlap({ x: 0, z: 0.3, radius: 0.1 }, wall), false);
+    assert.equal(circlesOverlap({ x: 0, z: 0.2, radius: 0.1 }, { ...wall, rotationY: Math.PI / 2 }), true);
+  });
+
+  it('lets a character pass beside a furniture rectangle but blocks its face', () => {
+    const desk = buildCollisionCircles([{
+      positionX: 0,
+      positionZ: 0,
+      collisionRadius: 0.58,
+      collisionShape: 'rectangle',
+      collisionWidth: 2,
+      collisionDepth: 1,
+      rotationY: 0,
+      scale: 1,
+    }]);
+    const face = moveWorldCharacter({ x: 0, z: -1 }, { x: 0, z: -0.2 }, 0.1, desk);
+    const side = moveWorldCharacter({ x: -2, z: -1 }, { x: -2, z: 0.2 }, 0.1, desk);
+    assert.equal(face.z, -1);
+    assert.equal(side.z, 0.2);
+  });
+
+  it('keeps a small navigation inset so the character can approach the visible face', () => {
+    const spec = getDecorationCollisionSpec({
+      collisionShape: 'rectangle',
+      collisionWidth: 2,
+      collisionDepth: 0.3,
+      navigationInset: 0.25,
+    }, 0.28);
+    const [wall] = buildCollisionCircles([{
+      positionX: 0,
+      positionZ: 0,
+      collisionRadius: spec.collisionRadius,
+      collisionShape: spec.collisionShape,
+      collisionWidth: spec.collisionWidth,
+      collisionDepth: spec.collisionDepth,
+      navigationInset: spec.navigationInset,
+      scale: 1,
+    }]);
+    const close = moveWorldCharacter({ x: 0, z: -1 }, { x: 0, z: -0.32 }, 0.35, [wall]);
+    const through = moveWorldCharacter({ x: 0, z: -1 }, { x: 0, z: 0.2 }, 0.35, [wall]);
+    assert.equal(close.z, -0.32);
+    assert.equal(through.z, -1);
   });
 
   it('slides character movement around decorations and keeps it inside the boundary', () => {

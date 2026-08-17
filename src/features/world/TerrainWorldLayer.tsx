@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { Object3D } from 'three';
-import { Check, Minus, Plus, RotateCw, X } from 'lucide-react';
+import { Camera, Check, Minus, Plus, RotateCw, X } from 'lucide-react';
 import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
 import {
   CENTRAL_TREE_KEEP_OUT,
@@ -51,6 +51,9 @@ interface TerrainWorldLayerProps {
   onCancelPlacement?: () => void;
   onStartDecorationPlacement?: (entityId: string) => void;
   onCollectDecoration?: (entityId: string) => void;
+  cleanMode?: boolean;
+  cleanModeHintVisible?: boolean;
+  onCleanModeToggle?: () => void;
 }
 
 type ThreeNamespace = typeof import('three');
@@ -261,6 +264,9 @@ export function TerrainWorldLayer({
   onCancelPlacement,
   onStartDecorationPlacement,
   onCollectDecoration,
+  cleanMode = false,
+  cleanModeHintVisible = false,
+  onCleanModeToggle,
 }: TerrainWorldLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<PointerInputController | null>(null);
@@ -502,6 +508,24 @@ export function TerrainWorldLayer({
         document.body,
       )}
       <DynamicJoystick input={input} />
+      {onCleanModeToggle && !placement && (
+        <>
+          <button
+            type="button"
+            className={`hh-world-clean-mode-control${cleanMode ? ' is-hidden' : ''}`}
+            aria-label={cleanMode ? '恢復介面' : '開啟清爽模式'}
+            title={cleanMode ? '恢復介面' : '清爽模式／截圖'}
+            onClick={onCleanModeToggle}
+          >
+            <Camera size={17} strokeWidth={2.4} aria-hidden="true" />
+          </button>
+          {cleanMode && cleanModeHintVisible && (
+            <p className="hh-world-clean-mode-hint" role="status">
+              清爽模式已開啟，再點擊右下角可恢復介面
+            </p>
+          )}
+        </>
+      )}
       {placement && (
         <section
           className="hh-world-placement-controls"

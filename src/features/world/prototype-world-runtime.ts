@@ -6,7 +6,7 @@ import {
   CHARACTER_COLLISION_RADIUS,
   CHARACTER_SPAWN,
   circlesOverlap,
-  getDecorationNavigationRadius,
+  getDecorationCollisionSpec,
   WORLD_BOUNDARY,
   moveWorldCharacter,
   type CollisionCircle,
@@ -96,6 +96,18 @@ function getDecorationCatalogItem(gameData: ChildGameData, entity: ChildWorldEnt
   return catalogItemId
     ? gameData.catalog.find((item) => item.id === catalogItemId && item.itemType === 'decoration')
     : undefined;
+}
+
+function getDecorationCollisionInput(gameData: ChildGameData, entity: ChildWorldEntity) {
+  const item = getDecorationCatalogItem(gameData, entity);
+  const spec = getDecorationCollisionSpec(item?.metadata, entity.collisionRadius ?? 0.3);
+  return {
+    positionX: entity.x,
+    positionZ: entity.z,
+    scale: entity.scale,
+    rotationY: entity.rotationY,
+    ...spec,
+  };
 }
 
 export function getCharacterGroundingReferenceY(
@@ -1448,15 +1460,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
       const decorationCollisions = buildCollisionCircles(options.gameData.worldEntities
         .filter((entity) => entity.entityKind === 'decoration')
-        .map((entity) => {
-          const item = getDecorationCatalogItem(options.gameData, entity);
-          return {
-            positionX: entity.x,
-            positionZ: entity.z,
-            collisionRadius: getDecorationNavigationRadius(item?.metadata, entity.collisionRadius ?? 0.3),
-            scale: entity.scale,
-          };
-        }));
+        .map((entity) => getDecorationCollisionInput(options.gameData, entity)));
       const wanderObstacles = [CENTRAL_TREE_KEEP_OUT, ...decorationCollisions];
       const petSpawnObstacles = [CHARACTER_SPAWN, ...wanderObstacles];
       let petSpawnIndex = 0;
@@ -1863,15 +1867,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           }
         });
 
-        const nextCollisions = buildCollisionCircles([...activeDecorations.values()].map((entity) => {
-          const item = getDecorationCatalogItem(nextGameData, entity);
-          return {
-            positionX: entity.x,
-            positionZ: entity.z,
-            collisionRadius: getDecorationNavigationRadius(item?.metadata, entity.collisionRadius ?? 0.3),
-            scale: entity.scale,
-          };
-        }));
+        const nextCollisions = buildCollisionCircles([...activeDecorations.values()]
+          .map((entity) => getDecorationCollisionInput(nextGameData, entity)));
         decorationCollisions.splice(0, decorationCollisions.length, ...nextCollisions);
         wanderObstacles.splice(1, wanderObstacles.length - 1, ...nextCollisions);
       };
