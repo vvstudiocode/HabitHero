@@ -428,7 +428,7 @@ updated_at
 - 寵物只儲存是否放入世界與 behavior mode；閒逛的即時座標預設不需要每幀同步。
 - 跟隨寵物不佔 roaming slot；閒逛寵物只能使用 `1`、`2`、`3` 三個位置，並以唯一約束避免同一孩子超過三隻。
 - 所有座標、旋轉與比例都要由後端限制合理範圍，不能信任孩子端數值。
-- 裝飾碰撞 footprint 由 catalog metadata 定義；保存前同時在前端預覽與後端 RPC 驗證不可重疊。
+- 裝飾 footprint 由 catalog metadata 定義；保存前前端與後端仍驗證邊界、保護區與 scale。只有 decoration-to-decoration 允許重疊。
 - `world_layout_version` 用於未來 terrain 尺寸或地圖結構改變時遷移舊擺設。
 
 ### 6.8 核准更正紀錄 `task_approval_corrections`
@@ -760,10 +760,12 @@ git diff --check
 
 ### 11.2 放置限制
 
+> 現行實作覆蓋本計畫早期的「裝飾彼此不可重疊」假設：目前只有 decoration-to-decoration 允許重疊；人物仍使用較小的 `metadata.navigationRadius` 碰撞 proxy，不能穿過裝飾。詳見 [`docs/game-assets.md`](../../docs/game-assets.md)。
+
 - 只能放在允許的 terrain 區域。
 - 不能進入角色出生點、中央大樹根部與其他保護區。
 - 比例需限制在 catalog 定義的 min/max。
-- 裝飾彼此不可重疊；預覽與保存 RPC 都必須依 footprint 驗證。
+- 裝飾彼此可以重疊；預覽與保存 RPC 仍必須依可見草地、保護區與 scale footprint 驗證。
 - 裝飾形成實際碰撞，角色不可穿越；寵物尋路需繞開。
 - 不得埋入地面、超出世界或使用極端 scale。
 - 提供「全部收回背包」，以單一交易停用／移除目前孩子的所有 decoration entities。
@@ -830,7 +832,7 @@ git diff --check
 
 - 放置、旋轉、縮放、取消、保存。
 - terrain 邊界與 scale 驗證。
-- 裝飾不可重疊，並加入角色與寵物碰撞／繞路。
+- 裝飾可彼此重疊，並加入角色與寵物的獨立碰撞／繞路。
 - 加入角色出生點禁放區與「全部收回背包」。
 - 多裝置衝突處理。
 
@@ -890,7 +892,7 @@ git diff --check
 
 ### 13.8 閒逛寵物上限
 
-已確認：
+已確認（現行規則）：
 
 - 跟隨寵物：最多 1 隻。
 - 場景閒逛寵物：最多 3 隻。
@@ -901,7 +903,7 @@ git diff --check
 已確認：
 
 - 保留角色出生點與中央大樹根部禁放區
-- 裝飾彼此不可重疊
+- 只有裝飾彼此允許重疊；非裝飾物件不共用這個例外
 - 裝飾會阻擋角色與寵物，移動系統需停止或沿碰撞面滑動，寵物需繞路
 - 佈置預覽以綠色／紅色或等價非純色訊號表示可否放置
 - 提供「全部收回背包」安全操作
@@ -967,7 +969,7 @@ git diff --check
 - 只能裝備自己擁有的角色。
 - 同時最多一隻跟隨寵物。
 - 閒逛寵物遵守上限與場景邊界。
-- 裝飾不可重疊，角色與寵物不能穿越裝飾碰撞範圍。
+- 裝飾可彼此重疊，角色與寵物不能穿越裝飾的導航碰撞範圍。
 - 佈置取消能還原，完成能跨登入／跨裝置讀回。
 - 不合法座標、scale 或其他孩子的 inventory ID 會被後端拒絕。
 
@@ -1128,7 +1130,7 @@ CSS owner 固定為：
 - `scripts/security-check.mjs` 只檢查舊表，新增遊戲表後必須擴充
 - 購買、核准與世界放置需要 local Supabase 的雙 client 並發測試
 - 測試 harness 必須拒絕任何非 `127.0.0.1:54321` URL，避免誤寫遠端
-- 裝飾位置 RPC 需要 `expected_revision` 與孩子世界鎖，才能保證雙裝置不可重疊
+- 裝飾位置 RPC 需要 `expected_revision` 與孩子世界鎖，才能保證雙裝置不會遺失更新
 - 同一寵物不可同時 following 與 roaming，RPC 必須鎖 loadout 與 world entity 後驗證
 - Web 版離線資產尚無 service worker。第一版只承諾 Capacitor bundled assets 與同頁 session cache；不要宣稱 Web 冷啟動離線可用
 

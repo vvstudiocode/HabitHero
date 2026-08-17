@@ -72,7 +72,6 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /createAmbientPollenField/);
     assert.match(runtimeSource, /createSunlightPatchField/);
     assert.match(runtimeSource, /createButterflyField/);
-    assert.match(runtimeSource, /createNaturalBoundaryScenery/);
     assert.match(grassSceneSource, /createNaturalGroundMaterial/);
     assert.match(grassSceneSource, /outerGround\.receiveShadow = false/);
     assert.match(grassSceneSource, /walkableGround\.receiveShadow = true/);
@@ -87,7 +86,7 @@ describe('prototype world runtime contracts', () => {
     assert.match(creatureSource, /big-tree-butterflies/);
     assert.match(creatureSource, /CanvasTexture/);
     assert.match(creatureSource, /flapRate/);
-    assert.match(boundaryScenerySource, /natural-air-wall-transition/);
+    assert.doesNotMatch(boundaryScenerySource, /outer-showcase-tree|createProceduralShowcaseTree|distant-tree|distant-hill/);
     assert.match(runtimeSource, /createEastFairytaleScenery/);
     assert.match(read('../terrain-prototype/index.html'), /createEastFairytaleScenery/);
     assert.match(eastFairytaleSource, /east-fairytale-castle/);
@@ -99,10 +98,18 @@ describe('prototype world runtime contracts', () => {
     assert.match(eastFairytaleSource, /new THREE\.BoxGeometry\(0\.12, 1\.15, 0\.2\)/);
     assert.match(runtimeSource, /eastFairytaleScenery\.update\(sceneElapsedTime\)/);
     assert.match(read('../terrain-prototype/index.html'), /eastFairytaleScenery\?\.update\(sceneElapsedTime\)/);
-    assert.doesNotMatch(boundaryScenerySource, /outer-showcase-tree|createProceduralShowcaseTree|distant-tree|distant-hill/);
     assert.doesNotMatch(treeSceneSource, /createProceduralShowcaseTree/);
     assert.doesNotMatch(runtimeSource, /natural-ground-details|createNaturalGroundDetails/);
     assert.doesNotMatch(read('../terrain-prototype/index.html'), /natural-ground-details|createNaturalGroundDetails/);
+  });
+
+  it('removes the decorative stone, shrub, and log perimeter from both scene entry points', () => {
+    const standaloneSource = read('../terrain-prototype/index.html');
+
+    assert.doesNotMatch(runtimeSource, /natural-boundary-scenery/);
+    assert.doesNotMatch(runtimeSource, /createNaturalBoundaryScenery/);
+    assert.doesNotMatch(standaloneSource, /natural-boundary-scenery/);
+    assert.doesNotMatch(standaloneSource, /createNaturalBoundaryScenery/);
   });
 
   it('keeps the butterfly ring around a three-unit radius in both scene entry points', () => {

@@ -139,7 +139,6 @@
       import { createProceduralForest } from './procedural-trees.js';
       import { createAmbientPollenField, createSunlightPatchField } from './natural-world-atmosphere.js';
       import { createButterflyField, getButterflyFlightBounds } from './natural-world-creatures.js';
-      import { createNaturalBoundaryScenery } from './natural-boundary-scenery.js';
       import { createEastFairytaleScenery } from './east-fairytale-scenery.js';
       import { getNaturalWorldVisualSettings } from './natural-world-visuals.js';
 
@@ -479,10 +478,6 @@
           heightLimit: centralTreeHeight * 0.5,
           layers: 0,
         }));
-        terrain.add(createNaturalBoundaryScenery(THREE, {
-          boundary: terrainLimit,
-          quality: 'high',
-        }).group);
         eastFairytaleScenery = createEastFairytaleScenery(THREE, { quality: 'high' });
         terrain.add(eastFairytaleScenery.group);
         const butterflyFlightBounds = getButterflyFlightBounds({

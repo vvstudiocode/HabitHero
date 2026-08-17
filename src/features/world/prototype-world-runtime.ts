@@ -33,7 +33,6 @@ import {
   createButterflyField,
   getButterflyFlightBounds,
 } from '../../../terrain-prototype/natural-world-creatures.js';
-import { createNaturalBoundaryScenery } from '../../../terrain-prototype/natural-boundary-scenery.js';
 import { createEastFairytaleScenery } from '../../../terrain-prototype/east-fairytale-scenery.js';
 import { getNaturalWorldVisualSettings } from '../../../terrain-prototype/natural-world-visuals.js';
 import {
@@ -1280,10 +1279,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         heightLimit: centralTreeHeight * 0.5,
         layers: qualitySettings.forestLayers,
       }));
-      terrain.add(createNaturalBoundaryScenery(THREE, {
-        boundary: terrainLimit,
-        quality,
-      }).group);
       const eastFairytaleScenery = createEastFairytaleScenery(THREE, { quality });
       terrain.add(eastFairytaleScenery.group);
       const butterflyFlightBounds = getButterflyFlightBounds({

@@ -24,20 +24,36 @@ The replacement migration (`20260812101223_replace_legacy_pets_with_starlight_sp
 
 臥室家具與世界裝飾是可直接放入世界裝飾系統的靜態 GLB。使用既有 catalog key 與 metadata，不要為同一個模型建立另一組名稱或路徑；AI 要新增家具時，先查 `game_catalog_items` 的 `item_type='decoration'`，再依 `asset_key` 載入模型。
 
-| Catalog key | 名稱 | Model | Thumbnail | 三角面 | 檔案大小 | 預設縮放 | 允許縮放 | Ground offset | 碰撞半徑 | Scroll price |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `decoration.bed` | 木製床 | `public/assets/decorations/bed.glb` | `public/assets/decorations/bed-thumbnail.png` | 15,505 | 約 511 KB | `0.82` | `0.35–1.15` | `0.426` | `1.05` | 10 |
-| `decoration.nightstand` | 床頭櫃 | `public/assets/decorations/nightstand.glb` | `public/assets/decorations/nightstand-thumbnail.png` | 8,511 | 約 177 KB | `0.5` | `0.25–0.8` | `1` | `0.52` | 6 |
-| `decoration.adventure-table` | 冒險桌 | `public/assets/decorations/adventure-table.glb` | `public/assets/decorations/adventure-table-thumbnail.png` | 12,697 | 約 414 KB | `0.5` | `0.25–0.9` | `0.5455` | `0.78` | 9 |
-| `decoration.fountain` | 噴泉 | `public/assets/decorations/fountain.glb` | `public/assets/decorations/fountain-thumbnail.png` | 10,991 | 約 405 KB | `0.45` | `0.25–0.75` | `1` | `0.68` | 8 |
+### Current decoration rules
+
+這一節是目前實作的裝飾規則來源；若舊 plan、舊 migration 或錯誤訊息與這裡不同，以目前最後一個 migration、runtime 與測試的結果為準。
+
+- 只有 `item_type='decoration'` 的裝飾彼此允許重疊。放置流程與 Supabase `validate_world_transform` 都不再做 decoration-to-decoration overlap rejection；這不是把所有世界物件的碰撞都關掉。
+- 裝飾仍必須通過可見草地邊界、角色出生點、中央大樹保護區與 catalog 的 `min_scale`／`max_scale` 驗證。
+- `collision_radius` 必須保持正值，供資料庫邊界與有效性檢查使用；不要把它設成 `0` 來表示可重疊。
+- `metadata.navigationRadius` 是人物／寵物在 runtime 使用的較小導航碰撞 proxy。它可以小於 `collision_radius`，讓人物靠近模型但仍不能穿過。
+- 新增裝飾時必須同步更新：`public/assets/decorations/`、`src/features/world/game-content-assets.ts`、Supabase catalog migration、資產契約測試與本文件。
+- migration 必須用 `npx supabase migration new ...` 建立，並在遠端部署後確認 migration history、catalog row 與最新 RPC 函式定義。
+
+| Catalog key | 名稱 | Model | Thumbnail | 預設縮放 | 允許縮放 | Ground offset | `collision_radius` | `navigationRadius` | Scroll price |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `decoration.study-desk` | 木製書桌 | `public/assets/decorations/study-desk.glb` | `public/assets/decorations/study-desk-thumbnail.png` | `0.62` | `0.1–0.8` | `0.713` | `0.74` | `0.58` | 6 |
+| `decoration.bookcase` | 木製書櫃 | `public/assets/decorations/bookcase.glb` | `public/assets/decorations/bookcase-thumbnail.png` | `0.4` | `0.1–0.65` | `1` | `0.66` | `0.48` | 7 |
+| `decoration.study-chair` | 木製椅子 | `public/assets/decorations/study-chair.glb` | `public/assets/decorations/study-chair-thumbnail.png` | `0.36` | `0.1–0.65` | `1` | `0.5` | `0.36` | 5 |
+| `decoration.bed` | 木製床 | `public/assets/decorations/bed.glb` | `public/assets/decorations/bed-thumbnail.png` | `0.82` | `0.35–1.15` | `0.426` | `1.05` | `0.56` | 10 |
+| `decoration.nightstand` | 床頭櫃 | `public/assets/decorations/nightstand.glb` | `public/assets/decorations/nightstand-thumbnail.png` | `0.5` | `0.25–0.8` | `1` | `0.52` | `0.32` | 6 |
+| `decoration.adventure-table` | 冒險桌 | `public/assets/decorations/adventure-table.glb` | `public/assets/decorations/adventure-table-thumbnail.png` | `0.5` | `0.25–0.9` | `0.5455` | `0.78` | `0.48` | 9 |
+| `decoration.fountain` | 噴泉 | `public/assets/decorations/fountain.glb` | `public/assets/decorations/fountain-thumbnail.png` | `0.45` | `0.25–0.75` | `1` | `0.68` | `0.4` | 8 |
+| `decoration.curtain-wall` | 窗簾牆 | `public/assets/decorations/curtain-wall.glb` | `public/assets/decorations/curtain-wall-thumbnail.webp` | `0.72` | `0.25–1.5` | `0.6102` | `0.28` | `0.28` | 8 |
+| `decoration.wall` | 牆壁 | `public/assets/decorations/wall.glb` | `public/assets/decorations/wall-thumbnail.webp` | `0.72` | `0.25–1.5` | `0.6309` | `0.28` | `0.28` | 6 |
 
 ### AI decoration loading rules
 
-- `model` 與 `thumbnail` 路徑以 catalog metadata 為準；目前路徑分別是上表的 `/assets/decorations/*.glb` 與 `/assets/decorations/*-thumbnail.png`。
+- `model` 與 `thumbnail` 路徑以本機 manifest 與 catalog metadata 為準；縮圖可以是 PNG，也可以是含透明通道的 WebP。
 - 這些 GLB 是靜態家具／場景裝飾，沒有角色骨架或動畫，不要套用 character/pet 的 `SkeletonUtils.clone()`、walk、idle 或 root-motion 流程。
-- 放置時沿用 catalog 的 `defaultScale`、`groundOffset`、`collision_radius`、`min_scale` 與 `max_scale`；不要在 UI 或 runtime 另外加固定偏移。
+- 放置時沿用 catalog 的 `defaultScale`、`groundOffset`、`collision_radius`、`min_scale`、`max_scale` 與 `navigationRadius`；不要在 UI 或 runtime 另外加固定偏移或重新發明一套碰撞半徑。
 - GLB 內含 Draco geometry、1024px WebP textures、`NORMAL`、`TEXCOORD_0` 與 MikkTSpace `TANGENT`。若重新優化，必須保留 UV／法線接縫並重新產生 tangents；不要使用會跨越材質或 UV seam 的 permissive simplification。
-- 目前已用 `20260816045548_add_bedroom_decorations.sql` 建立臥室家具 rows、`20260816052206_improve_bedroom_decoration_assets.sql` 記錄床與床頭櫃新版面數，並用 `20260816053842_add_adventure_table_fountain_decorations.sql` 建立冒險桌與噴泉 rows。修改家具模型後，同步更新 migration metadata、對應資產測試與本節數值。
+- 目前已用 `20260816045548_add_bedroom_decorations.sql` 建立床與床頭櫃、`20260815160614_add_study_room_decorations.sql` 建立書桌／書櫃／椅子、`20260816053842_add_adventure_table_fountain_decorations.sql` 建立冒險桌／噴泉，並用 `20260817000000_add_curtain_wall_decoration.sql` 與後續 wall migrations 建立兩面牆。修改家具模型後，同步更新 migration metadata、對應資產測試與本節數值。
 - `/Users/studio.vv/Downloads/床.glb`、`/Users/studio.vv/Downloads/床頭櫃.glb`、`/Users/studio.vv/Downloads/冒險桌.glb` 與 `/Users/studio.vv/Downloads/噴泉.glb` 是原始來源備份，不是 runtime asset；世界與商店只能使用 `public/assets/decorations/` 內的新版檔案。
 
 ## Big Tree
