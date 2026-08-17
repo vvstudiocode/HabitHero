@@ -45,6 +45,7 @@ const DECORATION_ASSETS: Readonly<Record<string, LocalGameAsset>> = {
   'decoration.adventure-table': { modelUrl: '/assets/decorations/adventure-table.glb', thumbnailUrl: '/assets/decorations/adventure-table-thumbnail.png' },
   'decoration.bed': { modelUrl: '/assets/decorations/bed.glb', thumbnailUrl: '/assets/decorations/bed-thumbnail.png' },
   'decoration.bookcase': { modelUrl: '/assets/decorations/bookcase.glb', thumbnailUrl: '/assets/decorations/bookcase-thumbnail.png' },
+  'decoration.curtain-wall': { modelUrl: '/assets/decorations/curtain-wall.glb', thumbnailUrl: '/assets/decorations/curtain-wall-thumbnail.webp' },
   'decoration.fountain': { modelUrl: '/assets/decorations/fountain.glb', thumbnailUrl: '/assets/decorations/fountain-thumbnail.png' },
   'decoration.nightstand': { modelUrl: '/assets/decorations/nightstand.glb', thumbnailUrl: '/assets/decorations/nightstand-thumbnail.png' },
   'decoration.study-chair': { modelUrl: '/assets/decorations/study-chair.glb', thumbnailUrl: '/assets/decorations/study-chair-thumbnail.png' },

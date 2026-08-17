@@ -6,6 +6,10 @@ export const BUTTERFLY_PALETTE = Object.freeze([
   0xfff1bd,
 ]);
 
+export const BUTTERFLY_TREE_CLEARANCE = 0.55;
+export const BUTTERFLY_FLIGHT_SPREAD = 0.6;
+const BUTTERFLY_MAX_DRIFT_RADIUS = 0.32;
+
 function createRandom(seed) {
   let state = seed >>> 0;
 
@@ -26,16 +30,38 @@ function requirePositiveNumber(value, name) {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be a positive number`);
 }
 
+export function getButterflyFlightBounds({
+  treeFootprintRadius = 0,
+  clearance = BUTTERFLY_TREE_CLEARANCE,
+  spread = BUTTERFLY_FLIGHT_SPREAD,
+  maxRadius = undefined,
+} = {}) {
+  requirePositiveNumber(treeFootprintRadius, 'treeFootprintRadius');
+  requirePositiveNumber(clearance, 'clearance');
+  requirePositiveNumber(spread, 'spread');
+
+  const resolvedMaxRadius = maxRadius
+    ?? treeFootprintRadius + clearance + BUTTERFLY_MAX_DRIFT_RADIUS + spread;
+  requirePositiveNumber(resolvedMaxRadius, 'maxRadius');
+  const minRadius = resolvedMaxRadius - spread;
+  if (minRadius <= 0) throw new Error('maxRadius must be greater than spread');
+  return { minRadius, maxRadius: resolvedMaxRadius };
+}
+
 export function createButterflyLayout({
   count = 4,
   center = { x: 0, z: -0.55 },
   radius = 1.6,
+  minRadius = undefined,
   minHeight = 1.25,
   maxHeight = 2.55,
   seed = 20260811,
 } = {}) {
   requirePositiveInteger(count, 'count');
   requirePositiveNumber(radius, 'radius');
+  const innerRadius = minRadius ?? radius * 0.72;
+  requirePositiveNumber(innerRadius, 'minRadius');
+  if (innerRadius > radius) throw new Error('minRadius must be less than or equal to radius');
   requirePositiveNumber(minHeight, 'minHeight');
   requirePositiveNumber(maxHeight, 'maxHeight');
   if (maxHeight <= minHeight) throw new Error('maxHeight must be greater than minHeight');
@@ -46,7 +72,7 @@ export function createButterflyLayout({
     // Keep the same number of butterflies, but place them around a stable
     // outer ring so the camera does not make a random disk look front-heavy.
     const angle = Math.PI * 0.25 + (index / count) * Math.PI * 2;
-    const distance = radius * (0.72 + random() * 0.28);
+    const distance = innerRadius + random() * (radius - innerRadius);
     return {
       x: center.x + Math.cos(angle) * distance,
       y: minHeight + random() * (maxHeight - minHeight),

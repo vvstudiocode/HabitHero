@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { dismissWithAnimation } from '../lib/utils';
+import { groupParentTodoTasks, type GroupedTask } from '../lib/parent-task-grouping';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
 import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, MinusCircle, Plus, PlusCircle, ShoppingBag, Star, Users, X, Trash2, Edit2, PlayCircle, Settings } from 'lucide-react';
 import { TaskStatus, Task, Reward, type ChildGender } from '../types';
@@ -50,18 +51,6 @@ interface ParentDashboardProps {
   onLogout: () => void;
   signupConsentAccepted?: boolean;
 }
-
-type GroupedTask = {
-  id: string;
-  name: string;
-  points: number;
-  duration?: number;
-  dueTime?: string | null;
-  endTime?: string | null;
-  requiresReviewBeforeNextTask?: boolean;
-  category?: TaskCategory;
-  children: { childId: string; childName: string; taskId: string }[];
-};
 
 type GroupedReward = {
   id: string;
@@ -157,15 +146,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const activeGeneralGroups = state.adventureGroups?.filter(group => group.status === 'active') ?? [];
   const generalAdventureTitle = activeGeneralGroups[0]?.title ?? '一般冒險';
 
-  const groupedTodoTasks = Object.values(todoTasks.reduce((acc, task) => {
-    const key = `${task.name}-${task.points}-${task.duration || ''}-${task.dueTime || ''}-${task.endTime || ''}-${task.category || DEFAULT_TASK_CATEGORY}-${task.isDaily ? 'daily' : 'once'}-${task.requiresReviewBeforeNextTask ? 'review-gated' : 'free'}`;
-    if (!acc[key]) {
-      acc[key] = { id: key, name: task.name, points: task.points, duration: task.duration, dueTime: task.dueTime, endTime: task.endTime, category: task.category, isDaily: task.isDaily, requiresReviewBeforeNextTask: task.requiresReviewBeforeNextTask, children: [{ childId: task.childId, childName: task.childName, taskId: task.id }] };
-    } else {
-      acc[key].children.push({ childId: task.childId, childName: task.childName, taskId: task.id });
-    }
-    return acc;
-  }, {} as Record<string, GroupedTask & { isDaily?: boolean }>)) as (GroupedTask & { isDaily?: boolean })[];
+  const groupedTodoTasks = groupParentTodoTasks(todoTasks, DEFAULT_TASK_CATEGORY);
 
   const allRewards = state.children.flatMap(c => c.rewards.map(r => ({ ...r, childId: c.id, childName: c.name })));
   const groupedRewards = Object.values(allRewards.reduce((acc, reward) => {
@@ -391,7 +372,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       for (const childId of newTaskTargetChildIds) {
         const existingChild = editingTask.children.find(c => c.childId === childId);
         if (existingChild) {
-          await updateTask(childId, existingChild.taskId, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, requiresReviewBeforeNextTask: false } as never);
+          for (const taskId of existingChild.taskIds) {
+            await updateTask(childId, taskId, { name: newTaskName, points: newTaskPoints, duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, requiresReviewBeforeNextTask: false } as never);
+          }
         } else {
           await addTask(childId, { name: newTaskName, points: newTaskPoints, icon: 'Star', duration, dueTime, endTime, isDaily: newTaskIsDaily, category: newTaskCategory, origin: 'parent_assigned', requiresReviewBeforeNextTask: false } as never);
         }
@@ -401,7 +384,9 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       for (const childId of existingChildIds.filter(childId => !newTaskTargetChildIds.includes(childId))) {
         if (!newTaskTargetChildIds.includes(childId)) {
           const existingChild = editingTask.children.find(c => c.childId === childId);
-          if (existingChild) await deleteTask(childId, existingChild.taskId);
+          if (existingChild) {
+            for (const taskId of existingChild.taskIds) await deleteTask(childId, taskId);
+          }
         }
       }
     } else {
@@ -601,7 +586,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
 
   const handleDeleteTaskGroup = (group: GroupedTask) => {
-    group.children.forEach(c => deleteTask(c.childId, c.taskId));
+    group.children.forEach(c => c.taskIds.forEach(taskId => deleteTask(c.childId, taskId)));
   };
 
   const calendarTaskGroup = (task: ParentCalendarAdventureTask): GroupedTask & { isDaily?: boolean } => ({
@@ -614,7 +599,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     category: (task.category as TaskCategory | undefined) ?? DEFAULT_TASK_CATEGORY,
     isDaily: task.isDaily ?? task.adventureType === 'daily',
     requiresReviewBeforeNextTask: task.requiresReviewBeforeNextTask,
-    children: [{ childId: task.childId, childName: task.childName, taskId: task.id }],
+    children: [{ childId: task.childId, childName: task.childName, taskId: task.id, taskIds: [task.id] }],
   });
 
   const openRewardForm = (group?: GroupedReward) => {

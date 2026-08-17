@@ -105,10 +105,18 @@ describe('prototype world runtime contracts', () => {
     assert.doesNotMatch(read('../terrain-prototype/index.html'), /natural-ground-details|createNaturalGroundDetails/);
   });
 
-  it('keeps the butterfly ring close to the big tree in both scene entry points', () => {
+  it('keeps the butterfly ring around a three-unit radius in both scene entry points', () => {
     const standaloneSource = read('../terrain-prototype/index.html');
-    assert.match(runtimeSource, /center:\s*\{\s*x:\s*treePlacement\.x,\s*z:\s*treePlacement\.z,\s*\},\s*radius:\s*0\.9/);
-    assert.match(standaloneSource, /center:\s*\{\s*x:\s*TREE_POSITION\.x,\s*z:\s*TREE_POSITION\.z\s*\},\s*radius:\s*0\.9/);
+    assert.match(runtimeSource, /getButterflyFlightBounds/);
+    assert.match(runtimeSource, /treeFootprintRadius:\s*treePlacement\.footprintRadius/);
+    assert.match(runtimeSource, /maxRadius:\s*3/);
+    assert.match(runtimeSource, /minRadius:\s*butterflyFlightBounds\.minRadius/);
+    assert.match(runtimeSource, /radius:\s*butterflyFlightBounds\.maxRadius/);
+    assert.match(standaloneSource, /getButterflyFlightBounds/);
+    assert.match(standaloneSource, /treeFootprintRadius:\s*treePlacement\.footprintRadius/);
+    assert.match(standaloneSource, /maxRadius:\s*3/);
+    assert.match(standaloneSource, /minRadius:\s*butterflyFlightBounds\.minRadius/);
+    assert.match(standaloneSource, /radius:\s*butterflyFlightBounds\.maxRadius/);
   });
 
   it('places the imported big tree at the upper outer edge in both scene entry points', () => {
@@ -135,6 +143,7 @@ describe('prototype world runtime contracts', () => {
     });
     assert.ok(placement.z + placement.halfDepth < -4.862);
     assert.ok(placement.z < -4.862);
+    assert.ok(placement.footprintRadius > 0);
   });
 
   it('wires the portrait control band to independent movement, camera, and pinch input', () => {

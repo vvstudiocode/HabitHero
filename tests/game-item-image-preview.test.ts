@@ -130,6 +130,12 @@ test('item detail preview includes the item description and price contract', () 
   assert.doesNotMatch(previewSource, /categoryLabel/);
 });
 
+test('item detail copy and actions keep a 20px horizontal gutter', () => {
+  assert.match(modalStyles, /\.hh-game-item-lightbox-content\s*\{[\s\S]*?--hh-game-item-lightbox-inline-gutter:\s*20px;/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-copy\s*\{[\s\S]*?width:\s*min\(calc\(100% - \(var\(--hh-game-item-lightbox-inline-gutter\) \* 2\)\), 420px\);/);
+  assert.match(modalStyles, /\.hh-game-item-lightbox-actions\s*\{[\s\S]*?width:\s*min\(calc\(100% - \(var\(--hh-game-item-lightbox-inline-gutter\) \* 2\)\), 420px\);/);
+});
+
 test('item detail preview owns the child purchase action', () => {
   assert.match(previewSource, /purchaseDisabled/);
   assert.match(previewSource, /purchaseLabel/);

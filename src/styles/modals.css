@@ -588,6 +588,7 @@
   position: relative;
   z-index: 1;
   box-sizing: border-box;
+  --hh-game-item-lightbox-inline-gutter: 20px;
   display: grid;
   width: 100%;
   max-width: 100%;
@@ -672,7 +673,7 @@
 .hh-game-item-lightbox-copy {
   display: grid;
   gap: 6px;
-  width: min(100%, 420px);
+  width: min(calc(100% - (var(--hh-game-item-lightbox-inline-gutter) * 2)), 420px);
 }
 
 .hh-game-item-lightbox-copy strong {
@@ -700,7 +701,7 @@
 .hh-game-item-lightbox-actions {
   display: grid;
   gap: 8px;
-  width: min(100%, 420px);
+  width: min(calc(100% - (var(--hh-game-item-lightbox-inline-gutter) * 2)), 420px);
 }
 
 .hh-game-item-lightbox-actions > .hh-game-action-button {

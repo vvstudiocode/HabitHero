@@ -28,7 +28,10 @@ import { createProceduralGrassField } from '../../../terrain-prototype/procedura
 import { createProceduralFlowerField } from '../../../terrain-prototype/procedural-flowers.js';
 import { createProceduralForest } from '../../../terrain-prototype/procedural-trees.js';
 import { createAmbientPollenField, createSunlightPatchField } from '../../../terrain-prototype/natural-world-atmosphere.js';
-import { createButterflyField } from '../../../terrain-prototype/natural-world-creatures.js';
+import {
+  createButterflyField,
+  getButterflyFlightBounds,
+} from '../../../terrain-prototype/natural-world-creatures.js';
 import { createNaturalBoundaryScenery } from '../../../terrain-prototype/natural-boundary-scenery.js';
 import { createEastFairytaleScenery } from '../../../terrain-prototype/east-fairytale-scenery.js';
 import { getNaturalWorldVisualSettings } from '../../../terrain-prototype/natural-world-visuals.js';
@@ -172,6 +175,7 @@ export function getOuterTreePlacement({
     z: -(terrainLimit + halfDepth + edgePadding),
     scale,
     halfDepth,
+    footprintRadius: (footprint * scale) / 2,
   };
 }
 
@@ -1273,13 +1277,18 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       }).group);
       const eastFairytaleScenery = createEastFairytaleScenery(THREE, { quality });
       terrain.add(eastFairytaleScenery.group);
+      const butterflyFlightBounds = getButterflyFlightBounds({
+        treeFootprintRadius: treePlacement.footprintRadius,
+        maxRadius: 3,
+      });
       const butterflies = createButterflyField(THREE, {
         count: visualSettings.butterflyCount,
         center: {
           x: treePlacement.x,
           z: treePlacement.z,
         },
-        radius: 0.9,
+        minRadius: butterflyFlightBounds.minRadius,
+        radius: butterflyFlightBounds.maxRadius,
         minHeight: 0.78,
         maxHeight: 1.35,
       });

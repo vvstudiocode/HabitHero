@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   BUTTERFLY_PALETTE,
   createButterflyLayout,
+  getButterflyFlightBounds,
 } from '../terrain-prototype/natural-world-creatures.js';
 import {
   BOUNDARY_SCENERY_TYPES,
@@ -64,6 +65,24 @@ describe('natural afternoon scenery', () => {
     assert.equal(layout.some((butterfly) => butterfly.x > 0), true);
     assert.equal(layout.some((butterfly) => butterfly.z < 0), true);
     assert.equal(layout.some((butterfly) => butterfly.z > 0), true);
+  });
+
+  it('keeps the expanded butterfly ring around the requested three-unit radius', () => {
+    const bounds = getButterflyFlightBounds({ treeFootprintRadius: 3.96, maxRadius: 3 });
+    const layout = createButterflyLayout({
+      count: 5,
+      center: { x: 1.1, z: -8.9 },
+      minRadius: bounds.minRadius,
+      radius: bounds.maxRadius,
+      seed: 42,
+    });
+
+    assert.equal(bounds.minRadius, 2.4);
+    assert.equal(bounds.maxRadius, 3);
+    assert.equal(layout.every((butterfly) => {
+      const distance = Math.hypot(butterfly.x - 1.1, butterfly.z + 8.9);
+      return distance >= bounds.minRadius && distance <= bounds.maxRadius;
+    }), true);
   });
 
   it('builds a layered boundary transition without turning the air wall into a tree fence', () => {
