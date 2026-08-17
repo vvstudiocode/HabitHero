@@ -54,6 +54,7 @@ interface TerrainWorldLayerProps {
   cleanMode?: boolean;
   cleanModeHintVisible?: boolean;
   onCleanModeToggle?: () => void;
+  onCleanModeHintDismiss?: () => void;
 }
 
 type ThreeNamespace = typeof import('three');
@@ -186,7 +187,7 @@ function getEquippedCatalogItem(gameData: ChildGameData): GameCatalogItem | unde
   return equippedItem && equippedItem.isActive
     ? equippedItem
     : gameData.catalog.find((item) => item.itemType === 'character' && item.isActive && item.assetKey === DEFAULT_WORLD_CHARACTER.assetKey)
-      ?? DEFAULT_WORLD_CHARACTER;
+    ?? DEFAULT_WORLD_CHARACTER;
 }
 
 function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
@@ -267,6 +268,7 @@ export function TerrainWorldLayer({
   cleanMode = false,
   cleanModeHintVisible = false,
   onCleanModeToggle,
+  onCleanModeHintDismiss,
 }: TerrainWorldLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<PointerInputController | null>(null);
@@ -520,9 +522,27 @@ export function TerrainWorldLayer({
             <Camera size={17} strokeWidth={2.4} aria-hidden="true" />
           </button>
           {cleanMode && cleanModeHintVisible && (
-            <p className="hh-world-clean-mode-hint" role="status">
-              清爽模式已開啟，再點擊右下角可恢復介面
-            </p>
+            <div
+              className="hh-world-clean-mode-hint"
+              data-clean-mode-hint
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="hh-world-clean-mode-hint-title"
+              aria-describedby="hh-world-clean-mode-hint-description"
+            >
+              <div className="hh-world-clean-mode-hint-card">
+                <strong id="hh-world-clean-mode-hint-title">清爽模式已開啟</strong>
+                <p id="hh-world-clean-mode-hint-description">點擊相機位置或單指點擊兩下可恢復介面</p>
+                <button
+                  type="button"
+                  className="hh-world-clean-mode-confirm"
+                  autoFocus
+                  onClick={onCleanModeHintDismiss}
+                >
+                  確定
+                </button>
+              </div>
+            </div>
           )}
         </>
       )}

@@ -27,7 +27,12 @@ import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
 import { emptyChildGameData, type GameCatalogItem, type GamePurchaseResult, type WorldMutationResult } from '../features/world/contracts';
 import { getPetNameDisplayPreference, setPetNameDisplayPreference } from '../features/world/pet-name-display-preference';
-import { isTwoFingerTapGesture } from '../features/world/clean-screen-mode';
+import {
+  CLEAN_MODE_DOUBLE_TAP_MAX_INTERVAL_MS,
+  CLEAN_MODE_DOUBLE_TAP_MAX_MOVEMENT_PX,
+  CLEAN_MODE_DOUBLE_TAP_MAX_TAP_DURATION_MS,
+  isSingleFingerDoubleTapGesture,
+} from '../features/world/clean-screen-mode';
 import { buildCollisionCircles } from '../features/world/world-collision';
 import { toWorldMutationErrorMessage } from '../features/world/world-errors';
 import {
@@ -153,14 +158,19 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const heroMenuOpenFrame = useRef<number | null>(null);
   const heroMenuCloseTimer = useRef<number | null>(null);
   const featureContentRef = useRef<HTMLElement>(null);
-  const cleanModeHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasShownCleanModeHint = useRef(false);
   const cleanModeGestureRef = useRef<{
-    active: Map<number, { x: number; y: number }>;
-    maxConcurrentPointers: number;
-    startedAt: number;
+    active: {
+      pointerId: number;
+      x: number;
+      y: number;
+      startedAt: number;
+      maxMovementPx: number;
+    } | null;
+    tapCount: number;
+    lastTapAt: number;
     maxMovementPx: number;
-    cancelled: boolean;
+    maxTapDurationMs: number;
   } | null>(null);
 
   useEffect(() => {
@@ -204,61 +214,105 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setCleanMode(false);
     setCleanModeHintVisible(false);
     hasShownCleanModeHint.current = false;
-    if (cleanModeHintTimer.current) {
-      clearTimeout(cleanModeHintTimer.current);
-      cleanModeHintTimer.current = null;
-    }
   }, [activeChildId]);
 
   useEffect(() => {
-    cleanModeGestureRef.current = null;
+    cleanModeGestureRef.current = {
+      active: null,
+      tapCount: 0,
+      lastTapAt: 0,
+      maxMovementPx: 0,
+      maxTapDurationMs: 0,
+    };
     if (!cleanMode) return undefined;
 
     const eventTime = (event: PointerEvent) => Number.isFinite(event.timeStamp) ? event.timeStamp : performance.now();
+    const resetGesture = () => {
+      cleanModeGestureRef.current = {
+        active: null,
+        tapCount: 0,
+        lastTapAt: 0,
+        maxMovementPx: 0,
+        maxTapDurationMs: 0,
+      };
+    };
     const handlePointerDown = (event: PointerEvent) => {
       if (event.pointerType !== 'touch') return;
-      let gesture = cleanModeGestureRef.current;
-      if (!gesture || gesture.active.size === 0) {
-        gesture = {
-          active: new Map(),
-          maxConcurrentPointers: 0,
-          startedAt: eventTime(event),
-          maxMovementPx: 0,
-          cancelled: false,
-        };
-        cleanModeGestureRef.current = gesture;
+      if (event.target instanceof Element && event.target.closest('[data-clean-mode-hint]')) {
+        resetGesture();
+        return;
       }
-      if (gesture.active.has(event.pointerId)) return;
-      gesture.active.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      gesture.maxConcurrentPointers = Math.max(gesture.maxConcurrentPointers, gesture.active.size);
-      if (gesture.active.size > 2) gesture.cancelled = true;
+      let gesture = cleanModeGestureRef.current;
+      if (!gesture) {
+        resetGesture();
+        gesture = cleanModeGestureRef.current;
+      }
+      if (!gesture) return;
+      if (gesture.active) {
+        resetGesture();
+        return;
+      }
+      const now = eventTime(event);
+      if (gesture.tapCount > 0 && now - gesture.lastTapAt > CLEAN_MODE_DOUBLE_TAP_MAX_INTERVAL_MS) {
+        resetGesture();
+        gesture = cleanModeGestureRef.current;
+      }
+      if (!gesture) return;
+      gesture.active = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        startedAt: now,
+        maxMovementPx: 0,
+      };
     };
     const handlePointerMove = (event: PointerEvent) => {
       const gesture = cleanModeGestureRef.current;
-      const start = gesture?.active.get(event.pointerId);
-      if (!gesture || !start) return;
-      gesture.maxMovementPx = Math.max(
-        gesture.maxMovementPx,
-        Math.hypot(event.clientX - start.x, event.clientY - start.y),
+      const active = gesture?.active;
+      if (!gesture || !active || active.pointerId !== event.pointerId) return;
+      active.maxMovementPx = Math.max(
+        active.maxMovementPx,
+        Math.hypot(event.clientX - active.x, event.clientY - active.y),
       );
     };
     const handlePointerEnd = (event: PointerEvent, cancelled: boolean) => {
       const gesture = cleanModeGestureRef.current;
-      if (!gesture || !gesture.active.has(event.pointerId)) return;
-      if (cancelled) gesture.cancelled = true;
-      gesture.active.delete(event.pointerId);
-      if (gesture.active.size > 0) return;
+      const active = gesture?.active;
+      if (!gesture || !active || active.pointerId !== event.pointerId) return;
+      gesture.active = null;
+      if (cancelled) {
+        resetGesture();
+        return;
+      }
+      const now = eventTime(event);
+      const tapDurationMs = now - active.startedAt;
+      if (tapDurationMs < 0 || tapDurationMs > CLEAN_MODE_DOUBLE_TAP_MAX_TAP_DURATION_MS || active.maxMovementPx > CLEAN_MODE_DOUBLE_TAP_MAX_MOVEMENT_PX) {
+        resetGesture();
+        return;
+      }
 
-      const shouldRestore = isTwoFingerTapGesture({
-        maxConcurrentPointers: gesture.maxConcurrentPointers,
-        durationMs: eventTime(event) - gesture.startedAt,
+      const intervalMs = gesture.tapCount === 0 ? 0 : now - gesture.lastTapAt;
+      if (gesture.tapCount > 0 && (intervalMs < 0 || intervalMs > CLEAN_MODE_DOUBLE_TAP_MAX_INTERVAL_MS)) {
+        gesture.tapCount = 0;
+        gesture.maxMovementPx = 0;
+        gesture.maxTapDurationMs = 0;
+      }
+      gesture.tapCount += 1;
+      gesture.lastTapAt = now;
+      gesture.maxMovementPx = Math.max(gesture.maxMovementPx, active.maxMovementPx);
+      gesture.maxTapDurationMs = Math.max(gesture.maxTapDurationMs, tapDurationMs);
+      const shouldRestore = isSingleFingerDoubleTapGesture({
+        tapCount: gesture.tapCount,
+        intervalMs: gesture.tapCount === 2 ? intervalMs : 0,
         maxMovementPx: gesture.maxMovementPx,
-        cancelled: gesture.cancelled,
+        maxTapDurationMs: gesture.maxTapDurationMs,
       });
-      cleanModeGestureRef.current = null;
       if (shouldRestore) {
         setCleanMode(false);
         setCleanModeHintVisible(false);
+        resetGesture();
+      } else if (gesture.tapCount >= 2) {
+        resetGesture();
       }
     };
 
@@ -277,10 +331,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     };
   }, [cleanMode]);
 
-  useEffect(() => () => {
-    if (cleanModeHintTimer.current) clearTimeout(cleanModeHintTimer.current);
-  }, []);
-
   const handleShowPetNamesChange = (visible: boolean) => {
     if (!activeChildId) return;
     setShowPetNames(visible);
@@ -297,21 +347,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     if (cleanMode) {
       setCleanMode(false);
       setCleanModeHintVisible(false);
-      if (cleanModeHintTimer.current) {
-        clearTimeout(cleanModeHintTimer.current);
-        cleanModeHintTimer.current = null;
-      }
       return;
     }
     setCleanMode(true);
     if (hasShownCleanModeHint.current) return;
     hasShownCleanModeHint.current = true;
     setCleanModeHintVisible(true);
-    if (cleanModeHintTimer.current) clearTimeout(cleanModeHintTimer.current);
-    cleanModeHintTimer.current = setTimeout(() => {
-      setCleanModeHintVisible(false);
-      cleanModeHintTimer.current = null;
-    }, 2200);
   };
   const activeGeneralAdventureGroup = state.adventureGroups?.find(
     (group) => group.childProfileId === activeChildId && group.status === 'active',
@@ -946,6 +987,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               cleanMode={cleanMode}
               cleanModeHintVisible={cleanModeHintVisible}
               onCleanModeToggle={toggleCleanMode}
+              onCleanModeHintDismiss={() => setCleanModeHintVisible(false)}
             />
           </Suspense>
         )}

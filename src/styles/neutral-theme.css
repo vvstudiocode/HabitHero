@@ -315,6 +315,42 @@ body,
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
+.hh-world-clean-mode-control {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
+  border: 1px solid var(--hh-neutral-line);
+  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  box-shadow: 0 8px 22px var(--hh-neutral-shadow);
+}
+
+.hh-world-clean-mode-hint {
+  background: rgb(32 33 36 / 28%);
+}
+
+.hh-world-clean-mode-hint-card {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  box-shadow: 0 18px 48px var(--hh-neutral-shadow);
+}
+
+.hh-world-clean-mode-hint-card p {
+  color: var(--hh-neutral-muted);
+}
+
+.hh-world-clean-mode-confirm {
+  color: var(--hh-neutral-surface);
+  background: var(--hh-neutral-ink);
+  box-shadow: 0 8px 20px var(--hh-neutral-shadow);
+}
+
+.hh-world-clean-mode-confirm:hover,
+.hh-world-clean-mode-confirm:focus-visible {
+  background: color-mix(in srgb, var(--hh-neutral-ink) 86%, var(--hh-neutral-surface));
+}
+
 .hh-adventure-card-trigger,
 .hh-adventure-task-control,
 .hh-adventure-schedule-trigger {

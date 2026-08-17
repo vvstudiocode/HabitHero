@@ -88,11 +88,7 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0;
-  color: var(--hh-neutral-ink);
-  background: color-mix(in srgb, var(--hh-neutral-surface) 86%, transparent);
-  border: 1px solid color-mix(in srgb, var(--hh-neutral-line) 86%, transparent);
   border-radius: 50%;
-  box-shadow: 0 7px 16px var(--hh-neutral-shadow);
   touch-action: manipulation;
   transition: transform 160ms ease, opacity 180ms ease, background 160ms ease, box-shadow 160ms ease;
 }
@@ -116,23 +112,76 @@
 
 .hh-world-clean-mode-hint {
   position: fixed;
-  z-index: 8;
-  top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
-  left: 50%;
-  width: max-content;
-  max-width: calc(100vw - 32px);
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(24px, calc(env(safe-area-inset-top, 0px) + 24px)) max(24px, env(safe-area-inset-right)) max(24px, calc(env(safe-area-inset-bottom, 0px) + 24px)) max(24px, env(safe-area-inset-left));
+  animation: hh-world-clean-mode-hint-fade-in 220ms ease-out both;
+}
+
+.hh-world-clean-mode-hint-card {
+  display: grid;
+  width: min(300px, calc(100vw - 40px));
+  gap: 16px;
+  padding: 22px 20px 20px;
+  border-radius: 24px;
+  text-align: center;
+  animation: hh-world-clean-mode-hint-card-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hh-world-clean-mode-hint-card strong {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.hh-world-clean-mode-hint-card p {
   margin: 0;
-  padding: 9px 14px;
-  color: var(--hh-neutral-surface);
-  background: color-mix(in srgb, var(--hh-neutral-ink) 86%, transparent);
-  border-radius: 999px;
-  box-shadow: 0 8px 20px var(--hh-neutral-shadow);
   font-size: 12px;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.5;
   text-align: center;
-  pointer-events: none;
-  transform: translateX(-50%);
+}
+
+.hh-world-clean-mode-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 900;
+  touch-action: manipulation;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.hh-world-clean-mode-confirm:active {
+  transform: scale(0.98);
+}
+
+.hh-world-clean-mode-confirm:focus-visible {
+  outline: 3px solid var(--hh-character-focus-ring);
+  outline-offset: 3px;
+}
+
+@keyframes hh-world-clean-mode-hint-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hh-world-clean-mode-hint-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .hh-dashboard-screen--child.is-clean-mode .hh-world-joystick {
@@ -287,6 +336,15 @@
   }
 
   .hh-world-clean-mode-control {
+    transition: none;
+  }
+
+  .hh-world-clean-mode-hint,
+  .hh-world-clean-mode-hint-card {
+    animation: none;
+  }
+
+  .hh-world-clean-mode-confirm {
     transition: none;
   }
 
