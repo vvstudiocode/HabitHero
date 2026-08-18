@@ -54,9 +54,16 @@ describe('supplied character assets', () => {
       const modelJson = readGlbJson(modelPath);
       const animations = modelJson.animations as Array<{ name?: string }>;
       const extensions = modelJson.extensionsUsed as string[];
-      assert.equal(animations.length, 2, `${character.name} should ship its idle and walk animation clips`);
+      const expectedAnimationCount = ['character.moss', 'character.noah', 'character.collette', 'character.violette', 'character.gilt', 'character.lunalia'].includes(character.id) ? 5 : 2;
+      assert.equal(animations.length, expectedAnimationCount, `${character.name} should ship its expected animation clips`);
       assert.match(animations.map((animation) => animation.name).join(','), /walk/i);
       assert.match(animations.map((animation) => animation.name).join(','), /idle/i);
+      if (['character.moss', 'character.noah', 'character.collette', 'character.violette', 'character.gilt', 'character.lunalia'].includes(character.id)) {
+        assert.deepEqual(
+          animations.map((animation) => animation.name).sort(),
+          ['Dance', 'Idle', 'Sit', 'Walk_InPlace', 'Wave'],
+        );
+      }
       assert.ok(extensions.includes('KHR_draco_mesh_compression'));
       assert.ok(extensions.includes('EXT_texture_webp'));
       assert.equal(readFileSync(thumbnailPath).toString('ascii', 0, 4), 'RIFF');

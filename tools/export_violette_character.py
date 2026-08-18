@@ -1,8 +1,8 @@
-"""Build the supplied Violette FBX pair into one mobile-ready animated GLB.
+"""Pack the supplied Violette FBX files into one compact animated GLB.
 
-The walk FBX provides the rig and mesh. The idle FBX is imported only to
-capture its action; its duplicate rig and mesh are removed before export so
-the final file contains one skinned character with both clips.
+The Idle FBX supplies the shared mesh, materials, and textures. Each other
+FBX supplies one action, so the exported GLB contains one skinned character
+with Idle, Walk_InPlace, Sit, Wave, and Dance clips.
 
 Run with Blender 5.x:
   /Applications/Blender.app/Contents/MacOS/Blender --background --python tools/export_violette_character.py
@@ -11,55 +11,57 @@ Run with Blender 5.x:
 from __future__ import annotations
 
 import os
-import re
 
 import bpy
 
 
 ROOT = "/Users/studio.vv/Desktop/HabitHero"
-WALK_SOURCE = "/Users/studio.vv/Downloads/薇歐莉特.fbx"
-IDLE_SOURCE = "/Users/studio.vv/Downloads/薇歐莉特Idle.fbx"
-MODEL_OUTPUT = os.path.join(ROOT, "public/assets/characters/violette.glb")
-THUMBNAIL_SOURCE = "/Users/studio.vv/Downloads/薇歐莉特去背.png"
-THUMBNAIL_OUTPUT = os.path.join(ROOT, "public/assets/characters/violette-thumbnail.webp")
-
+ACTION_DIRECTORY = "/Users/studio.vv/Downloads"
+IDLE_SOURCE = "/Users/studio.vv/Desktop/habithero動作檔/薇歐莉特Idle.fbx"
+OUTPUT = os.path.join(ROOT, "public/assets/characters/violette.glb")
 TEXTURE_MAX_SIZE = 1024
 TEXTURE_QUALITY = 86
-THUMBNAIL_SIZE = 512
-THUMBNAIL_QUALITY = 90
-MESH_RATIO = 0.12
+MESH_DECIMATE_RATIO = 0.12
 WARM_ROUGHNESS = 0.86
 WARM_METALLIC = 0.0
 WARM_SPECULAR = 0.35
-ROOT_MOTION_BONE = re.compile(r'pose\.bones\["[^"]*(?:root|hips|pelvis)[^"]*"\]\.location$', re.IGNORECASE)
 
 
-def iter_action_fcurves(action):
-    for layer in action.layers:
-        for strip in layer.strips:
-            for channelbag in strip.channelbags:
-                yield from channelbag.fcurves
+def reset_scene() -> None:
+    bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def lock_root_motion(action) -> int:
-    changed = 0
-    for fcurve in iter_action_fcurves(action):
-        if not ROOT_MOTION_BONE.search(fcurve.data_path) or fcurve.array_index not in (0, 2):
-            continue
-        if not fcurve.keyframe_points:
-            continue
-        first_value = fcurve.keyframe_points[0].co[1]
-        for keyframe in fcurve.keyframe_points:
-            keyframe.co[1] = first_value
-            keyframe.handle_left_type = "AUTO_CLAMPED"
-            keyframe.handle_right_type = "AUTO_CLAMPED"
-        fcurve.update()
-        changed += 1
-    return changed
-
-
-def import_fbx(path: str) -> None:
+def import_fbx(path: str):
+    before_objects = set(bpy.context.scene.objects)
+    before_actions = set(bpy.data.actions)
     bpy.ops.import_scene.fbx(filepath=path, automatic_bone_orientation=False)
+    new_objects = [obj for obj in bpy.context.scene.objects if obj not in before_objects]
+    new_armatures = [obj for obj in new_objects if obj.type == "ARMATURE"]
+    new_meshes = [obj for obj in new_objects if obj.type == "MESH"]
+    if len(new_armatures) != 1 or len(new_meshes) != 1:
+        raise RuntimeError(
+            f"{path}: expected one imported armature and mesh, got "
+            f"{len(new_armatures)} armatures and {len(new_meshes)} meshes"
+        )
+    new_actions = [action for action in bpy.data.actions if action not in before_actions]
+    if len(new_actions) != 1:
+        raise RuntimeError(f"{path}: expected one imported action, got {len(new_actions)}")
+    return new_armatures[0], new_meshes[0], new_actions[0]
+
+
+def remove_imported_objects(objects) -> None:
+    for obj in objects:
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+
+def copy_action_from_fbx(path: str, name: str):
+    armature, mesh, source_action = import_fbx(path)
+    action = source_action.copy()
+    action.name = name
+    action.use_fake_user = True
+    remove_imported_objects((armature, mesh))
+    bpy.data.actions.remove(source_action, do_unlink=True)
+    return action
 
 
 def resize_packed_images() -> None:
@@ -89,9 +91,9 @@ def apply_warm_material_preset() -> None:
 
 def reduce_mesh(mesh) -> tuple[int, int]:
     original_polygons = len(mesh.data.polygons)
-    modifier = mesh.modifiers.new(name="MobileCharacterDecimate", type="DECIMATE")
+    modifier = mesh.modifiers.new(name="VIOLETTE_MobileDecimate", type="DECIMATE")
     modifier.decimate_type = "COLLAPSE"
-    modifier.ratio = MESH_RATIO
+    modifier.ratio = MESH_DECIMATE_RATIO
     modifier.use_collapse_triangulate = True
     bpy.ops.object.select_all(action="DESELECT")
     mesh.select_set(True)
@@ -104,49 +106,19 @@ def reduce_mesh(mesh) -> tuple[int, int]:
     return original_polygons, len(mesh.data.polygons)
 
 
-def export_model() -> None:
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    import_fbx(WALK_SOURCE)
-    armature = next(object_ for object_ in bpy.data.objects if object_.type == "ARMATURE")
-    mesh = next(object_ for object_ in bpy.data.objects if object_.type == "MESH")
-    walk_action = armature.animation_data.action
-    if walk_action is None:
-        raise RuntimeError("薇歐莉特 walk FBX did not contain an animation action")
-    walk_action.name = "Walk_InPlace"
-    walk_channels_locked = lock_root_motion(walk_action)
+def ensure_action_on_armature(armature, action) -> None:
+    armature.animation_data_create()
+    armature.animation_data.action = action
+    if action.slots:
+        armature.animation_data.action_slot = action.slots[0]
+    action.use_fake_user = True
 
-    import_fbx(IDLE_SOURCE)
-    idle_armature = next(object_ for object_ in bpy.data.objects if object_.type == "ARMATURE" and object_ != armature)
-    idle_action = idle_armature.animation_data.action
-    if idle_action is None:
-        raise RuntimeError("薇歐莉特 idle FBX did not contain an animation action")
-    idle_action.name = "Idle"
-    lock_root_motion(idle_action)
 
-    duplicate_objects = [
-        object_
-        for object_ in list(bpy.data.objects)
-        if object_ == idle_armature or object_.parent == idle_armature
-    ]
-    for object_ in duplicate_objects:
-        bpy.data.objects.remove(object_, do_unlink=True)
-    armature.animation_data.action = walk_action
-
-    apply_warm_material_preset()
-    original_polygons, exported_polygons = reduce_mesh(mesh)
+def export_glb() -> None:
+    os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
     resize_packed_images()
-    scene = bpy.context.scene
-    scene.frame_start = 1
-    scene.frame_end = 500
-    scene.frame_set(scene.frame_start)
-
-    os.makedirs(os.path.dirname(MODEL_OUTPUT), exist_ok=True)
-    bpy.ops.object.select_all(action="DESELECT")
-    mesh.select_set(True)
-    armature.select_set(True)
-    bpy.context.view_layer.objects.active = armature
     bpy.ops.export_scene.gltf(
-        filepath=MODEL_OUTPUT,
+        filepath=OUTPUT,
         export_format="GLB",
         export_animations=True,
         export_animation_mode="ACTIONS",
@@ -164,21 +136,41 @@ def export_model() -> None:
         export_draco_color_quantization=8,
         export_draco_generic_quantization=12,
     )
+
+
+def main() -> None:
+    reset_scene()
+    base_armature, base_mesh, idle_source = import_fbx(IDLE_SOURCE)
+    idle = idle_source.copy()
+    idle.name = "Idle"
+    idle.use_fake_user = True
+    bpy.data.actions.remove(idle_source, do_unlink=True)
+
+    actions = [idle]
+    for source_filename, action_name in (
+        ("薇歐莉特.fbx", "Walk_InPlace"),
+        ("薇歐莉特坐下.fbx", "Sit"),
+        ("薇歐莉特揮手.fbx", "Wave"),
+        ("薇歐莉特跳舞.fbx", "Dance"),
+    ):
+        actions.append(copy_action_from_fbx(os.path.join(ACTION_DIRECTORY, source_filename), action_name))
+
+    apply_warm_material_preset()
+    original_polygons, exported_polygons = reduce_mesh(base_mesh)
+    for action in actions:
+        ensure_action_on_armature(base_armature, action)
+    export_glb()
     print(
-        f"VIOLETTE_MODEL {MODEL_OUTPUT} original_polygons={original_polygons} "
-        f"exported_polygons={exported_polygons} walk_root_channels_locked={walk_channels_locked} "
-        "animations=Idle,Walk_InPlace warm_material=roughness_0.86"
+        "VIOLETTE_ACTIONS",
+        [action.name for action in actions],
+        "original_polygons=",
+        original_polygons,
+        "exported_polygons=",
+        exported_polygons,
+        "walk_root_motion=source-preserved",
     )
+    print("VIOLETTE_OUTPUT_BYTES", os.path.getsize(OUTPUT))
 
 
-def export_thumbnail() -> None:
-    os.makedirs(os.path.dirname(THUMBNAIL_OUTPUT), exist_ok=True)
-    image = bpy.data.images.load(THUMBNAIL_SOURCE, check_existing=False)
-    image.scale(THUMBNAIL_SIZE, THUMBNAIL_SIZE)
-    image.file_format = "WEBP"
-    image.save(filepath=THUMBNAIL_OUTPUT, quality=THUMBNAIL_QUALITY)
-    print(f"VIOLETTE_THUMBNAIL {THUMBNAIL_OUTPUT} size={image.size[:]} format={image.file_format}")
-
-
-export_model()
-export_thumbnail()
+if __name__ == "__main__":
+    main()

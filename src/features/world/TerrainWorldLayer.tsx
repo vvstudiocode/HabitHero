@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { Object3D } from 'three';
-import { Armchair, Camera, Check, Footprints, Hand, Minus, Music2, Pause, Plus, RotateCw, UserRoundPlus, X } from 'lucide-react';
+import { Armchair, Camera, Check, Footprints, Hand, Minus, Music2, Pause, PersonStanding, Plus, RotateCw, UserRoundPlus, X } from 'lucide-react';
 import type { ChildGameData, GameCatalogItem, PetBehaviorMode } from './contracts';
 import {
   CENTRAL_TREE_KEEP_OUT,
@@ -14,7 +15,7 @@ import { PointerInputController } from './input/pointer-input-controller';
 import type { WorldInputState } from './input/world-input-types';
 import { DynamicJoystick } from './components/DynamicJoystick';
 import { mountPrototypeWorld, type PetSelection, type PrototypeWorldRuntime } from './prototype-world-runtime';
-import type { PetAction } from './pet-action-state';
+import { shouldPausePetForMenu, type PetAction } from './pet-action-state';
 import type { PetAnimationAction } from './pet-animation';
 import { getWorldQuality, type WorldQuality } from './world-quality';
 import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
@@ -285,6 +286,8 @@ export function TerrainWorldLayer({
   const [runtimeAttempt, setRuntimeAttempt] = useState(0);
   const [selectedDecoration, setSelectedDecoration] = useState<{ entityId: string; x: number; y: number } | null>(null);
   const [selectedPet, setSelectedPet] = useState<PetSelection | null>(null);
+  const [worldActionMenuOpen, setWorldActionMenuOpen] = useState(false);
+  const pausedPetForMenuRef = useRef<string | null>(null);
   const placementRotationDragRef = useRef<{ pointerId: number; startX: number; lastX: number; moved: boolean } | null>(null);
   const runtimeRef = useRef<PrototypeWorldRuntime | null>(null);
   const worldQuality = useWorldQuality();
@@ -327,22 +330,41 @@ export function TerrainWorldLayer({
     return controller.subscribe(setInput);
   }, [childId]);
 
+  const clearPetMenuPause = () => {
+    const inventoryItemId = pausedPetForMenuRef.current;
+    if (!inventoryItemId) return;
+    pausedPetForMenuRef.current = null;
+    runtimeRef.current?.clearOptimisticPetIdle(inventoryItemId);
+  };
+
   useEffect(() => {
     if (paused) controllerRef.current?.reset();
   }, [paused]);
 
   useEffect(() => {
     if (placement) {
+      clearPetMenuPause();
+      setWorldActionMenuOpen(false);
       setSelectedDecoration(null);
       setSelectedPet(null);
     }
   }, [placement]);
 
   useEffect(() => {
+    setWorldActionMenuOpen(false);
+  }, [childId, runtimeAttempt, sceneKey]);
+
+  useEffect(() => {
+    if (cleanMode) setWorldActionMenuOpen(false);
+  }, [cleanMode]);
+
+  useEffect(() => {
     if (!selectedDecoration && !selectedPet) return undefined;
     const dismissDecorationSelection = (event: PointerEvent | FocusEvent) => {
       const target = event.target;
-      if (target instanceof Element && target.closest('[data-world-decoration-action], [data-world-pet-action]')) return;
+      if (target instanceof Element && target.closest('[data-world-decoration-action], [data-world-pet-action], [data-world-action-control]')) return;
+      clearPetMenuPause();
+      setWorldActionMenuOpen(false);
       setSelectedDecoration(null);
       setSelectedPet(null);
     };
@@ -421,10 +443,17 @@ export function TerrainWorldLayer({
       onPlacementPositionChange,
       onPlacementGestureChange,
       onDecorationSelect: (selection) => {
+        clearPetMenuPause();
         setSelectedDecoration(selection);
         setSelectedPet(null);
       },
       onPetSelect: (selection) => {
+        clearPetMenuPause();
+        setWorldActionMenuOpen(false);
+        if (selection && shouldPausePetForMenu(selection)) {
+          pausedPetForMenuRef.current = selection.inventoryItemId;
+          runtimeRef.current?.optimisticallySetPetIdle(selection);
+        }
         setSelectedPet(selection);
         setSelectedDecoration(null);
       },
@@ -471,6 +500,7 @@ export function TerrainWorldLayer({
   const commitPetAction = (action: PetAction) => {
     if (!selectedPet || !onPetAction) return;
     const selection = selectedPet;
+    clearPetMenuPause();
     setSelectedPet(null);
     runtimeRef.current?.stopPetAnimation(selection.inventoryItemId);
     if (action === 'idle') runtimeRef.current?.optimisticallySetPetIdle(selection);
@@ -487,10 +517,56 @@ export function TerrainWorldLayer({
 
   const commitPetAnimation = (action: PetAnimationAction) => {
     if (!selectedPet) return;
-    const inventoryItemId = selectedPet.inventoryItemId;
+    const selection = selectedPet;
+    clearPetMenuPause();
+    setWorldActionMenuOpen(false);
     setSelectedPet(null);
-    runtimeRef.current?.playPetAnimation(inventoryItemId, action);
+    runtimeRef.current?.playPetAnimation(selection.inventoryItemId, action);
   };
+
+  const commitWorldInteractionAction = (action: PetAnimationAction) => {
+    clearPetMenuPause();
+    setWorldActionMenuOpen(false);
+    runtimeRef.current?.playInteractionAction(action);
+  };
+
+  const handleWorldActionPointerDown = (event: ReactPointerEvent<HTMLButtonElement>, action: PetAnimationAction) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    commitWorldInteractionAction(action);
+  };
+
+  const handleWorldActionKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, action: PetAnimationAction) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    event.stopPropagation();
+    commitWorldInteractionAction(action);
+  };
+
+  const toggleWorldActionMenu = () => {
+    setWorldActionMenuOpen((open) => !open);
+  };
+
+  const handleWorldActionTogglePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleWorldActionMenu();
+  };
+
+  const handleWorldActionToggleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleWorldActionMenu();
+  };
+
+  const worldAnimationActions = [
+    { action: 'wave' as const, label: '揮手', icon: <Hand size={17} aria-hidden="true" /> },
+    { action: 'sit' as const, label: '坐下', icon: <Armchair size={17} aria-hidden="true" /> },
+    { action: 'dance' as const, label: '跳舞', icon: <Music2 size={17} aria-hidden="true" /> },
+  ];
 
   return (
     <div className={`hh-terrain-world${placement ? ' is-placement-mode' : ''}`} data-world-status={status} data-child-id={childId} data-world-input-layout="portrait-control-band">
@@ -579,7 +655,7 @@ export function TerrainWorldLayer({
               }}
             >
               <Pause size={16} aria-hidden="true" />
-              待機
+              <span className="hh-world-pet-action-label">待機</span>
             </button>
             <button
               type="button"
@@ -598,7 +674,7 @@ export function TerrainWorldLayer({
               }}
             >
               <Footprints size={16} aria-hidden="true" />
-              巡遊
+              <span className="hh-world-pet-action-label">巡遊</span>
             </button>
             <button
               type="button"
@@ -619,7 +695,9 @@ export function TerrainWorldLayer({
               }}
             >
               <UserRoundPlus size={16} aria-hidden="true" />
-              {selectedPet.following ? '跟隨中' : '跟隨'}
+              <span className="hh-world-pet-action-label">
+                {selectedPet.following ? '跟隨中' : '跟隨'}
+              </span>
             </button>
             {selectedPet.availableActions.includes('wave') && (
               <button
@@ -639,7 +717,7 @@ export function TerrainWorldLayer({
                 }}
               >
                 <Hand size={16} aria-hidden="true" />
-                揮手
+                <span className="hh-world-pet-action-label">揮手</span>
               </button>
             )}
             {selectedPet.availableActions.includes('sit') && (
@@ -660,7 +738,7 @@ export function TerrainWorldLayer({
                 }}
               >
                 <Armchair size={16} aria-hidden="true" />
-                坐下
+                <span className="hh-world-pet-action-label">坐下</span>
               </button>
             )}
             {selectedPet.availableActions.includes('dance') && (
@@ -681,7 +759,7 @@ export function TerrainWorldLayer({
                 }}
               >
                 <Music2 size={16} aria-hidden="true" />
-                跳舞
+                <span className="hh-world-pet-action-label">跳舞</span>
               </button>
             )}
           </div>
@@ -689,6 +767,48 @@ export function TerrainWorldLayer({
         document.body,
       )}
       <DynamicJoystick input={input} />
+      {onPetAction && !placement && (
+        <div
+          className={`hh-world-action-control${cleanMode ? ' is-hidden' : ''}`}
+          data-world-action-control
+        >
+          <div
+            id="hh-world-action-menu"
+            className={`hh-world-action-menu${worldActionMenuOpen ? ' is-open' : ''}`}
+            role="group"
+            aria-label="角色與寵物動作"
+            aria-hidden={!worldActionMenuOpen}
+          >
+            {worldAnimationActions.map(({ action, label, icon }, index) => (
+              <button
+                key={action}
+                type="button"
+                className="hh-world-action-item"
+                aria-label={`角色${label}，面前寵物會同步`}
+                title={label}
+                tabIndex={worldActionMenuOpen ? 0 : -1}
+                data-action-index={index}
+                onPointerDown={(event) => handleWorldActionPointerDown(event, action)}
+                onKeyDown={(event) => handleWorldActionKeyDown(event, action)}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className={`hh-world-action-toggle${worldActionMenuOpen ? ' is-expanded' : ''}`}
+            aria-label={worldActionMenuOpen ? '收合動作選單' : '開啟動作選單'}
+            aria-controls="hh-world-action-menu"
+            aria-expanded={worldActionMenuOpen}
+            title="動作"
+            onPointerDown={handleWorldActionTogglePointerDown}
+            onKeyDown={handleWorldActionToggleKeyDown}
+          >
+            <PersonStanding size={18} strokeWidth={2.3} aria-hidden="true" />
+          </button>
+        </div>
+      )}
       {onCleanModeToggle && !placement && (
         <>
           <button
@@ -696,7 +816,10 @@ export function TerrainWorldLayer({
             className={`hh-world-clean-mode-control${cleanMode ? ' is-hidden' : ''}`}
             aria-label={cleanMode ? '恢復介面' : '開啟清爽模式'}
             title={cleanMode ? '恢復介面' : '清爽模式／截圖'}
-            onClick={onCleanModeToggle}
+            onClick={() => {
+              setWorldActionMenuOpen(false);
+              onCleanModeToggle();
+            }}
           >
             <Camera size={17} strokeWidth={2.4} aria-hidden="true" />
           </button>
@@ -711,7 +834,7 @@ export function TerrainWorldLayer({
             >
               <div className="hh-world-clean-mode-hint-card">
                 <strong id="hh-world-clean-mode-hint-title">清爽模式已開啟</strong>
-                <p id="hh-world-clean-mode-hint-description">點擊相機位置或單指點擊兩下可恢復介面</p>
+                <p id="hh-world-clean-mode-hint-description">再點擊右下角或單指點擊兩下可恢復介面</p>
                 <button
                   type="button"
                   className="hh-world-clean-mode-confirm"

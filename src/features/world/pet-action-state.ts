@@ -1,4 +1,10 @@
+import type { PetBehaviorMode } from './contracts';
+
 export type PetAction = 'idle' | 'wander' | 'follow';
+
+export function shouldPausePetForMenu(selection: { behaviorMode: PetBehaviorMode; following: boolean }): boolean {
+  return selection.behaviorMode === 'wander' && !selection.following;
+}
 
 export interface PetActionPlanInput {
   action: PetAction;

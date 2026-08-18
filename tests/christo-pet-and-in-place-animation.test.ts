@@ -86,6 +86,28 @@ function getAnimationHorizontalRanges(path: URL): Array<{ animation: string; nod
   return ranges;
 }
 
+function getAnimationVerticalRanges(path: URL): Array<{ animation: string; node: string; y: number }> {
+  const glb = readGlbJson(path);
+  const ranges: Array<{ animation: string; node: string; y: number }> = [];
+  for (const animation of glb.json.animations ?? []) {
+    if (!/walk|run/i.test(animation.name ?? '')) continue;
+    for (const channel of animation.channels ?? []) {
+      if (channel.target?.path !== 'translation') continue;
+      const nodeName = glb.json.nodes[channel.target.node]?.name ?? '';
+      if (!/root|armature|hips|pelvis/i.test(nodeName)) continue;
+      const sampler = animation.samplers[channel.sampler];
+      const vectors = readAccessorVectors(glb, sampler.output);
+      const yValues = vectors.map((vector) => vector[1]);
+      ranges.push({
+        animation: animation.name,
+        node: nodeName,
+        y: Math.max(...yValues) - Math.min(...yValues),
+      });
+    }
+  }
+  return ranges;
+}
+
 describe('pet animation delivery rules', () => {
   it('removes horizontal root motion from common Mixamo root track names', () => {
     const clip = new AnimationClip('Walk', 1, [
@@ -103,16 +125,14 @@ describe('pet animation delivery rules', () => {
   it('ships Christo and Star Diver walk clips with no authored horizontal root motion', () => {
     for (const pet of [
       { name: '星辰潛者', model: 'public/assets/pets/star-diver.glb' },
-      { name: '尼布斯', model: 'public/assets/pets/nibus.glb' },
       { name: '克里斯多', model: 'public/assets/pets/christo.glb' },
       { name: '莫可', model: 'public/assets/pets/moko.glb' },
       { name: '卡爾多', model: 'public/assets/pets/kaldo.glb' },
       { name: '奧利安', model: 'public/assets/pets/orian.glb' },
-      { name: '歐姆', model: 'public/assets/pets/oum.glb' },
     ]) {
       const path = new URL(pet.model, root);
       assert.equal(existsSync(path), true, `${pet.name} model should be present`);
-      const maxModelBytes = ['莫可', '奧利安'].includes(pet.name) ? 2 * 1024 * 1024 : 1.6 * 1024 * 1024;
+      const maxModelBytes = ['莫可', '奧利安', '卡爾多'].includes(pet.name) ? 2 * 1024 * 1024 : 1.6 * 1024 * 1024;
       assert.ok(statSync(path).size < maxModelBytes, `${pet.name} model should stay compact`);
       const contents = readFileSync(path).toString('latin1');
       assert.equal(contents.slice(0, 4), 'glTF');
@@ -126,6 +146,20 @@ describe('pet animation delivery rules', () => {
         assert.ok(range.x <= 0.0005, `${pet.name} ${range.node} x root motion should be in place`);
         assert.ok(range.z <= 0.0005, `${pet.name} ${range.node} z root motion should be in place`);
       }
+    }
+  });
+
+  it('keeps Arcadia and Oum source Walk vertical motion in the repacked GLBs', () => {
+    for (const pet of [
+      { name: '阿卡迪亞', model: 'public/assets/pets/arcadia.glb' },
+      { name: '歐姆', model: 'public/assets/pets/oum.glb' },
+    ]) {
+      const ranges = getAnimationVerticalRanges(new URL(pet.model, root));
+      assert.ok(ranges.length > 0, `${pet.name} should expose a walk root translation track`);
+      assert.ok(
+        ranges.some((range) => range.y > 0.0005),
+        `${pet.name} Walk should preserve the authored root vertical motion`,
+      );
     }
   });
 

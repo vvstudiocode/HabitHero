@@ -7,6 +7,8 @@ const CHARACTER_PREVIEW_Y_OFFSET = -0.36;
 const MIXAMO_PREVIEW_Y_OFFSET = -0.36;
 
 const MIXAMO_PET_PREVIEW_ASSET_KEYS = new Set([
+  'pet.ailite',
+  'pet.qifu-er',
   'pet.star-diver',
   'pet.nibus',
   'pet.christo',

@@ -12,7 +12,7 @@ function readGlbJson(path: URL): Record<string, unknown> {
   return JSON.parse(buffer.subarray(20, 20 + jsonLength).toString('utf8').trim()) as Record<string, unknown>;
 }
 
-test('莫斯 is a compact shop character with merged idle and walk clips', () => {
+test('莫斯 is a compact shop character with five merged action clips', () => {
   const character = WORLD_CHARACTER_CATALOG.find((item) => item.id === 'character.moss');
   assert.deepEqual(
     character && {
@@ -38,11 +38,24 @@ test('莫斯 is a compact shop character with merged idle and walk clips', () =>
   const modelJson = readGlbJson(modelPath);
   const animations = modelJson.animations as Array<{ name?: string }>;
   const extensions = modelJson.extensionsUsed as string[];
-  assert.deepEqual(animations.map((animation) => animation.name), ['Idle', 'Walk_InPlace']);
+  assert.deepEqual(
+    animations.map((animation) => animation.name),
+    ['Dance', 'Idle', 'Sit', 'Walk_InPlace', 'Wave'],
+  );
   assert.ok(extensions.includes('KHR_draco_mesh_compression'));
   assert.ok(extensions.includes('EXT_texture_webp'));
   assert.equal(readFileSync(thumbnailPath).toString('ascii', 0, 4), 'RIFF');
   assert.equal(readFileSync(thumbnailPath).toString('ascii', 8, 12), 'WEBP');
+});
+
+test('莫斯 records the five-action source contract in catalog metadata', () => {
+  const migrationPath = new URL('supabase/migrations/20260818150000_replace_moss_with_five_actions.sql', root);
+  const migration = readFileSync(migrationPath, 'utf8');
+  assert.match(migration, /character\.moss/);
+  assert.match(migration, /莫斯\.fbx \+ 莫斯idle\.fbx \+ 莫斯坐下\.fbx \+ 莫斯揮手\.fbx \+ 莫斯跳舞\.fbx/u);
+  assert.match(migration, /'animationClips', jsonb_build_array\('Idle', 'Walk_InPlace', 'Sit', 'Wave', 'Dance'\)/);
+  assert.match(migration, /'rootMotion', 'in-place'/);
+  assert.match(migration, /'modelBytes', 546476/);
 });
 
 test('莫斯 is registered in the shop and never remains equipped during a replacement migration', () => {

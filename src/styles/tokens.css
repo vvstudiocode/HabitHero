@@ -49,4 +49,14 @@
   --hh-reward-card-mint: #6ba887;
   --hh-reward-card-blue: #7b9ed0;
   --hh-reward-card-pink: #d98ba4;
+  --hh-world-control-size: 44px;
+  --hh-world-control-gap: 8px;
+  --hh-world-control-anchor-offset: 58px;
+  --hh-world-pet-action-mobile-size: 44px;
+  --hh-world-pet-action-mobile-visual-size: 32px;
+  --hh-world-pet-action-mobile-gap: 2px;
+  --hh-world-pet-action-mobile-horizontal-offset: 12px;
+  --hh-world-pet-action-mobile-offset: 16px;
+  --hh-world-pet-action-mobile-surface: rgb(255 253 241 / 72%);
+  --hh-world-pet-action-mobile-selected-surface: rgb(91 156 105 / 78%);
 }

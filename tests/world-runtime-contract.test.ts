@@ -217,7 +217,7 @@ describe('prototype world runtime contracts', () => {
     assert.equal(PET_WORLD_SCALE_MULTIPLIER, 1.3);
     assert.equal(PET_WANDER_SPEED, 0.5);
     assert.match(runtimeSource, /PET_WORLD_SCALE_MULTIPLIER/);
-    assert.match(runtimeSource, /target: null, wanderState/);
+    assert.match(runtimeSource, /target: null, followHistory: \[\], wanderState/);
     assert.match(runtimeSource, /state = 'wandering'/);
     assert.doesNotMatch(runtimeSource, /Math\.abs\(Math\.sin\(actor\.walkPhase\)\)/);
     assert.doesNotMatch(runtimeSource, /PET_SPRITE|farm-animals|pixel-farm-pet/);

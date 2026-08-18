@@ -62,3 +62,28 @@ test('ships transparent shop thumbnails for Moko and Kaldo', async () => {
     assert.equal(thumbnail[25], 6, `${pet.name} thumbnail must use RGBA color type`);
   }
 });
+
+test('ships Kaldo with all five supplied actions in one compact GLB', async () => {
+  const migrationNames = await readdir(new URL('supabase/migrations/', root));
+  const migrationName = migrationNames.find((name) => name.includes('replace_kaldo_with_five_actions'));
+  assert.ok(migrationName, 'Kaldo five-action migration should exist');
+  const migration = await readFile(new URL(`supabase/migrations/${migrationName}`, root), 'utf8');
+  const model = new URL('public/assets/pets/kaldo.glb', root);
+  const modelContents = await readFile(model);
+  const modelStats = await stat(model);
+  const jsonLength = modelContents.readUInt32LE(12);
+  const gltf = JSON.parse(modelContents.subarray(20, 20 + jsonLength).toString('utf8').trim()) as {
+    animations?: Array<{ name?: string }>;
+  };
+
+  assert.ok(modelStats.size < 2 * 1024 * 1024, 'Kaldo GLB should stay compact for mobile delivery');
+  assert.deepEqual(
+    (gltf.animations ?? []).map((animation) => animation.name).sort(),
+    ['Dance', 'Idle', 'Sit', 'Walk_InPlace', 'Wave'],
+  );
+  assert.match(modelContents.toString('latin1'), /KHR_draco_mesh_compression/);
+  assert.match(modelContents.toString('latin1'), /EXT_texture_webp/);
+  assert.match(migration, /卡爾多Idle\.fbx \+ 卡爾多坐下\.fbx \+ 卡爾多揮手\.fbx \+ 卡爾多\.fbx \+ 卡爾多跳舞\.fbx/u);
+  assert.match(migration, /'animationClips', jsonb_build_array\('Idle', 'Walk_InPlace', 'Sit', 'Wave', 'Dance'\)/);
+  assert.match(migration, /'modelBytes', 1138700/);
+});

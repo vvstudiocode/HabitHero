@@ -45,3 +45,27 @@ test('ships Orian as a compact animated pet shop asset', async () => {
   assert.match(migration, /'nameLabelScaleMultiplier', 0\.33/);
   assert.match(migration, /'idlePauseSeconds', 10/);
 });
+
+test('ships Orian with all five supplied actions in one compact GLB', async () => {
+  const migrationNames = await readdir(new URL('supabase/migrations/', root));
+  const migrationName = migrationNames.find((name) => name.includes('replace_orian_with_five_actions'));
+  assert.ok(migrationName, 'Orian five-action migration should exist');
+  const migration = await readFile(new URL(`supabase/migrations/${migrationName}`, root), 'utf8');
+  const modelContents = await readFile(new URL('public/assets/pets/orian.glb', root));
+  const modelStats = await stat(new URL('public/assets/pets/orian.glb', root));
+  const jsonLength = modelContents.readUInt32LE(12);
+  const gltf = JSON.parse(modelContents.subarray(20, 20 + jsonLength).toString('utf8').trim()) as {
+    animations?: Array<{ name?: string }>;
+  };
+
+  assert.ok(modelStats.size < 2 * 1024 * 1024, 'Orian GLB should stay compact for mobile delivery');
+  assert.deepEqual(
+    (gltf.animations ?? []).map((animation) => animation.name).sort(),
+    ['Dance', 'Idle', 'Sit', 'Walk_InPlace', 'Wave'],
+  );
+  assert.match(modelContents.toString('latin1'), /KHR_draco_mesh_compression/);
+  assert.match(modelContents.toString('latin1'), /EXT_texture_webp/);
+  assert.match(migration, /奧利安走路\.fbx \+ 奧利安Idle\.fbx \+ 奧利安坐下\.fbx \+ 奧利安揮手\.fbx \+ 奧利安跳舞\.fbx/u);
+  assert.match(migration, /'animationClips', jsonb_build_array\('Idle', 'Walk_InPlace', 'Sit', 'Wave', 'Dance'\)/);
+  assert.match(migration, /'modelBytes', 1337824/);
+});

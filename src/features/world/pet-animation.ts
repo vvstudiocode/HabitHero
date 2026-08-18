@@ -1,7 +1,12 @@
 export type PetAnimationState = 'idle' | 'walk';
 export type PetAnimationAction = 'sit' | 'wave' | 'dance';
+export type PetAnimationActionPlayback = 'hold' | 'repeat';
 
 export const PET_ANIMATION_ACTIONS: readonly PetAnimationAction[] = ['sit', 'wave', 'dance'];
+
+export function getPetAnimationActionPlayback(action: PetAnimationAction): PetAnimationActionPlayback {
+  return action === 'sit' ? 'hold' : 'repeat';
+}
 
 export interface PetPauseDurationRange {
   min: number;

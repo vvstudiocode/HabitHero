@@ -76,8 +76,8 @@ describe('clean screenshot mode', () => {
     assert.match(worldControlStyles, /\.hh-world-clean-mode-hint\s*\{[\s\S]*?inset:\s*0/);
     assert.match(worldControlStyles, /\.hh-world-clean-mode-hint-card\s*\{[\s\S]*?animation:/);
     assert.match(worldControlStyles, /\.hh-world-clean-mode-confirm\s*\{[\s\S]*?min-height:\s*44px/);
-    assert.match(neutralThemeStyles, /\.hh-world-clean-mode-control\s*\{[\s\S]*?background:\s*color-mix\(in srgb, var\(--hh-neutral-surface\) 68%, transparent\)/);
-    assert.match(neutralThemeStyles, /\.hh-world-clean-mode-control\s*\{[\s\S]*?box-shadow:\s*0 8px 22px var\(--hh-neutral-shadow\)/);
+    assert.match(neutralThemeStyles, /\.hh-world-clean-mode-control,\s*\.hh-world-action-toggle,\s*\.hh-world-action-item\s*\{[\s\S]*?background:\s*color-mix\(in srgb, var\(--hh-neutral-surface\) 68%, transparent\)/);
+    assert.match(neutralThemeStyles, /\.hh-world-clean-mode-control,\s*\.hh-world-action-toggle,\s*\.hh-world-action-item\s*\{[\s\S]*?box-shadow:\s*0 8px 22px var\(--hh-neutral-shadow\)/);
     assert.match(neutralThemeStyles, /\.hh-world-clean-mode-hint\s*\{[\s\S]*?background:\s*rgb\(32 33 36 \/ 28%\)/);
     assert.match(neutralThemeStyles, /\.hh-world-clean-mode-hint-card\s*\{[\s\S]*?background:\s*color-mix\(in srgb, var\(--hh-neutral-surface\) 92%, transparent\)/);
     assert.match(loginStyles, /is-clean-mode[\s\S]*?hh-bottom-nav/);

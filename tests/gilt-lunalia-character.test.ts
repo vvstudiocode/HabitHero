@@ -5,6 +5,10 @@ import { WORLD_CHARACTER_CATALOG } from '../src/features/characters/world-charac
 
 const root = new URL('../', import.meta.url);
 const migrationPath = new URL('supabase/migrations/20260814133802_add_gilt_lunalia_characters.sql', root);
+const replacementMigrationPath = new URL('supabase/migrations/20260818230000_replace_gilt_with_five_actions.sql', root);
+const lunaliaReplacementMigrationPath = new URL('supabase/migrations/20260818074452_replace_lunalia_with_five_actions.sql', root);
+const exporterPath = new URL('../tools/export_gilt_character.py', import.meta.url);
+const lunaliaExporterPath = new URL('../tools/export_lunalia_character.py', import.meta.url);
 
 const suppliedCharacters = [
   { id: 'character.gilt', name: '吉爾特', model: '/assets/characters/gilt.glb', thumbnail: '/assets/characters/gilt-thumbnail.webp' },
@@ -36,7 +40,8 @@ test('吉爾特 and 露娜莉亞 are compact animated shop/world characters', ()
     const modelJson = readGlbJson(modelPath);
     const animations = modelJson.animations as Array<{ name?: string }>;
     const extensions = modelJson.extensionsUsed as string[];
-    assert.deepEqual(animations.map((animation) => animation.name), ['Idle', 'Walk_InPlace']);
+    const expectedAnimations = ['Dance', 'Idle', 'Sit', 'Walk_InPlace', 'Wave'];
+    assert.deepEqual(animations.map((animation) => animation.name).sort(), expectedAnimations.sort());
     assert.ok(extensions.includes('KHR_draco_mesh_compression'));
     assert.ok(extensions.includes('EXT_texture_webp'));
     assert.equal(readFileSync(thumbnailPath).toString('ascii', 0, 4), 'RIFF');
@@ -57,4 +62,35 @@ test('migration registers both characters for the shop and selected new-child lo
   assert.match(migration, /order by random\(\)/i);
   assert.match(migration, /set equipped_character_inventory_id/);
   assert.match(migration, /warm-hand-painted/);
+});
+
+test('吉爾特 replacement packs all supplied action files into one mobile GLB', () => {
+  const migration = readFileSync(replacementMigrationPath, 'utf8');
+  assert.match(migration, /character\.gilt/);
+  assert.match(migration, /animationClips', jsonb_build_array\('Idle', 'Walk_InPlace', 'Sit', 'Wave', 'Dance'\)/);
+  assert.match(migration, /animationStates', jsonb_build_array\('idle', 'walk', 'sit', 'wave', 'dance'\)/);
+  assert.match(migration, /meshSharedAcrossActions', true/);
+  assert.match(migration, /modelBytes', 1244056/);
+
+  const exporter = readFileSync(exporterPath, 'utf8');
+  for (const sourceName of ['吉爾特Idle\.fbx', '吉爾特\.fbx', '吉爾特坐下\.fbx', '吉爾特揮手\.fbx', '吉爾特跳舞\.fbx']) {
+    assert.match(exporter, new RegExp(sourceName));
+  }
+  assert.match(exporter, /actions = \[idle\]/);
+  assert.match(exporter, /action_name in \(.*Sit.*Wave.*Dance/su);
+});
+
+test('露娜莉亞 replacement packs all supplied action files into one mobile GLB', () => {
+  const migration = readFileSync(lunaliaReplacementMigrationPath, 'utf8');
+  assert.match(migration, /character\.lunalia/);
+  assert.match(migration, /animationClips', jsonb_build_array\('Idle', 'Walk_InPlace', 'Sit', 'Wave', 'Dance'\)/);
+  assert.match(migration, /animationStates', jsonb_build_array\('idle', 'walk', 'sit', 'wave', 'dance'\)/);
+  assert.match(migration, /meshSharedAcrossActions', true/);
+
+  const exporter = readFileSync(lunaliaExporterPath, 'utf8');
+  for (const sourceName of ['露娜莉亞idle\.fbx', '露娜莉亞\.fbx', '露娜莉亞坐下\.fbx', '露娜莉亞揮手\.fbx', '露娜莉亞跳舞\.fbx']) {
+    assert.match(exporter, new RegExp(sourceName));
+  }
+  assert.match(exporter, /actions = \[idle\]/);
+  assert.match(exporter, /action_name in \(.*Sit.*Wave.*Dance/su);
 });

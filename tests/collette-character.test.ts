@@ -11,6 +11,7 @@ import {
 
 const root = new URL('../', import.meta.url);
 const migrationPath = new URL('supabase/migrations/20260813104601_add_collette_character.sql', root);
+const replacementMigrationPath = new URL('supabase/migrations/20260818210000_replace_collette_with_five_actions.sql', root);
 
 function readGlbJson(path: URL): Record<string, unknown> {
   const buffer = readFileSync(path);
@@ -44,7 +45,10 @@ test('柯蕾特 is registered as a compact animated shop/world character', () =>
   const modelJson = readGlbJson(modelPath);
   const animations = modelJson.animations as Array<{ name?: string }>;
   const extensions = modelJson.extensionsUsed as string[];
-  assert.deepEqual(animations.map((animation) => animation.name), ['Idle', 'Walk_InPlace']);
+  assert.deepEqual(
+    animations.map((animation) => animation.name).sort(),
+    ['Dance', 'Idle', 'Sit', 'Walk_InPlace', 'Wave'],
+  );
   assert.ok(extensions.includes('KHR_draco_mesh_compression'));
   assert.ok(extensions.includes('EXT_texture_webp'));
   const material = (modelJson.materials as Array<{ pbrMetallicRoughness?: { metallicFactor?: number; roughnessFactor?: number } }>)[0];
@@ -61,6 +65,26 @@ test('柯蕾特 migration registers the item and replaces any existing equipped 
   assert.match(migration, /order by random\(\)/i);
   assert.match(migration, /set equipped_character_inventory_id/);
   assert.match(migration, /supplied_character_keys/);
+});
+
+test('柯蕾特 replacement migration records all supplied action files and final asset size', () => {
+  const migration = readFileSync(replacementMigrationPath, 'utf8');
+  assert.match(migration, /character\.collette/);
+  for (const source of ['柯蕾特Idle\.fbx', '柯蕾特\.fbx', '柯蕾特坐下\.fbx', '柯蕾特揮手\.fbx', '柯蕾特跳舞\.fbx']) {
+    assert.match(migration, new RegExp(source));
+  }
+  assert.match(migration, /animationClips/);
+  assert.match(migration, /walkRootMotion.*source-preserved/s);
+  assert.match(migration, /modelBytes', 1033760/);
+});
+
+test('柯蕾特 exporter uses the five supplied FBX files and preserves Walk root data', () => {
+  const exporter = readFileSync(new URL('../tools/export_collette_character.py', import.meta.url), 'utf8');
+  for (const source of ['柯蕾特Idle\.fbx', '柯蕾特\.fbx', '柯蕾特坐下\.fbx', '柯蕾特揮手\.fbx', '柯蕾特跳舞\.fbx']) {
+    assert.match(exporter, new RegExp(source));
+  }
+  assert.match(exporter, /walk_root_motion=source-preserved/);
+  assert.doesNotMatch(exporter, /lock_root_motion|normalize_walk_root_motion/);
 });
 
 test('warm hand-painted material preset softens reflections without replacing textures', () => {

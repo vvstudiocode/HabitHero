@@ -10,7 +10,13 @@ For runtime grounding, walking animation, skeleton cloning, flicker, and visual 
 
 ## Supplied characters
 
-The character shop uses ten user-provided, mobile-optimized GLBs under `public/assets/characters/`: `arthur.glb`, `elina.glb`, `sia.glb`, `elio.glb`, `moss.glb`, `noah.glb`, `collette.glb`, `violette.glb`, `gilt.glb`, and `lunalia.glb`. All files contain the merged authored `Idle` and in-place `Walk_InPlace` clips. Models use Draco-compressed geometry and WebP textures, with transparent 512px WebP thumbnails beside the models.
+The character shop uses ten user-provided, mobile-optimized GLBs under `public/assets/characters/`: `arthur.glb`, `elina.glb`, `sia.glb`, `elio.glb`, `moss.glb`, `noah.glb`, `collette.glb`, `violette.glb`, `gilt.glb`, and `lunalia.glb`. All files contain the merged authored `Idle` and in-place `Walk_InPlace` clips; the action-enabled character bundles also include `Sit`, `Wave`, and `Dance`. Models use Draco-compressed geometry and WebP textures, with transparent 512px WebP thumbnails beside the models.
+
+`public/assets/characters/violette.glb` now packs `薇歐莉特Idle.fbx`, `薇歐莉特.fbx`, `薇歐莉特坐下.fbx`, `薇歐莉特揮手.fbx`, and `薇歐莉特跳舞.fbx` into one shared-mesh GLB. It contains `Idle`, `Walk_InPlace`, `Sit`, `Wave`, and `Dance`, and is approximately 1.16 MB after Draco/WebP compression and 0.12 mesh simplification; the corresponding catalog metadata is updated by `20260818220000_replace_violette_with_five_actions.sql`.
+
+`public/assets/characters/gilt.glb` now packs `吉爾特Idle.fbx`, `吉爾特.fbx`, `吉爾特坐下.fbx`, `吉爾特揮手.fbx`, and `吉爾特跳舞.fbx` into one shared-mesh GLB. It contains the same five clips and is approximately 1.24 MB after Draco/WebP compression and 0.12 mesh simplification; the corresponding catalog metadata is updated by `20260818230000_replace_gilt_with_five_actions.sql`.
+
+`public/assets/characters/lunalia.glb` now packs `露娜莉亞idle.fbx`, `露娜莉亞.fbx`, `露娜莉亞坐下.fbx`, `露娜莉亞揮手.fbx`, and `露娜莉亞跳舞.fbx` into one shared-mesh GLB. It contains the same five clips and is approximately 1.31 MB after Draco/WebP compression and 0.12 mesh simplification; the corresponding catalog metadata is updated by `20260818074452_replace_lunalia_with_five_actions.sql`.
 
 World character models share the `warm-hand-painted` runtime material preset: their original textures remain unchanged while reflections are softened, roughness is increased, and a subtle cream-warm tint is applied for a consistent storybook animation look.
 
@@ -68,7 +74,7 @@ The repository does not currently contain provenance or a license notice for thi
 
 ## 星辰潛者、尼布斯與克里斯多
 
-`public/assets/pets/star-diver.glb`、`public/assets/pets/nibus.glb` 與 `public/assets/pets/christo.glb` 都使用 Draco 幾何壓縮、WebP 貼圖與原地 `Walk_InPlace` 動畫。星辰潛者的 Hips 水平 root motion 已在 GLB 匯出時清除，並與尼布斯、克里斯多一樣使用 `groundOffset=-0.22`、`nameLabelPlacement=above-head`、0.55 名稱比例與自製橢圓標記關閉設定；太陽陰影仍保留。尼布斯使用 `Idle` 與 `Walk_InPlace`，世界巡遊速度為一般寵物的一半、顯示尺寸為原設定的 2 倍，名稱比例為 0.55、地面陰影比例為 0.22。克里斯多目前也使用 2 倍模型、0.55 名稱比例與 0.22 地面陰影比例。泰迪酥已從商店與本地 GLB/縮圖資產移除；若遠端有歷史購買或持有紀錄，catalog row 會保留但停用以維持帳務可追溯性。
+`public/assets/pets/star-diver.glb`、`public/assets/pets/nibus.glb` 與 `public/assets/pets/christo.glb` 都使用 Draco 幾何壓縮、WebP 貼圖與原地 `Walk_InPlace` 動畫。星辰潛者的 Hips 水平 root motion 已在 GLB 匯出時清除，並與尼布斯、克里斯多一樣使用 `groundOffset=-0.22`、`nameLabelPlacement=above-head`、0.55 名稱比例與自製橢圓標記關閉設定；太陽陰影仍保留。尼布斯使用 `Idle` 與 `Walk_InPlace`，世界巡遊速度為一般寵物的一半、顯示尺寸為原設定的 2 倍，名稱比例為 0.55、地面陰影比例為 0.22。尼布斯原始 Walk FBX 沒有位移，重新打包時固定最終 GLB 的 Hips／root translation X/Y/Z 三軸，避免循環時回朔或抬升；完整來源與驗證流程見 [`nibus-multi-animation-glb.md`](./nibus-multi-animation-glb.md)。克里斯多目前也使用 2 倍模型、0.55 名稱比例與 0.22 地面陰影比例。泰迪酥已從商店與本地 GLB/縮圖資產移除；若遠端有歷史購買或持有紀錄，catalog row 會保留但停用以維持帳務可追溯性。
 
 ## 莫可與卡爾多
 
@@ -92,6 +98,14 @@ The repository does not currently contain provenance or a license notice for thi
 `public/assets/pets/jasmine.glb` 是商店寵物 `pet.jasmine`，由 `茉莉Idle.fbx`、`茉莉walk.fbx`、`茉莉坐下.fbx`、`茉莉揮手.fbx` 與 `茉莉跳舞.fbx` 合併而成；單一 GLB 共用一份網格與貼圖，包含 `Idle`、`Walk_InPlace`、`Sit`、`Wave`、`Dance` 五段 animation，約 786 KB。`public/assets/pets/jasmine-thumbnail.png` 是 512×512 RGBA 透明縮圖。
 
 `public/assets/pets/christo.glb` 同樣保留一份模型，並新增 `Sit`、`Wave`、`Dance` 三段 clip；加上既有的 `Idle` 與 `Walk_InPlace` 後，完整 GLB 約 1.28 MB。兩隻寵物的 Walk 都在匯出階段固定為原地走路，世界 steering 負責實際移動；不要把五段動作拆成五個重複模型，避免重複網格、材質與貼圖增加 app 容量。對應 catalog migration 為 `20260818080000_add_jasmine_and_christo_actions.sql`。
+
+## 艾莉特（保留給既有 inventory）
+
+`public/assets/pets/ailite.glb` 與 `public/assets/pets/ailite-thumbnail.png` 由使用者提供的 `艾莉特idle.fbx`、`艾莉特.fbx`、`艾莉特坐下.fbx`、`艾莉特揮手.fbx` 與 `艾莉特跳舞.fbx` 合併而成，商店 key 為 `pet.ailite`。它已從商店下架，但保留本地資產與 catalog row，讓既有 inventory/world entity 仍可正常顯示；世界場景原本使用 `visualScaleMultiplier=2`，商店 3D 展示維持標準自動適配尺寸。可重複匯出腳本為 [`tools/export_ailite_action_assets.py`](../tools/export_ailite_action_assets.py)，對應 catalog migrations 為 `20260818103706_add_ailite_pet.sql` 與 `20260818105236_tune_ailite_pet_visual_scale.sql`。
+
+## 齊福爾
+
+`public/assets/pets/qifu-er.glb` 與 `public/assets/pets/qifu-er-thumbnail.png` 由使用者提供的 `齊福爾Idle.fbx`、`齊福爾.fbx`、`齊福爾坐下.fbx`、`齊福爾揮手.fbx` 與 `齊福爾跳舞.fbx` 合併而成，商店 key 為 `pet.qifu-er`。`齊福爾Idle.fbx` 提供唯一的網格、材質與貼圖，其餘檔案只提供 animation；GLB 包含 `Idle`、`Walk_InPlace`、`Sit`、`Wave`、`Dance` 五段 clip，使用 Draco、1024px WebP 貼圖與 0.12 網格簡化。原始 FBX 的 Walk 沒有位移；匯出後仍必須檢查 GLB 的 `Hips`／`root` translation，因 Blender 5 的 FBX→glTF 軸向轉換可能重新產生 Y 位移。現在匯出腳本會在最終 GLB binary accessor 再固定 X/Y/Z 三軸，並驗證三軸 range ≤ 0.0005，確保 Walk 完全原地、不會循環時回朔。透明縮圖為 512×512 RGBA。世界場景使用 `visualScaleMultiplier=2`，商店 3D 展示維持標準自動適配尺寸。完整流程見 [`qifu-er-multi-animation-glb.md`](./qifu-er-multi-animation-glb.md)，可重複匯出腳本為 [`tools/export_qifu_er_action_assets.py`](../tools/export_qifu_er_action_assets.py)，對應 catalog migration 為 `20260818110326_replace_ailite_with_qifu_er.sql`。
 
 ## 寵物浮空、陰影與巡遊隨機化心得
 

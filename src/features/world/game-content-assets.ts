@@ -19,6 +19,7 @@ const CHARACTER_ASSETS: Readonly<Record<string, LocalGameAsset>> = Object.fromEn
 );
 
 const PET_ASSETS: Readonly<Record<string, LocalGameAsset>> = {
+  'pet.ailite': { modelUrl: '/assets/pets/ailite.glb', thumbnailUrl: '/assets/pets/ailite-thumbnail.png' },
   'pet.arcadia': { modelUrl: '/assets/pets/arcadia.glb', thumbnailUrl: '/assets/pets/arcadia-thumbnail.webp' },
   'pet.baruku-mushroom': { modelUrl: '/assets/pets/baruku-mushroom.glb', thumbnailUrl: '/assets/pets/baruku-mushroom-thumbnail.png' },
   'pet.belilos-fox': { modelUrl: '/assets/pets/belilos-fox.glb', thumbnailUrl: '/assets/pets/belilos-fox-thumbnail.webp' },
@@ -34,6 +35,7 @@ const PET_ASSETS: Readonly<Record<string, LocalGameAsset>> = {
   'pet.nibus': { modelUrl: '/assets/pets/nibus.glb', thumbnailUrl: '/assets/pets/nibus-thumbnail.png' },
   'pet.orian': { modelUrl: '/assets/pets/orian.glb', thumbnailUrl: '/assets/pets/orian-thumbnail.png' },
   'pet.oum': { modelUrl: '/assets/pets/oum.glb', thumbnailUrl: '/assets/pets/oum-thumbnail.webp' },
+  'pet.qifu-er': { modelUrl: '/assets/pets/qifu-er.glb', thumbnailUrl: '/assets/pets/qifu-er-thumbnail.png' },
   'pet.silf-owl': { modelUrl: '/assets/pets/silf-owl.glb', thumbnailUrl: '/assets/pets/silf-owl-thumbnail.png' },
   'pet.star-diver': { modelUrl: '/assets/pets/star-diver.glb', thumbnailUrl: '/assets/pets/star-diver-thumbnail.png' },
   // Keep the stable legacy key used by the SQL migrations and point it at the

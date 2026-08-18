@@ -95,6 +95,8 @@ test('preview framing applies only the requested Mixamo and character visual off
   assert.deepEqual(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.belilos-fox' }), { x: 0, y: 0, z: 0 });
   assert.ok(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.star-diver' }).y < 0);
   assert.ok(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.jasmine' }).y < 0);
+  assert.ok(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.ailite' }).y < 0);
+  assert.ok(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.qifu-er' }).y < 0);
   assert.ok(getPreviewModelOffset({ itemType: 'character', assetKey: 'character.arthur' }).y < 0);
   assert.deepEqual(getPreviewModelOffset({ itemType: 'decoration', assetKey: 'decoration.study-desk' }), { x: 0, y: 0, z: 0 });
 });

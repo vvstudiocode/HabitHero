@@ -5,6 +5,8 @@ import { WORLD_CHARACTER_CATALOG } from '../src/features/characters/world-charac
 
 const root = new URL('../', import.meta.url);
 const migrationPath = new URL('supabase/migrations/20260813110128_add_violette_character.sql', root);
+const actionMigrationPath = new URL('supabase/migrations/20260818220000_replace_violette_with_five_actions.sql', root);
+const exporterPath = new URL('../tools/export_violette_character.py', import.meta.url);
 
 function readGlbJson(path: URL): Record<string, unknown> {
   const buffer = readFileSync(path);
@@ -38,7 +40,10 @@ test('薇歐莉特 is registered as a compact animated shop/world character', ()
   const modelJson = readGlbJson(modelPath);
   const animations = modelJson.animations as Array<{ name?: string }>;
   const extensions = modelJson.extensionsUsed as string[];
-  assert.deepEqual(animations.map((animation) => animation.name), ['Idle', 'Walk_InPlace']);
+  assert.deepEqual(
+    animations.map((animation) => animation.name).sort(),
+    ['Dance', 'Idle', 'Sit', 'Walk_InPlace', 'Wave'],
+  );
   assert.ok(extensions.includes('KHR_draco_mesh_compression'));
   assert.ok(extensions.includes('EXT_texture_webp'));
   const material = (modelJson.materials as Array<{ pbrMetallicRoughness?: { metallicFactor?: number; roughnessFactor?: number } }>)[0];
@@ -56,4 +61,20 @@ test('薇歐莉特 migration registers the item and supports new-child initializ
   assert.match(migration, /set equipped_character_inventory_id/);
   assert.match(migration, /supplied_character_keys/);
   assert.match(migration, /warm-hand-painted/);
+});
+
+test('薇歐莉特 five-action replacement keeps the asset metadata in sync', () => {
+  const migration = readFileSync(actionMigrationPath, 'utf8');
+  assert.match(migration, /character\.violette/);
+  assert.match(migration, /animationClips', jsonb_build_array\('Idle', 'Walk_InPlace', 'Sit', 'Wave', 'Dance'\)/);
+  assert.match(migration, /animationStates', jsonb_build_array\('idle', 'walk', 'sit', 'wave', 'dance'\)/);
+  assert.match(migration, /meshSharedAcrossActions', true/);
+  assert.match(migration, /modelBytes', 1159320/);
+
+  const exporter = readFileSync(exporterPath, 'utf8');
+  for (const sourceName of ['薇歐莉特Idle\.fbx', '薇歐莉特\.fbx', '薇歐莉特坐下\.fbx', '薇歐莉特揮手\.fbx', '薇歐莉特跳舞\.fbx']) {
+    assert.match(exporter, new RegExp(sourceName));
+  }
+  assert.match(exporter, /actions = \[idle\]/);
+  assert.match(exporter, /action_name in \(.*Sit.*Wave.*Dance/su);
 });

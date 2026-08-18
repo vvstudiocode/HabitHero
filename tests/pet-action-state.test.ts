@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
   getPetActionPlan,
+  shouldPausePetForMenu,
   type PetAction,
 } from '../src/features/world/pet-action-state';
 
@@ -16,6 +17,10 @@ const terrainSource = readFileSync(
 );
 const controlsSource = readFileSync(
   new URL('../src/styles/world-controls.css', import.meta.url),
+  'utf8',
+);
+const tokensSource = readFileSync(
+  new URL('../src/styles/tokens.css', import.meta.url),
   'utf8',
 );
 const dashboardSource = readFileSync(
@@ -91,6 +96,12 @@ describe('pet action state', () => {
     );
   });
 
+  it('pauses only roaming pets while their action menu is open', () => {
+    assert.equal(shouldPausePetForMenu({ behaviorMode: 'wander', following: false }), true);
+    assert.equal(shouldPausePetForMenu({ behaviorMode: 'idle', following: false }), false);
+    assert.equal(shouldPausePetForMenu({ behaviorMode: 'wander', following: true }), false);
+  });
+
   it('puts an idle or roaming pet at the front of the follow queue', () => {
     assert.deepEqual(
       plan('follow', [], ['pet-1', 'pet-3']),
@@ -144,6 +155,34 @@ describe('pet action state', () => {
     assert.match(roamingEntityMigrationSource, /and behavior_mode = 'wander'/);
     assert.doesNotMatch(roamingEntityMigrationSource, /set behavior_mode = 'wander',[\s\S]*?position_x = -3\.5/);
     assert.match(roamingEntityMigrationSource, /insert into public\.child_world_entities/);
+  });
+
+  it('pauses a roaming pet for the menu and resumes it when the menu is dismissed', () => {
+    assert.match(terrainSource, /shouldPausePetForMenu\(selection\)/);
+    assert.match(terrainSource, /optimisticallySetPetIdle\(selection\)/);
+    assert.match(terrainSource, /const clearPetMenuPause = \(\) =>/);
+    assert.match(terrainSource, /clearPetMenuPause\(\);[\s\S]*?setSelectedPet\(null\)/);
+    assert.match(terrainSource, /const commitPetAction = \(action: PetAction\) => \{[\s\S]*?clearPetMenuPause\(\);/);
+    assert.match(terrainSource, /const commitPetAnimation = \(action: PetAnimationAction\) => \{[\s\S]*?clearPetMenuPause\(\);/);
+  });
+
+  it('uses vertical icon-only pet controls on compact touch screens while preserving accessible labels', () => {
+    assert.match(terrainSource, /className="hh-world-pet-action-label">待機<\/span>/);
+    assert.match(terrainSource, /className="hh-world-pet-action-label">巡遊<\/span>/);
+    assert.match(terrainSource, /className="hh-world-pet-action-label">\s*\{selectedPet\.following \? '跟隨中' : '跟隨'\}\s*<\/span>/);
+    assert.match(controlsSource, /@media \(max-width: 760px\) \{[\s\S]*?\.hh-world-pet-actions \{[\s\S]*?flex-direction:\s*column;/);
+    assert.match(controlsSource, /\.hh-world-pet-selection\s*\{[\s\S]*?transform:\s*translate\(\s*calc\(-50% \+ var\(--hh-world-pet-action-mobile-horizontal-offset\)\),\s*calc\(-50% \+ var\(--hh-world-pet-action-mobile-offset\)\)\s*\);/);
+    assert.match(controlsSource, /\.hh-world-pet-action-label\s*\{[\s\S]*?display:\s*none;/);
+    assert.match(controlsSource, /\.hh-world-pet-action\s*\{[\s\S]*?width:\s*var\(--hh-world-pet-action-mobile-size\);[\s\S]*?min-width:\s*var\(--hh-world-pet-action-mobile-size\);/);
+    assert.match(controlsSource, /\.hh-world-pet-action::before\s*\{[\s\S]*?background:\s*var\(--hh-world-pet-action-mobile-surface\);/);
+    assert.match(controlsSource, /\.hh-world-pet-action\.is-selected::before\s*\{[\s\S]*?background:\s*var\(--hh-world-pet-action-mobile-selected-surface\);/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-size:\s*44px;/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-visual-size:\s*32px;/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-gap:\s*2px;/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-horizontal-offset:\s*12px;/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-offset:\s*16px;/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-surface:\s*rgb\(255 253 241 \/ 72%\);/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-selected-surface:\s*rgb\(91 156 105 \/ 78%\);/);
   });
 
   it('registers a pet that finishes loading after a purchase in the live actor list', () => {

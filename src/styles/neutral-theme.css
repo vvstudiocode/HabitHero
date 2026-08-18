@@ -315,7 +315,9 @@ body,
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
-.hh-world-clean-mode-control {
+.hh-world-clean-mode-control,
+.hh-world-action-toggle,
+.hh-world-action-item {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);
   background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);

@@ -65,8 +65,8 @@ describe('multiple pet following', () => {
   });
 
   it('puts the first follower closer to the player and queues the rest in order', () => {
-    assert.equal(PET_FOLLOW_DISTANCE, 0.24);
-    assert.equal(PET_FOLLOW_SPACING, 0.31);
+    assert.equal(PET_FOLLOW_DISTANCE, 0.12);
+    assert.equal(PET_FOLLOW_SPACING, 0.16);
     assert.ok(getFollowingDistance(0) < getFollowingDistance(1));
     assert.ok(getFollowingDistance(1) < getFollowingDistance(2));
   });

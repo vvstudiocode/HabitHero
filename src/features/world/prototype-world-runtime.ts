@@ -10,6 +10,7 @@ import {
   WORLD_BOUNDARY,
   moveWorldCharacter,
   type CollisionCircle,
+  type WorldPoint2D,
 } from './world-collision';
 import {
   getKeyboardCameraInput,
@@ -54,9 +55,12 @@ import {
 } from './world-roaming';
 import { getDistributedPetSpawnPosition, getPetNavigationRadius } from './pet-spawning';
 import {
+  appendFollowingTrailSample,
   getFollowingStep,
   getFollowingDistance,
-  PET_FOLLOW_DISTANCE,
+  getFollowingTrailTarget,
+  getSafeFollowingDistance,
+  PET_FOLLOW_CLEARANCE,
   PET_FOLLOW_SPEED,
 } from './pet-following';
 import { getPetModelUrl as getCatalogPetModelUrl, resolvePetCatalogItem } from './pet-model-assets';
@@ -65,6 +69,7 @@ import { getRequiredWorldDecorationCatalogItems, getRequiredWorldPetCatalogItems
 import {
   advancePetIdleCycle,
   getAvailablePetAnimationActions,
+  getPetAnimationActionPlayback,
   getPetAnimationActionClipName,
   getPetAnimationClipName,
   PET_ANIMATION_CROSSFADE_SECONDS,
@@ -81,6 +86,11 @@ import {
   type PicturebookPetMaterial,
   type WarmHandPaintedCharacterMaterial,
 } from './character-material-style';
+import {
+  findFacingPetTarget,
+  getSharedInteractionActions,
+  type WorldInteractionTarget,
+} from './world-interaction';
 
 export const PROTOTYPE_WORLD_ASSETS = {
   tree: new URL('../../../terrain-prototype/assets/big-tree-optimized.glb', import.meta.url).href,
@@ -350,6 +360,7 @@ export function getPetModelScale({
 
 type ThreeNamespace = typeof import('three');
 type RuntimeStatus = 'loading' | 'ready' | 'failed';
+type CharacterAnimationAction = 'idle' | 'walk' | PetAnimationAction;
 
 export interface DecorationSelection {
   entityId: string;
@@ -413,6 +424,7 @@ export interface PrototypeWorldRuntime {
   clearOptimisticPetIdle: (inventoryItemId: string) => void;
   playPetAnimation: (inventoryItemId: string, action: PetAnimationAction) => boolean;
   stopPetAnimation: (inventoryItemId: string) => void;
+  playInteractionAction: (action: PetAnimationAction) => boolean;
 }
 
 type DisposableScene = { traverse: (callback: (object: unknown) => void) => void };
@@ -847,8 +859,12 @@ function createPetModel(
       const clip = clipName ? animations.find((candidate) => candidate.name === clipName) : undefined;
       if (!clip) continue;
       const action = mixer.clipAction(createInPlaceAnimationClip(clip));
-      action.setLoop(THREE.LoopOnce, 1);
-      action.clampWhenFinished = true;
+      if (getPetAnimationActionPlayback(actionName) === 'repeat') {
+        action.setLoop(THREE.LoopRepeat, Infinity);
+      } else {
+        action.setLoop(THREE.LoopOnce, 1);
+        action.clampWhenFinished = true;
+      }
       petActionActions[actionName] = action;
     }
   }
@@ -861,6 +877,24 @@ function pauseAnimationAtIdlePose(action: import('three').AnimationAction, mixer
   action.paused = false;
   mixer.update(0);
   action.paused = true;
+}
+
+function transitionPetAnimation(
+  actor: { activeAction?: import('three').AnimationAction },
+  nextAction?: import('three').AnimationAction,
+) {
+  if (!nextAction) return false;
+  const didTransition = actor.activeAction !== nextAction;
+  if (didTransition) {
+    const previousAction = actor.activeAction;
+    nextAction.reset().setEffectiveWeight(1).play();
+    if (previousAction) {
+      nextAction.crossFadeFrom(previousAction, PET_ANIMATION_CROSSFADE_SECONDS, true);
+    }
+    actor.activeAction = nextAction;
+  }
+  nextAction.paused = false;
+  return didTransition;
 }
 
 function updatePetAnimation(
@@ -920,16 +954,7 @@ function updatePetAnimation(
   }
 
   if (nextAction) {
-    if (actor.activeAction !== nextAction) {
-      const previousAction = actor.activeAction;
-      nextAction.reset().setEffectiveWeight(1).play();
-      if (previousAction) {
-        nextAction.crossFadeFrom(previousAction, PET_ANIMATION_CROSSFADE_SECONDS, true);
-      }
-      actor.activeAction = nextAction;
-      if (nextAction === actor.idleAction) actor.idleCycleElapsed = 0;
-    }
-    nextAction.paused = false;
+    if (transitionPetAnimation(actor, nextAction) && nextAction === actor.idleAction) actor.idleCycleElapsed = 0;
   } else if (!isWalking && actor.walkAction) {
     actor.walkAction.paused = true;
     actor.activeAction = actor.walkAction;
@@ -1012,6 +1037,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let updateScene: (next: PrototypeWorldRuntimeUpdate) => void = () => undefined;
   let playPetAnimation: (inventoryItemId: string, action: PetAnimationAction) => boolean = () => false;
   let stopPetAnimation: (inventoryItemId: string) => void = () => undefined;
+  let playInteractionAction: (action: PetAnimationAction) => boolean = () => false;
   let optimisticPetActorsDirty = false;
   const optimisticPetIdles = new Map<string, PetSelection>();
   let latestRuntimeUpdate: PrototypeWorldRuntimeUpdate = {
@@ -1362,6 +1388,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const playerRoot = new THREE.Group();
       playerRoot.name = 'player-root';
       playerRoot.position.set(0, 0, terrainStep * 2.08);
+      const playerFollowHistory: WorldPoint2D[] = [];
       let characterDefinition = defineAsset(THREE, characterSource);
       let characterScale = PROTOTYPE_WORLD_CONFIG.characterTargetHeight / Math.max(characterDefinition.size.y, 0.001);
       const characterRoot = new THREE.Group();
@@ -1449,9 +1476,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       groundRoamingCharacterOnGrass();
 
-      let characterActions = new Map<'idle' | 'walk', import('three').AnimationAction>();
+      let characterActions = new Map<CharacterAnimationAction, import('three').AnimationAction>();
       let activeCharacterAction: import('three').AnimationAction | undefined;
-      const playCharacterAction = (name: 'idle' | 'walk') => {
+      const playCharacterAction = (name: CharacterAnimationAction) => {
         const fallbackClip = name === 'walk' ? getWalkAnimationClip(characterAnimations) : undefined;
         const nextAction = characterActions.get(name) ?? (fallbackClip && mixer ? mixer.clipAction(fallbackClip) : undefined);
         if (!nextAction) {
@@ -1480,13 +1507,29 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const configureCharacterAnimation = () => {
         mixer?.stopAllAction();
         mixer = characterAnimations.length > 0 ? new THREE.AnimationMixer(characterSource) : undefined;
-        characterActions = new Map<'idle' | 'walk', import('three').AnimationAction>();
+        characterActions = new Map<CharacterAnimationAction, import('three').AnimationAction>();
         characterAnimations.forEach((clip) => {
           const name = clip.name.toLowerCase();
           if (name.includes('walk') || name.includes('run')) characterActions.set('walk', mixer!.clipAction(createInPlaceAnimationClip(clip)));
           if (name.includes('idle') || name.includes('iddle') || name.includes('stand') || name.includes('rest')) characterActions.set('idle', mixer!.clipAction(clip));
         });
-        characterActions.forEach((action) => action.setLoop(THREE.LoopRepeat, Infinity));
+        for (const actionName of getAvailablePetAnimationActions(characterAnimations.map((clip) => clip.name))) {
+          const clipName = getPetAnimationActionClipName(characterAnimations.map((clip) => clip.name), actionName);
+          const clip = clipName ? characterAnimations.find((candidate) => candidate.name === clipName) : undefined;
+          if (!clip) continue;
+          const action = mixer!.clipAction(createInPlaceAnimationClip(clip));
+          if (getPetAnimationActionPlayback(actionName) === 'repeat') {
+            action.setLoop(THREE.LoopRepeat, Infinity);
+          } else {
+            action.setLoop(THREE.LoopOnce, 1);
+            action.clampWhenFinished = true;
+          }
+          characterActions.set(actionName, action);
+        }
+        characterActions.forEach((action, actionName) => {
+          if (actionName === 'sit' || actionName === 'wave' || actionName === 'dance') return;
+          action.setLoop(THREE.LoopRepeat, Infinity);
+        });
         activeCharacterAction = undefined;
         playCharacterAction('idle');
       };
@@ -1538,6 +1581,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         petActionActions: Partial<Record<PetAnimationAction, import('three').AnimationAction>>;
         petAction?: PetAnimationAction;
         target: { x: number; z: number } | null;
+        followHistory: WorldPoint2D[];
         wanderState: WanderState;
         active: boolean;
       }> = [];
@@ -1546,7 +1590,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const action = actor?.petActionActions[actionName];
         if (!actor || !action || !actor.mixer) return false;
         const previousAction = actor.activeAction;
-        action.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).play();
+        action.reset().setEffectiveWeight(1).play();
+        if (getPetAnimationActionPlayback(actionName) === 'repeat') {
+          action.setLoop(THREE.LoopRepeat, Infinity);
+        } else {
+          action.setLoop(THREE.LoopOnce, 1);
+          action.clampWhenFinished = true;
+        }
         if (previousAction && previousAction !== action) {
           action.crossFadeFrom(previousAction, PET_ANIMATION_CROSSFADE_SECONDS, true);
         }
@@ -1557,8 +1607,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       stopPetAnimation = (inventoryItemId) => {
         const actor = petActors.find((candidate) => candidate.inventoryItemId === inventoryItemId && candidate.active);
         if (!actor || !actor.petAction) return;
-        actor.petActionActions[actor.petAction]?.stop();
+        transitionPetAnimation(actor, actor.idleAction ?? actor.walkAction);
         actor.petAction = undefined;
+        actor.object.position.y = actor.baseY;
+        actor.model.rotation.z = 0;
       };
       options.gameData.worldEntities.filter((entity) => entity.isActive).forEach((entity) => {
         const isPet = entity.entityKind === 'pet';
@@ -1625,7 +1677,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const followIndex = followingPetInventoryIds.indexOf(entity.inventoryItemId);
           const follow = followIndex >= 0;
           const initialFacing = { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) };
-          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, idleAction: petModel!.idleAction, activeAction: petModel!.activeAction, petActionActions: petModel!.petActionActions, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
+          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, idleAction: petModel!.idleAction, activeAction: petModel!.activeAction, petActionActions: petModel!.petActionActions, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
         }
       });
       followingPetInventoryIds.forEach((inventoryId, followIndex) => {
@@ -1657,19 +1709,112 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           );
           const object = petModel.root;
           const initialFacing = { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) };
+          const petRadius = getPetNavigationRadius(followingPet?.collisionRadius ?? 0.28, followingPet?.maxScale ?? 1);
+          const previousLeader = followIndex > 0
+            ? petActors.find((candidate) => candidate.active && candidate.followIndex === followIndex - 1)
+            : undefined;
+          const leaderPosition = previousLeader
+            ? { x: previousLeader.object.position.x, z: previousLeader.object.position.z }
+            : { x: playerRoot.position.x, z: playerRoot.position.z };
+          const leaderRadius = previousLeader?.radius ?? CHARACTER_COLLISION_RADIUS;
           const initialFollowDistance = Math.max(
             getFollowingDistance(followIndex),
-            CHARACTER_COLLISION_RADIUS + (followingPet?.collisionRadius ?? 0.28) * petVisualMultiplier + 0.12,
+            leaderRadius + petRadius + PET_FOLLOW_CLEARANCE,
           );
           object.position.set(
-            playerRoot.position.x - initialFacing.x * initialFollowDistance,
+            leaderPosition.x - initialFacing.x * initialFollowDistance,
             petGroundOffset,
-            playerRoot.position.z - initialFacing.z * initialFollowDistance,
+            leaderPosition.z - initialFacing.z * initialFollowDistance,
           );
           worldScene.add(object);
-          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, idleAction: petModel.idleAction, activeAction: petModel.activeAction, petActionActions: petModel.petActionActions, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: getPetNavigationRadius(followingPet?.collisionRadius ?? 0.28, followingPet?.maxScale ?? 1), baseY: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
+          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, idleAction: petModel.idleAction, activeAction: petModel.activeAction, petActionActions: petModel.petActionActions, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
         }
       });
+
+      let interactionActionState: {
+        inventoryItemId?: string;
+        action: PetAnimationAction;
+      } | undefined;
+      const getInteractionTarget = (): WorldInteractionTarget | null => {
+        if (options.pausedRef.current || placementActive) return null;
+        const characterActionsAvailable = (['sit', 'wave', 'dance'] as const)
+          .filter((action) => characterActions.has(action));
+        const petTarget = findFacingPetTarget({
+          playerPosition: { x: playerRoot.position.x, z: playerRoot.position.z },
+          playerFacing: { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) },
+          pets: petActors
+            .filter((actor) => actor.active)
+            .map((actor) => ({
+              inventoryItemId: actor.inventoryItemId,
+              position: { x: actor.object.position.x, z: actor.object.position.z },
+              availableActions: Object.keys(actor.petActionActions) as PetAnimationAction[],
+            })),
+        });
+        if (!petTarget) return null;
+        return {
+          ...petTarget,
+          availableActions: getSharedInteractionActions(characterActionsAvailable, petTarget.availableActions),
+        };
+      };
+      const finishInteractionAction = (nextCharacterAction: 'idle' | 'walk' = 'idle') => {
+        const state = interactionActionState;
+        if (!state) return;
+        const actor = state.inventoryItemId
+          ? petActors.find((candidate) => candidate.inventoryItemId === state.inventoryItemId && candidate.active)
+          : undefined;
+        if (actor?.petAction === state.action) {
+          transitionPetAnimation(actor, actor.idleAction ?? actor.walkAction);
+          actor.petAction = undefined;
+          actor.object.position.y = actor.baseY;
+          actor.model.rotation.z = 0;
+        }
+        interactionActionState = undefined;
+        playCharacterAction(nextCharacterAction);
+      };
+      playInteractionAction = (actionName) => {
+        const target = getInteractionTarget();
+        const characterAction = characterActions.get(actionName);
+        if (!characterAction) return false;
+
+        finishInteractionAction();
+        playCharacterAction(actionName);
+        const actor = target?.availableActions.includes(actionName)
+          ? petActors.find((candidate) => candidate.inventoryItemId === target.inventoryItemId && candidate.active)
+          : undefined;
+        const petAction = actor?.petActionActions[actionName];
+        if (!actor || !petAction || !actor.mixer) {
+          interactionActionState = {
+            action: actionName,
+          };
+          return true;
+        }
+
+        const offsetX = actor.object.position.x - playerRoot.position.x;
+        const offsetZ = actor.object.position.z - playerRoot.position.z;
+        characterRoot.rotation.y = Math.atan2(offsetX, offsetZ);
+        actor.object.rotation.y = Math.atan2(-offsetX, -offsetZ);
+        actor.target = null;
+        actor.state = 'idle';
+
+        const previousPetAction = actor.activeAction;
+        petAction.reset().setEffectiveWeight(1).play();
+        if (getPetAnimationActionPlayback(actionName) === 'repeat') {
+          petAction.setLoop(THREE.LoopRepeat, Infinity);
+        } else {
+          petAction.setLoop(THREE.LoopOnce, 1);
+          petAction.clampWhenFinished = true;
+        }
+        if (previousPetAction && previousPetAction !== petAction) {
+          petAction.crossFadeFrom(previousPetAction, PET_ANIMATION_CROSSFADE_SECONDS, true);
+        }
+        actor.activeAction = petAction;
+        actor.petAction = actionName;
+        interactionActionState = {
+          inventoryItemId: actor.inventoryItemId,
+          action: actionName,
+        };
+        return true;
+      };
 
       type RuntimePetActor = (typeof petActors)[number];
       let latestPetData = options.gameData;
@@ -1704,17 +1849,24 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         actor.baseY = entity.y + groundOffset;
         actor.state = getPetActorState(actor.behaviorMode, following);
         actor.target = null;
+        actor.followHistory.length = 0;
         if (!placeAtStart) return;
         const facing = { x: Math.sin(characterRoot.rotation.y), z: Math.cos(characterRoot.rotation.y) };
         if (following) {
+          const previousLeader = followIndex > 0
+            ? petActors.find((candidate) => candidate.active && candidate !== actor && candidate.followIndex === followIndex - 1)
+            : undefined;
+          const leaderPosition = previousLeader
+            ? { x: previousLeader.object.position.x, z: previousLeader.object.position.z }
+            : { x: playerRoot.position.x, z: playerRoot.position.z };
           const followDistance = Math.max(
             getFollowingDistance(followIndex),
-            CHARACTER_COLLISION_RADIUS + (catalogItem.collisionRadius ?? 0.28) * visualMultiplier + 0.12,
+            (previousLeader?.radius ?? CHARACTER_COLLISION_RADIUS) + actor.radius + PET_FOLLOW_CLEARANCE,
           );
           actor.object.position.set(
-            playerRoot.position.x - facing.x * followDistance,
+            leaderPosition.x - facing.x * followDistance,
             actor.baseY,
-            playerRoot.position.z - facing.z * followDistance,
+            leaderPosition.z - facing.z * followDistance,
           );
         } else {
           actor.object.position.set(entity.x, entity.y + groundOffset, entity.z);
@@ -1767,6 +1919,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           movementSpeedMultiplier: getPetMovementSpeedMultiplier(catalogItem.assetKey, catalogItem.metadata),
           walkingGroundOffset: getPetWalkingGroundOffset(catalogItem.assetKey, catalogItem.metadata),
           target: null,
+          followHistory: [],
           wanderState: createWanderState(hashWanderSeed(`live:${entity.id}:${entity.inventoryItemId}`), { x: 0, z: 1 }),
           active: true,
         };
@@ -2450,12 +2603,25 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             isPlayerMoving = Math.hypot(nextPosition.x - playerRoot.position.x, nextPosition.z - playerRoot.position.z) > 0.0001;
             playerRoot.position.x = nextPosition.x;
             playerRoot.position.z = nextPosition.z;
+            if (isPlayerMoving) {
+              appendFollowingTrailSample(playerFollowHistory, {
+                x: playerRoot.position.x,
+                z: playerRoot.position.z,
+              });
+            }
             const targetYaw = Math.atan2(direction.x, direction.z);
             const yawDelta = Math.atan2(Math.sin(targetYaw - characterRoot.rotation.y), Math.cos(targetYaw - characterRoot.rotation.y));
             characterRoot.rotation.y += yawDelta * Math.min(1, delta * 12);
           }
         }
-        playCharacterAction(isPlayerMoving ? 'walk' : 'idle');
+        if (interactionActionState) {
+          if (isPlayerMoving) {
+            finishInteractionAction('walk');
+          }
+        }
+        if (!interactionActionState) {
+          playCharacterAction(isPlayerMoving ? 'walk' : 'idle');
+        }
         proceduralGrass.update({ time: sceneElapsedTime });
         ambientPollen.update(sceneElapsedTime);
         butterflies.update(sceneElapsedTime);
@@ -2503,6 +2669,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           if (!actor.active) return;
           if (actor.petAction) {
             actor.target = null;
+            actor.followHistory.length = 0;
             actor.state = 'idle';
             updatePetAnimation(actor, false, delta, prefersReducedMotion);
             return;
@@ -2514,33 +2681,52 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             const leader = actor.followIndex > 0
               ? orderedFollowingActors.find((candidate) => candidate.followIndex === actor.followIndex - 1)
               : undefined;
+            const leaderPosition = leader
+              ? { x: leader.object.position.x, z: leader.object.position.z }
+              : { x: playerRoot.position.x, z: playerRoot.position.z };
+            const leaderRadius = leader?.radius ?? CHARACTER_COLLISION_RADIUS;
+            const followDistance = getSafeFollowingDistance(
+              getFollowingDistance(actor.followIndex),
+              actor.radius,
+              leaderRadius,
+            );
+            const trailTarget = getFollowingTrailTarget(
+              leader?.followHistory ?? playerFollowHistory,
+              leaderPosition,
+              followDistance,
+            );
             const followingStep = getFollowingStep(
               current,
               leader
-                ? { position: { x: leader.object.position.x, z: leader.object.position.z }, facing: leader.facing }
-                : { position: { x: playerRoot.position.x, z: playerRoot.position.z }, facing: playerFacing },
+                ? { position: leaderPosition, facing: leader.facing }
+                : { position: leaderPosition, facing: playerFacing },
               delta,
               actor.radius,
               PET_FOLLOW_SPEED * actor.movementSpeedMultiplier * (prefersReducedMotion ? 0.55 : 1),
               wanderObstacles,
-              leader?.radius ?? CHARACTER_COLLISION_RADIUS,
-              PET_FOLLOW_DISTANCE,
+              leaderRadius,
+              getFollowingDistance(actor.followIndex),
+              trailTarget ?? actor.target ?? undefined,
             );
             actor.target = followingStep.target;
-            if (!followingStep.arrived || followingStep.rerouted) {
+            const moved = Math.hypot(
+              followingStep.next.x - current.x,
+              followingStep.next.z - current.z,
+            );
+            actor.object.position.x = followingStep.next.x;
+            actor.object.position.z = followingStep.next.z;
+            actor.object.position.y = actor.baseY;
+            if (moved > 0.0001) {
               actor.facing = followingStep.facing;
-              actor.object.position.x = followingStep.next.x;
-              actor.object.position.z = followingStep.next.z;
               const targetYaw = Math.atan2(followingStep.facing.x, followingStep.facing.z);
               const yawDelta = Math.atan2(
                 Math.sin(targetYaw - actor.object.rotation.y),
                 Math.cos(targetYaw - actor.object.rotation.y),
               );
               actor.object.rotation.y += yawDelta * Math.min(1, delta * 10);
-              actor.object.position.y = actor.baseY;
+              appendFollowingTrailSample(actor.followHistory, followingStep.next);
               updatePetAnimation(actor, true, delta, prefersReducedMotion);
             } else {
-              actor.object.position.y = actor.baseY;
               updatePetAnimation(actor, false, delta, prefersReducedMotion);
             }
             return;
@@ -2633,5 +2819,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     },
     playPetAnimation: (inventoryItemId, action) => playPetAnimation(inventoryItemId, action),
     stopPetAnimation: (inventoryItemId) => stopPetAnimation(inventoryItemId),
+    playInteractionAction: (action) => playInteractionAction(action),
   };
 }

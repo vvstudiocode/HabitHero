@@ -1,8 +1,8 @@
-"""Build the supplied Noah FBX pair into one mobile-ready animated GLB.
+"""Build the supplied Noah FBX actions into one mobile-ready animated GLB.
 
-The walk FBX provides the rig and mesh. The idle FBX is imported only to
-capture its action; its duplicate rig and mesh are removed before export so
-the final file contains one skinned character with both clips.
+The Idle FBX provides the shared rig, mesh, materials, and texture. Each other
+FBX contributes one authored action; its duplicate rig and mesh are removed so
+the final file contains one skinned character with five clips.
 
 Run with Blender 5.x:
   /Applications/Blender.app/Contents/MacOS/Blender --background --python tools/export_noah_character.py
@@ -17,10 +17,10 @@ import bpy
 
 
 ROOT = "/Users/studio.vv/Desktop/HabitHero"
-WALK_SOURCE = "/Users/studio.vv/Downloads/諾亞.fbx"
-IDLE_SOURCE = "/Users/studio.vv/Downloads/諾亞Idle.fbx"
+ACTION_DIRECTORY = "/Users/studio.vv/Downloads"
+IDLE_SOURCE = "/Users/studio.vv/Desktop/habithero動作檔/諾亞Idle.fbx"
 MODEL_OUTPUT = os.path.join(ROOT, "public/assets/characters/noah.glb")
-THUMBNAIL_SOURCE = "/Users/studio.vv/Downloads/諾亞去背.png"
+THUMBNAIL_SOURCE = "/Users/studio.vv/Desktop/habithero動作檔/諾亞去背.png"
 THUMBNAIL_OUTPUT = os.path.join(ROOT, "public/assets/characters/noah-thumbnail.webp")
 
 TEXTURE_MAX_SIZE = 1024
@@ -55,8 +55,35 @@ def lock_root_motion(action) -> int:
     return changed
 
 
-def import_fbx(path: str) -> None:
+def import_fbx(path: str):
+    before_objects = set(bpy.context.scene.objects)
+    before_actions = set(bpy.data.actions)
     bpy.ops.import_scene.fbx(filepath=path, automatic_bone_orientation=False)
+    imported_objects = [object_ for object_ in bpy.context.scene.objects if object_ not in before_objects]
+    armatures = [object_ for object_ in imported_objects if object_.type == "ARMATURE"]
+    meshes = [object_ for object_ in imported_objects if object_.type == "MESH"]
+    actions = [action for action in bpy.data.actions if action not in before_actions]
+    if len(armatures) != 1 or len(meshes) != 1 or len(actions) != 1:
+        raise RuntimeError(
+            f"{path}: expected one armature, mesh, and action; got "
+            f"{len(armatures)} armatures, {len(meshes)} meshes, {len(actions)} actions"
+        )
+    return imported_objects, armatures[0], meshes[0], actions[0]
+
+
+def remove_imported_objects(objects) -> None:
+    for object_ in objects:
+        bpy.data.objects.remove(object_, do_unlink=True)
+
+
+def copy_action_from_fbx(path: str, name: str):
+    imported_objects, _armature, _mesh, source_action = import_fbx(path)
+    action = source_action.copy()
+    action.name = name
+    action.use_fake_user = True
+    remove_imported_objects(imported_objects)
+    bpy.data.actions.remove(source_action, do_unlink=True)
+    return action
 
 
 def resize_packed_images() -> None:
@@ -87,37 +114,40 @@ def reduce_mesh(mesh) -> tuple[int, int]:
 
 def export_model() -> None:
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    import_fbx(WALK_SOURCE)
-    armature = next(object_ for object_ in bpy.data.objects if object_.type == "ARMATURE")
-    mesh = next(object_ for object_ in bpy.data.objects if object_.type == "MESH")
-    walk_action = armature.animation_data.action
-    if walk_action is None:
-        raise RuntimeError("諾亞 walk FBX did not contain an animation action")
-    walk_action.name = "Walk_InPlace"
-    walk_channels_locked = lock_root_motion(walk_action)
-
-    import_fbx(IDLE_SOURCE)
-    idle_armature = next(object_ for object_ in bpy.data.objects if object_.type == "ARMATURE" and object_ != armature)
-    idle_action = idle_armature.animation_data.action
-    if idle_action is None:
-        raise RuntimeError("諾亞 idle FBX did not contain an animation action")
+    _base_objects, armature, mesh, idle_source_action = import_fbx(IDLE_SOURCE)
+    idle_action = idle_source_action.copy()
     idle_action.name = "Idle"
+    idle_action.use_fake_user = True
     lock_root_motion(idle_action)
+    bpy.data.actions.remove(idle_source_action, do_unlink=True)
 
-    duplicate_objects = [
-        object_
-        for object_ in list(bpy.data.objects)
-        if object_ == idle_armature or object_.parent == idle_armature
-    ]
-    for object_ in duplicate_objects:
-        bpy.data.objects.remove(object_, do_unlink=True)
-    armature.animation_data.action = walk_action
+    actions = [idle_action]
+    for filename, action_name in (
+        ("諾亞.fbx", "Walk_InPlace"),
+        ("諾亞坐下.fbx", "Sit"),
+        ("諾亞揮手.fbx", "Wave"),
+        ("諾亞跳舞.fbx", "Dance"),
+    ):
+        action = copy_action_from_fbx(os.path.join(ACTION_DIRECTORY, filename), action_name)
+        lock_root_motion(action)
+        actions.append(action)
+
+    armature.animation_data_create()
+    for action in actions:
+        armature.animation_data.action = action
+        action.use_fake_user = True
+    armature.animation_data.action = actions[1]
+    walk_channels_locked = sum(
+        1
+        for fcurve in iter_action_fcurves(actions[1])
+        if ROOT_MOTION_BONE.search(fcurve.data_path) and fcurve.array_index in (0, 2)
+    )
 
     original_polygons, exported_polygons = reduce_mesh(mesh)
     resize_packed_images()
     scene = bpy.context.scene
     scene.frame_start = 1
-    scene.frame_end = 500
+    scene.frame_end = max(int(action.frame_range[1]) for action in actions)
     scene.frame_set(scene.frame_start)
 
     os.makedirs(os.path.dirname(MODEL_OUTPUT), exist_ok=True)
@@ -147,7 +177,7 @@ def export_model() -> None:
     print(
         f"NOAH_MODEL {MODEL_OUTPUT} original_polygons={original_polygons} "
         f"exported_polygons={exported_polygons} walk_root_channels_locked={walk_channels_locked} "
-        "animations=Idle,Walk_InPlace"
+        "animations=Idle,Walk_InPlace,Sit,Wave,Dance"
     )
 
 
