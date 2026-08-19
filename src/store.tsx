@@ -186,6 +186,42 @@ export const LIVE_DATA_REFRESH_INTERVAL_MS = 45_000;
 
 export { mergeTimerSnapshots, replaceOptimisticTaskId } from './lib/app-state-patches';
 
+export function patchChild(
+  previous: AppState,
+  childId: string,
+  update: (child: AppState['children'][number]) => AppState['children'][number],
+): AppState {
+  return {
+    ...previous,
+    children: previous.children.map((child) => child.id === childId ? update(child) : child),
+  };
+}
+
+export function patchTask(previous: AppState, taskId: string, update: (task: Task) => Task): AppState {
+  return {
+    ...previous,
+    children: previous.children.map((child) => ({
+      ...child,
+      tasks: child.tasks.map((task) => task.id === taskId ? update(task) : task),
+    })),
+  };
+}
+
+export function patchGameData(
+  previous: AppState,
+  childId: string,
+  update: (gameData: ReturnType<typeof emptyChildGameData>) => ReturnType<typeof emptyChildGameData>,
+): AppState {
+  const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+  return {
+    ...previous,
+    gameDataByChildId: {
+      ...previous.gameDataByChildId,
+      [childId]: update(currentGameData),
+    },
+  };
+}
+
 const emptyState: AppState = {
   parentPin: null,
   parentConsentVersion: null,
@@ -477,24 +513,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [familyId, repository, scheduleBackgroundRefresh]);
 
   const createLocalId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const patchChild = (previous: AppState, childId: string, update: (child: AppState['children'][number]) => AppState['children'][number]) => ({
-    ...previous,
-    children: previous.children.map((child) => child.id === childId ? update(child) : child),
-  });
-  const patchTask = (previous: AppState, taskId: string, update: (task: Task) => Task) => ({
-    ...previous,
-    children: previous.children.map((child) => ({ ...child, tasks: child.tasks.map((task) => task.id === taskId ? update(task) : task) })),
-  });
-  const patchGameData = (previous: AppState, childId: string, update: (gameData: ReturnType<typeof emptyChildGameData>) => ReturnType<typeof emptyChildGameData>) => {
-    const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-    return {
-      ...previous,
-      gameDataByChildId: {
-        ...previous.gameDataByChildId,
-        [childId]: update(currentGameData),
-      },
-    };
-  };
   const reconcileWorldMutation = (childId: string, result: WorldMutationResult, localEntityId?: string) => {
     setState((current) => {
       const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
