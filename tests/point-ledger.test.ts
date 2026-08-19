@@ -161,6 +161,59 @@ describe('point ledger repository contract', () => {
     assert.equal(result.pointsBalance, 120);
     assert.equal(result.ledgerEntry.pointsDelta, 20);
   });
+
+  it('defaults a manual adjustment result without a server balance to zero', async () => {
+    const client = {
+      rpc: async () => ({
+        data: { ledger_entry: ledgerRow },
+        error: null,
+      }),
+      from: () => queryThatShouldNotBeCalled(),
+      functions: { invoke: async () => ({ data: null, error: null }) },
+    };
+
+    const repository = createDataRepository(client as never);
+    const result = await repository.adjustChildPoints('family-1', 'child-1', 20, '主動整理餐桌');
+
+    assert.equal(result.pointsBalance, 0);
+    assert.equal(result.ledgerEntry.id, ledgerRow.id);
+  });
+
+  it('rejects a manual adjustment result without a ledger entry', async () => {
+    const client = {
+      rpc: async () => ({
+        data: { points_balance: 120 },
+        error: null,
+      }),
+      from: () => queryThatShouldNotBeCalled(),
+      functions: { invoke: async () => ({ data: null, error: null }) },
+    };
+
+    const repository = createDataRepository(client as never);
+
+    await assert.rejects(
+      () => repository.adjustChildPoints('family-1', 'child-1', 20, '主動整理餐桌'),
+      /點數調整回應格式錯誤，請重試。/,
+    );
+  });
+
+  it('rejects a nonobject manual adjustment result', async () => {
+    const client = {
+      rpc: async () => ({
+        data: 'unexpected',
+        error: null,
+      }),
+      from: () => queryThatShouldNotBeCalled(),
+      functions: { invoke: async () => ({ data: null, error: null }) },
+    };
+
+    const repository = createDataRepository(client as never);
+
+    await assert.rejects(
+      () => repository.adjustChildPoints('family-1', 'child-1', 20, '主動整理餐桌'),
+      /點數調整回應格式錯誤，請重試。/,
+    );
+  });
 });
 
 describe('manual point adjustment migration contract', () => {
