@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { emptyChildGameData, type ChildGameData } from '../src/features/world/contracts';
-import { patchChild, patchGameData, patchTask } from '../src/store';
+import { patchChild, patchGameData, patchTask } from '../src/lib/app-state-patches';
+import * as storeFacade from '../src/store';
 import type { AppState } from '../src/types';
 
 function stateFixture(overrides: Partial<AppState> = {}): AppState {
@@ -121,4 +122,10 @@ test('patchGameData supplies empty game data when the target child has no entry'
 
   assert.deepEqual(received, emptyChildGameData());
   assert.equal(patched.gameDataByChildId['child-1'].walletBalance, 12);
+});
+
+test('store facade keeps exporting pure app state patch helpers', () => {
+  assert.equal(storeFacade.patchChild, patchChild);
+  assert.equal(storeFacade.patchTask, patchTask);
+  assert.equal(storeFacade.patchGameData, patchGameData);
 });

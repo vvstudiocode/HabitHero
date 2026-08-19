@@ -30,7 +30,13 @@ import { toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
 import { notifyAdventureCreated, notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
-import { mergeTimerSnapshots, replaceOptimisticTaskId } from './lib/app-state-patches';
+import {
+  mergeTimerSnapshots,
+  patchChild,
+  patchGameData,
+  patchTask,
+  replaceOptimisticTaskId,
+} from './lib/app-state-patches';
 import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
 import {
@@ -184,43 +190,13 @@ export function shouldRefreshAppDataOnResume({
 
 export const LIVE_DATA_REFRESH_INTERVAL_MS = 45_000;
 
-export { mergeTimerSnapshots, replaceOptimisticTaskId } from './lib/app-state-patches';
-
-export function patchChild(
-  previous: AppState,
-  childId: string,
-  update: (child: AppState['children'][number]) => AppState['children'][number],
-): AppState {
-  return {
-    ...previous,
-    children: previous.children.map((child) => child.id === childId ? update(child) : child),
-  };
-}
-
-export function patchTask(previous: AppState, taskId: string, update: (task: Task) => Task): AppState {
-  return {
-    ...previous,
-    children: previous.children.map((child) => ({
-      ...child,
-      tasks: child.tasks.map((task) => task.id === taskId ? update(task) : task),
-    })),
-  };
-}
-
-export function patchGameData(
-  previous: AppState,
-  childId: string,
-  update: (gameData: ReturnType<typeof emptyChildGameData>) => ReturnType<typeof emptyChildGameData>,
-): AppState {
-  const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-  return {
-    ...previous,
-    gameDataByChildId: {
-      ...previous.gameDataByChildId,
-      [childId]: update(currentGameData),
-    },
-  };
-}
+export {
+  mergeTimerSnapshots,
+  patchChild,
+  patchGameData,
+  patchTask,
+  replaceOptimisticTaskId,
+} from './lib/app-state-patches';
 
 const emptyState: AppState = {
   parentPin: null,
