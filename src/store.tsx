@@ -215,7 +215,7 @@ function readTimerSnapshots(userId: string): TimerSnapshot[] {
   }
 }
 
-function mergeTimerSnapshots(appState: AppState, snapshots: TimerSnapshot[]) {
+export function mergeTimerSnapshots(appState: AppState, snapshots: TimerSnapshot[]) {
   const byTaskId = new Map(snapshots.map((snapshot) => [snapshot.taskId, snapshot]));
   return {
     ...appState,
