@@ -17,12 +17,16 @@ const prototypeRuntimeSource = readFileSync(
   new URL('../src/features/world/prototype-world-runtime.ts', import.meta.url),
   'utf8',
 );
+const runtimeAssetsSource = readFileSync(
+  new URL('../src/features/world/world-runtime-assets.ts', import.meta.url),
+  'utf8',
+);
 
 describe('production terrain asset contract', () => {
   it('loads the optimized big-tree asset and keeps a procedural fallback', () => {
-    assert.match(prototypeRuntimeSource, /tree: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/big-tree-optimized\.glb'/);
-    assert.match(prototypeRuntimeSource, /character: '\/assets\/characters\/arthur\.glb'/);
-    assert.match(prototypeRuntimeSource, /skybox: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/sky-equirectangular-day\.png'/);
+    assert.match(runtimeAssetsSource, /tree: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/big-tree-optimized\.glb'/);
+    assert.match(runtimeAssetsSource, /character: '\/assets\/characters\/arthur\.glb'/);
+    assert.match(runtimeAssetsSource, /skybox: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/sky-equirectangular-day\.png'/);
     assert.match(prototypeRuntimeSource, /loadGltfSafely[^\n]+PROTOTYPE_WORLD_ASSETS\.tree/);
     assert.match(prototypeRuntimeSource, /defineAsset\(THREE, treeSource\)/);
     assert.match(prototypeRuntimeSource, /applyCentralTreeMaterialFallback\(THREE, treeDefinition\.source\)/);

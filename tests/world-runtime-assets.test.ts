@@ -6,7 +6,7 @@ import {
   getDecorationCollisionInput,
   getDecorationGroundOffset,
   getDecorationModelUrl,
-} from '../src/features/world/prototype-world-runtime';
+} from '../src/features/world/world-runtime-assets';
 import type { ChildGameData, ChildWorldEntity, GameCatalogItem } from '../src/features/world/contracts';
 
 function catalogItem(overrides: Partial<GameCatalogItem> = {}): GameCatalogItem {
