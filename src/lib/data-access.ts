@@ -24,12 +24,10 @@ import type {
   AdventureGroup,
   AppState,
   Child,
-  FeedbackTone,
   PointLedgerAdjustmentResult,
   PointLedgerPage,
   Reward,
   Task,
-  TaskCategory,
   TaskSchedule,
   TaskStatus,
   TaskTemplate,
@@ -52,6 +50,16 @@ import {
   type BatchAdventureReviewResult,
   type GeneralAdventureInput,
 } from './adventure-data-access';
+import {
+  buildConfirmChildGoalPayload,
+  buildProposeChildGoalPayload,
+  buildReviewTaskCompletionPayload,
+  buildSubmitTaskReflectionPayload,
+  type ConfirmChildGoalInput,
+  type ProposeChildGoalInput,
+  type ReviewTaskCompletionInput,
+  type SubmitTaskReflectionInput,
+} from './growth-data-access';
 import { loadChildGameData } from '../features/world/game-data';
 import {
   toWorldMutationResult,
@@ -83,6 +91,18 @@ export type {
   BatchAdventureReviewResult,
   GeneralAdventureInput,
 } from './adventure-data-access';
+export {
+  buildConfirmChildGoalPayload,
+  buildProposeChildGoalPayload,
+  buildReviewTaskCompletionPayload,
+  buildSubmitTaskReflectionPayload,
+} from './growth-data-access';
+export type {
+  ConfirmChildGoalInput,
+  ProposeChildGoalInput,
+  ReviewTaskCompletionInput,
+  SubmitTaskReflectionInput,
+} from './growth-data-access';
 
 export interface LoadedAppData {
   state: AppState;
@@ -123,38 +143,6 @@ function asRows<T>(data: unknown): T[] {
 
 function removeUndefined<T extends Record<string, unknown>>(payload: T): Partial<T> {
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)) as Partial<T>;
-}
-
-export interface ProposeChildGoalInput {
-  name: string;
-  points: number;
-  icon: string;
-  category: TaskCategory;
-  duration?: number | null;
-  dueOn?: string | null;
-  dueTime?: string | null;
-  endTime?: string | null;
-}
-
-export interface ConfirmChildGoalInput {
-  name: string;
-  points: number;
-  category: TaskCategory;
-}
-
-export interface SubmitTaskReflectionInput {
-  reflection: string;
-  mood?: string | null;
-  difficulty?: number | null;
-}
-
-export interface ReviewTaskCompletionInput {
-  approved: boolean;
-  approvedPoints: number;
-  feedback?: string | null;
-  correction?: string | null;
-  tone?: FeedbackTone | null;
-  revisionNote?: string | null;
 }
 
 export const buildAdjustChildPointsPayload = (
@@ -198,62 +186,6 @@ export const buildCreateChildAccountPayload = (
   password: child.password,
   gender: child.gender,
   characterId: child.characterId,
-});
-
-function normalizeFeedbackTone(tone?: FeedbackTone | null): FeedbackTone | null {
-  if (tone === 'celebration' || tone === 'celebrating') return 'celebratory';
-  if (tone === 'correction') return 'corrective';
-  return tone ?? null;
-}
-
-export const buildProposeChildGoalPayload = (
-  familyId: string,
-  childId: string,
-  goal: ProposeChildGoalInput,
-) => ({
-  target_family_id: familyId,
-  target_child_profile_id: childId,
-  goal_name: goal.name,
-  goal_points: goal.points,
-  goal_icon: goal.icon,
-  goal_category: goal.category,
-  goal_duration_minutes: goal.duration ?? null,
-  goal_due_on: goal.dueOn ?? null,
-  goal_due_time: goal.dueTime ?? null,
-  goal_end_time: goal.endTime ?? null,
-});
-
-export const buildConfirmChildGoalPayload = (
-  taskId: string,
-  confirmation: ConfirmChildGoalInput,
-) => ({
-  target_task_id: taskId,
-  confirmed_name: confirmation.name,
-  confirmed_points: confirmation.points,
-  confirmed_category: confirmation.category,
-});
-
-export const buildSubmitTaskReflectionPayload = (
-  taskId: string,
-  submission: SubmitTaskReflectionInput,
-) => ({
-  target_task_id: taskId,
-  reflection: submission.reflection,
-  mood: submission.mood ?? null,
-  difficulty: submission.difficulty ?? null,
-});
-
-export const buildReviewTaskCompletionPayload = (
-  taskId: string,
-  review: ReviewTaskCompletionInput,
-) => ({
-  target_task_id: taskId,
-  approved: review.approved,
-  approved_points: review.approvedPoints,
-  feedback: review.feedback ?? null,
-  correction: review.correction ?? null,
-  tone: normalizeFeedbackTone(review.tone),
-  revision_note: review.revisionNote ?? null,
 });
 
 function childFromRows(
