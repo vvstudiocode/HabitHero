@@ -365,7 +365,7 @@ interface DisposalTracker {
   textures: Set<object>;
 }
 
-function createDisposalTracker(): DisposalTracker {
+export function createDisposalTracker(): DisposalTracker {
   return { geometries: new Set(), materials: new Set(), textures: new Set() };
 }
 
@@ -403,7 +403,7 @@ function disposeTexture(texture: unknown, tracker: DisposalTracker) {
   disposableTexture.dispose();
 }
 
-function disposeObject3D(scene: DisposableScene, tracker = createDisposalTracker()) {
+export function disposeObject3D(scene: DisposableScene, tracker = createDisposalTracker()) {
   scene.traverse((object) => {
     const mesh = object as {
       geometry?: object & { dispose?: () => void };
@@ -423,12 +423,12 @@ function disposeObject3D(scene: DisposableScene, tracker = createDisposalTracker
   });
 }
 
-function disposeScene(scene: DisposableScene, renderer: { dispose: () => void }, tracker: DisposalTracker) {
+export function disposeScene(scene: DisposableScene, renderer: { dispose: () => void }, tracker: DisposalTracker) {
   disposeObject3D(scene, tracker);
   renderer.dispose();
 }
 
-function loadGltfSafely<T extends { scene: DisposableScene }>(
+export function loadGltfSafely<T extends { scene: DisposableScene }>(
   loader: { loadAsync: (url: string) => Promise<T> },
   url: string,
   signal: AbortSignal,
