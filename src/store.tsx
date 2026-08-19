@@ -26,11 +26,11 @@ import {
 import { getSupabaseClient, supabaseConfigError } from './lib/supabase';
 import { subscribeToAppData } from './lib/realtime';
 import { resolveActiveChildId } from './lib/family-switch';
-import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
+import { toTimerSnapshot, type TimerSnapshot } from './lib/task-timer';
 import { notifyAdventureCreated, notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
-import { replaceOptimisticTaskId } from './lib/app-state-patches';
+import { mergeTimerSnapshots, replaceOptimisticTaskId } from './lib/app-state-patches';
 import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
 import {
@@ -184,7 +184,7 @@ export function shouldRefreshAppDataOnResume({
 
 export const LIVE_DATA_REFRESH_INTERVAL_MS = 45_000;
 
-export { replaceOptimisticTaskId } from './lib/app-state-patches';
+export { mergeTimerSnapshots, replaceOptimisticTaskId } from './lib/app-state-patches';
 
 const emptyState: AppState = {
   parentPin: null,
@@ -213,20 +213,6 @@ function readTimerSnapshots(userId: string): TimerSnapshot[] {
   } catch {
     return [];
   }
-}
-
-export function mergeTimerSnapshots(appState: AppState, snapshots: TimerSnapshot[]) {
-  const byTaskId = new Map(snapshots.map((snapshot) => [snapshot.taskId, snapshot]));
-  return {
-    ...appState,
-    children: appState.children.map((child) => ({
-      ...child,
-      tasks: child.tasks.map((task) => {
-        const snapshot = byTaskId.get(task.id);
-        return snapshot && snapshot.childId === child.id ? applyTimerSnapshot(task, snapshot) : task;
-      }),
-    })),
-  };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
