@@ -5,7 +5,7 @@ import {
   disposeObject3D,
   disposeScene,
   loadGltfSafely,
-} from '../src/features/world/prototype-world-runtime';
+} from '../src/features/world/world-runtime-resources';
 
 function createDisposable(label: string, calls: string[]) {
   return {

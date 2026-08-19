@@ -18,7 +18,7 @@ const policies = {
 // Removing an entry is part of the extraction/cleanup commit, not a way to hide
 // growth. Keep the values in sync with `docs/code-maintainability.md`.
 const baselineAllowlist = new Map([
-  ['src/features/world/prototype-world-runtime.ts', 2834],
+  ['src/features/world/prototype-world-runtime.ts', 2672],
   ['src/components/ParentDashboard.tsx', 1890],
   ['src/components/ChildDashboard.tsx', 1564],
   ['src/styles/modals.css', 1736],
