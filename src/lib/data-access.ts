@@ -41,6 +41,10 @@ import {
 } from './point-ledger';
 import { validateRewardPoints } from './reward-validation';
 import {
+  buildCreateChildAccountPayload,
+  type CreateChildAccountInput,
+} from './child-account-data-access';
+import {
   buildAdventureCompletionPayload,
   buildAdventureSchedulePayload,
   buildAdventureScheduleUpdatePayload,
@@ -60,6 +64,7 @@ import {
   type ReviewTaskCompletionInput,
   type SubmitTaskReflectionInput,
 } from './growth-data-access';
+import { buildAdjustChildPointsPayload } from './point-ledger-data-access';
 import { loadChildGameData } from '../features/world/game-data';
 import {
   toWorldMutationResult,
@@ -84,6 +89,12 @@ export {
   buildAdventureSchedulePayload,
   buildAdventureScheduleUpdatePayload,
 } from './adventure-data-access';
+export {
+  buildCreateChildAccountPayload,
+} from './child-account-data-access';
+export type {
+  CreateChildAccountInput,
+} from './child-account-data-access';
 export type {
   AdventureCompletionInput,
   AdventureScheduleInput,
@@ -103,6 +114,9 @@ export type {
   ReviewTaskCompletionInput,
   SubmitTaskReflectionInput,
 } from './growth-data-access';
+export {
+  buildAdjustChildPointsPayload,
+} from './point-ledger-data-access';
 
 export interface LoadedAppData {
   state: AppState;
@@ -145,16 +159,6 @@ function removeUndefined<T extends Record<string, unknown>>(payload: T): Partial
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)) as Partial<T>;
 }
 
-export const buildAdjustChildPointsPayload = (
-  childProfileId: string,
-  pointsDelta: number,
-  note: string,
-) => ({
-  target_child_profile_id: childProfileId,
-  points_delta: pointsDelta,
-  adjustment_note: note,
-});
-
 function pointLedgerAdjustmentResultFromRpc(value: unknown): PointLedgerAdjustmentResult {
   const result = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   const ledgerEntry = result.ledger_entry && typeof result.ledger_entry === 'object'
@@ -166,27 +170,6 @@ function pointLedgerAdjustmentResultFromRpc(value: unknown): PointLedgerAdjustme
     pointsBalance: Number(result.points_balance ?? 0),
   };
 }
-
-export interface CreateChildAccountInput {
-  name: string;
-  loginName: string;
-  password: string;
-  gender: 'boy' | 'girl';
-  characterId: string;
-}
-
-export const buildCreateChildAccountPayload = (
-  familyId: string,
-  child: CreateChildAccountInput,
-) => ({
-  action: 'create' as const,
-  familyId,
-  childName: child.name,
-  loginName: child.loginName,
-  password: child.password,
-  gender: child.gender,
-  characterId: child.characterId,
-});
 
 function childFromRows(
   child: ChildProfileRow,
