@@ -210,7 +210,7 @@ describe('child data loading assembly', () => {
         schedule_id: null,
         occurrence_date: '2026-07-30',
         completion_report_mode: 'reflection',
-        quick_report: 'done',
+        quick_report: 'smooth',
         requires_timer: true,
       },
       {
@@ -287,7 +287,7 @@ describe('child data loading assembly', () => {
     assert.equal(childWithProfile.tasks[0].adventureGroupId, 'group-1');
     assert.equal(childWithProfile.tasks[0].description, 'Find three things.');
     assert.equal(childWithProfile.tasks[0].completionReportMode, 'reflection');
-    assert.equal(childWithProfile.tasks[0].quickReport, 'done');
+    assert.equal(childWithProfile.tasks[0].quickReport, 'smooth');
     assert.equal(childWithProfile.tasks[0].requiresTimer, true);
     assert.deepEqual(childWithProfile.rewards.map((reward) => reward.id), ['reward-1']);
     assert.deepEqual(childWithProfile.wishlist.map((item) => item.id), ['wishlist-1']);
