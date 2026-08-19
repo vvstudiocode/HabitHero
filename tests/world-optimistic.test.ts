@@ -51,6 +51,36 @@ function createGameData(worldEntities: ChildWorldEntity[] = []): ChildGameData {
 }
 
 describe('optimistic decoration world mutations', () => {
+  it('returns only the revision when a world mutation has no entity', () => {
+    assert.deepEqual(toWorldMutationResult({ revision: 8 }), { revision: 8 });
+  });
+
+  it('uses safe defaults for unknown entity fields and omitted active state', () => {
+    const result = toWorldMutationResult({
+      revision: 8,
+      entity: {
+        id: 'server-decoration-fallback',
+        inventory_item_id: inventory.id,
+        entity_kind: 'unknown-kind',
+        world_layout_version: 1,
+        position_x: 0,
+        position_y: 0,
+        position_z: 0,
+        rotation_x: 0,
+        rotation_y: 0,
+        rotation_z: 0,
+        scale: 1,
+        behavior_mode: 'unknown-mode',
+        roaming_slot: null,
+      },
+    });
+
+    assert.equal(result.entity?.entityKind, 'decoration');
+    assert.equal(result.entity?.behaviorMode, 'static');
+    assert.equal(result.entity?.roamingSlot, null);
+    assert.equal(result.entity?.isActive, true);
+  });
+
   it('normalizes the snake_case entity returned by the world RPC', () => {
     const result = toWorldMutationResult({
       revision: 6,

@@ -21,6 +21,13 @@ function getRpcArgumentNames(functionName: string) {
 }
 
 describe('game economy RPC argument contracts', () => {
+  it('rejects transform RPC arguments when coordinates are missing', () => {
+    assert.throws(
+      () => toWorldTransformRpcArgs({ inventoryItemId: 'inventory-1', expectedRevision: 4 }),
+      /世界物件變更缺少座標。/,
+    );
+  });
+
   it('keeps transform data-access args exactly aligned with update_world_entity_transform', () => {
     const args = {
       ...toWorldTransformRpcArgs({
