@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   appendFollowingTrailSample,
+  snapshotFollowingTrail,
   getFollowingDistance,
   getFollowingStep,
   getFollowingTrailTarget,
@@ -110,6 +111,22 @@ describe('pet following movement', () => {
     assert.deepEqual(firstPetTarget, { x: 0.2, z: 0 });
     assert.deepEqual(secondPetTarget, { x: 0, z: -0.2 });
     assert.notDeepEqual(firstPetTarget, secondPetTarget);
+  });
+
+  it('keeps a frame trail snapshot isolated from later follower updates', () => {
+    const leaderTrail = [
+      { x: 0.4, z: 0 },
+      { x: 0, z: 0 },
+    ];
+    const frameSnapshot = snapshotFollowingTrail(leaderTrail);
+
+    leaderTrail.unshift({ x: 0.6, z: 0 });
+    leaderTrail[1].x = 0.45;
+
+    assert.deepEqual(frameSnapshot, [
+      { x: 0.4, z: 0 },
+      { x: 0, z: 0 },
+    ]);
   });
 
   it('stops instead of crossing the leader when a reverse target is on the other side', () => {

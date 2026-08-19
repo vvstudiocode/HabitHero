@@ -68,6 +68,12 @@ export function appendFollowingTrailSample(
   if (history.length > PET_FOLLOW_TRAIL_MAX_SAMPLES) history.length = PET_FOLLOW_TRAIL_MAX_SAMPLES;
 }
 
+export function snapshotFollowingTrail(
+  history: readonly WorldPoint2D[],
+): WorldPoint2D[] {
+  return history.map((sample) => ({ x: sample.x, z: sample.z }));
+}
+
 export function getFollowingTrailTarget(
   history: readonly WorldPoint2D[],
   leaderPosition: WorldPoint2D,

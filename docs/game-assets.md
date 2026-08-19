@@ -85,7 +85,7 @@ The repository does not currently contain provenance or a license notice for thi
 ## 奧利安
 
 `public/assets/pets/orian.glb` 與 `public/assets/pets/orian-thumbnail.png` 由使用者提供的 `奧利安.fbx`／`奧利安idle.fbx` 合併而成，商店 key 為 `pet.orian`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、WebP 與 0.2 網格簡化，約 1.90 MB／118,615 triangles；透明縮圖為 512×512 RGBA。它沿用 `groundOffset=-0.22`、關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機，模型顯示尺寸為原設定的 2 倍。
-`public/assets/pets/oum.glb` 與 `public/assets/pets/oum-thumbnail.webp` 由使用者提供的 `歐姆.fbx`／`歐姆 Idle.fbx` 合併而成，商店 key 為 `pet.oum`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、1024px WebP 貼圖與 0.12 網格簡化，約 1.12 MB／78,832 render vertices；透明縮圖為 512×512 WebP。它沿用 `groundOffset=-0.32`、關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機。
+`public/assets/pets/oum.glb` 與 `public/assets/pets/oum-thumbnail.webp` 由使用者提供的 `歐姆.fbx`／`歐姆 Idle.fbx` 合併而成，商店 key 為 `pet.oum`。模型包含 `Idle` 與原地 `Walk_InPlace`，使用 Draco、1024px WebP 貼圖與 0.12 網格簡化，約 1.12 MB／78,832 render vertices；透明縮圖為 512×512 WebP。它沿用 `groundOffset=-0.36`，讓放大後的待機與走路都沉到草地基底，並關閉自製橢圓標記、保留太陽陰影、陰影比例 0.22、名稱比例 0.55 與每次 3–5 秒的 Idle 待機；對應調整 migration 為 `20260819000100_lower_oum_to_grass.sql`。
 
 ## 阿卡迪亞
 

@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { Backpack, CalendarDays, CheckCircle2, Flower2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
+import { Backpack, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flower2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import {
@@ -107,6 +107,7 @@ function haveSameIds(left: readonly string[], right: readonly string[]) {
   return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 const HERO_MENU_EXIT_MS = 1200;
+const REWARDS_PER_PAGE = 18;
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
 const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
 
@@ -155,6 +156,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<ChildTab>('goals');
+  const [rewardPage, setRewardPage] = useState(1);
   const [heroFeature, setHeroFeature] = useState<ChildFeature | null>(null);
   const [decorationPurchasePrompt, setDecorationPurchasePrompt] = useState<DecorationPurchasePrompt | null>(null);
   const [decorationPlacement, setDecorationPlacement] = useState<DecorationPlacementSession | null>(null);
@@ -371,7 +373,17 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const tickets = activeChild?.tickets || [];
   const wishlist = activeChild?.wishlist || [];
   const childPoints = activeChild?.points || 0;
+  const rewardTotalPages = Math.max(1, Math.ceil(rewards.length / REWARDS_PER_PAGE));
+  const visibleRewards = rewards.slice((rewardPage - 1) * REWARDS_PER_PAGE, rewardPage * REWARDS_PER_PAGE);
   const taskTemplates = state.taskTemplates as GrowthTaskTemplate[];
+
+  useEffect(() => {
+    setRewardPage(1);
+  }, [activeChildId, rewards.length]);
+
+  useEffect(() => {
+    if (rewardPage > rewardTotalPages) setRewardPage(rewardTotalPages);
+  }, [rewardPage, rewardTotalPages]);
 
   // Wishlist Form
   const [showWishlistForm, setShowWishlistForm] = useState(false);
@@ -1307,67 +1319,117 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               )}
             </section>
 
-            <div className="grid grid-cols-2 gap-4">
-              {rewards.map(reward => {
-                const canAfford = childPoints >= reward.points;
-                return (
-                  <div key={reward.id} className={cn("bg-white p-5 rounded-3xl border shadow-sm flex flex-col items-center text-center relative overflow-hidden", canAfford ? "border-yellow-200" : "border-gray-100 opacity-80")}>
-                    <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mb-3", canAfford ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-400")}>
-                      <Gift size={32} />
-                    </div>
-                    <div className="text-lg font-bold text-gray-800 mb-2 line-clamp-2">{reward.name}</div>
-                    <div className={cn("text-lg font-black mb-4", canAfford ? "text-yellow-500" : "text-gray-400")}>
-                      <PointValue value={reward.points} iconSize={18} />
-                    </div>
-                    <button
-                      onClick={() => setRewardToConfirm(reward)}
-                      disabled={!canAfford || actionPending}
-                      className={cn(
-                        "w-full py-3 rounded-xl font-bold transition-all",
-                        canAfford ? "bg-yellow-400 text-yellow-900 hover:bg-yellow-500 shadow-md active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      )}
-                    >
-                      {canAfford ? '兌換' : '點數不夠'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            <section className="space-y-3" aria-labelledby="available-rewards-title">
+              <div className="flex items-center justify-between gap-3 px-2">
+                <h2 id="available-rewards-title" className="flex items-center gap-2 text-lg font-black text-gray-900">
+                  <Gift size={19} className="text-yellow-500" aria-hidden="true" />
+                  可兌換獎勵
+                </h2>
+                {rewards.length > 0 && <span className="shrink-0 text-xs font-bold text-gray-500">共 {rewards.length} 項</span>}
+              </div>
+              {rewards.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm font-bold text-gray-500">
+                  目前還沒有可兌換的獎勵，請等爸媽設定喔。
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {visibleRewards.map(reward => {
+                    const canAfford = childPoints >= reward.points;
+                    return (
+                      <div key={reward.id} className={cn("flex min-w-0 flex-col items-center rounded-3xl border bg-white p-3 text-center shadow-sm", canAfford ? "border-yellow-200" : "border-gray-100 opacity-80")}>
+                        <div className={cn("mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full", canAfford ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-400")}>
+                          <Gift size={25} aria-hidden="true" />
+                        </div>
+                        <div className="mb-1 min-h-10 w-full break-words text-sm font-bold leading-5 text-gray-800 line-clamp-2">{reward.name}</div>
+                        <div className={cn("text-base font-black", canAfford ? "text-yellow-500" : "text-gray-400")}>
+                          <PointValue value={reward.points} iconSize={15} />
+                        </div>
+                        <div className="min-h-5 text-xs font-bold text-rose-600">
+                          {!canAfford && `還差 ${reward.points - childPoints} 點`}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRewardToConfirm(reward)}
+                          disabled={!canAfford || actionPending}
+                          className={cn(
+                            "mt-2 min-h-11 w-full rounded-xl px-1 py-2 text-sm font-bold transition-all",
+                            canAfford ? "bg-yellow-400 text-yellow-900 hover:bg-yellow-500 shadow-md active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          )}
+                        >
+                          {canAfford ? '兌換' : '點數不夠'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {rewardTotalPages > 1 && (
+                <nav className="flex items-center justify-between gap-2 pt-1" aria-label="可兌換獎勵頁碼">
+                  <button
+                    type="button"
+                    onClick={() => setRewardPage((current) => Math.max(1, current - 1))}
+                    disabled={rewardPage === 1}
+                    className="flex min-h-11 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2 text-xs font-black text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft size={15} aria-hidden="true" /> 上一頁
+                  </button>
+                  <span className="text-xs font-black text-gray-500" aria-live="polite">第 {rewardPage} / {rewardTotalPages} 頁</span>
+                  <button
+                    type="button"
+                    onClick={() => setRewardPage((current) => Math.min(rewardTotalPages, current + 1))}
+                    disabled={rewardPage === rewardTotalPages}
+                    className="flex min-h-11 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2 text-xs font-black text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    下一頁 <ChevronRight size={15} aria-hidden="true" />
+                  </button>
+                </nav>
+              )}
+            </section>
 
             <PointLedgerHistory
               childProfileId={activeChild.id}
               childName={activeChild.name}
               loadPage={loadPointLedgerPage}
+              collapsible
+              defaultOpen={false}
             />
 
-            <section className="space-y-4" aria-labelledby="child-redemption-history-title">
-              <h2 id="child-redemption-history-title" className="flex items-center gap-2 px-2 text-lg font-bold text-gray-900">
-                <History size={20} className="text-purple-500" />
-                我的兌換紀錄
-              </h2>
-              {tickets.length === 0 ? (
-                <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center">
-                  <Gift size={48} className="mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-500">還沒有兌換過獎勵喔</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {[...tickets].reverse().map(ticket => (
-                    <div key={ticket.id} className={cn("flex flex-col gap-2 rounded-2xl border p-4", ticket.status === 'fulfilled' ? "border-gray-200 bg-gray-50 opacity-70" : "border-purple-200 bg-purple-50")}>
-                      <div className="flex items-center justify-between">
-                        <div className="text-lg font-bold text-gray-800">{ticket.rewardName}</div>
-                        <div className={cn("rounded-full px-3 py-1 text-xs font-bold", ticket.status === 'fulfilled' ? "bg-gray-200 text-gray-600" : "bg-purple-200 text-purple-700")}>
-                          {ticket.status === 'fulfilled' ? '已使用' : '等待兌現'}
+            <details className="space-y-4" defaultOpen={false}>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-2 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                  <History size={20} className="text-purple-500" aria-hidden="true" />
+                  <span id="child-redemption-history-title" role="heading" aria-level={2}>我的兌換紀錄</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  {tickets.length > 0 && <span className="text-xs font-bold text-gray-500">共 {tickets.length} 筆</span>}
+                  <ChevronDown size={20} className="text-gray-500" aria-hidden="true" />
+                </span>
+              </summary>
+              <div className="space-y-4" aria-labelledby="child-redemption-history-title">
+                {tickets.length === 0 ? (
+                  <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center">
+                    <Gift size={48} className="mx-auto mb-4 text-gray-300" aria-hidden="true" />
+                    <p className="text-gray-500">還沒有兌換過獎勵喔</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...tickets].reverse().map(ticket => (
+                      <div key={ticket.id} className={cn("flex flex-col gap-2 rounded-2xl border p-4", ticket.status === 'fulfilled' ? "border-gray-200 bg-gray-50 opacity-70" : "border-purple-200 bg-purple-50")}>
+                        <div className="flex items-center justify-between">
+                          <div className="text-lg font-bold text-gray-800">{ticket.rewardName}</div>
+                          <div className={cn("rounded-full px-3 py-1 text-xs font-bold", ticket.status === 'fulfilled' ? "bg-gray-200 text-gray-600" : "bg-purple-200 text-purple-700")}>
+                            {ticket.status === 'fulfilled' ? '已使用' : '等待兌現'}
+                          </div>
+                        </div>
+                        <div className="text-xs font-medium text-gray-400">
+                          {new Date(ticket.createdAt).toLocaleDateString()}
                         </div>
                       </div>
-                      <div className="text-xs font-medium text-gray-400">
-                        {new Date(ticket.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </details>
           </div>
         )}
       </main>

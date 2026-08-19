@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, History, MinusCircle, PlusCircle, Star } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, History, MinusCircle, PlusCircle, Star } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointLedgerEntryType, PointLedgerPage, PointLedgerViewModel } from '../types';
 import {
@@ -15,6 +15,8 @@ interface PointLedgerHistoryProps {
   pageSize?: number;
   title?: string;
   className?: string;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }
 
 function getEntryLabel(entry: PointLedgerViewModel): string {
@@ -56,6 +58,8 @@ export function PointLedgerHistory({
   pageSize = DEFAULT_POINT_LEDGER_PAGE_SIZE,
   title = '點數明細',
   className = '',
+  collapsible = false,
+  defaultOpen = true,
 }: PointLedgerHistoryProps) {
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PointLedgerPage | null>(null);
@@ -91,15 +95,22 @@ export function PointLedgerHistory({
 
   const pageNumbers = useMemo(() => getPointLedgerPageNumbers(page, result?.totalPages ?? 0), [page, result?.totalPages]);
 
-  return (
-    <section className={`space-y-3 ${className}`.trim()} aria-labelledby={`point-ledger-title-${childProfileId}`}>
-      <div className="flex items-center justify-between gap-3">
-        <h3 id={`point-ledger-title-${childProfileId}`} className="flex min-w-0 items-center gap-2 text-lg font-black text-gray-900">
-          <History size={19} className="shrink-0 text-amber-500" aria-hidden="true" />
-          <span className="truncate">{title}</span>
-        </h3>
-        {result && result.total > 0 && <span className="shrink-0 text-xs font-bold text-gray-500">共 {result.total} 筆</span>}
-      </div>
+  const titleId = `point-ledger-title-${childProfileId}`;
+  const header = (
+    <div className="flex w-full items-center justify-between gap-3">
+      <h3 id={titleId} className="flex min-w-0 items-center gap-2 text-lg font-black text-gray-900">
+        <History size={19} className="shrink-0 text-amber-500" aria-hidden="true" />
+        <span className="truncate">{title}</span>
+      </h3>
+      <span className="flex shrink-0 items-center gap-2">
+        {result && result.total > 0 && <span className="text-xs font-bold text-gray-500">共 {result.total} 筆</span>}
+        {collapsible && <ChevronDown size={20} className="text-gray-500" aria-hidden="true" />}
+      </span>
+    </div>
+  );
+
+  const content = (
+    <>
       {loading && (
         <div className="rounded-2xl border border-gray-200 bg-white p-5 text-center text-sm font-bold text-gray-500" role="status">
           點數紀錄載入中…
@@ -183,6 +194,26 @@ export function PointLedgerHistory({
           )}
         </>
       )}
+    </>
+  );
+
+  if (collapsible) {
+    return (
+      <details className={`space-y-3 ${className}`.trim()} defaultOpen={defaultOpen}>
+        <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-2xl px-2 [&::-webkit-details-marker]:hidden">
+          {header}
+        </summary>
+        <div className="space-y-3" aria-labelledby={titleId}>
+          {content}
+        </div>
+      </details>
+    );
+  }
+
+  return (
+    <section className={`space-y-3 ${className}`.trim()} aria-labelledby={titleId}>
+      {header}
+      {content}
     </section>
   );
 }

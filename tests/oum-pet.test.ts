@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { access, readFile, readdir, stat } from 'node:fs/promises';
 import { test } from 'node:test';
 import { getPetModelUrl } from '../src/features/world/pet-model-assets';
-import { getPetVisualScaleMultiplier } from '../src/features/world/prototype-world-runtime';
+import {
+  getPetGroundOffset,
+  getPetVisualScaleMultiplier,
+} from '../src/features/world/prototype-world-runtime';
 
 const root = new URL('../', import.meta.url);
 
@@ -72,4 +75,15 @@ test('ships Oum with all five supplied actions in one compact GLB', async () => 
   assert.match(migration, /'walkRootVerticalMotion', 'source-preserved'/);
   assert.match(exporter, /歐姆\.fbx.*Walk_InPlace/su);
   assert.doesNotMatch(exporter, /normalize_walk_root_motion/u);
+});
+
+test('lowers Oum from the grass tips to the grass-level baseline', async () => {
+  const migrationName = (await readdir(new URL('supabase/migrations/', root)))
+    .find((name) => name.includes('lower_oum_to_grass') && name.endsWith('.sql'));
+  assert.ok(migrationName, 'Oum grass-level migration should exist');
+  const migration = await readFile(new URL(`supabase/migrations/${migrationName}`, root), 'utf8');
+
+  assert.match(migration, /asset_key = 'pet\.oum'/);
+  assert.match(migration, /'groundOffset', -0\.36/);
+  assert.equal(getPetGroundOffset('pet.oum', { groundOffset: -0.36 }), -0.36);
 });

@@ -60,6 +60,7 @@ import {
   getFollowingDistance,
   getFollowingTrailTarget,
   getSafeFollowingDistance,
+  snapshotFollowingTrail,
   PET_FOLLOW_CLEARANCE,
   PET_FOLLOW_SPEED,
 } from './pet-following';
@@ -2660,6 +2661,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const orderedFollowingActors = petActors
           .filter((actor) => actor.active && actor.follow)
           .sort((left, right) => left.followIndex - right.followIndex);
+        const followingFrameSnapshots = new Map(
+          orderedFollowingActors.map((actor) => [
+            actor,
+            {
+              position: { x: actor.object.position.x, z: actor.object.position.z },
+              trail: snapshotFollowingTrail(actor.followHistory),
+            },
+          ] as const),
+        );
         petActors.sort((left, right) => {
           if (left.follow && !right.follow) return -1;
           if (!left.follow && right.follow) return 1;
@@ -2681,9 +2691,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             const leader = actor.followIndex > 0
               ? orderedFollowingActors.find((candidate) => candidate.followIndex === actor.followIndex - 1)
               : undefined;
-            const leaderPosition = leader
-              ? { x: leader.object.position.x, z: leader.object.position.z }
-              : { x: playerRoot.position.x, z: playerRoot.position.z };
+            const leaderSnapshot = leader ? followingFrameSnapshots.get(leader) : undefined;
+            const leaderPosition = leaderSnapshot?.position
+              ?? { x: playerRoot.position.x, z: playerRoot.position.z };
             const leaderRadius = leader?.radius ?? CHARACTER_COLLISION_RADIUS;
             const followDistance = getSafeFollowingDistance(
               getFollowingDistance(actor.followIndex),
@@ -2691,7 +2701,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               leaderRadius,
             );
             const trailTarget = getFollowingTrailTarget(
-              leader?.followHistory ?? playerFollowHistory,
+              leaderSnapshot?.trail ?? playerFollowHistory,
               leaderPosition,
               followDistance,
             );
