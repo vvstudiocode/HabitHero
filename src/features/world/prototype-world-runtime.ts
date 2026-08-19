@@ -137,7 +137,7 @@ export const PROTOTYPE_WORLD_ASSETS = {
   skybox: new URL('../../../terrain-prototype/assets/sky-equirectangular-day.png', import.meta.url).href,
 } as const;
 
-function getDecorationCatalogItem(gameData: ChildGameData, entity: ChildWorldEntity): GameCatalogItem | undefined {
+export function getDecorationCatalogItem(gameData: ChildGameData, entity: ChildWorldEntity): GameCatalogItem | undefined {
   const catalogItemId = entity.catalogItemId
     ?? gameData.inventory.find((inventory) => inventory.id === entity.inventoryItemId)?.catalogItemId;
   return catalogItemId
@@ -145,7 +145,7 @@ function getDecorationCatalogItem(gameData: ChildGameData, entity: ChildWorldEnt
     : undefined;
 }
 
-function getDecorationCollisionInput(gameData: ChildGameData, entity: ChildWorldEntity) {
+export function getDecorationCollisionInput(gameData: ChildGameData, entity: ChildWorldEntity) {
   const item = getDecorationCatalogItem(gameData, entity);
   const spec = getDecorationCollisionSpec(item?.metadata, entity.collisionRadius ?? 0.3);
   return {
@@ -474,11 +474,11 @@ function placeAsset(THREE: ThreeNamespace, definition: ReturnType<typeof defineA
   return wrapper;
 }
 
-function getDecorationModelUrl(item: GameCatalogItem | undefined): string | undefined {
+export function getDecorationModelUrl(item: GameCatalogItem | undefined): string | undefined {
   return getLocalGameModelUrl(item?.itemType === 'decoration' ? item : undefined) ?? undefined;
 }
 
-function getDecorationGroundOffset(item: GameCatalogItem | undefined): number {
+export function getDecorationGroundOffset(item: GameCatalogItem | undefined): number {
   const groundOffset = item?.metadata.groundOffset;
   return typeof groundOffset === 'number' && Number.isFinite(groundOffset) ? groundOffset : 0;
 }
