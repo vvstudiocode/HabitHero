@@ -64,7 +64,10 @@ import {
   type ReviewTaskCompletionInput,
   type SubmitTaskReflectionInput,
 } from './growth-data-access';
-import { buildAdjustChildPointsPayload } from './point-ledger-data-access';
+import {
+  buildAdjustChildPointsPayload,
+  pointLedgerAdjustmentResultFromRpc,
+} from './point-ledger-data-access';
 import { loadChildGameData } from '../features/world/game-data';
 import {
   toWorldMutationResult,
@@ -157,18 +160,6 @@ function asRows<T>(data: unknown): T[] {
 
 function removeUndefined<T extends Record<string, unknown>>(payload: T): Partial<T> {
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)) as Partial<T>;
-}
-
-function pointLedgerAdjustmentResultFromRpc(value: unknown): PointLedgerAdjustmentResult {
-  const result = value && typeof value === 'object' ? value as Record<string, unknown> : {};
-  const ledgerEntry = result.ledger_entry && typeof result.ledger_entry === 'object'
-    ? result.ledger_entry as PointLedgerRow
-    : null;
-  if (!ledgerEntry) throw new Error('點數調整回應格式錯誤，請重試。');
-  return {
-    ledgerEntry: pointLedgerRowToViewModel(ledgerEntry),
-    pointsBalance: Number(result.points_balance ?? 0),
-  };
 }
 
 function childFromRows(
