@@ -81,6 +81,11 @@ describe('point ledger repository contract', () => {
       points_delta: -10,
       adjustment_note: '未完成約定',
     });
+    assert.deepEqual(buildAdjustChildPointsPayload('child-1', 0, '  尚未驗證  '), {
+      target_child_profile_id: 'child-1',
+      points_delta: 0,
+      adjustment_note: '  尚未驗證  ',
+    });
   });
 
   it('uses server-side count and range pagination for ledger history', async () => {

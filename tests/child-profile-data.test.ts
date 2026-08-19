@@ -40,6 +40,21 @@ describe('child profile creation contract', () => {
       gender: 'boy',
       characterId: 'boy-001',
     });
+    assert.deepEqual(buildCreateChildAccountPayload('family-1', {
+      name: ' 小美 ',
+      loginName: 'xiaomei',
+      password: ' secret2 ',
+      gender: 'girl',
+      characterId: 'girl-002',
+    }), {
+      action: 'create',
+      familyId: 'family-1',
+      childName: ' 小美 ',
+      loginName: 'xiaomei',
+      password: ' secret2 ',
+      gender: 'girl',
+      characterId: 'girl-002',
+    });
   });
 });
 
