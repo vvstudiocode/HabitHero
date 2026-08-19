@@ -24,6 +24,7 @@ import {
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const runtimeSource = read('../src/features/world/prototype-world-runtime.ts');
 const resourceSource = read('../src/features/world/world-runtime-resources.ts');
+const runtimeAssetsSource = read('../src/features/world/world-runtime-assets.ts');
 const heroSource = read('../src/components/DashboardCharacterHero.tsx');
 const worldLayerSource = read('../src/features/world/TerrainWorldLayer.tsx');
 const characterStyles = read('../src/styles/character.css');
@@ -194,7 +195,7 @@ describe('prototype world runtime contracts', () => {
 
   it('renders the supplied animated GLB pet and keeps movement animation state explicit', () => {
     assert.match(runtimeSource, /getRequiredWorldPetCatalogItems/);
-    assert.match(runtimeSource, /getLocalGameModelUrl/);
+    assert.match(runtimeAssetsSource, /getLocalGameModelUrl/);
     assert.doesNotMatch(runtimeSource, /PET_MODEL_URL/);
     assert.match(runtimeSource, /loadGltfSafely[\s\S]*petModel/);
     assert.match(runtimeSource, /cloneSkinnedObject/);
