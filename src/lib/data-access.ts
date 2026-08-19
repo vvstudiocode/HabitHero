@@ -1,13 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  childProfileRowToViewModel,
   adventureGroupRowToViewModel,
   familyRowToViewModel,
   familyMemberRowToViewModel,
-  profileRowToViewModel,
-  redemptionRowToViewModel,
   pointLedgerRowToViewModel,
-  taskRowToViewModel,
   taskTemplateRowToViewModel,
   taskScheduleRowToViewModel,
   taskTimerSessionRowToViewModel,
@@ -23,7 +19,6 @@ import type { ChildProfileCreationInput } from './data-contracts';
 import type {
   AdventureGroup,
   AppState,
-  Child,
   PointLedgerAdjustmentResult,
   PointLedgerPage,
   Reward,
@@ -44,6 +39,7 @@ import {
   buildCreateChildAccountPayload,
   type CreateChildAccountInput,
 } from './child-account-data-access';
+import { childFromRows } from './child-data-access';
 import {
   buildAdventureCompletionPayload,
   buildAdventureSchedulePayload,
@@ -160,24 +156,6 @@ function asRows<T>(data: unknown): T[] {
 
 function removeUndefined<T extends Record<string, unknown>>(payload: T): Partial<T> {
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)) as Partial<T>;
-}
-
-function childFromRows(
-  child: ChildProfileRow,
-  profile: ProfileRow | undefined,
-  tasks: TaskRow[],
-  rewards: RewardRow[],
-  wishlist: WishlistItemRow[],
-  tickets: RewardRedemptionRow[],
-): Child {
-  return {
-    ...childProfileRowToViewModel(child, profile ? profileRowToViewModel(profile) : undefined),
-    code: '',
-    tasks: tasks.filter((row) => row.child_profile_id === child.id).map(taskRowToViewModel),
-    rewards: rewards.filter((row) => row.child_profile_id === child.id).map((row) => ({ id: row.id, name: row.name, points: row.points, icon: row.icon })),
-    wishlist: wishlist.filter((row) => row.child_profile_id === child.id).map((row) => ({ id: row.id, name: row.name })),
-    tickets: tickets.filter((row) => row.child_profile_id === child.id).map((row) => ({ ...redemptionRowToViewModel(row), status: row.status === 'cancelled' ? 'pending' : row.status })),
-  };
 }
 
 export async function loadAppData(client: SupabaseClient, userId: string): Promise<LoadedAppData> {
