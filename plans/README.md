@@ -28,14 +28,15 @@
 | 08 | 測試、安全與交付前驗收 | 已完成，NO-GO | 01-07 |
 | 09 | Supabase Runtime 驗證 + Vercel Web 部署 | 可開始，尚未執行外部操作 | 08 |
 | 10 | Capacitor iOS/Android 建置與雙平台上架 | 暫緩，等待 09 通過 | 08, 09 |
-| 16 | [可維護性、模組邊界與檔案規模治理](./16-maintainability-and-module-boundaries/PLAN.md) | Phase 0/1 已執行並全綠；Phase 2+ 尚未開始，等待使用者選定單一 hotspot 與 evidence 授權 | checkpoint `b24a93f`；[BEHAVIOR-BASELINE](./16-maintainability-and-module-boundaries/BEHAVIOR-BASELINE.md) |
+| 16 | [可維護性、模組邊界與檔案規模治理](./16-maintainability-and-module-boundaries/PLAN.md) | Phase 0/1 完成；低風險 Phase 2/3 extraction 完成；高風險 dashboard/provider/frame-loop/CSS 保留 baseline，待 visual/device evidence | checkpoint `b24a93f`；[BEHAVIOR-BASELINE](./16-maintainability-and-module-boundaries/BEHAVIOR-BASELINE.md)；[CSS owner report](./16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md) |
 | 17 | [寵物五個 FBX 整合規則與單一文件](./17-pet-asset-runtime-consolidation/PLAN.md) | Docs-only 已執行完成；現有寵物正確，不修改程式／資產 | checkpoint `b24a93f`；canonical [`docs/pet-system.md`](../docs/pet-system.md) |
 
 ## 2026-08-20 實際執行結果
 
-- Plan 16 Phase 0：branch、remote、checkpoint、automated baseline 已記錄；`npm run lint`、`npm test`（681/681）、`npm run build`、`npm run security:check`、`git diff --check` 全部通過。
+- Plan 16 Phase 0：branch、remote、checkpoint、automated baseline 已記錄；目前程式快照 `f46cf9b` 的 `npm run lint`、`npm test`（712/712）、`npm run build`、`npm run security:check`、`git diff --check` 全部通過。
 - Plan 16 Phase 1：已加入 [`docs/code-maintainability.md`](../docs/code-maintainability.md)、`quality:structure`、source-size ratchet 與 import-boundary checks；沒有搬動任何產品程式。
-- Plan 16 Phase 2–8：依計畫的 stop gate 尚未開始；未選定 hotspot、未取得 browser／device evidence 前不得宣稱完成 extraction。
+- Plan 16 低風險 extraction：已完成 types facade、world RPC mappers、runtime geometry/resource/asset metadata、store optimistic/pure state patches、growth/account/child-row/ledger payload builders 與 point-ledger result mapper；每個責任均有獨立 test/refactor commit 與回退點。`prototype-world-runtime.ts` 由 2,834 降至 2,648 行，`data-access.ts` 由 882 降至 730 行，`store.tsx` 由 995 降至 962 行。
+- Plan 16 高風險 Phase 5–8：dashboard/provider side effects、character/pet/decoration controllers、frame loop 與 CSS 尚未搬移；依 stop gate 保留 baseline，因 browser/device visual evidence 尚未取得。CSS 盤點見 [`CSS-OWNER-REPORT.md`](./16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md)。
 - Plan 17：已完成唯一 [`docs/pet-system.md`](../docs/pet-system.md)，合併舊 multi-animation 文件、更新入口並移除重複文件；現有 pet runtime、GLB、exporter、metadata、migration、tests 與外部狀態均未改變。
 
 ## 16、17 的交接啟動順序

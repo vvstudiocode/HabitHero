@@ -2,6 +2,17 @@
 
 本文件是 TypeScript、React、domain module 與 CSS 檔案規模治理的執行規格。它補充 `CSS_RULES.md`，不取代 CSS 的 selector owner 與 cascade 規則；也不授權為了降低行數而改變產品行為。
 
+## 0. 目前執行快照
+
+截至 Plan 16 最新程式快照 `f46cf9b`，低風險 pure/mechanical extraction 已落地並各自有 test/refactor commit：
+
+- world：`world-data-access.ts`、`world-runtime-geometry.ts`、`world-runtime-resources.ts`、`world-runtime-assets.ts`。
+- data access：growth、child-account、child row assembly、point-ledger payload/result owners；`data-access.ts` 保留相容 facade。
+- store：`app-state-patches.ts` 保留 optimistic task-id、timer snapshot 與 pure state patch helper facade。
+- types：`types.ts` 是 type-only facade，row/input/view/legacy contracts 已分檔。
+
+最新 ratchet：`prototype-world-runtime.ts` 2,648 行、`data-access.ts` 730 行、`store.tsx` 962 行、`types.ts` 11 行；完整 automated suite 712 tests / 77 suites。Dashboard/provider side effects、repository hydration、character/pet/frame-loop 與 CSS 尚未搬移，因為仍缺 browser/device/3D visual evidence；不得把 automated green 解讀為 visual gate 通過。
+
 ## 1. 執行範圍與安全邊界
 
 - 目標是單一責任、可找到的 owner、可測試的邊界與可精準回退的變更，不是用刪空行或壓縮 JSX 湊行數。
@@ -33,7 +44,7 @@
 目前 baseline 的理由是「既有熱點尚未取得完整 regression／visual／device evidence，先禁止回長」；它們不是本階段自動拆分授權：
 
 - 3D runtime／world：`src/features/world/prototype-world-runtime.ts`、`src/features/world/TerrainWorldLayer.tsx`。
-- Dashboard／state／data contract：`src/components/ParentDashboard.tsx`、`src/components/ChildDashboard.tsx`、`src/store.tsx`、`src/types.ts`、`src/lib/data-access.ts`。
+- Dashboard／state／data contract：`src/components/ParentDashboard.tsx`、`src/components/ChildDashboard.tsx`、`src/store.tsx`、`src/lib/data-access.ts`。
 - World feature／repository：`src/features/world/components/ChildGamePanel.tsx`、`src/lib/adventure-store-actions.ts`、`src/features/world/components/GameItem3DPreview.tsx`、`src/features/growth/components/GrowthSummaryPanel.tsx`、`src/features/world/world-roaming.ts`、`src/features/world/world-collision.ts`。
 - Adventure components：`src/features/adventures/components/ParentAdventureWorkspace.tsx`、`src/features/adventures/components/AdventureRewardCelebration.tsx`。
 - CSS owners：`src/styles/modals.css`、`src/styles/character.css`、`src/styles/world.css`、`src/styles/overlays.css`、`src/styles/neutral-theme.css`、`src/styles/login.css`、`src/styles/world-controls.css`、`src/styles/dashboard.css`。

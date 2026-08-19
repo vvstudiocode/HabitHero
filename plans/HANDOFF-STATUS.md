@@ -4,6 +4,15 @@
 **目前負責人：** 總指揮 agent
 **下一個執行任務：** 10 Capacitor 原生專案（Web 已部署）
 
+## Plan 16／17 最新交接（2026-08-20）
+
+- 目前 branch：`codex/deploy-all-worktree`，最新程式快照：`f46cf9b`；尚未 push。
+- Plan 16 已完成低風險、可回退 extraction：types facade、world RPC/geometry/resource/asset metadata、store optimistic/pure state patches、growth/account/child-row/ledger payload/result owners。完整 automated suite：712 tests / 77 suites；lint、quality structure、build、security、diff check 全部通過。
+- Plan 16 尚未宣稱全案完成：Parent/Child dashboard、provider/realtime/offline side effects、repository hydration/facade、character/pet/frame-loop controller 與 CSS surface 仍保留 baseline。沒有 browser/device/3D visual evidence 前不得搬移這些高風險區域。
+- Plan 16 CSS 唯一 owner 盤點：[`16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md`](16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md)。
+- Plan 17 已完成 docs-only canonical：[`../docs/pet-system.md`](../docs/pet-system.md)。目前寵物呈現、FBX/GLB、metadata、exporter、migration、runtime 與 tests 不因 Plan 17 被調整。
+- 下一個 AI 必須先讀 `AGENTS.md`、`CSS_RULES.md`、Plan 16 `PLAN.md`、`BEHAVIOR-BASELINE.md`、`CSS-OWNER-REPORT.md`、Plan 17 `PLAN.md`，再確認 working tree；不要自行啟動 dev server、push、部署或 cap sync。
+
 ## 已完成登入與本機連結
 
 | 系統 | 狀態 | 已確認內容 |
