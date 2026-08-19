@@ -30,6 +30,7 @@ import { applyTimerSnapshot, toTimerSnapshot, type TimerSnapshot } from './lib/t
 import { notifyAdventureCreated, notifyTaskEvent } from './lib/push-notifications';
 import { createAdventureStoreActions } from './lib/adventure-store-actions';
 import { restoreQueuedAdventureCompletions } from './lib/adventure-offline-queue';
+import { replaceOptimisticTaskId } from './lib/app-state-patches';
 import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
 import {
@@ -183,21 +184,7 @@ export function shouldRefreshAppDataOnResume({
 
 export const LIVE_DATA_REFRESH_INTERVAL_MS = 45_000;
 
-export function replaceOptimisticTaskId(
-  state: AppState,
-  childId: string,
-  localId: string,
-  taskId: string,
-): AppState {
-  if (!taskId) return state;
-  return {
-    ...state,
-    children: state.children.map((child) => child.id !== childId ? child : {
-      ...child,
-      tasks: child.tasks.map((task) => task.id === localId ? { ...task, id: taskId } : task),
-    }),
-  };
-}
+export { replaceOptimisticTaskId } from './lib/app-state-patches';
 
 const emptyState: AppState = {
   parentPin: null,
