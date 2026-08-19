@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { taskRowToViewModel, taskTemplateRowToViewModel } from '../src/lib/data-contracts';
 import {
   buildConfirmChildGoalPayload,
+  buildProposeChildGoalPayload,
   buildReviewTaskCompletionPayload,
   buildSubmitTaskReflectionPayload,
   createDataRepository,
@@ -124,6 +125,46 @@ describe('growth data contracts', () => {
 
 describe('growth repository payloads', () => {
   it('builds stable RPC payloads for goal review workflows', () => {
+    assert.deepEqual(buildProposeChildGoalPayload('family-1', 'child-1', {
+      name: 'Practice piano',
+      points: 4,
+      icon: 'Music',
+      category: 'creativity',
+      duration: 15,
+      dueOn: '2026-07-22',
+      dueTime: '18:00',
+      endTime: '20:00',
+    }), {
+      target_family_id: 'family-1',
+      target_child_profile_id: 'child-1',
+      goal_name: 'Practice piano',
+      goal_points: 4,
+      goal_icon: 'Music',
+      goal_category: 'creativity',
+      goal_duration_minutes: 15,
+      goal_due_on: '2026-07-22',
+      goal_due_time: '18:00',
+      goal_end_time: '20:00',
+    });
+
+    assert.deepEqual(buildProposeChildGoalPayload('family-1', 'child-1', {
+      name: 'Read',
+      points: 3,
+      icon: 'BookOpen',
+      category: 'learning',
+    }), {
+      target_family_id: 'family-1',
+      target_child_profile_id: 'child-1',
+      goal_name: 'Read',
+      goal_points: 3,
+      goal_icon: 'BookOpen',
+      goal_category: 'learning',
+      goal_duration_minutes: null,
+      goal_due_on: null,
+      goal_due_time: null,
+      goal_end_time: null,
+    });
+
     assert.deepEqual(buildConfirmChildGoalPayload('task-1', {
       name: 'Read for 20 minutes',
       points: 5,
@@ -144,6 +185,15 @@ describe('growth repository payloads', () => {
       reflection: 'I stayed focused.',
       mood: 'proud',
       difficulty: 3,
+    });
+
+    assert.deepEqual(buildSubmitTaskReflectionPayload('task-1', {
+      reflection: 'I stayed focused.',
+    }), {
+      target_task_id: 'task-1',
+      reflection: 'I stayed focused.',
+      mood: null,
+      difficulty: null,
     });
 
     assert.deepEqual(buildReviewTaskCompletionPayload('task-1', {
@@ -180,6 +230,23 @@ describe('growth repository payloads', () => {
       tone: 'correction',
       revisionNote: 'Try again.',
     }).tone, 'corrective');
+
+    assert.deepEqual(buildReviewTaskCompletionPayload('task-1', {
+      approved: false,
+      approvedPoints: 0,
+      feedback: null,
+      correction: null,
+      revisionNote: null,
+    }).tone, null);
+
+    assert.deepEqual(buildReviewTaskCompletionPayload('task-1', {
+      approved: false,
+      approvedPoints: 0,
+      feedback: null,
+      correction: null,
+      tone: null,
+      revisionNote: null,
+    }).tone, null);
   });
 
   it('calls the expected RPC methods for the child-led growth workflow', async () => {
