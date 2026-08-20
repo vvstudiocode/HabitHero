@@ -325,9 +325,9 @@ git diff --stat b24a93f..HEAD
 
 ## 10.1 2026-08-20 執行快照
 
-本計畫已在 `codex/deploy-all-worktree` 以小批、可回退 commits 執行低風險 Phase 2/3 extraction。最新程式驗證快照為 `f46cf9b`，完整 automated suite 為 712 tests / 77 suites，lint、quality structure、build、security 與 diff check 全部通過。已完成的責任與 exact commits 記錄在 [`BEHAVIOR-BASELINE.md`](./BEHAVIOR-BASELINE.md)。
+本計畫已在 `codex/deploy-all-worktree` 以小批、可回退 commits 執行低風險 Phase 2/3 extraction。最新程式驗證快照為 `b050359`，完整 automated suite 為 727 tests / 78 suites，lint、quality structure、build、security 與 diff check 全部通過。已完成的責任與 exact commits 記錄在 [`BEHAVIOR-BASELINE.md`](./BEHAVIOR-BASELINE.md)。
 
-目前沒有改動寵物呈現、FBX/GLB、metadata、migration 或 CSS selector。`prototype-world-runtime.ts`、`data-access.ts`、`store.tsx` 已分別降至 2,648、730、962 行；`types.ts` 已成為 11 行 type-only facade；新 owner modules 均低於 300 行警示線。
+目前沒有改動寵物呈現、FBX/GLB、metadata、migration 或 CSS selector。`prototype-world-runtime.ts`、`data-access.ts`、`store.tsx`、`ParentDashboard.tsx`、`TerrainWorldLayer.tsx` 已分別降至 2,648、679、936、1,875、895 行；`types.ts` 已成為 11 行 type-only facade；新 owner modules 均低於 300 行警示線。
 
 尚未完成的高風險部分不是遺漏，而是依停止閘門保留：dashboard/provider side effects、repository hydration/facade、character/pet/decoration controllers、frame loop，以及 CSS surface extraction。這些需要固定 viewport、computed style、3D snapshot 或 device/browser evidence；目前只完成 CSS owner 盤點 [`CSS-OWNER-REPORT.md`](./CSS-OWNER-REPORT.md)，未宣稱 visual/device 等價通過。
 

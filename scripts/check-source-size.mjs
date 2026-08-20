@@ -19,14 +19,14 @@ const policies = {
 // growth. Keep the values in sync with `docs/code-maintainability.md`.
 const baselineAllowlist = new Map([
   ['src/features/world/prototype-world-runtime.ts', 2648],
-  ['src/components/ParentDashboard.tsx', 1890],
+  ['src/components/ParentDashboard.tsx', 1875],
   ['src/components/ChildDashboard.tsx', 1564],
   ['src/styles/modals.css', 1736],
   ['src/styles/character.css', 1476],
   ['src/styles/world.css', 1022],
-  ['src/store.tsx', 962],
-  ['src/features/world/TerrainWorldLayer.tsx', 923],
-  ['src/lib/data-access.ts', 730],
+  ['src/store.tsx', 936],
+  ['src/features/world/TerrainWorldLayer.tsx', 895],
+  ['src/lib/data-access.ts', 679],
   ['src/styles/overlays.css', 842],
   ['src/styles/neutral-theme.css', 670],
   ['src/styles/login.css', 634],

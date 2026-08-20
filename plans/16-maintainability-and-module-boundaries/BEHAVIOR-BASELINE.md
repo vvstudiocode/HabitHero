@@ -5,7 +5,7 @@
 > 工作分支：`codex/deploy-all-worktree`
 > 目的：在任何 extraction 前保存可重跑的 automated evidence，並誠實標出尚未取得的 visual／device evidence。
 
-> 目前程式驗證快照：`f46cf9b`（child row assembly extraction 完成；文件與治理 ratchet 另以後續 commit 同步）。初始基線仍保留作為所有 before 比較點；每個 extraction 的 exact commit 與 rollback 見下方 ledger。
+> 目前程式驗證快照：`b050359`（store timer transition extraction 完成；文件與治理 ratchet 另以後續 commit 同步）。初始基線仍保留作為所有 before 比較點；每個 extraction 的 exact commit 與 rollback 見下方 ledger。
 
 ## 1. 工作區與版本證據
 
@@ -21,10 +21,10 @@
 | Command | Result | Evidence |
 | --- | --- | --- |
 | `npm run lint` | PASS (0) | TypeScript `tsc --noEmit` |
-| `npm test` | PASS (0) | 712 tests、77 suites、712 pass、0 fail |
-| `npm run build` | PASS (0) | Vite 1,870 modules transformed；既有大 chunk warning 已記錄，非本次行為差異 |
-| `npm run security:check` | PASS (0) | 914 files scanned |
-| `npm run quality:structure` | PASS (0) | 158 source files；146 import-boundary files；無 baseline growth／未審核超限檔 |
+| `npm test` | PASS (0) | 727 tests、78 suites、727 pass、0 fail |
+| `npm run build` | PASS (0) | Vite 1,874 modules transformed；既有大 chunk warning 已記錄，非本次行為差異 |
+| `npm run security:check` | PASS (0) | 920 files scanned |
+| `npm run quality:structure` | PASS (0) | 162 source files；150 import-boundary files；無 baseline growth／未審核超限檔 |
 | `git diff --check` | PASS (0) | 無 whitespace error |
 | Markdown local-link scan | PASS | Node read-only scan over project Markdown excluding generated `node_modules/`, `dist/`, `build/`, `.git/` and iOS DerivedData（本次 working tree 45 files）；未找到遺失 local target |
 | `wc -c public/assets/pets/nibus.glb` | PASS | `1327240` bytes；目前 test／migration expectation 已一致 |
@@ -77,10 +77,14 @@
   - `4bea19c`：`types.ts` split into primitive/database/write/view/legacy modules with type-only facade。
   - `356452b` / `fe954c8`：store pure `patchChild`／`patchTask`／`patchGameData` contracts → `app-state-patches.ts`；store `995 → 962` 行。
   - `e81713f` / `b92ea7d` / `f46cf9b`：child row assembly contracts → `child-data-access.ts`；data-access `752 → 730` 行。
+  - `10a3319` / `ee447c1`：Parent reward grouping selector contracts → `parent-reward-grouping.ts`；ParentDashboard `1890 → 1875` 行。
+  - `ce0024a` / `347ca8d`：Terrain scene remount key contracts → `world-scene-key.ts`；TerrainWorldLayer `923 → 895` 行。
+  - `eb10cce` / `96581f5` / `69f0801`：task/template write payload contracts → `task-data-access.ts`；data-access `730 → 679` 行。
+  - `24f7631` / `b050359`：local timer state transition contracts → `task-timer-state.ts`；store `962 → 936` 行。
 - Plan16 Phase 5 remaining high-risk areas：**保留 baseline / blocked**。Parent/Child dashboards、provider side effects、repository hydration/facade、character/pet/decoration controllers、frame loop、CSS require additional state/visual/device evidence before further extraction。
 - Plan16 CSS owner report：**PASS（盤點完成）**，見 [`CSS-OWNER-REPORT.md`](./CSS-OWNER-REPORT.md)；未搬 selector、未新增 override。
 - Plan17 docs-only：**PASS**；現有寵物呈現、runtime、GLB、exporter、metadata、migration、tests 與外部狀態均未修改。
 
 ### 5.1 Current line and dependency evidence
 
-Current ratcheted hotspots include `prototype-world-runtime.ts` 2,648 lines, `data-access.ts` 730 lines, `store.tsx` 962 lines, and `types.ts` is now an 11-line type-only facade. All new domain modules are below the 300-line warning threshold. `npm run quality:structure` and import-boundary checks are green at the current snapshot. No browser/device evidence was generated; this is an explicit remaining gate, not an implied pass.
+Current ratcheted hotspots include `prototype-world-runtime.ts` 2,648 lines, `data-access.ts` 679 lines, `store.tsx` 936 lines, `ParentDashboard.tsx` 1,875 lines, `TerrainWorldLayer.tsx` 895 lines, and `types.ts` is now an 11-line type-only facade. All new domain modules are below the 300-line warning threshold. `npm run quality:structure` and import-boundary checks are green at the current snapshot. No browser/device evidence was generated; this is an explicit remaining gate, not an implied pass.
