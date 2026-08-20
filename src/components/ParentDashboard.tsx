@@ -26,6 +26,7 @@ import { ParentDashboardBackgroundMusic } from './ParentDashboardBackgroundMusic
 import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashboard/ParentDashboardContent';
 import { ParentSettingsChildrenSection, type NewChildProfile } from './parent-dashboard/ParentSettingsChildrenSection';
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
+import { toParentCalendarTaskGroup } from './parent-dashboard/parent-dashboard-selectors';
 import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
 import { PointValue } from './shared/PointValue';
 import { PointLedgerHistory } from './PointLedgerHistory';
@@ -574,19 +575,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     group.children.forEach(c => c.taskIds.forEach(taskId => deleteTask(c.childId, taskId)));
   };
 
-  const calendarTaskGroup = (task: ParentCalendarAdventureTask): GroupedTask & { isDaily?: boolean } => ({
-    id: task.id,
-    name: task.name,
-    points: task.points ?? 0,
-    duration: task.duration ?? undefined,
-    dueTime: task.dueTime,
-    endTime: task.endTime,
-    category: (task.category as TaskCategory | undefined) ?? DEFAULT_TASK_CATEGORY,
-    isDaily: task.isDaily ?? task.adventureType === 'daily',
-    requiresReviewBeforeNextTask: task.requiresReviewBeforeNextTask,
-    children: [{ childId: task.childId, childName: task.childName, taskId: task.id, taskIds: [task.id] }],
-  });
-
   const openRewardForm = (group?: GroupedReward) => {
     setRewardFormError('');
     if (group) {
@@ -920,8 +908,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             onBatchReviewDaily={appStore.batchReviewDailyAdventures}
             onUpdateSchedule={appStore.updateAdventureSchedule}
             onDisableSchedule={appStore.disableAdventureSchedule}
-            onEditTask={task => openTaskForm(calendarTaskGroup(task))}
-            onDeleteTask={task => setTaskToDelete(calendarTaskGroup(task))}
+            onEditTask={task => openTaskForm(toParentCalendarTaskGroup(task, DEFAULT_TASK_CATEGORY))}
+            onDeleteTask={task => setTaskToDelete(toParentCalendarTaskGroup(task, DEFAULT_TASK_CATEGORY))}
             requestedForm={adventureFormRequest}
             legacyTaskList={(
               <>
