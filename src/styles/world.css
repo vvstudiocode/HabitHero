@@ -12,8 +12,8 @@
   min-height: 100dvh;
   place-items: center;
   padding: 24px;
-  color: #202124;
-  background: #f7f7f8;
+  color: var(--hh-primary-dark);
+  background: var(--hh-surface-soft);
 }
 
 .hh-world-preparing-card {
@@ -23,17 +23,17 @@
   justify-items: center;
   padding: 28px 22px;
   text-align: center;
-  background: #ffffff;
-  border: 1px solid #e5e5e7;
+  background: var(--hh-panel-strong);
+  border: 1px solid var(--hh-line);
   border-radius: 24px;
-  box-shadow: 0 18px 40px rgb(32 33 36 / 10%);
+  box-shadow: 0 18px 40px var(--hh-shadow);
 }
 
 .hh-world-preparing-mark {
   width: 28px;
   height: 28px;
-  border: 3px solid #d6d6da;
-  border-top-color: #202124;
+  border: 3px solid var(--hh-line);
+  border-top-color: var(--hh-primary);
   border-radius: 50%;
   animation: hh-world-preparing-spin 900ms linear infinite;
 }
@@ -44,7 +44,7 @@
 
 .hh-world-preparing-card p {
   margin: 0;
-  color: #6b6b70;
+  color: var(--hh-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -53,7 +53,7 @@
   width: 100%;
   height: 7px;
   overflow: hidden;
-  background: #e5e5e7;
+  background: var(--hh-line);
   border-radius: 999px;
 }
 
@@ -61,7 +61,7 @@
   display: block;
   width: 42%;
   height: 100%;
-  background: #202124;
+  background: var(--hh-primary);
   border-radius: inherit;
   animation: hh-world-preparing-progress 1.2s ease-in-out infinite alternate;
 }
@@ -111,23 +111,23 @@
   width: min(320px, calc(100% - 40px));
   gap: 8px;
   padding: 22px;
-  color: #202124;
+  color: var(--hh-primary-dark);
   text-align: center;
-  background: rgb(255 255 255 / 94%);
-  border: 1px solid #e5e5e7;
+  background: rgb(255 253 248 / 94%);
+  border: 1px solid var(--hh-line);
   border-radius: 24px;
-  box-shadow: 0 14px 28px rgb(32 33 36 / 12%);
+  box-shadow: 0 14px 28px rgb(18 57 59 / 12%);
   transform: translate(-50%, -50%);
 }
 
 .hh-terrain-world-loading-panel strong {
-  font-family: Nunito, system-ui, sans-serif;
+  font-family: var(--hh-font-body);
   font-size: 18px;
 }
 
 .hh-terrain-world-loading-panel p {
   margin: 0;
-  color: #6b6b70;
+  color: var(--hh-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -136,14 +136,14 @@
   height: 8px;
   margin-top: 8px;
   overflow: hidden;
-  background: #e5e5e7;
+  background: var(--hh-line);
   border-radius: 999px;
 }
 
 .hh-terrain-world-progress-track span {
   display: block;
   height: 100%;
-  background: #202124;
+  background: var(--hh-primary);
   border-radius: inherit;
   transition: width 180ms ease;
 }
@@ -154,7 +154,7 @@
   display: grid;
   place-items: center;
   gap: 8px;
-  color: #35554d;
+  color: var(--hh-primary-dark);
   font-size: 14px;
   font-weight: 900;
   text-align: center;
@@ -168,8 +168,8 @@
   padding: 14px 16px;
   transform: translateX(-50%);
   border-radius: 18px;
-  background: rgb(255 252 240 / 86%);
-  box-shadow: 0 14px 32px rgb(67 91 69 / 18%);
+  background: rgb(247 244 232 / 88%);
+  box-shadow: 0 14px 32px rgb(18 57 59 / 18%);
   backdrop-filter: blur(12px);
 }
 
@@ -184,8 +184,8 @@
 .hh-terrain-world-status--error button {
   min-height: 44px;
   padding: 0 16px;
-  color: #fffdf4;
-  background: #5b9c69;
+  color: var(--hh-on-success);
+  background: var(--hh-success);
   border-radius: 999px;
   font-weight: 900;
 }
@@ -225,7 +225,7 @@
 .hh-game-panel h2 {
   margin: 0;
   color: #23413f;
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: clamp(28px, 7vw, 42px);
   letter-spacing: -.04em;
 }
@@ -742,7 +742,7 @@
 }
 
 .hh-game-item-thumbnail-button:focus-visible {
-  outline: 3px solid #202124;
+  outline: 3px solid var(--hh-primary-dark);
   outline-offset: -3px;
 }
 
@@ -870,7 +870,7 @@
 }
 
 .hh-game-setting-toggle input:focus-visible + span:last-child {
-  outline: 3px solid #202124;
+  outline: 3px solid var(--hh-primary-dark);
   outline-offset: 3px;
 }
 
@@ -912,8 +912,8 @@
 
 .hh-game-action-button.is-selected,
 .hh-game-action-button--primary {
-  color: #fffdf1;
-  background: #5b9c69;
+  color: var(--hh-on-success);
+  background: var(--hh-success);
 }
 
 .hh-game-action-button--danger {

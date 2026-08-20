@@ -42,7 +42,7 @@ test('daily weekday selection uses a dedicated visible selected state', () => {
   assert.match(daily, /selected \? ' is-selected' : ''/);
   assert.doesNotMatch(daily, /孩子首頁只會顯示今天有勾選的每日冒險/);
   assert.match(modalStyles, /\.hh-adventure-weekday\s*\{/);
-  assert.match(neutralStyles, /\.hh-adventure-weekday\.is-selected\s*\{[^}]*background:\s*var\(--hh-neutral-ink\)/);
+  assert.match(neutralStyles, /\.hh-adventure-weekday\.is-selected\s*\{[^}]*background:\s*var\(--hh-primary\)/);
 });
 
 test('daily schedule choices and actions use the neutral app palette', () => {
@@ -58,8 +58,8 @@ test('daily schedule choices and actions use the neutral app palette', () => {
   assert.doesNotMatch(daily, /(?:bg|border|text|ring)-blue-/);
   assert.match(modalStyles, /\.hh-adventure-child-choice,/);
   assert.match(neutralStyles, /\.hh-adventure-child-choice\.is-selected,/);
-  assert.match(neutralStyles, /\.hh-adventure-control\s*\{[^}]*accent-color:\s*var\(--hh-neutral-ink\)/);
-  assert.match(neutralStyles, /\.hh-adventure-primary-action\s*\{[^}]*background:\s*var\(--hh-neutral-ink\)/);
+  assert.match(neutralStyles, /\.hh-adventure-control\s*\{[^}]*accent-color:\s*var\(--hh-primary\)/);
+  assert.match(neutralStyles, /\.hh-adventure-primary-action\s*\{[^}]*background:\s*var\(--hh-primary\)/);
 });
 
 test('general adventure choices and actions use the same neutral app palette', () => {
@@ -144,9 +144,9 @@ test('general adventure form uses an icon-only sheet header and hides scrollbar 
   assert.match(overlayStyles, /\.hh-goal-proposal-sheet-bar\s*\{[\s\S]*?position:\s*absolute[\s\S]*?left:\s*16px/);
   assert.match(
     neutralStyles,
-    /button:not\(\.hh-character-menu-action\):not\(\.hh-character-icon-button\):not\(\.hh-adventure-button\):not\(\.hh-goal-proposal-backdrop\)(?::not\(\.hh-adventure-reward-action\))?:hover/,
+    /button:not\(\.hh-character-menu-action\):not\(\.hh-character-icon-button\):not\(\.hh-adventure-button\):not\(\.hh-goal-proposal-backdrop\):not\(\.hh-primary-button\):not\(\[class\*="bg-"\]\):hover/,
   );
-  assert.match(neutralStyles, /\.hh-goal-proposal-backdrop:hover,[\s\S]*?background:\s*rgba\(32, 33, 36, 0\.28\)\s*!important/);
+  assert.match(neutralStyles, /\.hh-goal-proposal-backdrop:hover,[\s\S]*?background:\s*rgb\(18 57 59 \/ 30%\)\s*!important/);
 });
 
 test('a newly created general adventure waits for the child to open it from the board', () => {
@@ -201,7 +201,7 @@ test('mobile adventure completion keeps the submit action below the reflection f
   assert.match(overlayStyles, /\.hh-adventure-completion-actions\s*\{[\s\S]*?box-sizing:\s*border-box/);
   assert.match(overlayStyles, /\.hh-adventure-complete-button\s*\{[\s\S]*?box-sizing:\s*border-box/);
   assert.match(overlayStyles, /\.hh-adventure-completion\s*\{[\s\S]*?padding-bottom:\s*var\(--hh-adventure-completion-action-clearance\)/);
-  assert.match(neutralStyles, /\.hh-adventure-complete-button\s*\{[\s\S]*?color:\s*#ffffff;[\s\S]*?background:\s*var\(--hh-neutral-ink\)/);
+  assert.match(neutralStyles, /\.hh-adventure-complete-button\s*\{[\s\S]*?color:\s*var\(--hh-on-success\);[\s\S]*?background:\s*var\(--hh-success\)/);
   assert.doesNotMatch(neutralStyles, /\.hh-adventure-complete-button\s*\{[\s\S]*?background:\s*var\(--hh-character-theme-color\)/);
 });
 

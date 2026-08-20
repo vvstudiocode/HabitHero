@@ -201,7 +201,7 @@
 .hh-adventure-reward-card h2 {
   margin-top: 5px;
   color: var(--hh-reward-card-ink);
-  font-family: Fredoka, Nunito, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: clamp(30px, 8vw, 42px);
   font-weight: 700;
   letter-spacing: -.05em;
@@ -277,7 +277,7 @@
 }
 
 .hh-adventure-reward-total strong {
-  font-family: Fredoka, Nunito, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: 24px;
   line-height: 1;
 }
@@ -1066,7 +1066,7 @@
 .hh-consent-modal-header h2 {
   margin: 2px 0 0;
   color: #12393b;
-  font-family: "Fredoka", system-ui, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: 1.45rem;
 }
 
@@ -1226,7 +1226,7 @@
 .hh-document-title-row h1 {
   margin: 2px 0 0;
   color: #12393b;
-  font-family: "Fredoka", system-ui, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: clamp(2rem, 8vw, 3.6rem);
   line-height: 1;
 }
@@ -1669,7 +1669,7 @@
 .hh-decoration-purchase-choice-card h2 {
   margin: 0;
   color: #23413f;
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: 24px;
   line-height: 1.15;
   text-wrap: balance;

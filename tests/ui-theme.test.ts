@@ -18,6 +18,28 @@ test('shared hero uses persisted theme values without a legacy character catalog
   assert.match(hero, /theme\?\.accentColor \?\?/);
 });
 
+test('dashboard menu actions expose semantic tones and colored icons', () => {
+  const hero = read('../src/components/DashboardCharacterHero.tsx');
+  const parent = read('../src/components/ParentDashboard.tsx');
+  const child = read('../src/components/ChildDashboard.tsx');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+  const tokens = read('../src/styles/tokens.css');
+
+  assert.match(hero, /export type CharacterMenuTone = 'attention' \| 'action' \| 'explore' \| 'reward' \| 'growth' \| 'neutral'/);
+  assert.match(hero, /data-menu-tone=\{action\.tone\}/);
+  assert.match(hero, /className="hh-character-menu-icon"/);
+  for (const tone of ['attention', 'action', 'growth', 'reward', 'explore']) {
+    assert.match(parent, new RegExp(`tone: '${tone}'`));
+  }
+  for (const tone of ['attention', 'action', 'explore', 'reward', 'growth', 'neutral']) {
+    assert.match(child, new RegExp(`tone: '${tone}'`));
+    assert.match(tokens, new RegExp(`--hh-menu-tone-${tone}:`));
+  }
+  assert.match(hero, /className="hh-character-menu-icon" style=\{action\.tone/);
+  assert.match(neutralTheme, /\.hh-character-menu-icon/);
+  assert.match(neutralTheme, /background: color-mix\(in srgb, var\(--hh-neutral-surface\) 68%, transparent\)/);
+});
+
 test('shared hero exposes one theme color for all dashboard controls', () => {
   const hero = read('../src/components/DashboardCharacterHero.tsx');
   const characterStyles = read('../src/styles/character.css');

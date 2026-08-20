@@ -181,8 +181,8 @@ describe('pet action state', () => {
     assert.match(tokensSource, /--hh-world-pet-action-mobile-gap:\s*2px;/);
     assert.match(tokensSource, /--hh-world-pet-action-mobile-horizontal-offset:\s*12px;/);
     assert.match(tokensSource, /--hh-world-pet-action-mobile-offset:\s*16px;/);
-    assert.match(tokensSource, /--hh-world-pet-action-mobile-surface:\s*rgb\(255 253 241 \/ 72%\);/);
-    assert.match(tokensSource, /--hh-world-pet-action-mobile-selected-surface:\s*rgb\(91 156 105 \/ 78%\);/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-surface:\s*rgb\(255 253 248 \/ 82%\);/);
+    assert.match(tokensSource, /--hh-world-pet-action-mobile-selected-surface:\s*rgb\(91 156 105 \/ 84%\);/);
   });
 
   it('registers a pet that finishes loading after a purchase in the live actor list', () => {

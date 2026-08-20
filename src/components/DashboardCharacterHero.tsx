@@ -1,10 +1,13 @@
 import React from 'react';
 import type { ThemeSettings } from '../types';
 
+export type CharacterMenuTone = 'attention' | 'action' | 'explore' | 'reward' | 'growth' | 'neutral';
+
 export type CharacterMenuAction = {
   id: string;
   title: string;
   icon?: React.ReactNode;
+  tone?: CharacterMenuTone;
   hasNotification?: boolean;
   tour?: string;
   closeOnSelect?: boolean;
@@ -132,11 +135,12 @@ export function DashboardCharacterHero({
                   <button
                     key={action.id}
                     data-tour={action.tour}
+                    data-menu-tone={action.tone}
                     type="button"
                     className={`hh-character-menu-action ${activeMenuId === action.id ? 'is-selected' : ''}`}
                     onClick={action.onSelect}
                   >
-                    {action.icon && <span aria-hidden="true">{action.icon}</span>}
+                    {action.icon && <span className="hh-character-menu-icon" style={action.tone ? { color: `var(--hh-menu-tone-${action.tone})` } : undefined} aria-hidden="true">{action.icon}</span>}
                     {action.hasNotification && <span className="hh-character-menu-notification" aria-label="有新項目" />}
                     <strong>{action.title}</strong>
                   </button>
@@ -149,12 +153,13 @@ export function DashboardCharacterHero({
                   <button
                     key={`${action.id}-${index}`}
                     data-tour={action.tour}
+                    data-menu-tone={action.tone}
                     type="button"
                     className="hh-character-menu-action"
                     tabIndex={menuOpen === false ? -1 : 0}
                     onClick={action.onSelect}
                   >
-                    {action.icon && <span aria-hidden="true">{action.icon}</span>}
+                    {action.icon && <span className="hh-character-menu-icon" style={action.tone ? { color: `var(--hh-menu-tone-${action.tone})` } : undefined} aria-hidden="true">{action.icon}</span>}
                     {action.hasNotification && <span className="hh-character-menu-notification" aria-label="有新項目" />}
                     <strong>{action.title}</strong>
                   </button>

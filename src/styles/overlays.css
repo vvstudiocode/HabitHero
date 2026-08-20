@@ -207,7 +207,7 @@
 
 .hh-parent-feature-modal h2 {
   margin: 0;
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: clamp(44px, 18vw, 92px);
   line-height: .95;
   letter-spacing: 0;
@@ -571,7 +571,7 @@
 .hh-adventure-detail-header h2 {
   margin-top: 4px;
   overflow-wrap: anywhere;
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: 28px;
   line-height: 1.15;
 }
@@ -649,7 +649,7 @@
 }
 
 .hh-adventure-timer strong {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--hh-font-mono);
   font-size: 22px;
   font-variant-numeric: tabular-nums;
 }

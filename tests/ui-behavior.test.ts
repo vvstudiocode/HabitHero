@@ -29,12 +29,12 @@ test('parent dashboard reuses shared modal and empty-state primitives', () => {
   assert.doesNotMatch(dashboard, /fixed inset-0 bg-black\/40 flex items-center justify-center p-6 z-\[70\]/);
 });
 
-test('neutral theme keeps surfaces white without applying a grayscale filter', () => {
+test('forest-paper theme keeps surfaces warm without applying a grayscale filter', () => {
   const entry = read('../src/main.tsx');
   const neutralTheme = read('../src/styles/neutral-theme.css');
 
   assert.match(entry, /import ['"]\.\/styles\/neutral-theme\.css['"]/);
-  assert.match(neutralTheme, /--hh-neutral-body: #ffffff/);
+  assert.match(neutralTheme, /--hh-neutral-body: var\(--hh-surface-soft\)/);
   assert.match(neutralTheme, /--hh-neutral-line:/);
   assert.doesNotMatch(neutralTheme, /grayscale\(/);
   assert.doesNotMatch(neutralTheme, /linear-gradient/);

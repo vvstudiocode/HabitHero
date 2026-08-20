@@ -814,11 +814,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   };
 
   const heroRootMenuActions: CharacterMenuAction[] = [
-    { id: 'review', title: '審核', tour: 'review-menu', icon: <Eye size={17} />, hasNotification: parentMenuNotifications.review, onSelect: () => openHeroFeature('review') },
-    { id: 'tasks', title: '任務', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
-    { id: 'growth', title: '成長', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
-    { id: 'rewards', title: '獎勵', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards || parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('rewards') },
-    { id: 'world-shop', title: '商店', tour: 'world-shop-menu', icon: <ShoppingBag size={17} />, onSelect: () => openHeroFeature('world-shop') },
+    { id: 'review', title: '審核', tone: 'attention', tour: 'review-menu', icon: <Eye size={17} />, hasNotification: parentMenuNotifications.review, onSelect: () => openHeroFeature('review') },
+    { id: 'tasks', title: '任務', tone: 'action', tour: 'tasks-menu', icon: <Circle size={17} />, closeOnSelect: false, onSelect: () => toggleHeroMenuGroup('tasks') },
+    { id: 'growth', title: '成長', tone: 'growth', tour: 'growth-menu', icon: <Star size={17} />, onSelect: () => openHeroFeature('growth') },
+    { id: 'rewards', title: '獎勵', tone: 'reward', tour: 'rewards-menu', icon: <Gift size={17} />, hasNotification: parentMenuNotifications.rewards || parentMenuNotifications.wishlist, onSelect: () => openHeroFeature('rewards') },
+    { id: 'world-shop', title: '商店', tone: 'explore', tour: 'world-shop-menu', icon: <ShoppingBag size={17} />, onSelect: () => openHeroFeature('world-shop') },
   ];
 
   const heroSubMenuActions: Record<ParentTab, CharacterMenuAction[]> = {

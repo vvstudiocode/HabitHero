@@ -257,11 +257,11 @@ describe('child game panel decoration editing', () => {
     assert.match(terrainWorldLayerSource, /document\.addEventListener\('focusin', dismissDecorationSelection\)/);
   });
 
-  it('keeps selected-decoration actions translucent, crisp, and monochrome', () => {
-    assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?color:\s*#202124/);
-    assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?background:\s*rgb\(255 255 255 \/ 84%\)/);
+  it('keeps selected-decoration actions translucent, crisp, and forest-toned', () => {
+    assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?color:\s*var\(--hh-primary-dark\)/);
+    assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?background:\s*rgb\(255 253 248 \/ 88%\)/);
     assert.match(worldControlsSource, /\.hh-world-decoration-action\s*\{[\s\S]*?backdrop-filter:\s*none/);
-    assert.match(worldControlsSource, /\.hh-world-decoration-action:hover,[\s\S]*?background:\s*rgb\(255 255 255 \/ 94%\)/);
+    assert.match(worldControlsSource, /\.hh-world-decoration-action:hover,[\s\S]*?background:\s*rgb\(255 253 248 \/ 96%\)/);
   });
 
   it('uses the 0.1 minimum size and optimistic placement state', () => {

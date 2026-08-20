@@ -50,6 +50,37 @@
   }
 }
 
+/* Shared typography: rounded display type for the adventure tone, with a
+ * calmer readable body face for longer instructions and form content. */
+html {
+  font-family: var(--hh-font-body);
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--hh-font-body);
+}
+
+body {
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--hh-font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
 @keyframes hh-slide-up-exit {
   from {
     transform: translateY(0);

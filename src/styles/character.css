@@ -31,7 +31,7 @@
 }
 
 .hh-character-brand {
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.06em;
@@ -133,7 +133,7 @@
 .hh-character-hero-copy h1 {
   margin: 0;
   color: #050505;
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: clamp(28px, 7vw, 40px);
   line-height: 1.05;
   letter-spacing: -0.05em;
@@ -443,10 +443,6 @@
   border-radius: 50%;
   background: #ef4444;
   box-shadow: 0 1px 4px rgba(127, 29, 29, .35);
-}
-
-.hh-character-menu-action svg {
-  color: var(--hh-neutral-ink);
 }
 
 .hh-character-menu-action:nth-child(1) {
@@ -933,7 +929,7 @@
   width: 100%;
   gap: 0;
   color: #111827;
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: 19px;
   line-height: 1;
 }
@@ -964,7 +960,7 @@
 
 .hh-character-stats em {
   color: #68818e;
-  font-family: Nunito, sans-serif;
+  font-family: var(--hh-font-body);
   font-size: 10px;
   font-style: normal;
 }
@@ -1070,7 +1066,7 @@
 
 .hh-parent-feature-modal h2 {
   margin: 0;
-  font-family: Fredoka, sans-serif;
+  font-family: var(--hh-font-display);
   font-size: clamp(44px, 18vw, 92px);
   line-height: .95;
   letter-spacing: 0;

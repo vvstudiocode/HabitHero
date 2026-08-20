@@ -1006,12 +1006,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const heroSubMenuActions: Record<ChildMenuGroup, CharacterMenuAction[]> = {
     backpack: [
-      { id: 'goals', title: '冒險日記', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
-      { id: 'inventory', title: '背包', icon: <Backpack size={17} />, onSelect: () => openChildFeature('inventory') },
-      { id: 'shop', title: '商店', icon: <ShoppingBagIcon size={17} />, onSelect: () => openChildFeature('shop') },
-      { id: 'wishlist', title: '獎勵', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
-      { id: 'growth', title: '成長', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
-      { id: 'settings', title: '設定', icon: <Settings size={17} />, onSelect: () => openChildFeature('settings') },
+      { id: 'goals', title: '冒險日記', tone: 'attention', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
+      { id: 'inventory', title: '背包', tone: 'action', icon: <Backpack size={17} />, onSelect: () => openChildFeature('inventory') },
+      { id: 'shop', title: '商店', tone: 'explore', icon: <ShoppingBagIcon size={17} />, onSelect: () => openChildFeature('shop') },
+      { id: 'wishlist', title: '獎勵', tone: 'reward', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
+      { id: 'growth', title: '成長', tone: 'growth', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
+      { id: 'settings', title: '設定', tone: 'neutral', icon: <Settings size={17} />, onSelect: () => openChildFeature('settings') },
     ],
     goals: [],
     growth: [],
@@ -1059,14 +1059,14 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   return (
     <div
       className={`hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50${decorationPlacement ? ' is-decoration-placement' : ''}${cleanMode ? ' is-clean-mode' : ''}`}
-      style={{ '--hh-character-theme-color': '#202124' } as React.CSSProperties}
+      style={{ '--hh-character-theme-color': '#2f7f78' } as React.CSSProperties}
       onContextMenu={preventNativeAppContextMenu}
       onDragStart={preventNativeAppDragStart}
     >
       <ChildDashboardBackgroundMusic enabled={backgroundMusicEnabled} />
       <DashboardCharacterHero
         sceneImage=""
-        theme={{ ...activeChild.theme, accentColor: '#202124', mobileBackgroundImageUrl: undefined, desktopBackgroundImageUrl: undefined }}
+        theme={{ ...activeChild.theme, accentColor: '#2f7f78', mobileBackgroundImageUrl: undefined, desktopBackgroundImageUrl: undefined }}
         stats={[
           { label: '加入天數', value: activeChild.joinedDays, icon: <CalendarDays className="hh-character-stat-days-icon" size={17} strokeWidth={2.5} /> },
           { label: '我的點數', value: displayedPoints, target: 'points', icon: <Star className="hh-character-stat-points" size={17} strokeWidth={2.5} /> },
