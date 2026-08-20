@@ -30,6 +30,12 @@ describe('terrain world scene dependencies', () => {
     assert.equal(getTerrainWorldSceneKey(refreshed, 'high'), getTerrainWorldSceneKey(baseGameData, 'high'));
   });
 
+  it('changes when mounted-scene lifecycle inputs change', () => {
+    const highWithNames = getTerrainWorldSceneKey(baseGameData, 'high', true);
+    assert.notEqual(getTerrainWorldSceneKey(baseGameData, 'low', true), highWithNames);
+    assert.notEqual(getTerrainWorldSceneKey(baseGameData, 'high', false), highWithNames);
+  });
+
   it('keeps the mounted world stable while updating character and pet actors in place', () => {
     assert.equal(
       getTerrainWorldSceneKey({
