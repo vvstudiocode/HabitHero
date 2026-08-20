@@ -39,3 +39,11 @@ test('growth controls stay lightweight and day details escape the child card lay
   assert.doesNotMatch(panel, /bg-black\/30/);
   assert.doesNotMatch(panel, /absolute inset-0 cursor-default/);
 });
+
+test('growth day cards use one compact row while month counts stay on one line', () => {
+  const panel = read('../src/features/growth/components/GrowthSummaryPanel.tsx');
+
+  assert.match(panel, /compact \? 'flex-col' : 'flex-row'/);
+  assert.match(panel, /compact \? 'text-xs whitespace-nowrap' : ''/);
+  assert.match(panel, /compact \? 'min-h-12 flex-col items-center justify-center px-1\.5 text-center' : 'w-full flex-row items-center justify-center gap-2 text-center'/);
+});

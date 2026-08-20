@@ -9,6 +9,9 @@ test('legacy room character catalog and assets are removed', async () => {
   assert.equal(existsSync(new URL('../src/features/characters/catalog.ts', import.meta.url)), false);
 
   const legacyAssets = [
+    'public/images/habithero-dashboard-room.png',
+    'public/images/parent-character.png',
+    'public/images/parent-room-background.png',
     'public/images/habithero-catgirl-room.png',
     'public/images/habithero-catgirl-room-desktop.png',
     'public/images/habithero-black-catboy-room.png',

@@ -189,14 +189,14 @@ export function ParentAdventureScheduleForm({
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-gray-700">計時</legend>
-        <label className={`hh-adventure-timer-choice${!requiresTimer ? ' is-selected' : ''} flex min-h-11 items-center gap-3 rounded-xl p-3`}>
+        <label className={`hh-adventure-timer-choice${!requiresTimer ? ' is-selected' : ''} flex min-h-14 items-center gap-3 rounded-xl px-3 py-2`}>
           <input className="hh-adventure-control" type="radio" name="daily-timer" checked={!requiresTimer} onChange={() => setRequiresTimer(false)} />
           <span>不需要</span>
         </label>
-        <label className={`hh-adventure-timer-choice${requiresTimer ? ' is-selected' : ''} flex min-h-11 flex-wrap items-center gap-3 rounded-xl p-3`}>
+        <label className={`hh-adventure-timer-choice${requiresTimer ? ' is-selected' : ''} flex min-h-14 flex-wrap items-center gap-3 rounded-xl px-3 py-2`}>
           <input className="hh-adventure-control" type="radio" name="daily-timer" checked={requiresTimer} onChange={() => setRequiresTimer(true)} />
           <span>需要完成</span>
-          <input aria-label="計時分鐘" type="number" min="1" className="hh-adventure-field w-24 rounded-lg border p-2" disabled={!requiresTimer} value={durationMinutes ?? ''} onChange={event => setDurationMinutes(event.target.value ? Number(event.target.value) : null)} />
+          <input aria-label="計時分鐘" type="number" min="1" className="hh-adventure-timer-minutes hh-adventure-field h-8 w-20 rounded-lg border px-2" disabled={!requiresTimer} value={durationMinutes ?? ''} onChange={event => setDurationMinutes(event.target.value ? Number(event.target.value) : null)} />
           <span>分鐘</span>
         </label>
       </fieldset>

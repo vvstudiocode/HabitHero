@@ -257,8 +257,8 @@ body,
 
 .hh-character-icon-button.is-expanded,
 .hh-character-icon-button.is-expanded:hover,
-.hh-character-icon-button.is-expanded:active {
-  box-shadow: none;
+.hh-character-icon-button.is-expanded:active, .hh-goal-proposal-sheet-bar .hh-character-icon-button, .hh-goal-proposal-sheet-bar .hh-character-icon-button:hover {
+  background: transparent; box-shadow: none;
 }
 
 .hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button,
@@ -355,10 +355,10 @@ body,
 
 .hh-adventure-card-trigger,
 .hh-adventure-task-control,
+.hh-reward-management-action, .hh-child-delete-action,
 .hh-adventure-schedule-trigger {
-  color: var(--hh-neutral-ink);
-  background: transparent;
-  border: 0;
+  color: var(--hh-neutral-ink); background: transparent !important;
+  border: 0 !important; box-shadow: none !important;
 }
 
 .hh-adventure-card-trigger:active,

@@ -62,6 +62,37 @@ test('daily schedule choices and actions use the neutral app palette', () => {
   assert.match(neutralStyles, /\.hh-adventure-primary-action\s*\{[^}]*background:\s*var\(--hh-neutral-ink\)/);
 });
 
+test('general adventure choices and actions use the same neutral app palette', () => {
+  const general = read('../src/features/adventures/components/ParentGeneralAdventureForm.tsx');
+
+  assert.match(general, /hh-adventure-child-choice/);
+  assert.match(general, /hh-adventure-timer-choice/);
+  assert.match(general, /hh-adventure-control/);
+  assert.match(general, /hh-adventure-primary-action/);
+  assert.match(general, /hh-adventure-field/);
+  assert.doesNotMatch(general, /(?:bg|border|text|ring)-blue-/);
+});
+
+test('adventure timer choices stay equal-height and compact', () => {
+  const daily = read('../src/features/adventures/components/ParentAdventureScheduleForm.tsx');
+  const general = read('../src/features/adventures/components/ParentGeneralAdventureForm.tsx');
+
+  for (const form of [daily, general]) {
+    assert.equal((form.match(/hh-adventure-timer-choice/g) ?? []).length, 2);
+    assert.match(form, /hh-adventure-timer-choice[^`"]*?[`"]?[^\n]*min-h-14[^\n]*px-3 py-2/);
+    assert.match(form, /hh-adventure-timer-minutes/);
+  }
+  assert.match(daily, /hh-adventure-timer-minutes hh-adventure-field h-8 w-20/);
+  assert.match(general, /hh-adventure-timer-minutes hh-adventure-field h-8 w-20/);
+});
+
+test('parent adventure dialog scrolls vertically without scrollbar chrome or horizontal movement', () => {
+  const modalStyles = read('../src/styles/modals.css');
+
+  assert.match(modalStyles, /\.hh-adventure-form-dialog\s*\{[\s\S]*?overflow:\s*hidden auto[\s\S]*?scrollbar-width:\s*none/);
+  assert.match(modalStyles, /\.hh-adventure-form-dialog::\-webkit-scrollbar\s*\{[^}]*display:\s*none/);
+});
+
 test('daily schedule overlays are portaled above the scrollable parent feature', () => {
   const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
   const overlayStyles = read('../src/styles/overlays.css');

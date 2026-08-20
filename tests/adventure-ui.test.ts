@@ -24,7 +24,7 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 
 const task = (
   id: string,
-  status: 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed',
+  status: 'proposed' | 'proposal_revision_requested' | 'todo' | 'pending' | 'revision_requested' | 'completed' | 'cancelled',
   overrides: Record<string, unknown> = {},
 ) => ({
   id,
@@ -201,7 +201,7 @@ test('today adventure summary keeps daily progress and groups completed general 
   assert.deepEqual(summary.daily.map(({ id }) => id), ['daily-done']);
   assert.deepEqual(getAdventureProgress(summary.daily), { completed: 1, total: 1 });
   assert.deepEqual(summary.generalActive.map(({ id }) => id), ['general-active']);
-  assert.deepEqual(summary.generalCompletedByDate.map(({ dateKey, tasks: grouped }) => ({
+  assert.deepEqual(summary.generalHistoryByDate.map(({ dateKey, tasks: grouped }) => ({
     dateKey,
     ids: grouped.map(({ id }) => id),
   })), [
@@ -211,6 +211,32 @@ test('today adventure summary keeps daily progress and groups completed general 
   assert.deepEqual(getTodayAdventureSummary([
     task('daily-done', 'completed', { adventureType: 'daily', occurrenceDate: '2026-08-03' }),
   ], '2026-08-04').daily, []);
+});
+
+test('today adventure summary archives abandoned general adventures on their cancellation date', () => {
+  const summary = getTodayAdventureSummary([
+    task('general-active', 'todo'),
+    task('general-abandoned', 'cancelled', {
+      cancelledAt: '2026-08-20T02:30:00.000Z',
+    }),
+  ], '2026-08-20');
+
+  assert.deepEqual(summary.generalActive.map(({ id }) => id), ['general-active']);
+  assert.deepEqual(summary.generalHistoryByDate.map(({ dateKey, tasks: grouped }) => ({
+    dateKey,
+    ids: grouped.map(({ id }) => id),
+  })), [
+    { dateKey: '2026-08-20', ids: ['general-abandoned'] },
+  ]);
+});
+
+test('repository loads only active task statuses outside the bounded terminal history', () => {
+  const source = read('../src/lib/data-access.ts');
+
+  assert.doesNotMatch(source, /neq\('status', 'completed'\)/);
+  assert.match(source, /in\('status', ACTIVE_TASK_STATUSES\)/);
+  assert.match(source, /in\('status', TERMINAL_TASK_STATUSES\)[\s\S]*?limit\(CHILD_TASK_HISTORY_LIMIT\)/);
+  assert.match(source, /in\('status', TERMINAL_TASK_STATUSES\)[\s\S]*?limit\(FAMILY_TASK_HISTORY_LIMIT\)/);
 });
 
 test('today adventure summary sorts daily and active general tasks by start time', () => {

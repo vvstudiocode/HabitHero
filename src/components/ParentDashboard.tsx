@@ -26,6 +26,7 @@ import { ParentDashboardBackgroundMusic } from './ParentDashboardBackgroundMusic
 import { ParentDashboardContent, type ParentDashboardTab } from './parent-dashboard/ParentDashboardContent';
 import { ParentSettingsChildrenSection, type NewChildProfile } from './parent-dashboard/ParentSettingsChildrenSection';
 import { ParentDashboardFormModal } from './parent-dashboard/ParentDashboardFormModal';
+import { RecentApprovedTasks } from './parent-dashboard/RecentApprovedTasks';
 import { toParentCalendarTaskGroup } from './parent-dashboard/parent-dashboard-selectors';
 import { EmptyState, ModalShell } from './shared/ParentDashboardUI';
 import { PointValue } from './shared/PointValue';
@@ -469,25 +470,26 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       setShowSettings(false);
       setShowNewChildForm(false);
       setShowTaskForm(false);
-      return;
-    }
-    if (nextStep === 4) {
-      setShowSettings(false);
-      setShowNewChildForm(false);
-      setShowTaskForm(false);
       setHeroMenuGroup(null);
       setHeroMenuVisible(true);
       return;
     }
-    if (nextStep === 5) {
+    if (nextStep === 4) {
       setHeroMenuGroup('tasks');
       setHeroMenuVisible(true);
       setShowTaskForm(false);
       return;
     }
-    if (nextStep === 6) {
+    if (nextStep === 5) {
       openHeroFeature('tasks');
       setAdventureFormRequest({ type: 'daily', requestId: Date.now() });
+      return;
+    }
+    if (nextStep === 6) {
+      setShowTaskForm(false);
+      setHeroFeature(null);
+      setHeroMenuGroup(null);
+      setHeroMenuVisible(true);
       return;
     }
     if (nextStep === 7) {
@@ -498,13 +500,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
       return;
     }
     if (nextStep === 8) {
-      setShowTaskForm(false);
-      setHeroFeature(null);
-      setHeroMenuGroup(null);
-      setHeroMenuVisible(true);
-      return;
-    }
-    if (nextStep === 9) {
       setShowTaskForm(false);
       setHeroFeature(null);
       setHeroMenuGroup(null);
@@ -973,31 +968,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               </div>
             </section>
 
-            {completedTasks.length > 0 && (
-              <section>
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-gray-900">最近已核准</h2>
-                  <span className="text-xs font-bold text-gray-500">可撤銷一次</span>
-                </div>
-                <div className="space-y-3">
-                  {completedTasks.slice(0, 12).map((task) => (
-                    <div key={task.id} className="flex items-center justify-between gap-3 rounded-2xl border border-green-100 bg-green-50 p-4">
-                      <div className="min-w-0">
-                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <span className="rounded-lg bg-white px-2 py-1 text-xs font-black text-green-800">{task.childName}</span>
-                          <span className="text-xs font-bold text-green-700">已核准</span>
-                        </div>
-                        <div className="break-words font-bold text-gray-900">{task.name}</div>
-                        <PointValue value={task.approvedPoints ?? task.points} className="text-sm font-black text-green-700" />
-                      </div>
-                      <button type="button" onClick={() => void handleRevokeTaskApproval(task)} disabled={loading || mutationPending || !revokeTaskApproval} className="min-h-11 shrink-0 rounded-xl border border-red-200 bg-white px-3 text-xs font-black text-red-700 transition-colors hover:bg-red-50 disabled:cursor-wait disabled:opacity-50">
-                        撤銷核准
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+            {completedTasks.length > 0 && <RecentApprovedTasks tasks={completedTasks} disabled={loading || mutationPending || !revokeTaskApproval} onRevoke={task => void handleRevokeTaskApproval(task)} />}
 
             <section>
               <div className="flex justify-between items-center mb-3">
@@ -1136,7 +1107,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <div>
                         <div className="flex items-center gap-1 mb-1 flex-wrap">
                           {group.children.map(c => (
-                            <span key={c.childId} className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold">{c.childName}</span>
+                            <span key={c.childId} className="text-sm font-bold text-gray-800">{c.childName}</span>
                           ))}
                         </div>
                         <div className="whitespace-pre-wrap break-words font-medium text-gray-900">{group.name}</div>
@@ -1144,10 +1115,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => openRewardForm(group)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg">
+                      <button type="button" aria-label="編輯獎勵" onClick={() => openRewardForm(group)} className="hh-reward-management-action p-2 text-gray-400 hover:text-blue-500">
                         <Edit2 size={18} />
                       </button>
-                      <button onClick={() => setRewardToDelete(group)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                      <button type="button" aria-label="刪除獎勵" onClick={() => setRewardToDelete(group)} className="hh-reward-management-action p-2 text-gray-400 hover:text-red-500">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -1382,7 +1353,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 <button type="button" onClick={() => { setShowSettings(false); setShowFirstUseGuide(true); }} className="mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-3 font-bold text-blue-700 transition-colors hover:bg-blue-100">
                   重新觀看新手指引
                 </button>
-                <button onClick={() => dismissWithAnimation(() => { setShowSettings(false); onLogout(); }, '.hh-settings-drawer')} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold transition-colors">
+                <button onClick={() => dismissWithAnimation(() => { setShowSettings(false); onLogout(); }, '.hh-settings-drawer')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 font-bold text-gray-700 transition-colors hover:bg-gray-200">
                   <LogOut size={20} /> 登出家長端
                 </button>
               </section>

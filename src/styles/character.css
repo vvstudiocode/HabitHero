@@ -909,11 +909,11 @@
 
   0%,
   100% {
-    margin-top: 0;
+    translate: 0 0;
   }
 
   50% {
-    margin-top: -4px;
+    translate: 0 -4px;
   }
 }
 
@@ -1445,13 +1445,6 @@
   .hh-character-stats[data-stat-count="3"]>div:has(.hh-character-stat-points) {
     width: auto;
     min-width: 0;
-  }
-}
-
-/* Touch browsers should keep menu controls layout-stable; margin animation can visibly jitter during scroll/repaint. */
-@media (hover: none) and (pointer: coarse) {
-  .hh-character-menu-action {
-    animation: none;
   }
 }
 

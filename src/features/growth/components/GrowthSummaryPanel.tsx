@@ -198,16 +198,16 @@ function DayProgressButton({ day, onSelect, compact = false }: { key?: string; d
     : day.total > 0 ? `${day.completed} / ${day.total}` : '—';
   const content = (
     <>
-      <span className={`flex items-center justify-between gap-2 ${compact ? 'flex-col' : ''}`}>
+      <span className={`flex items-center justify-between gap-2 ${compact ? 'flex-col' : 'flex-row'}`}>
         <span className="font-black text-gray-800">{compact ? day.dayOfMonth : `週${WEEKDAY_LABELS[day.weekdayIndex]}`}</span>
-        <span className={`font-black ${day.state === 'complete' ? 'text-emerald-700' : 'text-gray-600'}`}>{progressText}</span>
+        <span className={`font-black ${day.state === 'complete' ? 'text-emerald-700' : 'text-gray-600'} ${compact ? 'text-xs whitespace-nowrap' : ''}`}>{progressText}</span>
       </span>
       {!compact && <span className="text-xs font-bold text-gray-500">{getDayStateLabel(day)}</span>}
     </>
   );
 
   if (!interactive) {
-    return <div aria-label={label} className={`flex min-h-14 items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-3 py-2 ${compact ? 'min-h-12 px-1.5' : ''}`}>{content}</div>;
+    return <div aria-label={label} className={`flex min-h-14 rounded-2xl border border-dashed border-gray-200 bg-white px-3 py-2 ${compact ? 'min-h-12 flex-col items-center justify-center px-1.5 text-center' : 'w-full flex-row items-center justify-center gap-2 text-center'}`}>{content}</div>;
   }
 
   return (
@@ -215,7 +215,7 @@ function DayProgressButton({ day, onSelect, compact = false }: { key?: string; d
       type="button"
       aria-label={label}
       onClick={() => onSelect(day)}
-      className={`flex min-h-14 flex-col justify-center rounded-2xl border border-gray-200 bg-white px-3 py-2 text-left transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${compact ? 'min-h-12 px-1.5 text-center' : ''}`}
+      className={`flex min-h-14 rounded-2xl border border-gray-200 bg-white px-3 py-2 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${compact ? 'min-h-12 flex-col items-center justify-center px-1.5 text-center' : 'w-full flex-row items-center justify-center gap-2 text-center'}`}
     >
       {content}
     </button>

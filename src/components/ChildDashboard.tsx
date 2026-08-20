@@ -1425,7 +1425,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           <button type="button" className="hh-goal-proposal-backdrop" aria-label="關閉新增一般冒險" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-overlay')} />
           <div className="hh-goal-proposal-sheet">
             <div className="hh-goal-proposal-sheet-bar">
-              <button type="button" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-overlay')} aria-label="關閉新增一般冒險" className="hh-character-icon-button"><X size={18} /></button>
+              <button type="button" onClick={() => closeChildForm(() => setShowGoalForm(false), '.hh-goal-proposal-overlay')} aria-label="關閉新增一般冒險" className="hh-goal-proposal-close hh-character-icon-button"><X size={18} /></button>
             </div>
             <GoalProposalForm templates={taskTemplates} loading={actionPending || loading} onSubmit={handleSubmitGoalProposal} />
           </div>

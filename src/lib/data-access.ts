@@ -135,8 +135,16 @@ export interface LoadedAppData {
 
 // Keep enough history in the app state for the UI's 30-item pages.
 // This can later become a server-side cursor when history grows substantially.
-const CHILD_COMPLETED_TASK_HISTORY_LIMIT = 300;
-const FAMILY_COMPLETED_TASK_HISTORY_LIMIT = 300;
+const ACTIVE_TASK_STATUSES: TaskStatus[] = [
+  'proposed',
+  'proposal_revision_requested',
+  'todo',
+  'pending',
+  'revision_requested',
+];
+const TERMINAL_TASK_STATUSES: TaskStatus[] = ['completed', 'cancelled'];
+const CHILD_TASK_HISTORY_LIMIT = 300;
+const FAMILY_TASK_HISTORY_LIMIT = 300;
 const INITIAL_POINT_LEDGER_LIMIT = DEFAULT_POINT_LEDGER_PAGE_SIZE;
 
 function check<T>(result: { data: T; error: { message: string } | null }): T {
@@ -209,15 +217,15 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     check(await client.rpc('ensure_daily_adventure_occurrences', {
       target_child_profile_id: childFilter,
     }));
-    const [activeTasks, completedHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
-      client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).neq('status', 'completed').order('created_at').then((result) => asRows<TaskRow>(check(result))),
-      client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).eq('status', 'completed').order('completed_at', { ascending: false }).limit(CHILD_COMPLETED_TASK_HISTORY_LIMIT).then((result) => asRows<TaskRow>(check(result))),
+    const [activeTasks, taskHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
+      client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).in('status', ACTIVE_TASK_STATUSES).order('created_at').then((result) => asRows<TaskRow>(check(result))),
+      client.from('tasks').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).in('status', TERMINAL_TASK_STATUSES).order('updated_at', { ascending: false }).limit(CHILD_TASK_HISTORY_LIMIT).then((result) => asRows<TaskRow>(check(result))),
       client.from('rewards').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('sort_order').then((result) => asRows<RewardRow>(check(result))),
       client.from('wishlist_items').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at').then((result) => asRows<WishlistItemRow>(check(result))),
       client.from('reward_redemptions').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at', { ascending: false }).then((result) => asRows<RewardRedemptionRow>(check(result))),
       client.from('point_ledger').select('*').eq('family_id', familyId).eq('child_profile_id', childFilter).order('created_at', { ascending: false }).order('id', { ascending: false }).range(0, INITIAL_POINT_LEDGER_LIMIT - 1).then((result) => asRows<PointLedgerRow>(check(result))),
     ]);
-    tasks = [...activeTasks, ...completedHistory];
+    tasks = [...activeTasks, ...taskHistory];
     rewards = loadedRewards;
     wishlist = loadedWishlist;
     tickets = loadedTickets;
@@ -230,20 +238,20 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     await Promise.all(children.map((child) => client.rpc('ensure_daily_adventure_occurrences', {
       target_child_profile_id: child.id,
     }).then(check)));
-    const [loadedTemplates, activeTasks, completedHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
+    const [loadedTemplates, activeTasks, taskHistory, loadedRewards, loadedWishlist, loadedTickets, loadedLedger] = await Promise.all([
       client.from('task_templates').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<TaskTemplateRow>(check(result)).map((row): TaskTemplate => {
         const template = taskTemplateRowToViewModel(row);
         return { ...template, ...(template.duration == null ? { duration: undefined } : { duration: template.duration }) };
       })),
-      client.from('tasks').select('*').eq('family_id', familyId).neq('status', 'completed').order('created_at').then((result) => asRows<TaskRow>(check(result))),
-      client.from('tasks').select('*').eq('family_id', familyId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(FAMILY_COMPLETED_TASK_HISTORY_LIMIT).then((result) => asRows<TaskRow>(check(result))),
+      client.from('tasks').select('*').eq('family_id', familyId).in('status', ACTIVE_TASK_STATUSES).order('created_at').then((result) => asRows<TaskRow>(check(result))),
+      client.from('tasks').select('*').eq('family_id', familyId).in('status', TERMINAL_TASK_STATUSES).order('updated_at', { ascending: false }).limit(FAMILY_TASK_HISTORY_LIMIT).then((result) => asRows<TaskRow>(check(result))),
       client.from('rewards').select('*').eq('family_id', familyId).order('sort_order').then((result) => asRows<RewardRow>(check(result))),
       client.from('wishlist_items').select('*').eq('family_id', familyId).order('created_at').then((result) => asRows<WishlistItemRow>(check(result))),
       client.from('reward_redemptions').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).then((result) => asRows<RewardRedemptionRow>(check(result))),
       client.from('point_ledger').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).order('id', { ascending: false }).range(0, INITIAL_POINT_LEDGER_LIMIT - 1).then((result) => asRows<PointLedgerRow>(check(result))),
     ]);
     state.taskTemplates = loadedTemplates;
-    tasks = [...activeTasks, ...completedHistory];
+    tasks = [...activeTasks, ...taskHistory];
     rewards = loadedRewards;
     wishlist = loadedWishlist;
     tickets = loadedTickets;

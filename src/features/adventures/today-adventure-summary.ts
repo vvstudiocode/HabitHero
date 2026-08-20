@@ -9,15 +9,17 @@ export interface AdventureDateGroup {
 export interface TodayAdventureSummary {
   daily: AdventureTask[];
   generalActive: AdventureTask[];
-  generalCompletedByDate: AdventureDateGroup[];
+  generalHistoryByDate: AdventureDateGroup[];
 }
 
 function isValidDate(value: string): boolean {
   return !Number.isNaN(new Date(value).getTime());
 }
 
-export function getAdventureCompletionDate(task: Pick<AdventureTask, 'completedAt' | 'reviewedAt' | 'submittedAt' | 'updatedAt' | 'occurrenceDate'>, fallbackDate: string): string {
-  const timestamp = task.completedAt ?? task.reviewedAt ?? task.submittedAt ?? task.updatedAt;
+export function getAdventureHistoryDate(task: Pick<AdventureTask, 'status' | 'completedAt' | 'cancelledAt' | 'reviewedAt' | 'submittedAt' | 'updatedAt' | 'occurrenceDate'>, fallbackDate: string): string {
+  const timestamp = task.status === 'cancelled'
+    ? task.cancelledAt ?? task.updatedAt
+    : task.completedAt ?? task.reviewedAt ?? task.submittedAt ?? task.updatedAt;
   if (timestamp && isValidDate(timestamp)) return getTaipeiDateKey(new Date(timestamp));
   return task.occurrenceDate || fallbackDate;
 }
@@ -37,8 +39,8 @@ export function getTodayAdventureSummary(
       continue;
     }
 
-    if (task.status === 'completed') {
-      const dateKey = getAdventureCompletionDate(task, today);
+    if (task.status === 'completed' || task.status === 'cancelled') {
+      const dateKey = getAdventureHistoryDate(task, today);
       const group = completedByDate.get(dateKey) ?? [];
       group.push(task);
       completedByDate.set(dateKey, group);
@@ -50,7 +52,7 @@ export function getTodayAdventureSummary(
   return {
     daily: sortAdventureTasksByStartTime(daily),
     generalActive: sortAdventureTasksByStartTime(generalActive),
-    generalCompletedByDate: [...completedByDate.entries()]
+    generalHistoryByDate: [...completedByDate.entries()]
       .sort(([left], [right]) => right.localeCompare(left))
       .map(([dateKey, groupedTasks]) => ({ dateKey, tasks: sortAdventureTasksByStartTime(groupedTasks) })),
   };

@@ -104,7 +104,7 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
             <div key={child.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
               <div className="flex items-center justify-between">
                 <input type="text" value={childNameDrafts[child.id] ?? child.name} onChange={e => onChildNameDraftChange(child.id, e.target.value)} onBlur={e => onChildNameBlur(child.id, e.target.value)} className="font-bold text-lg bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none w-1/2 min-w-0" placeholder="小孩名字" />
-                {children.length > 1 && <button onClick={() => onDeleteChild(child.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg text-sm flex items-center gap-1 shrink-0"><Trash2 size={16} /> 刪除</button>}
+                {children.length > 1 && <button type="button" aria-label="刪除小孩" title="刪除小孩" onClick={() => onDeleteChild(child.id)} className="hh-child-delete-action text-red-500 p-1.5 rounded-lg shrink-0"><Trash2 size={20} /></button>}
               </div>
               <div className="flex items-start gap-2 text-xs text-amber-700"><KeyRound size={16} className="mt-0.5 shrink-0" /><span>{child.loginName ? `登入帳號：${child.loginName}。密碼不會顯示在這裡，忘記時請由家長重新設定。` : '此小孩尚未建立登入帳號。'}</span></div>
               {child.loginName ? <button onClick={() => onResetPassword(child.id)} className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50">重設小孩密碼</button> : <button onClick={() => onSetupAccount(child.id)} className="rounded-lg bg-blue-500 px-3 py-2 text-sm font-bold text-white hover:bg-blue-600">建立小孩帳號</button>}

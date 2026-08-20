@@ -23,8 +23,10 @@ function formatDate(dateKey: string, today: string): string {
   return dateKey.replaceAll('-', '/');
 }
 
-function formatCompletedTime(task: AdventureTask): string | null {
-  const timestamp = task.completedAt ?? task.reviewedAt ?? task.submittedAt;
+function formatHistoryTime(task: AdventureTask): string | null {
+  const timestamp = task.status === 'cancelled'
+    ? task.cancelledAt
+    : task.completedAt ?? task.reviewedAt ?? task.submittedAt;
   if (!timestamp) return null;
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return null;
@@ -35,12 +37,12 @@ function formatCompletedTime(task: AdventureTask): string | null {
   }).format(date);
 }
 
-function AdventureSummaryTask({ task, completed = false, onSelect }: { key?: string; task: AdventureTask; completed?: boolean; onSelect: (task: AdventureTask) => void }) {
+function AdventureSummaryTask({ task, historical = false, onSelect }: { key?: string; task: AdventureTask; historical?: boolean; onSelect: (task: AdventureTask) => void }) {
   const state = getAdventureTaskState(task);
   const StateIcon = getStateIcon(state);
   const statusLabel = getAdventureStatusLabel(state);
   const taskWindow = formatAdventureTaskWindow(task);
-  const completedTime = completed ? formatCompletedTime(task) : null;
+  const historyTime = historical ? formatHistoryTime(task) : null;
   const reflection = task.reflection ?? task.childReflectionText;
   const parentFeedback = task.parentFeedback ?? task.parentFeedbackText;
   const parentCorrection = task.parentCorrection ?? task.parentCorrectionText;
@@ -57,17 +59,21 @@ function AdventureSummaryTask({ task, completed = false, onSelect }: { key?: str
           <StateIcon
             size={22}
             aria-hidden="true"
-            className={state === 'completed' || state === 'submitted' ? 'mt-0.5 shrink-0 text-emerald-500' : 'mt-0.5 shrink-0 text-gray-400'}
+            className={state === 'cancelled'
+              ? 'mt-0.5 shrink-0 text-amber-600'
+              : state === 'completed' || state === 'submitted'
+                ? 'mt-0.5 shrink-0 text-emerald-500'
+                : 'mt-0.5 shrink-0 text-gray-400'}
           />
           <div className="min-w-0 flex-1">
             <p className="break-words font-black text-gray-900">{task.name}</p>
             <p className="mt-1 text-sm font-bold text-gray-500">
-              {state === 'available' ? `時間 ${taskWindow}` : statusLabel}{completedTime ? ` · ${completedTime} 完成` : ''}
+              {state === 'available' ? `時間 ${taskWindow}` : statusLabel}{historyTime ? ` · ${historyTime} ${state === 'cancelled' ? '放棄' : '完成'}` : ''}
             </p>
           </div>
           <PointValue value={task.approvedPoints ?? task.points} className="shrink-0 text-sm font-black text-yellow-600" />
         </div>
-        {completed && (reflection || parentFeedback || parentCorrection) && (
+        {historical && (reflection || parentFeedback || parentCorrection) && (
           <div className="mt-3 space-y-1 rounded-xl bg-gray-50 p-3 text-sm leading-6 text-gray-600">
             {reflection && <p><strong className="text-gray-800">我的心得：</strong>{reflection}</p>}
             {parentFeedback && <p><strong className="text-gray-800">爸媽鼓勵：</strong>{parentFeedback}</p>}
@@ -80,6 +86,13 @@ function AdventureSummaryTask({ task, completed = false, onSelect }: { key?: str
 }
 
 function CompletedDateGroup({ group, today, onTaskSelect }: { key?: string; group: AdventureDateGroup; today: string; onTaskSelect: (task: AdventureTask) => void }) {
+  const completedCount = group.tasks.filter(({ status }) => status === 'completed').length;
+  const cancelledCount = group.tasks.filter(({ status }) => status === 'cancelled').length;
+  const countLabel = [
+    completedCount > 0 ? `完成 ${completedCount} 個` : null,
+    cancelledCount > 0 ? `放棄 ${cancelledCount} 個` : null,
+  ].filter(Boolean).join(' · ');
+
   return (
     <details className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm" open={group.dateKey === today}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-black text-gray-800 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-400 [&::-webkit-details-marker]:hidden">
@@ -87,10 +100,10 @@ function CompletedDateGroup({ group, today, onTaskSelect }: { key?: string; grou
           <ChevronDown size={18} aria-hidden="true" />
           <span>{formatDate(group.dateKey, today)}</span>
         </span>
-        <span className="shrink-0 text-sm font-bold text-gray-500">完成 {group.tasks.length} 個</span>
+        <span className="shrink-0 text-sm font-bold text-gray-500">{countLabel}</span>
       </summary>
       <ul className="space-y-2 border-t border-gray-100 bg-gray-50/70 p-3">
-        {group.tasks.map((task) => <AdventureSummaryTask key={task.id} task={task} completed onSelect={onTaskSelect} />)}
+        {group.tasks.map((task) => <AdventureSummaryTask key={task.id} task={task} historical onSelect={onTaskSelect} />)}
       </ul>
     </details>
   );
@@ -117,7 +130,7 @@ export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdv
         )}
       </section>
 
-      {(summary.generalActive.length > 0 || summary.generalCompletedByDate.length > 0) && (
+      {(summary.generalActive.length > 0 || summary.generalHistoryByDate.length > 0) && (
         <section className="space-y-3" aria-labelledby="today-general-adventure-title">
           <div className="px-2">
             <h2 id="today-general-adventure-title" className="font-black text-gray-800">一般冒險</h2>
@@ -132,10 +145,10 @@ export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdv
             </div>
           )}
 
-          {summary.generalCompletedByDate.length > 0 && (
+          {summary.generalHistoryByDate.length > 0 && (
             <div className="space-y-2">
               <h3 className="px-2 text-sm font-black text-gray-500">完成紀錄</h3>
-              {summary.generalCompletedByDate.map((group) => (
+              {summary.generalHistoryByDate.map((group) => (
                 <CompletedDateGroup key={group.dateKey} group={group} today={today} onTaskSelect={onTaskSelect} />
               ))}
             </div>

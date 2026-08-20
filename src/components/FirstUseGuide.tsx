@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Baby, CheckCircle2, Gift, ListChecks, Settings, Sparkles, UserRound } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, ArrowRight, CheckCircle2, Gift, ListChecks, Settings, Sparkles, UserRound } from 'lucide-react';
 
 export const FIRST_USE_GUIDE_STORAGE_KEY = 'habithero:first-use-guide:v1';
 
@@ -34,50 +35,43 @@ const guideSteps: GuideStep[] = [
     icon: UserRound,
   },
   {
-    target: 'child-view',
-    eyebrow: '第 4 步／讓孩子知道怎麼用',
-    title: '孩子可以登入自己的畫面',
-    description: '孩子在登入頁選「小孩登入」，輸入你剛剛建立的帳號。你也可以按這個小孩圖示預覽孩子看到的畫面。',
-    icon: Baby,
-  },
-  {
     target: 'tasks-menu',
-    eyebrow: '第 5 步／開始安排冒險',
+    eyebrow: '第 4 步／開始安排冒險',
     title: '開啟冒險管理',
     description: '家長首頁的「任務」選單可以開啟冒險行事曆，並建立每日冒險或一般冒險。',
     icon: ListChecks,
   },
   {
     target: 'add-task-menu',
-    eyebrow: '第 6 步／建立每日冒險',
+    eyebrow: '第 5 步／建立每日冒險',
     title: '進入冒險管理',
     description: '這裡有行事曆、每日冒險與一般冒險。下一步會帶你建立適合刷牙、閱讀等固定習慣的每日冒險。',
     icon: ListChecks,
   },
   {
     target: 'task-name',
-    eyebrow: '第 7 步／填寫第一個每日冒險',
+    eyebrow: '第 6 步／填寫第一個每日冒險',
     title: '輸入一件具體的小事',
     description: '輸入孩子看得懂、做得到的事情，例如「睡前刷牙」。選好重複日期後，按表單下方的「建立排程」。',
     icon: CheckCircle2,
   },
   {
     target: 'review-menu',
-    eyebrow: '第 8 步／看孩子的回報',
+    eyebrow: '第 7 步／看孩子的回報',
     title: '開啟審核選單',
     description: '每日冒險可以直接送出，一般冒險會附快速回報或完整心得。從「審核」選單確認完成狀態與點數。',
     icon: CheckCircle2,
   },
   {
     target: 'rewards-menu',
-    eyebrow: '第 9 步／設定孩子想要的目標',
+    eyebrow: '第 8 步／設定孩子想要的目標',
     title: '開啟獎勵選單',
     description: '從家長首頁的「獎勵」選單進入獎勵中心，查看獎勵清單、兌換紀錄，也能在頁面上方查看孩子的許願。',
     icon: Gift,
   },
   {
     target: 'growth-menu',
-    eyebrow: '第 10 步／觀察家庭成長',
+    eyebrow: '第 9 步／觀察家庭成長',
     title: '開啟成長選單',
     description: '從家長首頁的「成長」選單查看成長紀錄與完成任務，幫助你看見孩子持續努力的進步。',
     icon: Sparkles,
@@ -119,6 +113,7 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
   const step = guideSteps[stepIndex];
   const StepIcon = step.icon;
   const isLastStep = stepIndex === guideSteps.length - 1;
+  const usesLightCopy = step.target === 'add-child' || step.target === 'task-name';
 
   const measureTarget = () => {
     const primaryTarget = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
@@ -212,20 +207,20 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
   const height = visibleTargetRect ? visibleTargetRect.height + spotlightPadding * 2 : 0;
   const copyWidth = Math.min(390, window.innerWidth - 32);
   const copyLeft = visibleTargetRect ? clamp(visibleTargetRect.left + visibleTargetRect.width / 2 - copyWidth / 2, 16, window.innerWidth - copyWidth - 16) : 16;
-  const copyTopLimit = 16;
+  const copyTopLimit = window.innerWidth <= 640 ? 72 : 24;
   const copyBottomLimit = window.innerHeight - 16;
   const copyBelowTop = visibleTargetRect ? visibleTargetRect.bottom + 18 : 24;
   const copyAboveTop = visibleTargetRect ? visibleTargetRect.top - copyHeight - 18 : 24;
   const copyTop = visibleTargetRect && copyBelowTop + copyHeight <= copyBottomLimit
     ? copyBelowTop
-    : visibleTargetRect && copyAboveTop >= 16
+    : visibleTargetRect && copyAboveTop >= copyTopLimit
       ? copyAboveTop
     : copyTopLimit;
-  const copyStyle = { left: copyLeft, top: copyTop, width: copyWidth, maxHeight: 'calc(100dvh - 32px)' };
+  const copyStyle = { left: copyLeft, top: copyTop, width: copyWidth, maxHeight: `calc(100dvh - ${copyTopLimit + 16}px)` };
   const showingCreatedTask = activeTarget === 'task-card';
 
-  return (
-    <div className="fixed inset-0 z-[80]" role="presentation">
+  return createPortal(
+    <div className="fixed inset-0 z-[120]" role="presentation">
           <svg key={`guide-backdrop-${stepIndex}-${positionReady ? 'ready' : 'waiting'}`} className="pointer-events-none fixed inset-0 h-full w-full" aria-hidden="true">
         <defs>
           <mask id="first-use-guide-mask">
@@ -249,7 +244,7 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
         key={`guide-copy-${stepIndex}-${positionReady ? 'ready' : 'waiting'}`}
         ref={copyRef}
         tabIndex={-1}
-        className="hh-first-use-guide-fade-in pointer-events-auto fixed overflow-y-auto p-1 text-white outline-none [text-shadow:0_2px_8px_rgba(0,0,0,0.9)] sm:p-2"
+        className={`hh-first-use-guide-fade-in pointer-events-auto fixed overflow-y-auto p-1 outline-none sm:p-2 ${usesLightCopy ? 'text-gray-950 [text-shadow:none]' : 'text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]'}`}
         style={{ ...copyStyle, visibility: positionReady ? 'visible' : 'hidden' }}
         role="dialog"
         aria-modal="true"
@@ -259,14 +254,14 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
           <div className="flex items-center gap-3">
             <StepIcon size={21} aria-hidden="true" />
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-cyan-200">{step.eyebrow}</p>
-              <p className="mt-1 text-xs font-bold text-white/75">{stepIndex + 1} / {guideSteps.length}</p>
+              <p className={`text-xs font-black uppercase tracking-wide ${usesLightCopy ? 'text-gray-950' : 'text-cyan-200'}`}>{step.eyebrow}</p>
+              <p className={`mt-1 text-xs font-bold ${usesLightCopy ? 'text-gray-800' : 'text-white/75'}`}>{stepIndex + 1} / {guideSteps.length}</p>
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-0.5">
-            <button type="button" onClick={finish} className="min-h-8 rounded-lg px-2 text-[11px] font-bold text-white/80 transition-colors hover:bg-black/20 hover:text-white">跳過</button>
+            <button type="button" onClick={finish} className={`min-h-8 rounded-lg px-2 text-[11px] font-bold transition-colors hover:bg-black/20 ${usesLightCopy ? 'text-gray-950' : 'text-white/80 hover:text-white'}`}>跳過</button>
             <div className="flex gap-1">
-              <button type="button" onClick={() => goToStep(Math.max(0, stepIndex - 1))} disabled={stepIndex === 0} className="flex min-h-8 items-center gap-0.5 rounded-lg border border-white/60 bg-black/20 px-1.5 text-[11px] font-bold text-white transition-colors hover:bg-black/40 disabled:cursor-not-allowed disabled:opacity-40">
+              <button type="button" onClick={() => goToStep(Math.max(0, stepIndex - 1))} disabled={stepIndex === 0} className={`flex min-h-8 items-center gap-0.5 rounded-lg border px-1.5 text-[11px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${usesLightCopy ? 'border-gray-300 bg-gray-50 text-gray-950 hover:bg-gray-100' : 'border-white/60 bg-black/20 text-white hover:bg-black/40'}`}>
                 <ArrowLeft size={13} aria-hidden="true" /> 上一步
               </button>
               <button type="button" onClick={() => isLastStep ? finish() : goToStep(stepIndex + 1)} className="flex min-h-8 items-center gap-0.5 rounded-lg border border-cyan-200 bg-cyan-600/90 px-1.5 text-[11px] font-bold text-white transition-colors hover:bg-cyan-500">
@@ -276,10 +271,11 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
             </div>
           </div>
         </div>
-        <h2 id="first-use-guide-title" className="text-xl font-black leading-tight text-white">{showingCreatedTask ? '任務已經建立' : step.title}</h2>
-        <p className="mt-2 text-sm leading-6 text-white/95">{showingCreatedTask ? '這張就是剛剛建立的任務卡片。孩子完成任務並提交心得後，你會在審核分頁看到回報。' : step.description}</p>
+        <h2 id="first-use-guide-title" className={`text-xl font-black leading-tight ${usesLightCopy ? 'text-gray-950' : 'text-white'}`}>{showingCreatedTask ? '任務已經建立' : step.title}</h2>
+        <p className={`mt-2 text-sm leading-6 ${usesLightCopy ? 'text-gray-900' : 'text-white/95'}`}>{showingCreatedTask ? '這張就是剛剛建立的任務卡片。孩子完成任務並提交心得後，你會在審核分頁看到回報。' : step.description}</p>
       </section>
 
-    </div>
+    </div>,
+    document.body,
   );
 }

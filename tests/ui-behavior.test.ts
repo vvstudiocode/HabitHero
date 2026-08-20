@@ -116,6 +116,41 @@ test('today goal form no longer renders template shortcut buttons', () => {
   assert.doesNotMatch(source, /template\.name/);
 });
 
+test('parent reward cards keep child names readable at the compact text size', () => {
+  const source = read('../src/components/ParentDashboard.tsx');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(source, /text-sm font-bold text-gray-800">\{c\.childName\}/);
+  assert.doesNotMatch(source, /bg-blue-100 text-blue-700 text-xs px-1\.5 py-0\.5 rounded font-bold">\{c\.childName\}/);
+  assert.match(source, /className="hh-reward-management-action p-2 text-gray-400/);
+  assert.match(neutralTheme, /\.hh-reward-management-action[\s\S]*?background: transparent !important;[\s\S]*?border: 0 !important;[\s\S]*?box-shadow: none !important/);
+});
+
+test('settings and child adventure controls keep icon-only neutral treatments', () => {
+  const dashboard = read('../src/components/ParentDashboard.tsx');
+  const childDashboard = read('../src/components/ChildDashboard.tsx');
+  const children = read('../src/components/parent-dashboard/ParentSettingsChildrenSection.tsx');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(children, /aria-label="刪除小孩"/);
+  assert.match(children, /className="hh-child-delete-action text-red-500/);
+  assert.match(children, /<Trash2 size=\{20\} \/>/);
+  assert.doesNotMatch(children, /hover:bg-red-50[^>]*>\s*<Trash2/);
+  assert.match(childDashboard, /className="hh-goal-proposal-close hh-character-icon-button"/);
+  assert.match(neutralTheme, /\.hh-goal-proposal-sheet-bar \.hh-character-icon-button[\s\S]*?background: transparent;[\s\S]*?box-shadow: none;/);
+});
+
+test('parent settings action buttons share the same compact height and padding', () => {
+  const dashboard = read('../src/components/ParentDashboard.tsx');
+  const guideButton = /mb-3 flex min-h-12 w-full[^\n]*px-4 py-3/;
+  const logoutButton = /className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3/;
+
+  assert.match(dashboard, guideButton);
+  assert.match(dashboard, logoutButton);
+  assert.match(dashboard, /重新觀看新手指引/);
+  assert.match(dashboard, /登出家長端/);
+});
+
 test('parent review items are removed immediately after a successful action', () => {
   const source = read('../src/features/growth/components/GoalReviewPanel.tsx');
 
@@ -200,13 +235,17 @@ test('first-use guide covers the complete parent and child workflow', () => {
   const dashboardContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
 
   assert.match(guide, /建立小孩/);
-  assert.match(guide, /小孩登入/);
+  assert.doesNotMatch(guide, /孩子可以登入自己的畫面|讓孩子知道怎麼用/);
   assert.match(guide, /冒險/);
   assert.match(guide, /心得/);
   assert.match(guide, /審核/);
   assert.match(guide, /獎勵/);
   assert.match(guide, /localStorage/);
   assert.match(guide, /aria-modal="true"/);
+  assert.match(guide, /createPortal/);
+  assert.match(guide, /z-\[120\]/);
+  assert.match(guide, /const usesLightCopy = step\.target === 'add-child' \|\| step\.target === 'task-name'/);
+  assert.match(guide, /const copyTopLimit = window\.innerWidth <= 640 \? 72 : 24/);
   assert.match(guide, /spotlight/);
   assert.match(guide, /getBoundingClientRect/);
   assert.match(guide, /mask/);
@@ -254,6 +293,26 @@ test('first-use guide covers the complete parent and child workflow', () => {
   assert.match(dashboard, /重新觀看新手指引/);
   assert.doesNotMatch(dashboard, /Sparkles size=\{18\}[^\n]*重新觀看新手指引/);
   assert.match(dashboard, /signupConsentAccepted \|\| !hasCompletedFirstUseGuide\(\)/);
+});
+
+test('recent approvals are collapsed by default and paginate twenty records at a time', () => {
+  const dashboard = read('../src/components/ParentDashboard.tsx');
+  const approvals = read('../src/components/parent-dashboard/RecentApprovedTasks.tsx');
+
+  assert.match(dashboard, /<RecentApprovedTasks/);
+  assert.match(approvals, /const PAGE_SIZE = 20/);
+  assert.match(approvals, /useState\(false\)/);
+  assert.match(approvals, /aria-expanded=\{expanded\}/);
+  assert.match(approvals, /expanded &&/);
+  assert.match(approvals, /slice\(pageStart, pageStart \+ PAGE_SIZE\)/);
+  assert.match(approvals, /第 \{safePage\} \/ \{pageCount\} 頁/);
+  assert.match(approvals, /aria-label=\{`第 \$\{pageNumber\} 頁`\}/);
+});
+
+test('mobile toast feedback clears the notch with extra breathing room', () => {
+  const overlays = read('../src/styles/overlays.css');
+
+  assert.match(overlays, /@media \(max-width: 760px\)[\s\S]*?\.hh-toast\s*\{\s*top: max\(52px, calc\(env\(safe-area-inset-top, 0px\) \+ 52px\)\)/);
 });
 
 test('parent hero menu avoids duplicate destinations', () => {
@@ -354,6 +413,15 @@ test('child feature menu keeps the submenu mounted while it animates closed', ()
   assert.match(characterStyles, /nth-child\(5\)[\s\S]*?transition-delay: 0ms/);
   assert.match(characterStyles, /prefers-reduced-motion: reduce/);
   assert.match(characterStyles, /data-menu-variant="child"[\s\S]*?--hh-menu-action-size: 84px/);
+});
+
+test('character menu floating animation remains compositor-safe on iOS touch browsers', () => {
+  const characterStyles = read('../src/styles/character.css');
+  const floatingKeyframes = characterStyles.match(/@keyframes hh-menu-float[\s\S]*?\n}\n\n\.hh-character-stats small/)?.[0] ?? '';
+
+  assert.match(floatingKeyframes, /translate:\s*0 0;[\s\S]*?50%[\s\S]*?translate:\s*0 -4px;/);
+  assert.doesNotMatch(floatingKeyframes, /margin-top/);
+  assert.doesNotMatch(characterStyles, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.hh-character-menu-action\s*\{\s*animation:\s*none;/);
 });
 
 test('child feature pages omit the duplicate modal title while keeping the close control', () => {

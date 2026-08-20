@@ -29,7 +29,7 @@ interface ParentGeneralAdventureFormProps {
   onSubmit: (input: ParentGeneralAdventureInput) => Promise<void> | void;
 }
 
-const fieldClass = 'min-h-12 w-full rounded-xl border border-gray-200 bg-white p-3 text-gray-900 outline-none focus:ring-2 focus:ring-blue-400';
+const fieldClass = 'hh-adventure-field min-h-12 w-full rounded-xl border p-3 outline-none';
 
 export function validateGeneralAdventureTitle(value: string): string | null {
   const title = value.trim();
@@ -123,7 +123,7 @@ export function ParentGeneralAdventureForm({
         <p className="mt-1 text-sm leading-5 text-gray-500">改名只影響顯示，不會重設任務或歷史紀錄。</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input aria-label="一般冒險卡片名稱" className={fieldClass} value={titleDraft} maxLength={12} onChange={event => setTitleDraft(event.target.value)} />
-          <button type="button" disabled={submitting} className="min-h-12 shrink-0 rounded-xl bg-gray-900 px-5 font-bold text-white disabled:cursor-wait disabled:opacity-50" onClick={() => void saveTitle()}>
+          <button type="button" disabled={submitting} className="hh-adventure-primary-action min-h-12 shrink-0 rounded-xl px-5 font-bold disabled:cursor-wait disabled:opacity-50" onClick={() => void saveTitle()}>
             {submitting ? '儲存中…' : '儲存名稱'}
           </button>
         </div>
@@ -156,8 +156,8 @@ export function ParentGeneralAdventureForm({
             {children.map(child => {
               const selected = childIds.includes(child.id);
               return (
-                <label key={child.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 ${selected ? 'border-blue-400 bg-blue-50 text-blue-900' : 'border-gray-200 bg-white text-gray-700'}`}>
-                  <input type="checkbox" checked={selected} onChange={event => setChildIds(current => event.target.checked ? [...current, child.id] : current.filter(id => id !== child.id))} />
+                <label key={child.id} className={`hh-adventure-child-choice${selected ? ' is-selected' : ''} flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 py-2`}>
+                  <input className="hh-adventure-control" type="checkbox" checked={selected} onChange={event => setChildIds(current => event.target.checked ? [...current, child.id] : current.filter(id => id !== child.id))} />
                   <span className="font-medium">{child.name}</span>
                 </label>
               );
@@ -184,25 +184,25 @@ export function ParentGeneralAdventureForm({
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-gray-700">完成回報</legend>
           <label className="flex min-h-11 items-start gap-3 rounded-xl border border-gray-200 p-3">
-            <input className="mt-1" type="radio" name="general-report" value="quick" checked={reportMode === 'quick'} onChange={() => setReportMode('quick')} />
+            <input className="hh-adventure-control mt-1" type="radio" name="general-report" value="quick" checked={reportMode === 'quick'} onChange={() => setReportMode('quick')} />
             <span><strong className="block">簡單回報</strong><span className="text-sm text-gray-500">孩子選擇很順利、有點難或需要幫忙。</span></span>
           </label>
           <label className="flex min-h-11 items-start gap-3 rounded-xl border border-gray-200 p-3">
-            <input className="mt-1" type="radio" name="general-report" value="reflection" checked={reportMode === 'reflection'} onChange={() => setReportMode('reflection')} />
+            <input className="hh-adventure-control mt-1" type="radio" name="general-report" value="reflection" checked={reportMode === 'reflection'} onChange={() => setReportMode('reflection')} />
             <span><strong className="block">完整文字心得</strong><span className="text-sm text-gray-500">孩子需選擇感受並填寫非空白心得。</span></span>
           </label>
         </fieldset>
 
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-gray-700">計時</legend>
-          <label className="flex min-h-11 items-center gap-3 rounded-xl border border-gray-200 p-3">
-            <input type="radio" name="general-timer" checked={!requiresTimer} onChange={() => setRequiresTimer(false)} />
+          <label className={`hh-adventure-timer-choice${!requiresTimer ? ' is-selected' : ''} flex min-h-14 items-center gap-3 rounded-xl px-3 py-2`}>
+            <input className="hh-adventure-control" type="radio" name="general-timer" checked={!requiresTimer} onChange={() => setRequiresTimer(false)} />
             <span>不需要</span>
           </label>
-          <label className="flex min-h-11 flex-wrap items-center gap-3 rounded-xl border border-gray-200 p-3">
-            <input type="radio" name="general-timer" checked={requiresTimer} onChange={() => setRequiresTimer(true)} />
+          <label className={`hh-adventure-timer-choice${requiresTimer ? ' is-selected' : ''} flex min-h-14 flex-wrap items-center gap-3 rounded-xl px-3 py-2`}>
+            <input className="hh-adventure-control" type="radio" name="general-timer" checked={requiresTimer} onChange={() => setRequiresTimer(true)} />
             <span>需要完成</span>
-            <input aria-label="計時分鐘" type="number" min="1" className="w-24 rounded-lg border border-gray-200 p-2" disabled={!requiresTimer} value={durationMinutes ?? ''} onChange={event => setDurationMinutes(event.target.value ? Number(event.target.value) : null)} />
+            <input aria-label="計時分鐘" type="number" min="1" className="hh-adventure-timer-minutes hh-adventure-field h-8 w-20 rounded-lg border px-2" disabled={!requiresTimer} value={durationMinutes ?? ''} onChange={event => setDurationMinutes(event.target.value ? Number(event.target.value) : null)} />
             <span>分鐘</span>
           </label>
         </fieldset>
@@ -217,7 +217,7 @@ export function ParentGeneralAdventureForm({
 
         <div className="flex gap-3">
           {onCancel && <button type="button" className="min-h-12 flex-1 rounded-xl bg-gray-100 px-4 font-bold text-gray-700" onClick={onCancel}>取消</button>}
-          <button type="submit" disabled={submitting || children.length === 0} className="min-h-12 flex-1 rounded-xl bg-blue-500 px-4 font-bold text-white disabled:cursor-wait disabled:opacity-50">
+          <button type="submit" disabled={submitting || children.length === 0} className="hh-adventure-primary-action min-h-12 flex-1 rounded-xl px-4 font-bold disabled:cursor-wait disabled:opacity-50">
             {submitting ? '新增中…' : '新增冒險'}
           </button>
         </div>
