@@ -33,10 +33,10 @@
 
 ## 2026-08-20 實際執行結果
 
-- Plan 16 Phase 0：branch、remote、checkpoint、automated baseline 已記錄；目前程式快照 `83ba329` 的 `npm run lint`、`npm test`（734/734）、`npm run build`、`npm run security:check`、`git diff --check` 全部通過。
+- Plan 16 Phase 0：branch、remote、checkpoint、automated baseline 已記錄；目前程式快照 `469f3bf` 的 `npm run lint`、`npm test`（747/747）、`npm run build`、`npm run security:check`、`git diff --check` 全部通過。
 - Plan 16 Phase 1：已加入 [`docs/code-maintainability.md`](../docs/code-maintainability.md)、`quality:structure`、source-size ratchet 與 import-boundary checks；沒有搬動任何產品程式。
-- Plan 16 低風險 extraction：已完成 types facade、world RPC/geometry/resource/asset/scene-key owners、store optimistic/pure/timer state patches、growth/account/child-row/task/template/ledger payload builders、point-ledger result mapper、Parent reward grouping、Child display helpers、Edge Function error mapper；每個責任均有獨立 test/refactor commit 與回退點。`prototype-world-runtime.ts` 由 2,834 降至 2,648 行，`data-access.ts` 由 882 降至 665 行，`store.tsx` 由 995 降至 936 行，`ParentDashboard.tsx` 由 1,890 降至 1,875 行，`ChildDashboard.tsx` 由 1,564 降至 1,553 行，`TerrainWorldLayer.tsx` 由 923 降至 895 行。
-- Plan 16 高風險 Phase 5–8：dashboard/provider side effects、character/pet/decoration controllers、frame loop 與 CSS 尚未搬移；依 stop gate 保留 baseline，因 browser/device visual evidence 尚未取得。CSS 盤點見 [`CSS-OWNER-REPORT.md`](./16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md)。
+- Plan 16 bounded extraction：除既有 types/world/store/data/dashboard owners 外，已完成 provider lifecycle、repository hydration、Parent calendar selector、Child adventure selector、world animation helper；每個責任均有獨立 test/refactor commit 與回退點。`prototype-world-runtime.ts` 由 2,834 降至 2,629 行，`data-access.ts` 由 882 降至 645 行，`store.tsx` 由 995 降至 919 行，`ParentDashboard.tsx` 由 1,890 降至 1,863 行，`ChildDashboard.tsx` 由 1,564 降至 1,549 行，`TerrainWorldLayer.tsx` 由 923 降至 895 行。
+- Plan 16 高風險 Phase 5–8：dashboard/provider 剩餘 side effects、realtime/offline orchestration、repository 其餘 facade、character/pet/decoration controllers、frame loop 與 CSS 尚未全部搬移；目前已有 parent/child/3D character/action browser smoke，但固定 viewport、真機、含寵物 3D 與完整 frame-loop evidence 仍缺。CSS 盤點見 [`CSS-OWNER-REPORT.md`](./16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md)。
 - Plan 17：已完成唯一 [`docs/pet-system.md`](../docs/pet-system.md)，合併舊 multi-animation 文件、更新入口並移除重複文件；現有 pet runtime、GLB、exporter、metadata、migration、tests 與外部狀態均未改變。
 
 ## 16、17 的交接啟動順序

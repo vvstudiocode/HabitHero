@@ -5,7 +5,7 @@
 > 工作分支：`codex/deploy-all-worktree`
 > 目的：在任何 extraction 前保存可重跑的 automated evidence，並誠實標出尚未取得的 visual／device evidence。
 
-> 目前程式驗證快照：`83ba329`（edge function error mapper extraction 完成；文件與治理 ratchet 另以後續 commit 同步）。初始基線仍保留作為所有 before 比較點；每個 extraction 的 exact commit 與 rollback 見下方 ledger。
+> 目前程式驗證快照：`469f3bf`（world runtime animation helper extraction 完成；文件與治理 ratchet 另以後續 commit 同步）。初始基線仍保留作為所有 before 比較點；每個 extraction 的 exact commit 與 rollback 見下方 ledger。
 
 ## 1. 工作區與版本證據
 
@@ -21,10 +21,11 @@
 | Command | Result | Evidence |
 | --- | --- | --- |
 | `npm run lint` | PASS (0) | TypeScript `tsc --noEmit` |
-| `npm test` | PASS (0) | 734 tests、79 suites、734 pass、0 fail |
-| `npm run build` | PASS (0) | Vite 1,876 modules transformed；既有大 chunk warning 已記錄，非本次行為差異 |
-| `npm run security:check` | PASS (0) | 924 files scanned |
-| `npm run quality:structure` | PASS (0) | 164 source files；152 import-boundary files；無 baseline growth／未審核超限檔 |
+| `npm test` | PASS (0) | 747 tests、81 suites、747 pass、0 fail |
+| `npm test -- --experimental-test-coverage` | PASS (0) | 747 tests、81 suites、0 fail；專案未配置 coverage threshold/script，未宣稱 coverage 百分比 |
+| `npm run build` | PASS (0) | Vite 1,881 modules transformed；既有大 chunk warning 已記錄，非本次行為差異 |
+| `npm run security:check` | PASS (0) | 933 files scanned |
+| `npm run quality:structure` | PASS (0) | 169 source files；157 import-boundary files；無 baseline growth／未審核超限檔 |
 | `git diff --check` | PASS (0) | 無 whitespace error |
 | Markdown local-link scan | PASS | Node read-only scan over project Markdown excluding generated `node_modules/`, `dist/`, `build/`, `.git/` and iOS DerivedData（本次 working tree 45 files）；未找到遺失 local target |
 | `wc -c public/assets/pets/nibus.glb` | PASS | `1327240` bytes；目前 test／migration expectation 已一致 |
@@ -37,7 +38,9 @@
 - DOM smoke：頁面標題、家長功能主選單、家庭總點數 `217`、待審核 `0` 與設定入口均可讀取。
 - Read-only navigation smoke：`審核`、`任務`、`成長`、`獎勵`、`商店` 五個入口均可切換／開啟對應功能頁面或對話框，並可關閉功能頁面。
 - Console：瀏覽器 `error`／`warn` 皆為 0；目前 viewport screenshot 已擷取供人工參考。
-- 結論：local browser smoke **PASS**；這不是固定 `375×709`／`1440×900` 的 screenshot baseline，也沒有涵蓋真機、3D 寵物場景、FBX 動作、貼地、陰影或 frame-loop，因此 UI/CSS 與 3D 高風險 extraction 仍維持 `M/B` gate。
+- 孩子 3D smoke：由既有家長 session 唯讀切換到「小宣」孩子視角；world accessibility banner、統計 `23/31/1`、每日／一般冒險入口與草地人物場景均可讀取。角色／寵物同步動作的揮手、坐下、跳舞三個按鈕均可操作，操作後仍留在孩子世界，console `error`／`warn` 仍為 0。
+- 背包 smoke：可開啟背包並切換到「寵物」分類；目前資料是「這個分類目前還沒有物品」，因此本次沒有可供人工檢查的寵物模型、貼地、陰影或五個 FBX 動作實例。
+- 結論：local browser smoke **PASS**；這不是固定 `375×709`／`1440×900` 的 screenshot baseline，也沒有涵蓋真機、含寵物的 3D 場景、FBX 動作逐一對照、貼地、陰影或 frame-loop performance，因此 UI/CSS 與 3D 高風險 extraction 仍維持 `M/B` gate。
 
 ## 3. 行為矩陣
 
@@ -91,10 +94,15 @@
   - `24f7631` / `b050359`：local timer state transition contracts → `task-timer-state.ts`；store `962 → 936` 行。
   - `04f7660` / `39b01f7`：ChildDashboard display helper contracts → `child-dashboard-display.ts`；ChildDashboard `1564 → 1553` 行。
   - `5f05f54` / `83ba329`：Edge Function error message contracts → `edge-function-errors.ts`；data-access `679 → 665` 行。
-- Plan16 Phase 5 remaining high-risk areas：**保留 baseline / blocked**。Parent/Child dashboards、provider side effects、repository hydration/facade、character/pet/decoration controllers、frame loop、CSS require additional state/visual/device evidence before further extraction。
+  - `caf181e` / `86ccaf5` / `b92fcd1`：repository hydration contracts → `repository-hydration.ts`；data-access `665 → 645` 行。
+  - `8f702db` / `469f3bf`：world animation helper contracts → `world-runtime-animation.ts`；runtime `2648 → 2629` 行。
+  - `c84b35a` / `4c770a2`：Parent calendar task selector contracts → `parent-dashboard-selectors.ts`；ParentDashboard `1875 → 1863` 行。
+  - `fc9f791` / `f898fd3`：Child adventure state selector contracts → `child-dashboard-adventure-state.ts`；ChildDashboard `1553 → 1549` 行。
+  - `98a7305`：provider lifecycle decision contracts → `app-provider-lifecycle.ts`；store `936 → 919` 行。
+- Plan16 bounded high-risk slices：**上述 provider、repository hydration、Parent/Child pure selectors 與 runtime animation helper 已完成並驗證**；仍保留 baseline / blocked 的區域是 dashboard/provider 剩餘副作用、realtime/offline event orchestration、repository 其餘 facade、character/pet/decoration controllers、frame loop、CSS selector surface。這些仍需要更完整 state／visual／device／3D evidence，不能用目前 smoke 或 unit tests 代替。
 - Plan16 CSS owner report：**PASS（盤點完成）**，見 [`CSS-OWNER-REPORT.md`](./CSS-OWNER-REPORT.md)；未搬 selector、未新增 override。
 - Plan17 docs-only：**PASS**；現有寵物呈現、runtime、GLB、exporter、metadata、migration、tests 與外部狀態均未修改。
 
 ### 5.1 Current line and dependency evidence
 
-Current ratcheted hotspots include `prototype-world-runtime.ts` 2,648 lines, `data-access.ts` 665 lines, `store.tsx` 936 lines, `ParentDashboard.tsx` 1,875 lines, `ChildDashboard.tsx` 1,553 lines, `TerrainWorldLayer.tsx` 895 lines, and `types.ts` is now an 11-line type-only facade. All new domain modules are below the 300-line warning threshold. `npm run quality:structure` and import-boundary checks are green at the current snapshot. A local browser smoke was recorded above, but fixed viewport/device/3D evidence remains an explicit gate, not an implied pass.
+Current ratcheted hotspots include `prototype-world-runtime.ts` 2,629 lines, `data-access.ts` 645 lines, `store.tsx` 919 lines, `ParentDashboard.tsx` 1,863 lines, `ChildDashboard.tsx` 1,549 lines, `TerrainWorldLayer.tsx` 895 lines, and `types.ts` is now an 11-line type-only facade. All new domain modules are below the 300-line warning threshold. `npm run quality:structure` and import-boundary checks are green at the current snapshot. A local parent/child browser smoke and 3D character/action check were recorded above, but fixed viewport/device,含寵物 3D and full frame-loop evidence remain explicit gates, not implied passes.
