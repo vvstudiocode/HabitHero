@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { dismissWithAnimation } from '../lib/utils';
 import { groupParentTodoTasks, type GroupedTask } from '../lib/parent-task-grouping';
+import { groupParentRewards, type GroupedReward } from '../lib/parent-reward-grouping';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
 import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, MinusCircle, Plus, PlusCircle, ShoppingBag, Star, Users, X, Trash2, Edit2, PlayCircle, Settings } from 'lucide-react';
 import { TaskStatus, Task, Reward, type ChildGender } from '../types';
@@ -51,13 +52,6 @@ interface ParentDashboardProps {
   onLogout: () => void;
   signupConsentAccepted?: boolean;
 }
-
-type GroupedReward = {
-  id: string;
-  name: string;
-  points: number;
-  children: { childId: string; childName: string; rewardId: string }[];
-};
 
 type ParentTab = ParentDashboardTab;
 
@@ -148,16 +142,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
   const groupedTodoTasks = groupParentTodoTasks(todoTasks, DEFAULT_TASK_CATEGORY);
 
-  const allRewards = state.children.flatMap(c => c.rewards.map(r => ({ ...r, childId: c.id, childName: c.name })));
-  const groupedRewards = Object.values(allRewards.reduce((acc, reward) => {
-    const key = `${reward.name}-${reward.points}`;
-    if (!acc[key]) {
-      acc[key] = { id: key, name: reward.name, points: reward.points, children: [{ childId: reward.childId, childName: reward.childName, rewardId: reward.id }] };
-    } else {
-      acc[key].children.push({ childId: reward.childId, childName: reward.childName, rewardId: reward.id });
-    }
-    return acc;
-  }, {} as Record<string, GroupedReward>)) as GroupedReward[];
+  const groupedRewards = groupParentRewards(state.children);
 
   const allTickets = state.children.flatMap(c => c.tickets.map(t => ({ ...t, childId: c.id, childName: c.name })));
   const pendingTickets = allTickets.filter(t => t.status === 'pending');
