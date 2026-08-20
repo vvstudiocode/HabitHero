@@ -4,6 +4,7 @@ import { useAuthSession } from '../auth';
 import { Backpack, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flower2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
+import { formatTaskTime, formatTaskWindow, haveSameIds } from '../lib/child-dashboard-display';
 import {
   preventNativeAppContextMenu,
   preventNativeAppDragStart,
@@ -103,22 +104,10 @@ interface DecorationPlacementSession {
   entityId?: string;
 }
 
-function haveSameIds(left: readonly string[], right: readonly string[]) {
-  return left.length === right.length && left.every((id, index) => id === right[index]);
-}
 const HERO_MENU_EXIT_MS = 1200;
 const REWARDS_PER_PAGE = 18;
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
 const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
-
-function formatTaskTime(dueTime?: string | null) {
-  return dueTime ? dueTime.slice(0, 5) : '全天';
-}
-
-function formatTaskWindow(task: { dueTime?: string | null; endTime?: string | null }) {
-  const start = task.dueTime?.slice(0, 5) ?? '隨時';
-  return task.endTime ? `${start}–${task.endTime.slice(0, 5)}` : `${start}起`;
-}
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
