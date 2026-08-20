@@ -33,9 +33,9 @@
 
 ## 2026-08-20 實際執行結果
 
-- Plan 16 Phase 0：branch、remote、checkpoint、automated baseline 已記錄；目前程式快照 `b050359` 的 `npm run lint`、`npm test`（727/727）、`npm run build`、`npm run security:check`、`git diff --check` 全部通過。
+- Plan 16 Phase 0：branch、remote、checkpoint、automated baseline 已記錄；目前程式快照 `83ba329` 的 `npm run lint`、`npm test`（734/734）、`npm run build`、`npm run security:check`、`git diff --check` 全部通過。
 - Plan 16 Phase 1：已加入 [`docs/code-maintainability.md`](../docs/code-maintainability.md)、`quality:structure`、source-size ratchet 與 import-boundary checks；沒有搬動任何產品程式。
-- Plan 16 低風險 extraction：已完成 types facade、world RPC/geometry/resource/asset/scene-key owners、store optimistic/pure/timer state patches、growth/account/child-row/task/template/ledger payload builders 與 point-ledger result mapper、Parent reward grouping；每個責任均有獨立 test/refactor commit 與回退點。`prototype-world-runtime.ts` 由 2,834 降至 2,648 行，`data-access.ts` 由 882 降至 679 行，`store.tsx` 由 995 降至 936 行，`ParentDashboard.tsx` 由 1,890 降至 1,875 行，`TerrainWorldLayer.tsx` 由 923 降至 895 行。
+- Plan 16 低風險 extraction：已完成 types facade、world RPC/geometry/resource/asset/scene-key owners、store optimistic/pure/timer state patches、growth/account/child-row/task/template/ledger payload builders、point-ledger result mapper、Parent reward grouping、Child display helpers、Edge Function error mapper；每個責任均有獨立 test/refactor commit 與回退點。`prototype-world-runtime.ts` 由 2,834 降至 2,648 行，`data-access.ts` 由 882 降至 665 行，`store.tsx` 由 995 降至 936 行，`ParentDashboard.tsx` 由 1,890 降至 1,875 行，`ChildDashboard.tsx` 由 1,564 降至 1,553 行，`TerrainWorldLayer.tsx` 由 923 降至 895 行。
 - Plan 16 高風險 Phase 5–8：dashboard/provider side effects、character/pet/decoration controllers、frame loop 與 CSS 尚未搬移；依 stop gate 保留 baseline，因 browser/device visual evidence 尚未取得。CSS 盤點見 [`CSS-OWNER-REPORT.md`](./16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md)。
 - Plan 17：已完成唯一 [`docs/pet-system.md`](../docs/pet-system.md)，合併舊 multi-animation 文件、更新入口並移除重複文件；現有 pet runtime、GLB、exporter、metadata、migration、tests 與外部狀態均未改變。
 

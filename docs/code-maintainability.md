@@ -4,15 +4,16 @@
 
 ## 0. 目前執行快照
 
-截至 Plan 16 最新程式快照 `b050359`，低風險 pure/mechanical extraction 已落地並各自有 test/refactor commit：
+截至 Plan 16 最新程式快照 `83ba329`，低風險 pure/mechanical extraction 已落地並各自有 test/refactor commit：
 
 - world：`world-data-access.ts`、`world-runtime-geometry.ts`、`world-runtime-resources.ts`、`world-runtime-assets.ts`。
 - data access：growth、child-account、child row、task/template、point-ledger payload/result owners；`data-access.ts` 保留相容 facade。
 - store：`app-state-patches.ts` 與 `task-timer-state.ts` 保留 optimistic task-id、timer snapshot、timer transition 與 pure state patch helper facade。
 - dashboard/world UI derivation：`parent-reward-grouping.ts`、`world-scene-key.ts`，不持有 React lifecycle 或 runtime side effects。
+- child display/error boundaries：`child-dashboard-display.ts`、`edge-function-errors.ts`。
 - types：`types.ts` 是 type-only facade，row/input/view/legacy contracts 已分檔。
 
-最新 ratchet：`prototype-world-runtime.ts` 2,648 行、`data-access.ts` 679 行、`store.tsx` 936 行、`ParentDashboard.tsx` 1,875 行、`TerrainWorldLayer.tsx` 895 行、`types.ts` 11 行；完整 automated suite 727 tests / 78 suites。Dashboard/provider lifecycle、repository hydration、character/pet/frame-loop 與 CSS 尚未搬移，因為仍缺 browser/device/3D visual evidence；不得把 automated green 解讀為 visual gate 通過。
+最新 ratchet：`prototype-world-runtime.ts` 2,648 行、`data-access.ts` 665 行、`store.tsx` 936 行、`ParentDashboard.tsx` 1,875 行、`ChildDashboard.tsx` 1,553 行、`TerrainWorldLayer.tsx` 895 行、`types.ts` 11 行；完整 automated suite 734 tests / 79 suites。Dashboard/provider lifecycle、repository hydration、character/pet/frame-loop 與 CSS 尚未搬移，因為仍缺 browser/device/3D visual evidence；不得把 automated green 解讀為 visual gate 通過。
 
 ## 1. 執行範圍與安全邊界
 
