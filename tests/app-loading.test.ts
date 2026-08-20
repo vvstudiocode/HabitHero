@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { shouldMarkInitialLoadDone } from '../src/lib/app-provider-lifecycle';
 import { shouldBlockAppForDataLoad, shouldRefreshAppDataOnResume } from '../src/store';
 
 const storeSource = readFileSync(new URL('../src/store.tsx', import.meta.url), 'utf8');
@@ -51,6 +52,53 @@ describe('app data loading gate', () => {
   it('does not refresh hidden or offline documents until the browser can sync', () => {
     assert.equal(shouldRefreshAppDataOnResume({ visibilityState: 'hidden', isOnline: true }), false);
     assert.equal(shouldRefreshAppDataOnResume({ visibilityState: 'visible', isOnline: false }), false);
+  });
+
+  it('keeps the first-load lifecycle pending while auth is still checking', () => {
+    assert.equal(shouldMarkInitialLoadDone({
+      initialLoadDone: false,
+      sessionLoading: true,
+      hasSession: false,
+      dataReady: false,
+      hasDataError: false,
+    }), false);
+  });
+
+  it('marks first-load lifecycle done when auth settles without a session', () => {
+    assert.equal(shouldMarkInitialLoadDone({
+      initialLoadDone: false,
+      sessionLoading: false,
+      hasSession: false,
+      dataReady: false,
+      hasDataError: false,
+    }), true);
+  });
+
+  it('marks first-load lifecycle done when session data settles by success or error', () => {
+    assert.equal(shouldMarkInitialLoadDone({
+      initialLoadDone: false,
+      sessionLoading: false,
+      hasSession: true,
+      dataReady: true,
+      hasDataError: false,
+    }), true);
+    assert.equal(shouldMarkInitialLoadDone({
+      initialLoadDone: false,
+      sessionLoading: false,
+      hasSession: true,
+      dataReady: false,
+      hasDataError: true,
+    }), true);
+  });
+
+  it('does not re-mark first-load lifecycle after it has already completed', () => {
+    assert.equal(shouldMarkInitialLoadDone({
+      initialLoadDone: true,
+      sessionLoading: false,
+      hasSession: true,
+      dataReady: true,
+      hasDataError: false,
+    }), false);
   });
 
   it('keeps realtime recovery and foreground polling wired to the shared retry path', () => {

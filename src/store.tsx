@@ -37,6 +37,7 @@ import {
   patchTask,
   replaceOptimisticTaskId,
 } from './lib/app-state-patches';
+import { shouldBlockAppForDataLoad, shouldMarkInitialLoadDone, shouldRefreshAppDataOnResume } from './lib/app-provider-lifecycle';
 import { pauseTaskTimerInState, startTaskTimerInState } from './lib/task-timer-state';
 import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
@@ -162,34 +163,12 @@ export interface AppContextType {
   revokeTaskApproval: (taskId: string) => Promise<void>;
 }
 
-interface AppLoadingGateInput {
-  sessionLoading: boolean;
-  dataLoading: boolean;
-  hasSession: boolean;
-  dataReady: boolean;
-}
-
-export function shouldBlockAppForDataLoad({ sessionLoading, dataLoading, hasSession, dataReady }: AppLoadingGateInput) {
-  // Block UI only during initial load. Once data is ready, background
-  // refreshes (realtime, reconnect) should NOT replace the dashboard
-  // with a loading screen.
-  if (sessionLoading) return true;
-  if (hasSession && !dataReady) return true; // first load not finished
-  if (dataLoading && !dataReady) return true; // still loading first time
-  return false;
-}
-
-export function shouldRefreshAppDataOnResume({
-  visibilityState,
-  isOnline,
-}: {
-  visibilityState: 'visible' | 'hidden';
-  isOnline: boolean;
-}) {
-  return visibilityState === 'visible' && isOnline;
-}
-
 export const LIVE_DATA_REFRESH_INTERVAL_MS = 45_000;
+
+export {
+  shouldBlockAppForDataLoad,
+  shouldRefreshAppDataOnResume,
+} from './lib/app-provider-lifecycle';
 
 export {
   mergeTimerSnapshots,
@@ -338,10 +317,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Track first full load completion (session check + data load)
   useEffect(() => {
-    if (initialLoadDone) return;
-    if (sessionLoading) return; // still checking session
-    if (!session) { setInitialLoadDone(true); return; } // no session → done
-    if (dataReady || dataError) { setInitialLoadDone(true); return; } // data settled
+    if (!shouldMarkInitialLoadDone({
+      initialLoadDone,
+      sessionLoading,
+      hasSession: Boolean(session),
+      dataReady,
+      hasDataError: Boolean(dataError),
+    })) return;
+    setInitialLoadDone(true);
   }, [initialLoadDone, sessionLoading, session, dataReady, dataError]);
 
   useEffect(() => {
