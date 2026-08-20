@@ -58,7 +58,8 @@ describe('supplied pet grounding and motion', () => {
 
   it('normalizes Mixamo Hips root motion before the pet mixer plays a walk clip', () => {
     const runtime = readFileSync(new URL('src/features/world/prototype-world-runtime.ts', root), 'utf8');
-    assert.match(runtime, /mixamorig:Hips|hips|pelvis/);
+    const runtimeAnimation = readFileSync(new URL('src/features/world/world-runtime-animation.ts', root), 'utf8');
+    assert.match(runtimeAnimation, /mixamorig:Hips|hips|pelvis/);
     assert.match(runtime, /createInPlaceAnimationClip\(getWalkAnimationClip\(animations\)!\)/);
     assert.match(runtime, /pauseAnimationAtIdlePose\(walkAction, mixer\)/);
     assert.match(runtime, /action\.reset\(\)\.play\(\)/);

@@ -5,10 +5,14 @@ import { AnimationClip, NumberKeyframeTrack, VectorKeyframeTrack } from 'three';
 import {
   createInPlaceAnimationClip,
   getCharacterAnimationClip,
-} from '../src/features/world/prototype-world-runtime';
+} from '../src/features/world/world-runtime-animation';
 
 const runtimeSource = readFileSync(
   new URL('../src/features/world/prototype-world-runtime.ts', import.meta.url),
+  'utf8',
+);
+const animationSource = readFileSync(
+  new URL('../src/features/world/world-runtime-animation.ts', import.meta.url),
   'utf8',
 );
 
@@ -50,7 +54,7 @@ describe('world runtime animation helpers', () => {
   });
 
   it('keeps runtime callers wired through the in-place walk clip helper', () => {
-    assert.match(runtimeSource, /function getWalkAnimationClip/);
+    assert.match(animationSource, /function getWalkAnimationClip/);
     assert.match(runtimeSource, /clipAction\(createInPlaceAnimationClip\(getWalkAnimationClip\(animations\)!\)\)/);
     assert.match(runtimeSource, /createInPlaceAnimationClip\(getWalkAnimationClip\(roamingCharacterAnimations\)!\)/);
   });
