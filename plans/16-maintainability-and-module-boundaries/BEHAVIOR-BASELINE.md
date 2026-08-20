@@ -31,6 +31,14 @@
 
 若後續重跑發現 Nibus `modelBytes` mismatch，先重新讀 GLB bytes、test 與最後有效 migration；只有證明 assertion／文件過時才可修正，不能重匯、調 metadata 或改 published migration。
 
+### 2.1 Local dev browser smoke（2026-08-20）
+
+- 使用者已預先啟動的 `http://localhost:3000/` 分頁；本次只 claim 既有分頁，沒有啟動、reload、登入或寫入資料。
+- DOM smoke：頁面標題、家長功能主選單、家庭總點數 `217`、待審核 `0` 與設定入口均可讀取。
+- Read-only navigation smoke：`審核`、`任務`、`成長`、`獎勵`、`商店` 五個入口均可切換／開啟對應功能頁面或對話框，並可關閉功能頁面。
+- Console：瀏覽器 `error`／`warn` 皆為 0；目前 viewport screenshot 已擷取供人工參考。
+- 結論：local browser smoke **PASS**；這不是固定 `375×709`／`1440×900` 的 screenshot baseline，也沒有涵蓋真機、3D 寵物場景、FBX 動作、貼地、陰影或 frame-loop，因此 UI/CSS 與 3D 高風險 extraction 仍維持 `M/B` gate。
+
 ## 3. 行為矩陣
 
 ### 狀態欄位
@@ -89,4 +97,4 @@
 
 ### 5.1 Current line and dependency evidence
 
-Current ratcheted hotspots include `prototype-world-runtime.ts` 2,648 lines, `data-access.ts` 665 lines, `store.tsx` 936 lines, `ParentDashboard.tsx` 1,875 lines, `ChildDashboard.tsx` 1,553 lines, `TerrainWorldLayer.tsx` 895 lines, and `types.ts` is now an 11-line type-only facade. All new domain modules are below the 300-line warning threshold. `npm run quality:structure` and import-boundary checks are green at the current snapshot. No browser/device evidence was generated; this is an explicit remaining gate, not an implied pass.
+Current ratcheted hotspots include `prototype-world-runtime.ts` 2,648 lines, `data-access.ts` 665 lines, `store.tsx` 936 lines, `ParentDashboard.tsx` 1,875 lines, `ChildDashboard.tsx` 1,553 lines, `TerrainWorldLayer.tsx` 895 lines, and `types.ts` is now an 11-line type-only facade. All new domain modules are below the 300-line warning threshold. `npm run quality:structure` and import-boundary checks are green at the current snapshot. A local browser smoke was recorded above, but fixed viewport/device/3D evidence remains an explicit gate, not an implied pass.

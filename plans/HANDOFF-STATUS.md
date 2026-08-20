@@ -8,7 +8,7 @@
 
 - 目前 branch：`codex/deploy-all-worktree`，最新程式快照：`83ba329`；尚未 push。
 - Plan 16 已完成低風險、可回退 extraction：types facade、world RPC/geometry/resource/asset/scene-key owners、store optimistic/pure/timer state patches、growth/account/child-row/task/template/ledger payload/result owners、Parent reward grouping、Child display helpers、Edge Function error mapper。完整 automated suite：734 tests / 79 suites；lint、quality structure、build、security、diff check 全部通過。
-- Plan 16 尚未宣稱全案完成：Parent/Child dashboard、provider/realtime/offline side effects、repository hydration/facade、character/pet/frame-loop controller 與 CSS surface 仍保留 baseline。沒有 browser/device/3D visual evidence 前不得搬移這些高風險區域。
+- Plan 16 尚未宣稱全案完成：Parent/Child dashboard、provider/realtime/offline side effects、repository hydration/facade、character/pet/frame-loop controller 與 CSS surface 仍保留 baseline。雖已完成 local browser smoke，但沒有固定 viewport、真機或 3D visual evidence 前不得搬移這些高風險區域。
 - Plan 16 CSS 唯一 owner 盤點：[`16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md`](16-maintainability-and-module-boundaries/CSS-OWNER-REPORT.md)。
 - Plan 17 已完成 docs-only canonical：[`../docs/pet-system.md`](../docs/pet-system.md)。目前寵物呈現、FBX/GLB、metadata、exporter、migration、runtime 與 tests 不因 Plan 17 被調整。
 - 下一個 AI 必須先讀 `AGENTS.md`、`CSS_RULES.md`、Plan 16 `PLAN.md`、`BEHAVIOR-BASELINE.md`、`CSS-OWNER-REPORT.md`、Plan 17 `PLAN.md`，再確認 working tree；不要自行啟動 dev server、push、部署或 cap sync。
@@ -63,3 +63,4 @@
 - Vercel production deployment：`dpl_5AhCuphBE8A1xgj36KGsdfvGBLuk`；`https://habit-hero-gilt.vercel.app`。
 - Git commits：`105d342`、`89c79fd`、`4986325`、`1b87721`、`281fbb2`，已 push 到 `origin/main`。
 - Preview/production smoke test：首頁家長登入按鈕、家長登入/註冊切換、孩子密碼入口、既有家長 session 載入；console errors 0。
+- Local dev smoke（2026-08-20）：使用者既有 `http://localhost:3000/` 分頁；DOM、家長五個功能入口與 modal close 均可操作，console error/warn 0。僅為 read-only smoke，未取代固定 viewport／真機／3D baseline。
