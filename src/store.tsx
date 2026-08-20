@@ -37,6 +37,7 @@ import {
   patchTask,
   replaceOptimisticTaskId,
 } from './lib/app-state-patches';
+import { pauseTaskTimerInState, startTaskTimerInState } from './lib/task-timer-state';
 import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
 import {
@@ -922,35 +923,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     state, familyId, loading, initialLoading, dataReady: dataReadyForSession, mutationPending, stale, isOffline, error: sessionError || dataError,
     retry, role, hasSession: Boolean(session), updateState, setParentPin,
     setParentActiveChild, setChildLoggedIn, clearProtectedState,
-    startTaskTimer: (childId, taskId) => setState((previous) => ({
-      ...previous,
-      children: previous.children.map((child) => child.id !== childId ? child : {
-        ...child,
-        tasks: child.tasks.map((task) => {
-          if (task.id === taskId) {
-            const remaining = task.timerRemainingMs ?? (task.duration ?? 0) * 60 * 1000;
-            return { ...task, timerIsRunning: true, timerEndTime: Date.now() + remaining, timerRemainingMs: null };
-          }
-          if (task.timerIsRunning) {
-            const remaining = task.timerEndTime ? Math.max(0, task.timerEndTime - Date.now()) : 0;
-            return { ...task, timerIsRunning: false, timerEndTime: null, timerRemainingMs: remaining };
-          }
-          return task;
-        }),
-      }),
-    })),
-    pauseTaskTimer: (childId, taskId) => setState((previous) => ({
-      ...previous,
-      children: previous.children.map((child) => child.id !== childId ? child : {
-        ...child,
-        tasks: child.tasks.map((task) => task.id !== taskId || !task.timerIsRunning ? task : {
-          ...task,
-          timerIsRunning: false,
-          timerEndTime: null,
-          timerRemainingMs: task.timerEndTime ? Math.max(0, task.timerEndTime - Date.now()) : 0,
-        }),
-      }),
-    })),
+    startTaskTimer: (childId, taskId) => setState((previous) => startTaskTimerInState(previous, childId, taskId, Date.now())),
+    pauseTaskTimer: (childId, taskId) => setState((previous) => pauseTaskTimerInState(previous, childId, taskId, Date.now())),
     ...actions,
   }}>{children}</AppContext.Provider>;
 }
