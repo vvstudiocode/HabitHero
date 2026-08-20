@@ -158,6 +158,8 @@ function childRow(id: string, familyId: string, profileId: string): ChildProfile
     gender: 'girl',
     character_id: 'girl-001',
     joined_at: now,
+    created_at: now,
+    updated_at: now,
     points_balance: 0,
     login_name: null,
     accent_color: null,
