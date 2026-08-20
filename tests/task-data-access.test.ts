@@ -100,7 +100,7 @@ describe('task repository write payloads', () => {
       name: 'Read',
       points: 5,
       icon: 'BookOpen',
-    });
+    } as never);
     await repository.insertTask('family-1', 'child-1', {
       templateId: 'template-1',
       name: 'Draw a dragon',
