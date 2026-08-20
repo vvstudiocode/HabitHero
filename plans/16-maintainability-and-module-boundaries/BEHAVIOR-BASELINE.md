@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | `npm run lint` | PASS (0) | TypeScript `tsc --noEmit` |
 | `npm test` | PASS (0) | 734 tests、79 suites、734 pass、0 fail |
-| `npm run build` | PASS (0) | Vite 1,874 modules transformed；既有大 chunk warning 已記錄，非本次行為差異 |
+| `npm run build` | PASS (0) | Vite 1,876 modules transformed；既有大 chunk warning 已記錄，非本次行為差異 |
 | `npm run security:check` | PASS (0) | 924 files scanned |
 | `npm run quality:structure` | PASS (0) | 164 source files；152 import-boundary files；無 baseline growth／未審核超限檔 |
 | `git diff --check` | PASS (0) | 無 whitespace error |
