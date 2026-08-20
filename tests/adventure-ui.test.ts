@@ -240,8 +240,9 @@ test('adventures use only the adventure board completion entry, not the legacy g
   assert.equal(isLegacyGrowthTask(task('legacy', 'todo', { adventureType: undefined })), true);
 
   const dashboard = read('../src/components/ChildDashboard.tsx');
-  assert.match(dashboard, /const adventureTasks = tasks\.filter\(\(task\) => !isLegacyGrowthTask\(task\)\)/);
-  assert.match(dashboard, /getTodayAdventureSummary/);
+  const adventureState = read('../src/lib/child-dashboard-adventure-state.ts');
+  assert.match(adventureState, /!isLegacyGrowthTask\(task\)/);
+  assert.match(adventureState, /getTodayAdventureSummary/);
   assert.match(dashboard, /<TodayAdventureSummary/);
   assert.doesNotMatch(dashboard, /<GoalCard/);
 });

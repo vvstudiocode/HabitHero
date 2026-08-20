@@ -127,9 +127,10 @@ test('parent review items are removed immediately after a successful action', ()
 
 test('child today goals show the new adventure summary instead of legacy goal sections', () => {
   const source = read('../src/components/ChildDashboard.tsx');
+  const adventureState = read('../src/lib/child-dashboard-adventure-state.ts');
 
-  assert.match(source, /const adventureTasks = tasks\.filter\(\(task\) => !isLegacyGrowthTask\(task\)\)/);
-  assert.match(source, /const todayAdventureSummary = getTodayAdventureSummary\(adventureTasks, adventureDate\)/);
+  assert.match(adventureState, /const adventureTasks = tasks\.filter\(\(task\) => !isLegacyGrowthTask\(task\)\)/);
+  assert.match(adventureState, /todayAdventureSummary: getTodayAdventureSummary\(adventureTasks, adventureDate\)/);
   assert.match(source, /<TodayAdventureSummary summary=\{todayAdventureSummary\}/);
   assert.doesNotMatch(source, /<GoalCard/);
   assert.doesNotMatch(source, /parentGoalTasks|childGoalTasks|goalCopy\.child\.parentTitle/);

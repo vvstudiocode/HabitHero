@@ -56,9 +56,7 @@ import { AdventureRewardCelebration } from '../features/adventures/components/Ad
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
 import {
   getAdventureTaskState,
-  getTaipeiDateKey,
   hasStartedAdventureTimer,
-  isLegacyGrowthTask,
 } from '../features/adventures/adventure-progress';
 import {
   createAdventureRewardBundle,
@@ -71,8 +69,8 @@ import {
   writeAdventureRewardNoticeState,
   type AdventureRewardBundle,
 } from '../features/adventures/adventure-reward-notice';
-import { getTodayAdventureSummary } from '../features/adventures/today-adventure-summary';
 import type { AdventureCompletionInput, AdventureTask } from '../features/adventures/types';
+import { selectChildAdventureState } from '../lib/child-dashboard-adventure-state';
 import { PointValue } from './shared/PointValue';
 import { PointLedgerHistory } from './PointLedgerHistory';
 
@@ -438,9 +436,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   // The adventure board is the only place that starts or completes an
   // adventure. Today's Goals is a read-only progress and history summary.
-  const adventureTasks = tasks.filter((task) => !isLegacyGrowthTask(task)) as AdventureTask[];
-  const adventureDate = getTaipeiDateKey(new Date(now));
-  const todayAdventureSummary = getTodayAdventureSummary(adventureTasks, adventureDate);
+  const { adventureTasks, adventureDate, todayAdventureSummary } = selectChildAdventureState(tasks, now);
 
   useEffect(() => {
     setAdventureRewardNotice(null);
