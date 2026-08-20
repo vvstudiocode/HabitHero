@@ -7,7 +7,6 @@ import {
   taskTemplateRowToViewModel,
   taskScheduleRowToViewModel,
   taskTimerSessionRowToViewModel,
-  applyServerTimerSession,
 } from './data-contracts';
 import type {
   AdventureGroupRow,
@@ -71,6 +70,10 @@ import {
   buildUpdateTaskPayload,
   buildUpdateTaskTemplatePayload,
 } from './task-data-access';
+import {
+  applyTimerSessionsToChildren,
+  createEmptyAppState,
+} from './repository-hydration';
 import { loadChildGameData } from '../features/world/game-data';
 import {
   toWorldMutationResult,
@@ -130,22 +133,6 @@ export interface LoadedAppData {
   role: 'parent' | 'child';
 }
 
-const emptyState = (): AppState => ({
-  parentPin: null,
-  parentConsentVersion: null,
-  children: [],
-  parentActiveChildId: null,
-  childLoggedInId: null,
-  taskTemplates: [],
-  ledger: [],
-  lastResetDate: null,
-  familyTheme: { accentColor: 'amber', mobileBackgroundImageUrl: null, desktopBackgroundImageUrl: null },
-  adventureGroups: [],
-  taskSchedules: [],
-  timerSessions: [],
-  gameDataByChildId: {},
-});
-
 // Keep enough history in the app state for the UI's 30-item pages.
 // This can later become a server-side cursor when history grows substantially.
 const CHILD_COMPLETED_TASK_HISTORY_LIMIT = 300;
@@ -199,7 +186,7 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
   const family = role === 'parent'
     ? check(await client.from('families').select('*').eq('id', familyId).single()) as FamilyRow
     : null;
-  const state = emptyState();
+  const state = createEmptyAppState();
   if (family) state.familyTheme = familyRowToViewModel(family).theme;
   if (role === 'parent') {
     const consent = check(await client.from('parent_consents').select('consent_version').eq('family_id', familyId).eq('parent_profile_id', userId).eq('consent_type', 'parental').maybeSingle()) as { consent_version: string } | null;
@@ -282,14 +269,7 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
     children.map((child) => child.id),
     role === 'parent',
   );
-  const timerByTaskId = new Map(state.timerSessions.map((session) => [session.taskId, session]));
-  state.children = state.children.map((child) => ({
-    ...child,
-    tasks: child.tasks.map((task) => {
-      const timer = timerByTaskId.get(task.id);
-      return timer ? applyServerTimerSession(task, timer) : task;
-    }),
-  }));
+  state.children = applyTimerSessionsToChildren(state.children, state.timerSessions);
   const ownChild = children.find((child) => child.profile_id === userId);
   state.childLoggedInId = ownChild?.id ?? null;
   state.parentActiveChildId = state.children[0]?.id ?? null;
