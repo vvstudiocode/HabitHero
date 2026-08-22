@@ -51,6 +51,7 @@ import {
   type DecorationPlacementGestureDelta,
 } from '../features/world/world-placement';
 import { getBackgroundMusicPreference, setBackgroundMusicPreference } from '../lib/background-music-preference';
+import { useDayNightPreference } from '../features/world/use-day-night-preference';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
 import { AdventureRewardCelebration } from '../features/adventures/components/AdventureRewardCelebration';
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
@@ -200,8 +201,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       && placementItem
       && isDecorationPlacementValid(decorationPlacement.draft, placementItem, activeDecorationCollisionCircles),
   );
-  const [showPetNames, setShowPetNames] = useState(() => getPetNameDisplayPreference(activeChildId ?? ''));
-  const [backgroundMusicEnabled, setBackgroundMusicEnabled] = useState(() => getBackgroundMusicPreference(activeChildId ?? ''));
+  const [showPetNames, setShowPetNames] = useState(() => getPetNameDisplayPreference(activeChildId ?? '')), [backgroundMusicEnabled, setBackgroundMusicEnabled] = useState(() => getBackgroundMusicPreference(activeChildId ?? ''));
+  const { dayNightEnabled, onDayNightChange } = useDayNightPreference(activeChildId);
 
   useEffect(() => {
     setShowPetNames(getPetNameDisplayPreference(activeChildId ?? ''));
@@ -1080,6 +1081,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               childId={activeChild.id}
               gameData={gameData}
               showPetNames={showPetNames}
+              dayNightEnabled={dayNightEnabled}
               paused={Boolean((heroFeature && !decorationPlacement) || adventureRewardNotice)}
               placement={decorationPlacement ?? undefined}
               placementValid={placementValid}
@@ -1218,6 +1220,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onShowPetNamesChange={handleShowPetNamesChange}
               backgroundMusicEnabled={backgroundMusicEnabled}
               onBackgroundMusicChange={handleBackgroundMusicChange}
+              dayNightEnabled={dayNightEnabled}
+              onDayNightChange={onDayNightChange}
             />
           </Suspense>
         )}

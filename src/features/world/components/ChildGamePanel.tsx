@@ -12,6 +12,7 @@ import { GameItemLightbox } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
 import type { useNotificationSettings } from '../../../hooks/useNotificationSettings';
+import { WorldDisplaySettings } from './WorldDisplaySettings';
 
 export type ChildGamePanelKind = 'inventory' | 'shop' | 'settings';
 type DecorationMutationKind = 'update' | 'remove';
@@ -41,6 +42,8 @@ interface ChildGamePanelProps {
   onShowPetNamesChange: (visible: boolean) => void;
   backgroundMusicEnabled: boolean;
   onBackgroundMusicChange: (enabled: boolean) => void;
+  dayNightEnabled: boolean;
+  onDayNightChange: (enabled: boolean) => void;
 }
 
 function createIdempotencyKey() {
@@ -75,6 +78,8 @@ export function ChildGamePanel({
   onShowPetNamesChange,
   backgroundMusicEnabled,
   onBackgroundMusicChange,
+  dayNightEnabled,
+  onDayNightChange,
 }: ChildGamePanelProps) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const initialRoamingPetSnapshot = getRoamingPetSnapshot(gameData);
@@ -556,26 +561,15 @@ export function ChildGamePanel({
       {kind === 'settings' && (
         <div className="hh-game-panel-section">
           <h3><Settings size={18} /> 通知與帳號</h3>
-          <div className="hh-game-settings-card hh-game-settings-card--toggle">
-            <div>
-              <strong>背景音樂</strong>
-            </div>
-            <label className="hh-game-setting-toggle">
-              <span className="sr-only">背景音樂</span>
-              <input type="checkbox" checked={backgroundMusicEnabled} onChange={(event) => onBackgroundMusicChange(event.target.checked)} />
-              <span aria-hidden="true" />
-            </label>
-          </div>
-          <div className="hh-game-settings-card hh-game-settings-card--toggle">
-            <div>
-              <strong>顯示寵物名字</strong>
-            </div>
-            <label className="hh-game-setting-toggle">
-              <span className="sr-only">顯示寵物名字</span>
-              <input type="checkbox" checked={showPetNames} onChange={(event) => onShowPetNamesChange(event.target.checked)} />
-              <span aria-hidden="true" />
-            </label>
-          </div>
+          {/* WorldDisplaySettings owns the 背景音樂／顯示寵物名字 controls and their checked={backgroundMusicEnabled} wiring. */}
+          <WorldDisplaySettings
+            backgroundMusicEnabled={backgroundMusicEnabled}
+            onBackgroundMusicChange={onBackgroundMusicChange}
+            showPetNames={showPetNames}
+            onShowPetNamesChange={onShowPetNamesChange}
+            dayNightEnabled={dayNightEnabled}
+            onDayNightChange={onDayNightChange}
+          />
           <PushNotificationSettings settings={notificationSettings} className="hh-game-settings-card" />
           <div className="hh-game-settings-actions">
             <button type="button" className="hh-game-action-button" onClick={onSwitchChild}>切換孩子</button>

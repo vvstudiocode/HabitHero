@@ -41,6 +41,7 @@ import {
   WORLD_QUALITY_SETTINGS,
 } from './world-quality';
 import { getWorldPixelRatio, shouldRenderWorldFrame } from './world-performance';
+import { createWorldWeatherRuntime } from './world-weather-runtime';
 import {
   createWanderState,
   HABITHERO_ROAMING_CHARACTER_ASSET_KEY,
@@ -109,7 +110,6 @@ import {
   createDisposalTracker,
   disposeObject3D,
   disposeScene,
-  disposeTexture,
   loadGltfSafely,
   type DisposableScene,
 } from './world-runtime-resources';
@@ -329,6 +329,7 @@ export interface PrototypeWorldRuntimeOptions {
   characterModelUrl?: string;
   createProceduralCharacter: (THREE: ThreeNamespace, item?: GameCatalogItem) => Object3D;
   showPetNames: boolean;
+  dayNightEnabled: boolean;
   placement?: PrototypeWorldRuntimePlacement;
   onPlacementPositionChange?: (position: { x: number; z: number }) => void;
   onPlacementGestureChange?: (gesture: { scaleFactor: number; rotationDelta: number }) => void;
@@ -348,6 +349,7 @@ export interface PrototypeWorldRuntimeUpdate {
   characterRenderMode: 'anime-maiden' | 'world-glb' | 'procedural';
   characterModelUrl?: string;
   showPetNames: boolean;
+  dayNightEnabled: boolean;
   placement?: PrototypeWorldRuntimePlacement;
 }
 
@@ -823,7 +825,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let pausedTimer: number | undefined;
   let renderer: { dispose: () => void } | undefined;
   let scene: DisposableScene | undefined;
-  let skyboxTexture: { dispose: () => void } | undefined;
   let loadingAbortController: AbortController | undefined;
   let removeListeners: (() => void) | undefined;
   let removeContextLostListener: (() => void) | undefined;
@@ -842,6 +843,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     characterRenderMode: options.characterRenderMode,
     characterModelUrl: options.characterModelUrl,
     showPetNames: options.showPetNames,
+    dayNightEnabled: options.dayNightEnabled,
     placement: options.placement,
   };
   const disposalTracker = createDisposalTracker();
@@ -871,7 +873,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     else if (scene) disposeObject3D(scene, disposalTracker);
     dracoDecoderLoader?.dispose();
     dracoDecoderLoader = undefined;
-    disposeTexture(skyboxTexture, disposalTracker);
     renderer = undefined;
     scene = undefined;
   };
@@ -934,34 +935,17 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const worldScene = new THREE.Scene();
       scene = worldScene;
       worldScene.background = new THREE.Color(visualSettings.backgroundColor);
-      worldScene.fog = new THREE.Fog(
-        new THREE.Color(visualSettings.fogColor),
-        visualSettings.fogNear,
-        visualSettings.fogFar,
-      );
-      const texture = new THREE.TextureLoader().load(
-        PROTOTYPE_WORLD_ASSETS.skybox,
-        (loadedTexture) => {
-          if (disposed) {
-            loadedTexture.dispose();
-            return;
-          }
-          loadedTexture.colorSpace = THREE.SRGBColorSpace;
-          loadedTexture.mapping = THREE.EquirectangularReflectionMapping;
-          loadedTexture.needsUpdate = true;
-          worldScene.background = loadedTexture;
-          worldScene.environment = loadedTexture;
-          worldScene.environmentIntensity = visualSettings.environmentIntensity;
-        },
-      );
-      skyboxTexture = texture;
+      // The four sky images are the authored cloud layer. Keep runtime fog
+      // disabled so the grass and the panorama keep their original clarity.
+      worldScene.fog = null;
 
       const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-      worldScene.add(new THREE.HemisphereLight(
+      const ambient = new THREE.HemisphereLight(
         visualSettings.hemisphereSkyColor,
         visualSettings.hemisphereGroundColor,
         visualSettings.hemisphereIntensity,
-      ));
+      );
+      worldScene.add(ambient);
       const sun = new THREE.DirectionalLight(visualSettings.sunColor, visualSettings.sunIntensity);
       sun.position.set(...visualSettings.sunPosition);
       sun.target.position.set(0, 0, 0);
@@ -977,6 +961,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       sun.shadow.camera.near = 0.1;
       sun.shadow.camera.far = 40;
       worldScene.add(sun);
+      const nightFill = new THREE.HemisphereLight(0x8eaee1, 0x25384a, 0);
+      const moonFill = new THREE.DirectionalLight(0x91b8ff, 0);
+      moonFill.position.set(-4.5, 6.5, 3.4);
+      worldScene.add(nightFill, moonFill);
 
       loadingAbortController = new AbortController();
       const signal = loadingAbortController.signal;
@@ -1179,6 +1167,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         maxHeight: 1.35,
       });
       terrain.add(butterflies.group);
+      const weatherRuntime = createWorldWeatherRuntime({
+        THREE, scene: worldScene, renderer: rendererInstance, quality, fieldSize: terrainWidth, walkableSize: walkableWidth, dayNightEnabled: options.dayNightEnabled, visualSettings,
+        ambient, sun, nightFill, moonFill, sunlightPatches: sunlightPatches.group, pollen: ambientPollen.points,
+        butterflies: butterflies.group, signal, prefersReducedMotion,
+      });
       worldScene.add(terrain);
 
       const playerRoot = new THREE.Group();
@@ -2001,6 +1994,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         characterRenderMode: options.characterRenderMode,
         characterModelUrl: options.characterModelUrl,
         showPetNames: options.showPetNames,
+        dayNightEnabled: options.dayNightEnabled,
       });
       const queueCharacterUpdate = (next: PrototypeWorldRuntimeUpdate) => {
         const nextKey = getCharacterUpdateKey(next);
@@ -2064,6 +2058,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       updateScene = (next) => {
         const wasPlacementActive = placementActive;
         placementActive = Boolean(next.placement);
+        weatherRuntime.setDayNightEnabled(next.dayNightEnabled);
         if (placementActive) controller?.reset();
         else {
           placementPointers.clear();
@@ -2351,6 +2346,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         lastRenderedAt = frameTime;
         const delta = Math.min(clock.getDelta(), 0.05);
         sceneElapsedTime += delta;
+        weatherRuntime.update({
+          time: sceneElapsedTime,
+          delta,
+          camera,
+        });
         const currentInput = controller?.getSnapshot();
         let isPlayerMoving = false;
         if (currentInput && !options.pausedRef.current && !placementActive) {

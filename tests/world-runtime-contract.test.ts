@@ -25,6 +25,7 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 const runtimeSource = read('../src/features/world/prototype-world-runtime.ts');
 const resourceSource = read('../src/features/world/world-runtime-resources.ts');
 const runtimeAssetsSource = read('../src/features/world/world-runtime-assets.ts');
+const weatherRuntimeSource = read('../src/features/world/world-weather-runtime.ts');
 const heroSource = read('../src/components/DashboardCharacterHero.tsx');
 const worldLayerSource = read('../src/features/world/TerrainWorldLayer.tsx');
 const characterStyles = read('../src/styles/character.css');
@@ -70,7 +71,13 @@ describe('prototype world runtime contracts', () => {
 
   it('keeps the natural lighting pass connected to the quality budget', () => {
     assert.match(runtimeSource, /getNaturalWorldVisualSettings\(quality\)/);
-    assert.match(runtimeSource, /worldScene\.environment = loadedTexture/);
+    assert.match(weatherRuntimeSource, /scene\.environment = loadedTexture/);
+    assert.match(runtimeSource, /worldScene\.fog = null/);
+    assert.match(runtimeSource, /createWorldWeatherRuntime/);
+    assert.match(weatherRuntimeSource, /createWorldWeatherEffects/);
+    assert.match(weatherRuntimeSource, /getWorldTimeState/);
+    assert.match(weatherRuntimeSource, /fetchWorldWeather/);
+    assert.match(weatherRuntimeSource, /WORLD_WEATHER_REFRESH_MS/);
     assert.match(runtimeSource, /sun\.shadow\.normalBias/);
     assert.match(runtimeSource, /createAmbientPollenField/);
     assert.match(runtimeSource, /createSunlightPatchField/);

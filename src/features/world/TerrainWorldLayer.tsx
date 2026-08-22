@@ -39,7 +39,7 @@ export { getTerrainWorldSceneKey } from './world-scene-key';
 interface TerrainWorldLayerProps {
   childId: string;
   gameData: ChildGameData;
-  showPetNames?: boolean;
+  showPetNames?: boolean; dayNightEnabled?: boolean;
   paused?: boolean;
   placement?: {
     inventoryItemId: string;
@@ -229,7 +229,7 @@ function useWorldQuality() {
 export function TerrainWorldLayer({
   childId,
   gameData,
-  showPetNames = true,
+  showPetNames = true, dayNightEnabled = true,
   paused = false,
   placement,
   placementValid = false,
@@ -275,7 +275,7 @@ export function TerrainWorldLayer({
       equippedCatalogItem,
       characterRenderMode: getCharacterRenderMode(equippedCatalogItem),
       characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
-      showPetNames,
+      showPetNames, dayNightEnabled,
       placement: placement && placementItem ? {
         item: placementItem,
         entityId: placement.entityId,
@@ -283,7 +283,7 @@ export function TerrainWorldLayer({
         isValid: placementValid,
       } : undefined,
     };
-  }, [gameData, placement, placementValid, sceneGameData, showPetNames]);
+  }, [gameData, placement, placementValid, sceneGameData, showPetNames, dayNightEnabled]);
   pausedRef.current = paused;
 
   useEffect(() => {
@@ -410,7 +410,7 @@ export function TerrainWorldLayer({
       equippedCatalogItem: sceneInput.equippedCatalogItem,
       characterRenderMode: sceneInput.characterRenderMode,
       characterModelUrl: sceneInput.characterModelUrl,
-      showPetNames: sceneInput.showPetNames,
+      showPetNames: sceneInput.showPetNames, dayNightEnabled: sceneInput.dayNightEnabled,
       placement: sceneInput.placement,
       onPlacementPositionChange,
       onPlacementGestureChange,

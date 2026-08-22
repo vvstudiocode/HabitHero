@@ -21,12 +21,19 @@ const runtimeAssetsSource = readFileSync(
   new URL('../src/features/world/world-runtime-assets.ts', import.meta.url),
   'utf8',
 );
+const weatherRuntimeSource = readFileSync(
+  new URL('../src/features/world/world-weather-runtime.ts', import.meta.url),
+  'utf8',
+);
 
 describe('production terrain asset contract', () => {
   it('loads the optimized big-tree asset and keeps a procedural fallback', () => {
     assert.match(runtimeAssetsSource, /tree: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/big-tree-optimized\.glb'/);
     assert.match(runtimeAssetsSource, /character: '\/assets\/characters\/arthur\.glb'/);
     assert.match(runtimeAssetsSource, /skybox: new URL\('\.\.\/\.\.\/\.\.\/terrain-prototype\/assets\/sky-equirectangular-day\.png'/);
+    assert.match(runtimeAssetsSource, /sky-equirectangular-dawn\.png/);
+    assert.match(runtimeAssetsSource, /sky-equirectangular-dusk\.png/);
+    assert.match(runtimeAssetsSource, /sky-equirectangular-night\.png/);
     assert.match(prototypeRuntimeSource, /loadGltfSafely[^\n]+PROTOTYPE_WORLD_ASSETS\.tree/);
     assert.match(prototypeRuntimeSource, /defineAsset\(THREE, treeSource\)/);
     assert.match(prototypeRuntimeSource, /applyCentralTreeMaterialFallback\(THREE, treeDefinition\.source\)/);
@@ -37,7 +44,8 @@ describe('production terrain asset contract', () => {
     assert.match(prototypeRuntimeSource, /createProceduralForest\(THREE/);
     assert.doesNotMatch(prototypeRuntimeSource, /updateGrassInteractionState\(/);
     assert.match(prototypeRuntimeSource, /proceduralGrass\.update\(/);
-    assert.match(prototypeRuntimeSource, /worldScene\.background = loadedTexture/);
+    assert.match(prototypeRuntimeSource, /createWorldWeatherRuntime/);
+    assert.match(weatherRuntimeSource, /scene\.background = loadedTexture/);
     assert.match(prototypeRuntimeSource, /rendererInstance\.toneMapping = THREE\.ACESFilmicToneMapping/);
     assert.match(prototypeRuntimeSource, /rendererInstance\.shadowMap\.type = THREE\.PCFSoftShadowMap/);
   });

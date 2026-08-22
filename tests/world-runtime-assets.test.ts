@@ -69,6 +69,10 @@ describe('world runtime asset metadata helpers', () => {
     assert.equal(PROTOTYPE_WORLD_ASSETS.character, '/assets/characters/arthur.glb');
     assert.equal(PROTOTYPE_WORLD_ASSETS.roamingCharacter, '/assets/habithero-v16-wanderer.glb');
     assert.match(PROTOTYPE_WORLD_ASSETS.skybox, /sky-equirectangular-day\.png$/);
+    assert.match(PROTOTYPE_WORLD_ASSETS.skyboxes.dawn, /sky-equirectangular-dawn\.png$/);
+    assert.match(PROTOTYPE_WORLD_ASSETS.skyboxes.day, /sky-equirectangular-day\.png$/);
+    assert.match(PROTOTYPE_WORLD_ASSETS.skyboxes.dusk, /sky-equirectangular-dusk\.png$/);
+    assert.match(PROTOTYPE_WORLD_ASSETS.skyboxes.night, /sky-equirectangular-night\.png$/);
   });
 
   it('resolves decoration catalog items from the entity id before inventory fallback', () => {

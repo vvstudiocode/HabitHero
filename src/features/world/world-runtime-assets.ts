@@ -8,6 +8,12 @@ export const PROTOTYPE_WORLD_ASSETS = {
   character: '/assets/characters/arthur.glb',
   roamingCharacter: HABITHERO_ROAMING_CHARACTER_MODEL_URL,
   skybox: new URL('../../../terrain-prototype/assets/sky-equirectangular-day.png', import.meta.url).href,
+  skyboxes: Object.freeze({
+    dawn: new URL('../../../terrain-prototype/assets/sky-equirectangular-dawn.png', import.meta.url).href,
+    day: new URL('../../../terrain-prototype/assets/sky-equirectangular-day.png', import.meta.url).href,
+    dusk: new URL('../../../terrain-prototype/assets/sky-equirectangular-dusk.png', import.meta.url).href,
+    night: new URL('../../../terrain-prototype/assets/sky-equirectangular-night.png', import.meta.url).href,
+  }),
 } as const;
 
 export function getDecorationCatalogItem(gameData: ChildGameData, entity: ChildWorldEntity): GameCatalogItem | undefined {
