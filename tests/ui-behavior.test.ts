@@ -358,7 +358,7 @@ test('child growth menu opens the growth feature directly', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
   const hero = read('../src/components/DashboardCharacterHero.tsx');
 
-  assert.match(dashboard, /backpack: \[[\s\S]*?id: 'goals', title: '冒險日記',[\s\S]*?id: 'growth', title: '成長'/);
+  assert.match(dashboard, /backpack: \[[\s\S]*?id: 'goals', title: '冒險',[\s\S]*?id: 'growth', title: '成長'/);
   assert.match(dashboard, /const heroRootMenuActions: CharacterMenuAction\[\] = \[\]/);
   assert.match(hero, /const hasMenu = rootActions\.length > 0 \|\| subActions\.length > 0/);
   assert.match(dashboard, /toggleHeroMenuGroup\('backpack'\)/);
@@ -369,6 +369,8 @@ test('child growth menu opens the growth feature directly', () => {
   assert.match(dashboard, /id: 'inventory', title: '背包'/);
   assert.match(dashboard, /id: 'shop', title: '商店'/);
   assert.match(dashboard, /id: 'settings', title: '設定'/);
+  assert.match(dashboard, /activeTab === 'goals'[\s\S]*?>\s*冒險\s*\{/);
+  assert.doesNotMatch(dashboard, /冒險日記/);
   assert.doesNotMatch(dashboard, /id: 'switch-child', title: '切換視角'/);
   assert.doesNotMatch(dashboard, /id: 'logout', title: '登出'/);
 });

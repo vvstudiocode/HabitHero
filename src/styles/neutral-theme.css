@@ -455,8 +455,7 @@ body,
 .hh-adventure-weekday.is-selected {
   color: var(--hh-neutral-surface);
   background: var(--hh-primary);
-  border-color: var(--hh-primary);
-  box-shadow: inset 0 0 0 2px var(--hh-neutral-surface);
+  box-shadow: none;
 }
 
 .hh-adventure-field {
@@ -609,8 +608,7 @@ body,
   color: var(--hh-neutral-ink) !important;
 }
 
-.hh-bottom-nav,
-.hh-login-tabs {
+.hh-bottom-nav {
   background: var(--hh-neutral-surface) !important;
   border-color: var(--hh-neutral-line) !important;
   box-shadow: 0 8px 24px var(--hh-neutral-shadow) !important;

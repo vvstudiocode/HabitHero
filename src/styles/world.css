@@ -294,9 +294,9 @@
 }
 
 .hh-game-tabs button.is-selected {
-  color: #2f5b4c;
-  background: #fffdf7;
-  box-shadow: 0 5px 14px rgb(63 103 71 / 10%);
+  color: var(--hh-on-primary);
+  background: var(--hh-primary);
+  box-shadow: 0 5px 14px rgb(18 57 59 / 18%);
 }
 
 .hh-game-tabs--icons button {
@@ -912,8 +912,8 @@
 
 .hh-game-action-button.is-selected,
 .hh-game-action-button--primary {
-  color: var(--hh-on-success);
-  background: var(--hh-success);
+  color: var(--hh-on-primary);
+  background: var(--hh-primary);
 }
 
 .hh-game-action-button--danger {

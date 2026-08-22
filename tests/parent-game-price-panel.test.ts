@@ -7,6 +7,7 @@ import { ParentGamePricePanel } from '../src/features/world/components/ParentGam
 import type { GameCatalogItem } from '../src/features/world/contracts';
 
 const parentPanelSource = readFileSync(new URL('../src/features/world/components/ParentGamePricePanel.tsx', import.meta.url), 'utf8');
+const worldStyles = readFileSync(new URL('../src/styles/world.css', import.meta.url), 'utf8');
 
 describe('parent world price panel', () => {
   it('renders a recoverable empty state instead of returning a blank panel', () => {
@@ -77,5 +78,10 @@ describe('parent world price panel', () => {
     assert.match(heading, /className="hh-game-store-heading-actions"[\s\S]*?GameCatalogLayoutControls columns=\{layoutColumns\}[\s\S]*?hh-game-price-edit-button/);
     assert.doesNotMatch(parentPanelSource, /hh-game-store-toolbar--parent/);
     assert.doesNotMatch(parentPanelSource, /調整這個家庭看到的任務捲價格/);
+  });
+
+  it('uses the primary green for store selections and primary actions', () => {
+    assert.match(worldStyles, /\.hh-game-tabs button\.is-selected\s*\{[\s\S]*?color:\s*var\(--hh-on-primary\);[\s\S]*?background:\s*var\(--hh-primary\)/);
+    assert.match(worldStyles, /\.hh-game-action-button\.is-selected,[\s\n]*\.hh-game-action-button--primary\s*\{[\s\S]*?color:\s*var\(--hh-on-primary\);[\s\S]*?background:\s*var\(--hh-primary\)/);
   });
 });

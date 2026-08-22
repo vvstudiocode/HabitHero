@@ -42,7 +42,9 @@ test('daily weekday selection uses a dedicated visible selected state', () => {
   assert.match(daily, /selected \? ' is-selected' : ''/);
   assert.doesNotMatch(daily, /孩子首頁只會顯示今天有勾選的每日冒險/);
   assert.match(modalStyles, /\.hh-adventure-weekday\s*\{/);
+  assert.match(modalStyles, /\.hh-adventure-weekday\s*\{[^}]*border:\s*0;/);
   assert.match(neutralStyles, /\.hh-adventure-weekday\.is-selected\s*\{[^}]*background:\s*var\(--hh-primary\)/);
+  assert.match(neutralStyles, /\.hh-adventure-weekday\.is-selected\s*\{[^}]*box-shadow:\s*none;/);
 });
 
 test('daily schedule choices and actions use the neutral app palette', () => {

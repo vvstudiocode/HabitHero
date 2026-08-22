@@ -7,6 +7,7 @@ import type { PointLedgerViewModel } from '../src/types';
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const pointLedgerHistorySource = read('src/components/PointLedgerHistory.tsx');
 const parentDashboardSource = read('src/components/ParentDashboard.tsx');
+const neutralThemeStyles = read('src/styles/neutral-theme.css');
 
 describe('point ledger UI contracts', () => {
   it('prefers the linked Chinese task name and keeps manual reasons intact', () => {
@@ -47,5 +48,15 @@ describe('point ledger UI contracts', () => {
   it('keeps the point ledger drawer below the mobile safe-area edge', () => {
     assert.match(parentDashboardSource, /hh-point-ledger-modal-panel/);
     assert.match(read('src/styles/base.css'), /\.hh-form-modal-panel\.hh-point-ledger-modal-panel[\s\S]*?\n  height:\s*calc\(100dvh - 32px\)/);
+  });
+
+  it('keeps point management controls on one restrained semantic treatment', () => {
+    assert.match(parentDashboardSource, /className="hh-child-points-section(?:\s|\")/);
+    assert.match(parentDashboardSource, /className="hh-point-management-action hh-adventure-secondary-action /);
+    assert.match(parentDashboardSource, /className="hh-point-ledger-action hh-adventure-secondary-action /);
+    assert.match(parentDashboardSource, /className="hh-point-adjustment-submit hh-adventure-primary-action /);
+    assert.match(neutralThemeStyles, /\.hh-adventure-secondary-action\s*\{[\s\S]*?color:\s*var\(--hh-neutral-ink\);[\s\S]*?background:\s*var\(--hh-neutral-soft\);[\s\S]*?border:\s*1px solid var\(--hh-neutral-line\);/);
+    assert.match(neutralThemeStyles, /\.hh-adventure-primary-action\s*\{[\s\S]*?color:\s*var\(--hh-neutral-surface\);[\s\S]*?background:\s*var\(--hh-primary\);/);
+    assert.doesNotMatch(parentDashboardSource, /bg-amber-400[^\n]*贈點|border-rose-300[^\n]*扣點/);
   });
 });

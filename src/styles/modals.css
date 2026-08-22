@@ -71,10 +71,10 @@
 
 .hh-adventure-weekday {
   min-height: 44px;
-  border: 2px solid var(--hh-neutral-line);
+  border: 0;
   border-radius: 12px;
   font-weight: 900;
-  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 .hh-adventure-child-choice,

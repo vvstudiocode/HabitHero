@@ -1026,7 +1026,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
 
         {activeTab === 'rewards' && (
           <div className="space-y-6">
-            <section className="space-y-3" aria-labelledby="parent-child-points-title">
+            <section className="hh-child-points-section space-y-3" aria-labelledby="parent-child-points-title">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <h2 id="parent-child-points-title" className="flex items-center gap-2 text-lg font-black text-gray-900">
@@ -1052,7 +1052,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                           type="button"
                           onClick={() => openPointAdjustment(child.id, 'grant')}
                           disabled={mutationPending}
-                          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-3 text-sm font-black text-amber-950 transition-colors hover:bg-amber-500 disabled:cursor-wait disabled:opacity-50"
+                          className="hh-point-management-action hh-adventure-secondary-action flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-black transition-colors disabled:cursor-wait disabled:opacity-50"
                         >
                           <PlusCircle size={17} aria-hidden="true" /> 贈點
                         </button>
@@ -1060,7 +1060,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                           type="button"
                           onClick={() => openPointAdjustment(child.id, 'deduct')}
                           disabled={mutationPending || child.points === 0}
-                          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 text-sm font-black text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="hh-point-management-action hh-adventure-secondary-action flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-black transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <MinusCircle size={17} aria-hidden="true" /> 扣點
                         </button>
@@ -1068,7 +1068,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                       <button
                         type="button"
                         onClick={() => setPointHistoryChildId(child.id)}
-                        className="mt-2 flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-200 bg-white px-3 text-sm font-black text-amber-800 transition-colors hover:bg-amber-100"
+                        className="hh-point-ledger-action hh-adventure-secondary-action mt-2 flex min-h-11 w-full items-center justify-center rounded-xl px-3 text-sm font-black transition-colors"
                       >
                         查看點數明細
                       </button>
@@ -1594,7 +1594,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             <div className="space-y-4">
               <div className="rounded-2xl p-4">
                 <p className="text-sm font-bold text-gray-600">目前餘額</p>
-                <PointValue value={adjustmentChild.points} className={`mt-1 text-2xl font-black ${isGrant ? 'text-amber-700' : 'text-rose-700'}`} />
+                <PointValue value={adjustmentChild.points} className="mt-1 text-2xl font-black text-gray-900" />
               </div>
               <div>
                 <label htmlFor="point-adjustment-amount" className="mb-1 block text-sm font-bold text-gray-700">點數</label>
@@ -1610,7 +1610,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                     setPointAmount(event.target.value === '' ? '' : Number(event.target.value));
                     setPointAdjustmentError('');
                   }}
-                  className="min-h-12 w-full rounded-xl border border-gray-200 p-3 text-lg font-black outline-none focus:ring-2 focus:ring-amber-400"
+                  className="min-h-12 w-full rounded-xl border border-gray-200 p-3 text-lg font-black outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>
               <div>
@@ -1625,7 +1625,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                     setPointAdjustmentError('');
                   }}
                   placeholder={isGrant ? '例如：主動整理餐桌' : '例如：未完成今天的約定'}
-                  className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 outline-none focus:ring-2 focus:ring-amber-400"
+                  className="w-full resize-y rounded-xl border border-gray-200 p-3 leading-6 outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>
               {pointAdjustmentError && <p className="text-sm font-bold text-red-600" role="alert">{pointAdjustmentError}</p>}
@@ -1633,7 +1633,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 type="button"
                 onClick={() => void handleAdjustPoints()}
                 disabled={mutationPending}
-                className={`min-h-12 w-full rounded-xl px-4 text-base font-black text-white transition-colors disabled:cursor-wait disabled:opacity-50 ${isGrant ? 'bg-amber-500 hover:bg-amber-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+                className="hh-point-adjustment-submit hh-adventure-primary-action min-h-12 w-full rounded-xl px-4 text-base font-black transition-colors disabled:cursor-wait disabled:opacity-50"
               >
                 {mutationPending ? '儲存中…' : isGrant ? '確認贈點' : '確認扣點'}
               </button>

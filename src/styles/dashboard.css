@@ -38,7 +38,7 @@
   }
 
   .hh-login-copy h1 {
-    font-size: clamp(54px, 15.5vw, 76px);
+    font-size: clamp(50px, 11vw, 56px);
   }
 
   .hh-login-copy p {

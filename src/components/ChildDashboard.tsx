@@ -1006,7 +1006,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const heroSubMenuActions: Record<ChildMenuGroup, CharacterMenuAction[]> = {
     backpack: [
-      { id: 'goals', title: '冒險日記', tone: 'attention', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
+      { id: 'goals', title: '冒險', tone: 'attention', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
       { id: 'inventory', title: '背包', tone: 'action', icon: <Backpack size={17} />, onSelect: () => openChildFeature('inventory') },
       { id: 'shop', title: '商店', tone: 'explore', icon: <ShoppingBagIcon size={17} />, onSelect: () => openChildFeature('shop') },
       { id: 'wishlist', title: '獎勵', tone: 'reward', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
@@ -1235,7 +1235,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               activeTab === 'goals' && "is-active"
             )}
           >
-            冒險日記
+            冒險
             {childMenuNotifications.goals && (
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
             )}

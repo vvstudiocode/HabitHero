@@ -118,8 +118,12 @@ export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, initial
               <button type="submit" disabled={!account || !password || submitting} className="hh-primary-button">
                 {submitting ? '登入中…' : '登入任務森林'}
               </button>
-              {mode === 'parent' && <button type="button" onClick={onGoSignup} className="hh-secondary-button">沒有家長帳號？註冊</button>}
-              {mode === 'parent' && <button type="button" onClick={onForgotPassword} className="hh-secondary-inline">忘記家長密碼？</button>}
+              {mode === 'parent' && (
+                <div className="hh-login-secondary-actions flex flex-col gap-1">
+                  <button type="button" onClick={onGoSignup} className="hh-secondary-button">沒有家長帳號？註冊</button>
+                  <button type="button" onClick={onForgotPassword} className="hh-secondary-inline text-[13px]">忘記家長密碼？</button>
+                </div>
+              )}
               {mode === 'child' && <p className="hh-login-note">小孩帳號由家長在管理端建立，無法自行註冊。</p>}
             </div>
           )}
