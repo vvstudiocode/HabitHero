@@ -1,0 +1,147 @@
+[  513179ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[  831242ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 1315241ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 1343474ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 1980470ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 2025279ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/features/friends/friend-world-pet-presentation.ts?t=1787486891711:0
+[ 2025280ms] [ERROR] [vite] Failed to reload /src/features/world-social/WorldSocialLayer.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[ 2025830ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/features/friends/friend-world-pet-presentation.ts?t=1787486891711:0
+[ 2043784ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 6913861ms] [ERROR] React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://react.dev/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ WorldSocialLayer 1. useState                   useState
+2. useState                   useState
+3. useState                   useState
+4. useState                   useState
+5. useState                   useState
+6. useMemo                    useMemo
+7. useMemo                    useMemo
+8. useMemo                    useMemo
+9. useMemo                    useMemo
+10. useState                  useState
+11. useMemo                   useMemo
+12. useCallback               useCallback
+13. useEffect                 useEffect
+14. useCallback               useCallback
+15. useMemo                   useMemo
+16. useState                  useState
+17. useCallback               useCallback
+18. useEffect                 useEffect
+19. useCallback               useCallback
+20. useCallback               useCallback
+21. useMemo                   useMemo
+22. useState                  useState
+23. useState                  useState
+24. useState                  useState
+25. useCallback               useCallback
+26. useEffect                 useEffect
+27. useCallback               useCallback
+28. useCallback               useCallback
+29. useCallback               useCallback
+30. useCallback               useCallback
+31. useCallback               useCallback
+32. useState                  useState
+33. useState                  useState
+34. useState                  useState
+35. useState                  useState
+36. useRef                    useRef
+37. useRef                    useRef
+38. useRef                    useRef
+39. useRef                    useRef
+40. useRef                    useRef
+41. useRef                    useRef
+42. useRef                    useRef
+43. useRef                    useRef
+44. useEffect                 useRef
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5593
+[ 6913876ms] Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5792:19)
+    at updateEffectImpl (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6414:20)
+    at Object.useEffect (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18946:11)
+    at exports.useEffect (http://localhost:3000/node_modules/.vite/deps/chunk-3ETMJPLF.js?v=f4ec500f:923:36)
+    at WorldSocialLayer (http://localhost:3000/src/features/world-social/WorldSocialLayer.tsx?t=1787491779374:60:3)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:8525:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:997:72)
+[ 6913874ms] [WARNING] %s
+
+%s
+ An error occurred in the <WorldSocialLayer> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965
+[ 7109902ms] [WARNING] WebSocket connection to 'wss://rqofqnoyxnmlsuejeyld.supabase.co/realtime/v1/websocket?apikey=sb_publishable_SfHafMQbkeWtk5czAu6r7g_vWwZ4HOa&vsn=2.0.0' failed: WebSocket is closed before the connection is established. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:6167
+[ 8323032ms] TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at onKeyDown (http://localhost:3000/src/features/world/prototype-world-runtime.ts:1890:31)
+[ 8323033ms] TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at onKeyUp (http://localhost:3000/src/features/world/prototype-world-runtime.ts:1895:56)
+[ 8323033ms] TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at onKeyDown (http://localhost:3000/src/features/world/prototype-world-runtime.ts:1890:31)
+[ 8323033ms] TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at onKeyUp (http://localhost:3000/src/features/world/prototype-world-runtime.ts:1895:56)
+[ 8994766ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9089823ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9099151ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9168300ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9232119ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9247750ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9365368ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9488242ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[ 9521002ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[10384318ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[10895939ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[11063550ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[11372809ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[11622213ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[11812565ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[12162609ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[12361335ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:20102
+[13536121ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/features/world/prototype-world-runtime.ts?t=1787498402490:0
+[13536121ms] [ERROR] [vite] Failed to reload /src/features/world/TerrainWorldLayer.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[17466001ms] [ERROR] React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://react.dev/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ WorldSocialLayer 1. useContext                 useContext
+2. useState                   useState
+3. useState                   useState
+4. useState                   useState
+5. useState                   useState
+6. useState                   useState
+7. useState                   useState
+8. useState                   useState
+9. useMemo                    useMemo
+10. useMemo                   useMemo
+11. useMemo                   useMemo
+12. useState                  useState
+13. useMemo                   useMemo
+14. useCallback               useCallback
+15. useEffect                 useEffect
+16. useCallback               useCallback
+17. useState                  useState
+18. useState                  useState
+19. useEffect                 useEffect
+20. useMemo                   useMemo
+21. useState                  useState
+22. useCallback               useEffect
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5593
+[17466017ms] Error: Should have a queue. You are likely calling Hooks conditionally, which is not allowed. (https://react.dev/link/invalid-hook-call)
+    at updateReducerImpl (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5892:17)
+    at updateReducer (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5887:16)
+    at Object.useState (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18996:20)
+    at exports.useState (http://localhost:3000/node_modules/.vite/deps/chunk-3ETMJPLF.js?v=f4ec500f:959:36)
+    at useWorldChat (http://localhost:3000/src/features/world-chat/hooks/use-world-chat.ts?t=1787502332413:10:29)
+    at WorldSocialLayer (http://localhost:3000/src/features/world-social/WorldSocialLayer.tsx?t=1787502332413:41:16)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:8525:20)
+[17466006ms] [WARNING] %s
+
+%s
+ An error occurred in the <WorldSocialLayer> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965

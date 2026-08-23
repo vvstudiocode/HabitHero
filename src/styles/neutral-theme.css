@@ -248,8 +248,15 @@ body,
 
 .hh-character-icon-button.is-expanded,
 .hh-character-icon-button.is-expanded:hover,
-.hh-character-icon-button.is-expanded:active, .hh-goal-proposal-sheet-bar .hh-character-icon-button, .hh-goal-proposal-sheet-bar .hh-character-icon-button:hover {
-  background: transparent; box-shadow: none;
+.hh-character-icon-button.is-expanded:active {
+  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
+  box-shadow: none;
+}
+
+.hh-goal-proposal-sheet-bar .hh-character-icon-button,
+.hh-goal-proposal-sheet-bar .hh-character-icon-button:hover {
+  background: transparent;
+  box-shadow: none;
 }
 
 .hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button,
@@ -315,6 +322,20 @@ body,
   border: 1px solid var(--hh-neutral-line);
   border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
+}
+
+.hh-world-chat-dock,
+.hh-friend-dock {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
+  border: 1px solid var(--hh-neutral-line);
+  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  box-shadow: 0 8px 22px var(--hh-neutral-shadow);
+}
+
+.hh-world-chat-dock {
+  background: color-mix(in srgb, var(--hh-neutral-surface) 44%, transparent);
 }
 
 .hh-world-clean-mode-hint {

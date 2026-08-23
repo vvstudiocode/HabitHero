@@ -1,0 +1,139 @@
+[  290222ms] Error: cannot add `presence` callbacks for realtime:friend-world-live:771fdd2d-84ac-48c2-aae6-d77dcd758bbb after `subscribe()`.
+    at _RealtimeChannel.on (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7154:13)
+    at http://localhost:3000/src/features/friends/hooks/use-friend-presence.ts:42:17
+    at Array.forEach (<anonymous>)
+    at subscribe (http://localhost:3000/src/features/friends/hooks/use-friend-presence.ts:38:11)
+[  292595ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  294595ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  296612ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  298629ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  300645ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  302645ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  304662ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  306678ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  308678ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  310695ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  312711ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  314712ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  316712ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  318712ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  320712ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[  322729ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 1808296ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/src/features/friends/components/FriendWorldViewer.tsx?t=1787504717280:0
+[ 1808443ms] [ERROR] [vite] Failed to reload /src/features/friends/components/FriendWorldViewer.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[ 3729946ms] Error: cannot add `postgres_changes` callbacks for realtime:friend-world:42b98f48-80b0-4b0d-a386-8b83354d8032 after `subscribe()`.
+    at _RealtimeChannel.on (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7154:13)
+    at subscribeToMessages (http://localhost:3000/src/lib/social-data/world-chat-repository.ts:53:90)
+    at Object.subscribe (http://localhost:3000/src/lib/social-data/world-chat-repository.ts:14:38)
+    at Object.subscribe (http://localhost:3000/src/features/world-chat/chat-service.ts:20:42)
+    at http://localhost:3000/src/features/world-chat/hooks/use-world-chat.ts?t=1787502332413:27:20
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18567:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:997:72)
+    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:11040:29)
+[ 3729939ms] [WARNING] %s
+
+%s
+ An error occurred in the <WorldSocialLayer> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965
+[ 4021572ms] Error: cannot add `presence` callbacks for realtime:friend-world-live:771fdd2d-84ac-48c2-aae6-d77dcd758bbb after `subscribe()`.
+    at _RealtimeChannel.on (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7154:13)
+    at http://localhost:3000/src/features/friends/hooks/use-friend-presence.ts:42:17
+    at Array.forEach (<anonymous>)
+    at subscribe (http://localhost:3000/src/features/friends/hooks/use-friend-presence.ts:38:11)
+[ 4024327ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4038388ms] Error: cannot add `presence` callbacks for realtime:friend-world-live:771fdd2d-84ac-48c2-aae6-d77dcd758bbb after `subscribe()`.
+    at _RealtimeChannel.on (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7154:13)
+    at http://localhost:3000/src/features/friends/hooks/use-friend-presence.ts:42:17
+    at Array.forEach (<anonymous>)
+    at subscribe (http://localhost:3000/src/features/friends/hooks/use-friend-presence.ts:38:11)
+[ 4041743ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4043743ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4045743ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4047743ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4049777ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4051777ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4053777ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4055778ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4057810ms] [WARNING] Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7262
+[ 4059427ms] [WARNING] Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
+Element with focus: <button.hh-character-menu-action>
+Ancestor with aria-hidden: <div.hh-character-menu-submenu> @ http://localhost:3000/:0
+[ 4103118ms] Error: cannot add `postgres_changes` callbacks for realtime:friend-world:42b98f48-80b0-4b0d-a386-8b83354d8032 after `subscribe()`.
+    at _RealtimeChannel.on (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7154:13)
+    at subscribeToMessages (http://localhost:3000/src/lib/social-data/world-chat-repository.ts:53:90)
+    at Object.subscribe (http://localhost:3000/src/lib/social-data/world-chat-repository.ts:14:38)
+    at Object.subscribe (http://localhost:3000/src/features/world-chat/chat-service.ts:20:42)
+    at http://localhost:3000/src/features/world-chat/hooks/use-world-chat.ts?t=1787502332413:27:20
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18567:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:997:72)
+    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:11040:29)
+[ 4103115ms] [WARNING] %s
+
+%s
+ An error occurred in the <WorldSocialLayer> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965
+[ 4148778ms] Error: cannot add `postgres_changes` callbacks for realtime:friend-world:42b98f48-80b0-4b0d-a386-8b83354d8032 after `subscribe()`.
+    at _RealtimeChannel.on (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=f4ec500f:7154:13)
+    at subscribeToMessages (http://localhost:3000/src/lib/social-data/world-chat-repository.ts:53:90)
+    at Object.subscribe (http://localhost:3000/src/lib/social-data/world-chat-repository.ts:14:38)
+    at Object.subscribe (http://localhost:3000/src/features/world-chat/chat-service.ts:20:42)
+    at http://localhost:3000/src/features/world-chat/hooks/use-world-chat.ts?t=1787502332413:27:20
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18567:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:997:72)
+    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:11040:29)
+[ 4148774ms] [WARNING] %s
+
+%s
+ An error occurred in the <WorldSocialLayer> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965
+[ 7158936ms] [ERROR] React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://react.dev/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ WorldSocialLayer 1. useContext                 useContext
+2. useState                   useState
+3. useState                   useState
+4. useState                   useState
+5. useState                   useState
+6. useState                   useState
+7. useState                   useState
+8. useState                   useState
+9. useMemo                    useMemo
+10. useMemo                   useMemo
+11. useMemo                   useMemo
+12. useState                  useState
+13. useMemo                   useMemo
+14. useCallback               useCallback
+15. useEffect                 useEffect
+16. useCallback               useCallback
+17. useState                  useState
+18. useState                  useState
+19. useEffect                 useEffect
+20. useMemo                   useMemo
+21. useState                  useState
+22. useEffect                 useEffect
+23. useCallback               useEffect
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5593
+[ 7158945ms] Error: Should have a queue. You are likely calling Hooks conditionally, which is not allowed. (https://react.dev/link/invalid-hook-call)
+    at updateReducerImpl (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5892:17)
+    at updateReducer (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5887:16)
+    at Object.useState (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18996:20)
+    at exports.useState (http://localhost:3000/node_modules/.vite/deps/chunk-3ETMJPLF.js?v=f4ec500f:959:36)
+    at useWorldChat (http://localhost:3000/src/features/world-chat/hooks/use-world-chat.ts?t=1787510071165:10:29)
+    at WorldSocialLayer (http://localhost:3000/src/features/world-social/WorldSocialLayer.tsx?t=1787510071165:40:16)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:8525:20)
+[ 7158939ms] [WARNING] %s
+
+%s
+ An error occurred in the <WorldSocialLayer> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965

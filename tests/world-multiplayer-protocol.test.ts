@@ -29,6 +29,7 @@ const remoteAvatarState: RemoteAvatarStateSnapshot = {
   rotationY: 0,
   motion: 'idle',
   emote: 'none',
+  characterAssetKey: 'character.elina',
   sentAt: 100,
   receivedAt: 100,
 };
@@ -85,6 +86,7 @@ describe('world multiplayer protocol', () => {
       rotationY: Math.PI / 2,
       motion: 'walk',
       emote: 'none',
+      characterAssetKey: 'character.elina',
       sentAt: 1234,
     });
 
@@ -98,6 +100,7 @@ describe('world multiplayer protocol', () => {
       rotationY: Math.PI / 2,
       motion: 'walk',
       emote: 'none',
+      characterAssetKey: 'character.elina',
       sentAt: 1234,
     });
     assert.equal(getWorldEventByteLength({ event: AVATAR_STATE_EVENT, payload }) < 512, true);
@@ -141,5 +144,9 @@ describe('world multiplayer protocol', () => {
       event: AVATAR_STATE_EVENT,
       payload: { ...base, extra: 'x'.repeat(2100) },
     }).accepted, false);
+    assert.equal(validateWorldEventEnvelope({
+      event: AVATAR_STATE_EVENT,
+      payload: { ...base, characterAssetKey: 'x'.repeat(129) },
+    }).reason, 'invalid-character');
   });
 });

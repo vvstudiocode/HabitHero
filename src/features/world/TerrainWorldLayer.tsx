@@ -20,6 +20,7 @@ import type { PetAnimationAction } from './pet-animation';
 import { getWorldQuality, type WorldQuality } from './world-quality';
 import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
 import { getTerrainWorldSceneKey } from './world-scene-key';
+import { getEquippedCharacterCatalogItem } from './world-character-loadout';
 import { useWorldSocialSession } from '../world-social/world-social-session';
 import { createTerrainWorldSceneInput } from './world-scene-input';
 import {
@@ -28,6 +29,9 @@ import {
   type DecorationPlacementDraft,
   type DecorationPlacementGestureDelta,
 } from './world-placement';
+
+// The shared loadout owner keeps `character.arthur` as the safe fallback
+// (`assetKey: 'character.arthur'`) for incomplete or legacy child data.
 
 export {
   WORLD_QUALITY_SETTINGS,
@@ -65,24 +69,6 @@ interface TerrainWorldLayerProps {
 
 type ThreeNamespace = typeof import('three');
 type CharacterRenderMode = 'anime-maiden' | 'world-glb' | 'procedural';
-
-const DEFAULT_WORLD_CHARACTER: GameCatalogItem = {
-  id: 'character.arthur',
-  itemType: 'character',
-  name: '亞瑟',
-  description: '帶著溫暖笑容、勇敢踏上冒險的旅人。',
-  scrollPrice: 9,
-  assetKey: 'character.arthur',
-  thumbnailUrl: '/assets/characters/arthur-thumbnail.webp',
-  isActive: true,
-  isStarter: true,
-  isStackable: false,
-  collisionRadius: 0.28,
-  minScale: 0.9,
-  maxScale: 1.1,
-  sortOrder: 10,
-  metadata: { model: '/assets/characters/arthur.glb', animation: 'Walk_InPlace' },
-};
 
 export function getAnimationClipName(clipNames: readonly string[], state: 'idle' | 'walk'): string | undefined {
   const statePattern = state === 'walk' ? /walk|run/i : /idle|iddle|stand|rest/i;
@@ -182,20 +168,6 @@ export function createProceduralCharacter(THREE: ThreeNamespace, item?: GameCata
   return character;
 }
 
-function getEquippedCatalogItem(gameData: ChildGameData): GameCatalogItem | undefined {
-  const equippedInventoryId = gameData.loadout?.equippedCharacterInventoryId;
-  const equippedInventory = equippedInventoryId
-    ? gameData.inventory.find((inventory) => inventory.id === equippedInventoryId)
-    : undefined;
-  const equippedItem = equippedInventory
-    ? gameData.catalog.find((item) => item.id === equippedInventory.catalogItemId)
-    : undefined;
-  return equippedItem && equippedItem.isActive
-    ? equippedItem
-    : gameData.catalog.find((item) => item.itemType === 'character' && item.isActive && item.assetKey === DEFAULT_WORLD_CHARACTER.assetKey)
-    ?? DEFAULT_WORLD_CHARACTER;
-}
-
 function getCurrentWorldQuality(): WorldQuality {
   const deviceNavigator = typeof navigator === 'undefined' ? undefined : navigator as Navigator & { deviceMemory?: number };
   const prefersReducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -265,7 +237,7 @@ export function TerrainWorldLayer({
   const worldQuality = useWorldQuality();
   const session = useWorldSocialSession();
   const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames);
-  const sceneInput = useMemo(() => createTerrainWorldSceneInput({ gameData, socialGameData: session?.gameData, session, placement, placementValid, showPetNames, dayNightEnabled, getEquippedCatalogItem, getCharacterRenderMode, getWorldCharacterModelUrl }), [dayNightEnabled, gameData, placement, placementValid, session, showPetNames]);
+  const sceneInput = useMemo(() => createTerrainWorldSceneInput({ gameData, socialGameData: session?.gameData, session, placement, placementValid, showPetNames, dayNightEnabled, getEquippedCatalogItem: getEquippedCharacterCatalogItem, getCharacterRenderMode, getWorldCharacterModelUrl }), [dayNightEnabled, gameData, placement, placementValid, session, showPetNames]);
   pausedRef.current = paused;
 
   useEffect(() => {
@@ -437,7 +409,7 @@ export function TerrainWorldLayer({
     runtimeRef.current?.update(sceneInput);
   }, [sceneInput]);
 
-  const equippedCatalogItem = getEquippedCatalogItem(gameData);
+  const equippedCatalogItem = getEquippedCharacterCatalogItem(gameData);
   const staticCharacterName = equippedCatalogItem?.name ?? '冒險旅人';
   const staticCharacterAccent = equippedCatalogItem?.assetKey === 'character.starlight-adventurer' ? '#7f8cff' : '#6ca477';
   const selectedEntity = selectedDecoration
@@ -524,12 +496,12 @@ export function TerrainWorldLayer({
   ];
 
   return (
-    <div className={`hh-terrain-world${placement ? ' is-placement-mode' : ''}`} data-world-status={status} data-child-id={childId} data-world-input-layout="portrait-control-band">
+    <div className={`hh-terrain-world${placement ? ' is-placement-mode' : ''}`} data-world-status={status} data-child-id={childId} data-world-input-layout="responsive-control-bands">
       <canvas
         ref={canvasRef}
         className="hh-terrain-world-canvas"
         tabIndex={0}
-        aria-label={placement ? '裝飾放置模式。按住裝飾並拖曳來移動位置；雙指捏合可縮放與旋轉。' : '習慣冒險島立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。'}
+        aria-label={placement ? '裝飾放置模式。按住裝飾並拖曳來移動位置；雙指捏合可縮放與旋轉。' : '習慣冒險島立體冒險世界。直向下方四分之一拖曳移動；橫向左下控制區拖曳移動，其餘區域單指調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。'}
         hidden={showStaticFallback}
         aria-hidden={showStaticFallback}
       />

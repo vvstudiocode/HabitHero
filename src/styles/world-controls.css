@@ -567,6 +567,25 @@
   }
 }
 
+@media (orientation: landscape) {
+  .hh-world-joystick--fixed {
+    display: block;
+    opacity: 0.46;
+    top: calc(100% - max(18px, calc(env(safe-area-inset-bottom, 0px) + 18px)) - 56px);
+    left: max(72px, calc(env(safe-area-inset-left, 0px) + 72px));
+  }
+
+  .hh-world-action-control {
+    bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+    left: calc(max(16px, env(safe-area-inset-left, 0px) + 16px) + 128px);
+  }
+
+  .hh-world-clean-mode-control {
+    bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+    left: calc(max(16px, env(safe-area-inset-left, 0px) + 16px) + 184px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hh-world-joystick {
     transition: none;

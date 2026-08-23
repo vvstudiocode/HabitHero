@@ -59,6 +59,7 @@ describe('supplied pet grounding and motion', () => {
   it('normalizes Mixamo Hips root motion before the pet mixer plays a walk clip', () => {
     const runtime = readFileSync(new URL('src/features/world/prototype-world-runtime.ts', root), 'utf8');
     const runtimeAnimation = readFileSync(new URL('src/features/world/world-runtime-animation.ts', root), 'utf8');
+    const characterRuntime = readFileSync(new URL('src/features/world/world-character-runtime.ts', root), 'utf8');
     assert.match(runtimeAnimation, /mixamorig:Hips|hips|pelvis/);
     assert.match(runtime, /createInPlaceAnimationClip\(getWalkAnimationClip\(animations\)!\)/);
     assert.match(runtime, /pauseAnimationAtIdlePose\(walkAction, mixer\)/);
@@ -66,8 +67,9 @@ describe('supplied pet grounding and motion', () => {
     assert.match(runtime, /getWalkIdlePoseTime\(nextAction\.getClip\(\)\.duration\)/);
     assert.match(runtime, /characterActions\.has\('idle'\)/);
     assert.match(runtime, /nextAction\.setEffectiveWeight\(1\)/);
-    assert.match(runtime, /getCharacterGroundingReferenceY\(characterBounds\.min\.y, footYs\)/);
-    assert.match(runtime, /characterFootNodes\.map\(\(node\) => node\.getWorldPosition/);
+    assert.match(runtime, /groundWorldCharacter\(THREE, \{/);
+    assert.match(characterRuntime, /getCharacterGroundingReferenceY\(bounds\.min\.y, footYs\)/);
+    assert.match(characterRuntime, /options\.footNodes\.map\(\(node\) => node\.getWorldPosition/);
     assert.match(runtime, /roamingActor\.model\.position\.y = roamingActor\.baseModelY;/);
     assert.match(runtime, /groundRoamingCharacterOnGrass\(\);/);
   });

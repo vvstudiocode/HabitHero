@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { Backpack, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flower2, Gift, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
+import { Backpack, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flower2, Gift, LogOut, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { formatTaskTime, formatTaskWindow, haveSameIds } from '../lib/child-dashboard-display';
@@ -152,6 +152,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [decorationPlacementPending, setDecorationPlacementPending] = useState(false);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
+  const [isVisitingFriendWorld, setIsVisitingFriendWorld] = useState(false);
+  const [leaveFriendWorldRequest, setLeaveFriendWorldRequest] = useState(0);
   const [cleanMode, setCleanMode] = useState(false);
   const [cleanModeHintVisible, setCleanModeHintVisible] = useState(false);
   const heroMenuOpenFrame = useRef<number | null>(null);
@@ -1014,6 +1016,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       { id: 'wishlist', title: '獎勵', tone: 'reward', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
       { id: 'growth', title: '成長', tone: 'growth', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
       { id: 'settings', title: '設定', tone: 'neutral', icon: <Settings size={17} />, onSelect: () => openChildFeature('settings') },
+      ...(isVisitingFriendWorld ? [{ id: 'leave-friend-world', title: '離開', tone: 'neutral' as const, icon: <LogOut size={17} color="#050505" strokeWidth={2.6} />, onSelect: () => { setLeaveFriendWorldRequest((request) => request + 1); closeHeroMenu(); } }] : []),
     ],
     goals: [],
     growth: [],
@@ -1126,7 +1129,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       <WorldSocialLayer
         childProfileId={activeChild.id}
         enabled={role === 'child'}
-        generalTaskId={todayAdventureSummary.generalActive[0]?.id}
+        leaveFriendWorldRequest={leaveFriendWorldRequest}
+        onVisitingChange={setIsVisitingFriendWorld}
       />
       <ChildAdventureBoard
         tasks={adventureTasks}

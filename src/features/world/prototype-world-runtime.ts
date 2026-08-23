@@ -124,6 +124,9 @@ import {
   type WorldRuntimeSession,
 } from './world-runtime-multiplayer';
 import { createPlayerGroundMarker, createPlayerGroundShadowMaterial } from './world-player-marker';
+import { createRemoteCharacterLoader } from './world-runtime-remote-character';
+import { createCharacterFallbackCatalogItem } from './world-character-loadout';
+import { groundWorldCharacter, getWorldCharacterFootNodes, mountWorldCharacterModel } from './world-character-runtime';
 
 export {
   PROTOTYPE_WORLD_ASSETS,
@@ -519,14 +522,6 @@ function createDecorationObject(
   return group;
 }
 
-function getCharacterFootNodes(source: Object3D): Object3D[] {
-  const footNodes: Object3D[] = [];
-  source.traverse((node) => {
-    if (/toe_end$/i.test(node.name)) footNodes.push(node);
-  });
-  return footNodes;
-}
-
 function getPetModelUrl(item: GameCatalogItem | undefined): string | undefined {
   return getCatalogPetModelUrl(item);
 }
@@ -809,6 +804,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let pausedTimer: number | undefined;
   let renderer: { dispose: () => void } | undefined;
   let scene: DisposableScene | undefined;
+  let remoteAvatarRuntime: ReturnType<typeof createRemoteAvatarRuntimeManager> | undefined;
   let loadingAbortController: AbortController | undefined;
   let removeListeners: (() => void) | undefined;
   let removeContextLostListener: (() => void) | undefined;
@@ -849,6 +845,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     loadingAbortController?.abort();
     characterSwapAbortController?.abort();
     characterSwapSequence += 1;
+    remoteAvatarRuntime?.dispose();
+    remoteAvatarRuntime = undefined;
     window.cancelAnimationFrame(animationFrame);
     if (pausedTimer !== undefined) window.clearTimeout(pausedTimer);
     removeListeners?.();
@@ -1163,16 +1161,26 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       playerRoot.name = 'player-root';
       playerRoot.position.set(options.session?.fixedSpawn?.x ?? 0, 0, options.session?.fixedSpawn?.z ?? terrainStep * 2.08);
       let appliedFixedSpawn = options.session?.fixedSpawn ? { ...options.session.fixedSpawn } : null;
-      const remoteAvatarRuntime = createRemoteAvatarRuntimeManager({ THREE, scene: worldScene, createCharacter: options.createProceduralCharacter, disposeRoot: (root) => disposeObject3D(root, disposalTracker) });
+      const activeRemoteAvatarRuntime = remoteAvatarRuntime = createRemoteAvatarRuntimeManager({
+        THREE,
+        scene: worldScene,
+        createCharacter: (three, characterAssetKey) => options.createProceduralCharacter(three, characterAssetKey ? createCharacterFallbackCatalogItem(characterAssetKey) : undefined),
+        loadCharacter: createRemoteCharacterLoader({ load: (url) => loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, url, signal), applyStyle: applyWarmHandPaintedCharacterStyle }),
+        disposeRoot: (root) => disposeObject3D(root, disposalTracker),
+      });
       const playerFollowHistory: WorldPoint2D[] = [];
-      let characterDefinition = defineAsset(THREE, characterSource);
-      let characterScale = PROTOTYPE_WORLD_CONFIG.characterTargetHeight / Math.max(characterDefinition.size.y, 0.001);
       const characterRoot = new THREE.Group();
       characterRoot.name = 'player-character';
-      characterRoot.scale.setScalar(characterScale);
       characterRoot.position.y = PLAYER_CHARACTER_GROUND_OFFSET;
-      characterSource.position.copy(characterDefinition.offset);
-      characterRoot.add(characterSource);
+      const characterMount = mountWorldCharacterModel(THREE, {
+        root: characterRoot,
+        model: characterSource,
+        targetHeight: PROTOTYPE_WORLD_CONFIG.characterTargetHeight,
+        parentY: playerRoot.position.y,
+      });
+      let characterDefinition = characterMount.definition;
+      let characterScale = characterMount.scale;
+      let characterFootNodes = characterMount.footNodes;
       playerRoot.add(characterRoot);
       worldScene.add(playerRoot);
 
@@ -1226,7 +1234,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         roamingActor = {
           object: roamingRoot,
           model: roamingModel,
-          footNodes: getCharacterFootNodes(roamingModel),
+          footNodes: getWorldCharacterFootNodes(roamingModel),
           baseModelY: roamingModel.position.y,
           animationTime: 0,
           facing: { x: 0, z: 1 },
@@ -1303,18 +1311,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         playCharacterAction('idle');
       };
       configureCharacterAnimation();
-      let characterFootNodes = getCharacterFootNodes(characterSource);
       const groundCharacterOnGrass = () => {
-        characterSource.updateMatrixWorld(true);
-        const characterBounds = new THREE.Box3().setFromObject(characterSource);
-        const footYs = characterFootNodes.map((node) => node.getWorldPosition(new THREE.Vector3()).y);
-        const referenceY = getCharacterGroundingReferenceY(characterBounds.min.y, footYs);
-        characterRoot.position.y = getGroundedRootY(
-          characterRoot.position.y,
-          referenceY,
-          playerRoot.position.y,
-        );
-        characterRoot.updateMatrixWorld(true);
+        groundWorldCharacter(THREE, {
+          root: characterRoot,
+          model: characterSource,
+          footNodes: characterFootNodes,
+          parentY: playerRoot.position.y,
+        });
       };
       groundCharacterOnGrass();
 
@@ -2009,12 +2012,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             characterRoot.remove(previousSource);
             characterSource = nextSource;
             characterAnimations = nextAnimations;
-            characterDefinition = defineAsset(THREE, characterSource);
-            characterScale = PROTOTYPE_WORLD_CONFIG.characterTargetHeight / Math.max(characterDefinition.size.y, 0.001);
-            characterRoot.scale.setScalar(characterScale);
-            characterSource.position.copy(characterDefinition.offset);
-            characterRoot.add(characterSource);
-            characterFootNodes = getCharacterFootNodes(characterSource);
+            const nextCharacterMount = mountWorldCharacterModel(THREE, {
+              root: characterRoot,
+              model: characterSource,
+              targetHeight: PROTOTYPE_WORLD_CONFIG.characterTargetHeight,
+              parentY: playerRoot.position.y,
+            });
+            characterDefinition = nextCharacterMount.definition;
+            characterScale = nextCharacterMount.scale;
+            characterFootNodes = nextCharacterMount.footNodes;
             configureCharacterAnimation();
             groundCharacterOnGrass();
             const previousIndex = resourceRoots.indexOf(previousSource);
@@ -2059,7 +2065,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           optimisticPetActorsDirty = false;
         }
         updateDecorationObjects(next.gameData);
-        remoteAvatarRuntime.update(next.session?.multiplayer?.remoteAvatars ?? []);
+        activeRemoteAvatarRuntime.update(next.session?.multiplayer?.remoteAvatars ?? []);
       };
       updateScene(latestRuntimeUpdate);
 
@@ -2076,6 +2082,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         camera.updateProjectionMatrix();
         rendererInstance.setSize(width, height, false);
       };
+      const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize);
+      resizeObserver?.observe(options.canvas);
       const placementRaycaster = new THREE.Raycaster();
       const placementNdc = new THREE.Vector2();
       const placementGround = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -2223,7 +2231,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           pointerId: event.pointerId,
           pointerType: event.pointerType === 'mouse' ? 'mouse' : event.pointerType === 'pen' ? 'pen' : 'touch',
           point,
-          zone: event.pointerType === 'mouse' ? 'camera' : getWorldInputZone(point, rect.height),
+          zone: event.pointerType === 'mouse' ? 'camera' : getWorldInputZone(point, rect.height, rect.width),
         });
       };
       const onPointerMove = (event: PointerEvent) => {
@@ -2289,13 +2297,19 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       const onKeyUp = (event: KeyboardEvent) => keys.delete(event.key.toLowerCase());
       const resetInput = () => { keys.clear(); placementPointers.clear(); placementGesture = null; pendingDecorationSelection = null; pendingPetSelection = null; controller?.reset(); };
+      const handleViewportResize = () => {
+        resize();
+        resetInput();
+      };
       options.canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
       options.canvas.addEventListener('pointermove', onPointerMove, { passive: false });
       options.canvas.addEventListener('pointerup', onPointerEnd);
       options.canvas.addEventListener('pointercancel', onPointerEnd);
       window.addEventListener('keydown', onKeyDown);
       window.addEventListener('keyup', onKeyUp);
-      window.addEventListener('resize', resize);
+      window.addEventListener('resize', handleViewportResize);
+      window.addEventListener('orientationchange', handleViewportResize);
+      window.visualViewport?.addEventListener('resize', handleViewportResize);
       window.addEventListener('blur', resetInput);
       window.addEventListener('pagehide', resetInput);
       document.addEventListener('visibilitychange', resetInput);
@@ -2306,7 +2320,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         options.canvas.removeEventListener('pointercancel', onPointerEnd);
         window.removeEventListener('keydown', onKeyDown);
         window.removeEventListener('keyup', onKeyUp);
-        window.removeEventListener('resize', resize);
+        window.removeEventListener('resize', handleViewportResize);
+        window.removeEventListener('orientationchange', handleViewportResize);
+        window.visualViewport?.removeEventListener('resize', handleViewportResize);
+        resizeObserver?.disconnect();
         window.removeEventListener('blur', resetInput);
         window.removeEventListener('pagehide', resetInput);
         document.removeEventListener('visibilitychange', resetInput);
@@ -2553,7 +2570,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             updatePetAnimation(actor, true, delta, prefersReducedMotion);
           }
         });
-        remoteAvatarRuntime.render(Date.now());
+        activeRemoteAvatarRuntime.render(Date.now());
         if (mixer) mixer.update(delta);
         if (roamingMixer) roamingMixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
         groundCharacterOnGrass();

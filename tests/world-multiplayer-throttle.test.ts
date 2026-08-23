@@ -60,4 +60,12 @@ describe('world multiplayer avatar throttle', () => {
     assert.equal(second.event?.seq, 2);
     assert.ok(JSON.stringify(second.event).length < 512);
   });
+
+  it('broadcasts a character change even when the avatar has not moved', () => {
+    const sender = createAvatarBroadcastController({ connectionId: 'connection-1', childProfileId: 'child-1' });
+    assert.ok(sender.next(input({ characterAssetKey: 'character.arthur' })).event);
+    const changed = sender.next(input({ now: 125, characterAssetKey: 'character.elina' }));
+
+    assert.equal(changed.event?.characterAssetKey, 'character.elina');
+  });
 });

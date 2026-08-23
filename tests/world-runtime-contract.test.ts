@@ -164,10 +164,10 @@ describe('prototype world runtime contracts', () => {
   });
 
   it('wires the portrait control band to independent movement, camera, and pinch input', () => {
-    assert.match(runtimeSource, /getWorldInputZone\(point, rect\.height\)/);
+    assert.match(runtimeSource, /getWorldInputZone\(point, rect\.height, rect\.width\)/);
     assert.match(runtimeSource, /zone: event\.pointerType === 'mouse' \? 'camera' : getWorldInputZone/);
-    assert.match(worldLayerSource, /data-world-input-layout="portrait-control-band"/);
-    assert.match(worldLayerSource, /下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放/);
+    assert.match(worldLayerSource, /data-world-input-layout="responsive-control-bands"/);
+    assert.match(worldLayerSource, /橫向左下控制區拖曳移動，其餘區域單指調整視角，雙指捏合縮放/);
     assert.equal(PROTOTYPE_WORLD_CONFIG.cameraPitchMax, Math.PI * (89 / 180));
     assert.match(read('../terrain-prototype/index.html'), /CAMERA_PITCH_MAX = Math\.PI\s*\*\s*\(89\s*\/\s*180\)/);
   });

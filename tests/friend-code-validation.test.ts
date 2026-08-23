@@ -23,9 +23,15 @@ describe('friend code validation', () => {
     assert.equal(FRIEND_CODE_LENGTH, 32);
     assert.deepEqual(validateFriendCode(code), { valid: true, normalized: code });
     assert.deepEqual(validateFriendCode(formatFriendCode(code)), { valid: true, normalized: code });
-    assert.equal(validateFriendCode('A'.repeat(FRIEND_CODE_LENGTH - 1)).valid, false);
+    assert.equal(validateFriendCode(`${'A'.repeat(FRIEND_CODE_LENGTH - 1)}!`).valid, false);
     assert.equal(validateFriendCode('A'.repeat(FRIEND_CODE_LENGTH + 1)).valid, false);
     assert.equal(validateFriendCode('ABCD1234EFGH5678IJKL9012MNOP345!').valid, false);
+  });
+
+  it('accepts an account name as the short friend identifier', () => {
+    assert.deepEqual(validateFriendCode('  星芽_01  '), { valid: false, normalized: '星芽_01', reason: '好友帳號或代碼格式不正確。' });
+    assert.deepEqual(validateFriendCode(' XingYa_01 '), { valid: true, normalized: 'xingya_01' });
+    assert.equal(formatFriendCode('XingYa_01'), 'xingya_01');
   });
 
   it('formats only validated values into UI groups', () => {

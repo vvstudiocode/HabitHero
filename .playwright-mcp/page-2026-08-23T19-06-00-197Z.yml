@@ -1,0 +1,40 @@
+- generic [ref=f30e10]:
+  - banner [ref=f30e11]:
+    - generic [ref=f30e12]:
+      - generic [ref=f30e14]:
+        - generic "習慣冒險島立體冒險世界。直向下方四分之一拖曳移動；橫向左下控制區拖曳移動，其餘區域單指調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [ref=f30e15]
+        - generic: 拖曳移動
+        - generic [ref=f30e16]:
+          - group:
+            - button
+            - button
+            - button
+          - button "開啟動作選單" [ref=f30e17]
+        - button "開啟清爽模式" [ref=f30e22]
+        - status [ref=f30e26]:
+          - strong [ref=f30e27]: 正在準備冒險地圖
+          - paragraph [ref=f30e28]: 讀取草地與大樹模型…
+      - generic "儀表板統計":
+        - generic "加入天數：13":
+          - strong:
+            - generic: "13"
+        - generic "我的點數：186":
+          - strong:
+            - generic: "186"
+        - generic "我的卷軸：0":
+          - strong:
+            - generic: "0"
+      - button "開啟功能選單" [ref=f30e32]
+  - button "開啟好友列表，目前 1 位好友" [ref=f30e37]
+  - generic [ref=f30e43]:
+    - button "開啟我的世界 的世界聊天" [ref=f30e44]:
+      - generic [ref=f30e45]: 我的世界 的世界聊天
+      - generic [ref=f30e46]: 和好友說說話吧！
+    - button "收合聊天摘要" [expanded] [ref=f30e48]
+  - complementary "我的冒險" [ref=f30e51]:
+    - button "每日冒險 完成 0 個，共 6 個" [ref=f30e53]:
+      - generic [ref=f30e54]: 每日冒險
+      - generic "完成 0 個，共 6 個" [ref=f30e55]: 0/6
+    - button "一般冒險 完成 0 個，共 0 個" [ref=f30e59]:
+      - generic [ref=f30e60]: 一般冒險
+      - generic "完成 0 個，共 0 個" [ref=f30e61]: 0/0

@@ -1,10 +1,12 @@
 import { getShortestAngleDistance, normalizeWorldAngle } from './world-broadcast';
 import type { AvatarEmote, AvatarMotion } from './contracts';
 import type { RemoteAvatarStateSnapshot } from './remote-avatar-state';
+import { REMOTE_AVATAR_MAX_EXTRAPOLATION_MS } from './limits';
 
 export interface RemoteAvatarRenderState {
   connectionId: string;
   childProfileId: string;
+  characterAssetKey?: string;
   x: number;
   z: number;
   rotationY: number;
@@ -33,13 +35,22 @@ function toRenderState(
   previous: RemoteAvatarStateSnapshot,
   target: RemoteAvatarStateSnapshot,
   progress: number,
+  extrapolationMs = 0,
 ): RemoteAvatarRenderState {
+  const intervalMs = Math.max(target.receivedAt - previous.receivedAt, 1);
+  const extraProgress = target.motion === 'walk' && previous.motion === 'walk'
+    ? Math.min(extrapolationMs, REMOTE_AVATAR_MAX_EXTRAPOLATION_MS) / intervalMs
+    : 0;
+  const predictedX = previous.x + (target.x - previous.x) * (progress + extraProgress);
+  const predictedZ = previous.z + (target.z - previous.z) * (progress + extraProgress);
+  const predictedRotation = target.rotationY + getShortestAngleDistance(previous.rotationY, target.rotationY) * extraProgress;
   return {
     connectionId: target.connectionId,
     childProfileId: target.childProfileId,
-    x: previous.x + (target.x - previous.x) * progress,
-    z: previous.z + (target.z - previous.z) * progress,
-    rotationY: interpolateAngle(previous.rotationY, target.rotationY, progress),
+    characterAssetKey: target.characterAssetKey,
+    x: predictedX,
+    z: predictedZ,
+    rotationY: normalizeWorldAngle(interpolateAngle(previous.rotationY, target.rotationY, progress) + getShortestAngleDistance(target.rotationY, predictedRotation)),
     motion: target.motion,
     emote: target.emote,
     visible: true,
@@ -69,7 +80,7 @@ export function createRemoteAvatarController(): RemoteAvatarController {
     if (disposed || !previous || !target || !Number.isFinite(now)) return null;
     if (previous === target || target.receivedAt <= previous.receivedAt) return toRenderState(target, target, 1);
     const progress = clampProgress((now - previous.receivedAt) / (target.receivedAt - previous.receivedAt));
-    return toRenderState(previous, target, progress);
+    return toRenderState(previous, target, progress, Math.max(0, now - target.receivedAt));
   };
 
   return {

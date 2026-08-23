@@ -48,9 +48,13 @@ export type WorldInputEvent =
 export const JOYSTICK_RADIUS = 56;
 export const JOYSTICK_DEAD_ZONE = 10;
 export const WORLD_CONTROL_BAND_RATIO = 0.25;
+export const LANDSCAPE_MOVEMENT_BAND_RATIO = 0.34;
 
-export function getWorldInputZone(point: WorldPoint, viewportHeight: number): WorldInputZone {
-  return viewportHeight > 0 && point.y >= viewportHeight * (1 - WORLD_CONTROL_BAND_RATIO)
+export function getWorldInputZone(point: WorldPoint, viewportHeight: number, viewportWidth = 0): WorldInputZone {
+  const isLandscape = viewportWidth > viewportHeight && viewportHeight > 0;
+  const inMovementBand = point.y >= viewportHeight * (1 - WORLD_CONTROL_BAND_RATIO);
+  const inLandscapeLeftBand = viewportWidth > 0 && point.x <= viewportWidth * LANDSCAPE_MOVEMENT_BAND_RATIO;
+  return inMovementBand && (!isLandscape || inLandscapeLeftBand)
     ? 'movement'
     : 'camera';
 }

@@ -154,9 +154,9 @@
   position: fixed;
   inset: 0;
   width: 100%;
-  height: 100vh;
-  min-height: 100vh;
-  max-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -803,6 +803,33 @@
 
 .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-collapsed .hh-character-menu-submenu .hh-character-menu-action:nth-child(7) {
   transition-delay: 0ms;
+}
+
+@media (orientation: landscape) {
+  .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
+    max-height: calc(100dvh - (17px + var(--hh-menu-submenu-offset)));
+    gap: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(232px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    gap: 6px;
+    overflow-y: auto;
+  }
+
+  .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu .hh-character-menu-action {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 6px 8px;
+  }
 }
 
 .hh-character-menu[data-menu-variant="child"] .hh-character-menu-root>.hh-character-menu-action:nth-child(3) {

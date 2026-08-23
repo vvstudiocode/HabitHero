@@ -35,10 +35,16 @@ describe('world chat UI contract', () => {
     const sheet = await read('src/features/world-chat/components/WorldChatSheet.tsx');
     const bubble = await read('src/features/world-chat/components/AvatarChatBubble.tsx');
     assert.match(dock, /最新訊息/);
-    assert.match(dock, /未讀/);
+    assert.doesNotMatch(dock, /未讀/);
     assert.match(dock, /aria-label/);
+    assert.match(dock, /ChevronDown/);
+    assert.match(dock, /aria-expanded/);
+    assert.match(dock, /收合聊天摘要|展開聊天摘要/);
+    assert.match(dock, /collapsed \?[\s\S]*latest/);
     assert.match(sheet, /role="dialog"/);
     assert.match(sheet, /aria-modal="true"/);
+    assert.match(sheet, /scrollTop\s*=\s*.*scrollHeight/);
+    assert.doesNotMatch(sheet, /返回/);
     assert.match(sheet, /onReport/);
     assert.match(sheet, /type="submit"/);
     assert.match(bubble, /prefers-reduced-motion|motion-reduce|reduced-motion/);

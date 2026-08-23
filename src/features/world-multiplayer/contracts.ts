@@ -14,6 +14,7 @@ export interface AvatarStatePayload {
   v: typeof PROTOCOL_VERSION;
   connectionId: string;
   childProfileId: string;
+  characterAssetKey?: string;
   seq: number;
   x: number;
   z: number;
@@ -43,6 +44,7 @@ export interface WorldEventEnvelope<TPayload = unknown> {
 export interface AvatarStatePayloadInput {
   connectionId: string;
   childProfileId: string;
+  characterAssetKey?: string;
   seq: number;
   x: number;
   z: number;

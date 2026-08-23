@@ -2,23 +2,28 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ChatReportInput, WorldChatMessage } from '../contracts';
 
 interface WorldChatSheetProps {
+  title?: string;
   messages: WorldChatMessage[];
   loading?: boolean;
   sending?: boolean;
   error?: string | null;
   onClose: () => void;
-  onBack?: () => void;
   onSend: (body: string) => Promise<void>;
   onReport: (input: ChatReportInput) => Promise<void> | void;
 }
 
-export function WorldChatSheet({ messages, loading = false, sending = false, error, onClose, onBack, onSend, onReport }: WorldChatSheetProps) {
+export function WorldChatSheet({ title = '好友世界聊天', messages, loading = false, sending = false, error, onClose, onSend, onReport }: WorldChatSheetProps) {
   const [draft, setDraft] = useState('');
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportMessage, setReportMessage] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { closeButtonRef.current?.focus(); }, []);
+  useEffect(() => {
+    const messageList = messageListRef.current;
+    if (messageList) messageList.scrollTop = messageList.scrollHeight;
+  }, [loading, messages.length, messages.at(-1)?.id]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -41,13 +46,10 @@ export function WorldChatSheet({ messages, loading = false, sending = false, err
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/35 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="世界聊天">
       <section className="flex max-h-[min(42rem,90vh)] w-full max-w-lg flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
         <header className="flex items-center justify-between gap-3 border-b border-slate-100 p-4">
-          <div className="flex items-center gap-2">
-            {onBack && <button type="button" className="min-h-11 rounded-xl px-3 font-bold text-slate-600 hover:bg-slate-100" aria-label="返回" onClick={onBack}>返回</button>}
-            <h2 className="text-lg font-black text-slate-900">好友世界聊天</h2>
-          </div>
+          <h2 className="text-lg font-black text-slate-900">{title}</h2>
           <button ref={closeButtonRef} type="button" className="min-h-11 min-w-11 rounded-xl font-black text-slate-600 hover:bg-slate-100" aria-label="關閉聊天" onClick={onClose}>關閉</button>
         </header>
-        <div className="min-h-48 flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
+        <div ref={messageListRef} className="min-h-48 flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
           {loading && <p className="text-sm font-bold text-slate-500">聊天載入中…</p>}
           {!loading && messages.length === 0 && <p className="text-sm font-bold text-slate-500">尚無訊息，打個招呼吧！</p>}
           {messages.map((message) => (

@@ -17,6 +17,7 @@ const payload = (overrides: Record<string, unknown> = {}) => ({
   rotationY: 0,
   motion: 'idle',
   emote: 'none',
+  characterAssetKey: 'character.arthur',
   sentAt: 0,
   ...overrides,
 });
@@ -71,6 +72,7 @@ describe('remote avatar state', () => {
       rotationY: 0,
       motion: 'idle',
       emote: 'none',
+      characterAssetKey: 'character.arthur',
       visible: true,
     });
     assert.equal(controller.update(100)?.x, 1);
@@ -91,5 +93,19 @@ describe('remote avatar state', () => {
     controller.ingest(second.state as RemoteAvatarStateSnapshot);
 
     assert.ok(Math.abs((controller.update(50)?.rotationY ?? 0) - 2 * Math.PI) < 0.001 || Math.abs(controller.update(50)?.rotationY ?? 0) < 0.001);
+  });
+
+  it('briefly predicts walking after a packet gap instead of freezing at the last snapshot', () => {
+    const receiver = createRemoteAvatarStateReceiver();
+    const controller = createRemoteAvatarController();
+    const first = receiver.accept(event({ x: 0, motion: 'walk' }), 0);
+    const second = receiver.accept(event({ seq: 2, x: 0.5, motion: 'walk', sentAt: 100 }), 100);
+
+    controller.ingest(first.state as RemoteAvatarStateSnapshot);
+    controller.ingest(second.state as RemoteAvatarStateSnapshot);
+
+    const predicted = controller.update(180);
+    assert.ok((predicted?.x ?? 0) > 0.5);
+    assert.ok((predicted?.x ?? 0) < 1);
   });
 });

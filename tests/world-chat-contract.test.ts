@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   MAX_CHAT_HISTORY,
   MAX_CHAT_PAGE_SIZE,
@@ -65,6 +66,7 @@ describe('world chat contracts', () => {
     const repository = await read('src/lib/social-data/world-chat-repository.ts');
     const service = await read('src/features/world-chat/chat-service.ts');
     const hook = await read('src/features/world-chat/hooks/use-world-chat.ts');
+    const dock = await read('src/features/world-chat/components/WorldChatDock.tsx');
     const sheet = await read('src/features/world-chat/components/WorldChatSheet.tsx');
     const bubble = await read('src/features/world-chat/components/AvatarChatBubble.tsx');
 
@@ -73,16 +75,73 @@ describe('world chat contracts', () => {
     assert.match(repository, /friend_world_message_reports/);
     assert.match(service, /send_friend_world_message/);
     assert.match(service, /validateChatMessageText/);
-    assert.match(hook, /MAX_CHAT_HISTORY|MAX_CHAT_PAGE_SIZE/);
+    assert.match(hook, /MAX_CHAT_HISTORY/);
+    assert.doesNotMatch(hook, /service\.list\(|service\.unreadCount\(/);
     assert.match(hook, /postgres_changes|chat_created_v1/);
+    assert.match(dock, /slice\(-6\)/);
+    assert.match(dock, /hh-world-chat-dock/);
     for (const source of [sheet, bubble]) {
       assert.doesNotMatch(source, /dangerouslySetInnerHTML/);
     }
     assert.match(sheet, /aria-label/);
     assert.match(sheet, /檢舉/);
-    assert.match(sheet, /返回/);
     assert.match(sheet, /關閉/);
     assert.match(bubble, /4000|BUBBLE_DURATION_MS/);
     assert.match(bubble, /line-clamp-2/);
+  });
+
+  it('multiplexes subscriptions for the same world instead of subscribing one channel twice', async () => {
+    const repository = await read('src/lib/social-data/world-chat-repository.ts');
+    assert.match(repository, /WeakMap/);
+    assert.match(repository, /listeners:\s*Set/);
+    assert.match(repository, /channel\.subscribe\(\)/);
+    assert.match(repository, /removeChannel\(entry\.channel\)/);
+
+    let callback: ((payload: unknown) => void) | undefined;
+    let onCount = 0;
+    let subscribeCount = 0;
+    let removeCount = 0;
+    const channel = {
+      on: (_event: string, _filter: unknown, next: (payload: unknown) => void) => {
+        onCount += 1;
+        callback = next;
+        return channel;
+      },
+      subscribe: () => {
+        subscribeCount += 1;
+        return channel;
+      },
+    };
+    const client = {
+      realtime: { setAuth: async () => undefined },
+      channel: () => channel,
+      removeChannel: async () => { removeCount += 1; return 'ok'; },
+    } as unknown as SupabaseClient;
+
+    const { createWorldChatRepository } = await import('../src/lib/social-data/world-chat-repository');
+    const chatRepository = createWorldChatRepository(client);
+    const receivedA: unknown[] = [];
+    const receivedB: unknown[] = [];
+    const releaseA = chatRepository.subscribe('owner-1', (message) => receivedA.push(message));
+    const releaseB = chatRepository.subscribe('owner-1', (message) => receivedB.push(message));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    callback?.({ new: {
+      id: 'message-1',
+      world_owner_child_profile_id: 'owner-1',
+      sender_child_profile_id: 'sender-1',
+      sender_display_name: '小宣',
+      body: '嗨',
+      status: 'visible',
+      created_at: '2026-08-24T00:00:00.000Z',
+    } });
+
+    assert.equal(onCount, 1);
+    assert.equal(subscribeCount, 1);
+    assert.equal(receivedA.length, 1);
+    assert.equal(receivedB.length, 1);
+    releaseA();
+    assert.equal(removeCount, 0);
+    releaseB();
+    assert.equal(removeCount, 1);
   });
 });

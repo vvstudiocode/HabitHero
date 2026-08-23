@@ -1,0 +1,60 @@
+- generic [ref=f19e4]:
+  - banner [ref=f19e5]:
+    - generic [ref=f19e6]:
+      - generic [ref=f19e8]:
+        - generic "習慣冒險島立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [ref=f19e9]
+        - text: 拖曳移動
+        - generic [ref=f19e10]:
+          - group:
+            - button
+            - button
+            - button
+          - button "開啟動作選單" [ref=f19e11]
+        - button "開啟清爽模式" [ref=f19e16]
+      - generic "儀表板統計":
+        - generic "加入天數：26":
+          - strong:
+            - generic: "26"
+        - generic "我的點數：31":
+          - strong:
+            - generic: "31"
+        - generic "我的卷軸：1":
+          - strong:
+            - generic: "1"
+      - button "開啟功能選單" [ref=f19e21]
+  - region "合作冒險空白狀態" [ref=f19e27]:
+    - paragraph [ref=f19e28]: 尚無合作冒險。
+    - button "建立合作冒險" [ref=f19e29]
+  - button "開啟好友列表，目前 1 位好友" [active] [ref=f19e30]: 👥 好友
+  - button "開啟世界聊天" [ref=f19e31]:
+    - generic [ref=f19e32]: 最新訊息
+    - generic [ref=f19e33]: 和好友說說話吧！
+  - dialog "好友列表" [ref=f19e47]:
+    - generic [ref=f19e48]:
+      - generic [ref=f19e49]:
+        - heading "我的好友" [level=2] [ref=f19e50]
+        - button "關閉好友列表" [ref=f19e51]: 關閉
+      - generic [ref=f19e52]:
+        - generic [ref=f19e53]: 輸入好友代碼
+        - generic [ref=f19e54]:
+          - textbox "好友代碼" [ref=f19e55]:
+            - /placeholder: 32 碼好友代碼
+          - button "送出" [disabled] [ref=f19e56]
+        - paragraph [ref=f19e57]: 我的好友代碼：814515BB786DB17AA6C0B5C95469B7DF
+      - region [ref=f19e58]:
+        - heading "好友 1/50" [level=3] [ref=f19e59]
+        - list [ref=f19e60]:
+          - listitem [ref=f19e61]:
+            - generic [ref=f19e62]:
+              - strong [ref=f19e63]: 星芽
+              - text: 離線世界
+            - generic [ref=f19e64]:
+              - button "刪除好友星芽" [ref=f19e65]: 刪除
+              - button "參觀" [ref=f19e66]
+  - complementary "我的冒險" [ref=f19e34]:
+    - button "每日冒險 完成 0 個，共 2 個" [ref=f19e36]:
+      - generic [ref=f19e37]: 每日冒險
+      - generic "完成 0 個，共 2 個" [ref=f19e38]: 0/2
+    - button "一般冒險 完成 0 個，共 3 個" [ref=f19e42]:
+      - generic [ref=f19e43]: 一般冒險
+      - generic "完成 0 個，共 3 個" [ref=f19e44]: 0/3

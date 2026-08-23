@@ -1,0 +1,8 @@
+[  323523ms] [ERROR] The final argument passed to %s changed size between renders. The order and size of this array must remain constant.
+
+Previous: %s
+Incoming: %s useEffect [[object Object]] [true, [object Object]] @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5627
+[  323523ms] [ERROR] The final argument passed to %s changed size between renders. The order and size of this array must remain constant.
+
+Previous: %s
+Incoming: %s useEffect [[object Object]] [true, [object Object]] @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5627

@@ -1,0 +1,46 @@
+- generic [ref=f19e4]:
+  - banner [ref=f19e5]:
+    - generic [ref=f19e6]:
+      - generic [ref=f19e8]:
+        - generic "習慣冒險島立體冒險世界。下方四分之一拖曳移動，上方單指拖曳調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [ref=f19e9]
+        - text: 拖曳移動
+        - generic [ref=f19e10]:
+          - group:
+            - button
+            - button
+            - button
+          - button "開啟動作選單" [ref=f19e11]
+        - button "開啟清爽模式" [ref=f19e16]
+      - generic "儀表板統計":
+        - generic "加入天數：26":
+          - strong:
+            - generic: "26"
+        - generic "我的點數：31":
+          - strong:
+            - generic: "31"
+        - generic "我的卷軸：1":
+          - strong:
+            - generic: "1"
+      - button "開啟功能選單" [ref=f19e21]
+  - generic "參觀星芽的世界":
+    - generic [ref=f19e67]:
+      - strong [ref=f19e68]: 星芽 的世界
+      - generic [ref=f19e69]: 離線也能參觀 · 世界版本 814
+    - button "回到我的世界" [ref=f19e70]
+  - region "合作冒險空白狀態" [ref=f19e27]:
+    - paragraph [ref=f19e71]: 尚無合作冒險。
+    - button "建立合作冒險" [ref=f19e72]
+  - status [ref=f19e73]:
+    - text: 正在參觀 星芽 的世界
+    - button "回到我的世界" [ref=f19e74]
+  - button "開啟好友列表，目前 1 位好友" [ref=f19e30]: 👥 好友
+  - button "最新訊息：小宣：小宣測試聊天" [ref=f19e75]:
+    - generic [ref=f19e32]: 最新訊息
+    - generic [ref=f19e33]: 小宣：小宣測試聊天
+  - complementary "我的冒險" [ref=f19e34]:
+    - button "每日冒險 完成 0 個，共 2 個" [ref=f19e36]:
+      - generic [ref=f19e37]: 每日冒險
+      - generic "完成 0 個，共 2 個" [ref=f19e38]: 0/2
+    - button "一般冒險 完成 0 個，共 3 個" [ref=f19e42]:
+      - generic [ref=f19e43]: 一般冒險
+      - generic "完成 0 個，共 3 個" [ref=f19e44]: 0/3

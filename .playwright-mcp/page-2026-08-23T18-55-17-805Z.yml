@@ -1,0 +1,37 @@
+- generic [ref=f26e4]:
+  - banner [ref=f26e5]:
+    - generic [ref=f26e6]:
+      - generic [ref=f26e8]:
+        - generic "習慣冒險島立體冒險世界。直向下方四分之一拖曳移動；橫向左下控制區拖曳移動，其餘區域單指調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [ref=f26e9]
+        - generic: 拖曳移動
+        - generic [ref=f26e10]:
+          - group:
+            - button
+            - button
+            - button
+          - button "開啟動作選單" [ref=f26e11]
+        - button "開啟清爽模式" [ref=f26e16]
+      - generic "儀表板統計":
+        - generic "加入天數：13":
+          - strong:
+            - generic: "13"
+        - generic "我的點數：186":
+          - strong:
+            - generic: "186"
+        - generic "我的卷軸：0":
+          - strong:
+            - generic: "0"
+      - button "開啟功能選單" [ref=f26e21]
+  - button "開啟好友列表，目前 1 位好友" [ref=f26e26]
+  - generic [ref=f26e32]:
+    - button "開啟我的世界 的世界聊天" [ref=f26e33]:
+      - generic [ref=f26e34]: 我的世界 的世界聊天
+      - generic [ref=f26e35]: 和好友說說話吧！
+    - button "收合聊天摘要" [expanded] [ref=f26e37]
+  - complementary "我的冒險" [ref=f26e40]:
+    - button "每日冒險 完成 0 個，共 6 個" [ref=f26e42]:
+      - generic [ref=f26e43]: 每日冒險
+      - generic "完成 0 個，共 6 個" [ref=f26e44]: 0/6
+    - button "一般冒險 完成 0 個，共 0 個" [ref=f26e48]:
+      - generic [ref=f26e49]: 一般冒險
+      - generic "完成 0 個，共 0 個" [ref=f26e50]: 0/0

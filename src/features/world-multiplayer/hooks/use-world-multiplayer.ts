@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
-import { AVATAR_EMOTE_EVENT, AVATAR_STATE_EVENT, createAvatarBroadcastController, type AvatarBroadcastInput } from '../world-broadcast';
+import { AVATAR_STATE_EVENT, createAvatarBroadcastController, type AvatarBroadcastInput } from '../world-broadcast';
 import { WORLD_REVISION_EVENT } from '../contracts';
 import { flattenPresenceState, getPresenceAdmissionDecision, type PresenceAdmissionDecision, type WorldPresenceMember } from '../world-presence';
 import { getFriendWorldLiveTopic } from '../world-topic';
@@ -11,11 +11,12 @@ interface WorldMultiplayerOptions {
   client: SupabaseClient | null;
   worldOwnerChildProfileId: string | null;
   childProfileId: string | null;
+  characterAssetKey?: string | null;
   enabled?: boolean;
   onWorldRevision?: () => void;
 }
 
-export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childProfileId, enabled = true, onWorldRevision }: WorldMultiplayerOptions) {
+export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childProfileId, characterAssetKey, enabled = true, onWorldRevision }: WorldMultiplayerOptions) {
   const [presenceMembers, setPresenceMembers] = useState<WorldPresenceMember[]>([]);
   const [remoteAvatars, setRemoteAvatars] = useState<RemoteAvatarStateSnapshot[]>([]);
   const [crowded, setCrowded] = useState(false);
@@ -112,7 +113,8 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
         }
         setRemoteAvatars((current) => [...current.filter((avatar) => avatar.connectionId !== accepted.state.connectionId), accepted.state]);
       });
-      activeChannel.on('broadcast', { event: AVATAR_EMOTE_EVENT }, () => undefined);
+      // Emotes are carried in avatar_state_v1 so position, motion, and action
+      // remain one ordered snapshot for the remote avatar renderer.
       activeChannel.on('broadcast', { event: WORLD_REVISION_EVENT }, () => {
         if (isCurrentChannel()) onWorldRevision?.();
       });
@@ -176,11 +178,11 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
     if (!channel || crowdedRef.current || !admission.accepted) return false;
     const otherMemberCount = admission.acceptedConnectionIds.filter((id) => id !== connectionIdRef.current).length;
     if (otherMemberCount < 1) return false;
-    const result = controllerRef.current.next({ ...input, otherMemberCount });
+    const result = controllerRef.current.next({ ...input, characterAssetKey: characterAssetKey ?? undefined, otherMemberCount });
     if (!result.event) return false;
     void channel.send({ type: 'broadcast', event: AVATAR_STATE_EVENT, payload: result.event });
     return true;
-  }, []);
+  }, [characterAssetKey]);
 
   return {
     connectionId: connectionIdRef.current,

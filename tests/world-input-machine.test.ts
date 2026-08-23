@@ -19,6 +19,12 @@ describe('world input state machine', () => {
     assert.equal(getWorldInputZone({ x: 140, y: 120 }, 720), 'camera');
   });
 
+  it('keeps landscape movement controls in the lower-left touch band', () => {
+    assert.equal(getWorldInputZone({ x: 120, y: 390 }, 480, 800), 'movement');
+    assert.equal(getWorldInputZone({ x: 520, y: 390 }, 480, 800), 'camera');
+    assert.equal(getWorldInputZone({ x: 120, y: 180 }, 480, 800), 'camera');
+  });
+
   it('starts a dynamic joystick in the lower control quarter and stops on release', () => {
     let state = worldInputReducer(createInitialWorldInputState(), touchDown(4, { x: 140, y: 620 }, 'movement'));
     assert.equal(state.mode, 'joystick');

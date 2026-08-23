@@ -17,11 +17,17 @@ import {
   AVATAR_MIN_BROADCAST_INTERVAL_MS,
   AVATAR_POSITION_DELTA_THRESHOLD,
   AVATAR_ROTATION_DELTA_RADIANS,
-  MAX_PRESENCE_ID_LENGTH,
   MAX_REALTIME_EVENT_BYTES,
   MIN_SEQUENCE,
   WORLD_BOUNDARY,
 } from './limits';
+import {
+  isFiniteNonNegative,
+  isOneOf,
+  isOptionalCharacterAssetKey,
+  isRecord,
+  isShortIdentity,
+} from './world-broadcast-validation';
 
 export {
   AVATAR_EMOTE_EVENT,
@@ -42,6 +48,7 @@ export type WorldEventRejectionReason =
   | 'event-too-large'
   | 'unsupported-version'
   | 'invalid-identity'
+  | 'invalid-character'
   | 'invalid-sequence'
   | 'non-finite-position'
   | 'out-of-bounds-position'
@@ -60,26 +67,6 @@ export interface WorldEventValidationOptions {
   worldBoundary?: number;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isShortIdentity(value: unknown): value is string {
-  return typeof value === 'string'
-    && value.length > 0
-    && value.length <= MAX_PRESENCE_ID_LENGTH
-    && value.trim() === value
-    && !/[\u0000-\u001f\u007f]/u.test(value);
-}
-
-function isFiniteNonNegative(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-}
-
-function isOneOf<T extends string>(values: readonly T[], value: unknown): value is T {
-  return typeof value === 'string' && (values as readonly string[]).includes(value);
-}
-
 function validateIdentityAndSequence(payload: Record<string, unknown>): WorldEventRejectionReason | null {
   if (!isShortIdentity(payload.connectionId) || !isShortIdentity(payload.childProfileId)) return 'invalid-identity';
   if (!Number.isInteger(payload.seq) || (payload.seq as number) < MIN_SEQUENCE) return 'invalid-sequence';
@@ -95,6 +82,7 @@ function validateAvatarStatePayload(
   if (!isRecord(payload)) return { accepted: false, reason: 'invalid-envelope' };
   const commonError = validateIdentityAndSequence(payload);
   if (commonError) return { accepted: false, reason: commonError };
+  if (!isOptionalCharacterAssetKey(payload.characterAssetKey)) return { accepted: false, reason: 'invalid-character' };
   if (!Number.isFinite(payload.x) || !Number.isFinite(payload.z)) {
     return { accepted: false, reason: 'non-finite-position' };
   }
@@ -200,6 +188,7 @@ export interface AvatarBroadcastInput {
   rotationY: number;
   motion: AvatarMotion;
   emote?: AvatarEmote;
+  characterAssetKey?: string;
   otherMemberCount: number;
 }
 
@@ -237,7 +226,8 @@ function isValidBroadcastInput(input: AvatarBroadcastInput): boolean {
     && Math.abs(input.z) <= WORLD_BOUNDARY
     && Number.isFinite(input.rotationY)
     && isOneOf(AVATAR_MOTIONS, input.motion)
-    && isOneOf(AVATAR_EMOTES, input.emote ?? 'none');
+    && isOneOf(AVATAR_EMOTES, input.emote ?? 'none')
+    && isOptionalCharacterAssetKey(input.characterAssetKey);
 }
 
 export function createAvatarBroadcastController(
@@ -257,6 +247,7 @@ export function createAvatarBroadcastController(
     const candidate = buildAvatarStatePayload({
       connectionId: options.connectionId,
       childProfileId: options.childProfileId,
+      characterAssetKey: input.characterAssetKey,
       seq: sequence + 1,
       x: input.x,
       z: input.z,
@@ -272,7 +263,8 @@ export function createAvatarBroadcastController(
       || Math.abs(getShortestAngleDistance(lastSent.rotationY, candidate.rotationY)) >= AVATAR_ROTATION_DELTA_RADIANS;
     const changedPresentation = !lastSent
       || candidate.motion !== lastSent.motion
-      || candidate.emote !== lastSent.emote;
+      || candidate.emote !== lastSent.emote
+      || candidate.characterAssetKey !== lastSent.characterAssetKey;
     const keepaliveDue = Boolean(lastSent)
       && candidate.motion === 'idle'
       && candidate.sentAt - lastSent.sentAt >= AVATAR_KEEPALIVE_INTERVAL_MS;

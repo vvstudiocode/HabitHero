@@ -1,3 +1,4 @@
+import { Check, Copy } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import type { FriendRequest, FriendSummary } from '../contracts';
 
@@ -12,13 +13,17 @@ interface FriendListSheetProps {
   onAccept: (requestId: string) => Promise<void>;
   onDecline: (requestId: string) => Promise<void>;
   onVisit: (friend: FriendSummary) => Promise<void> | void;
+  onChat?: (friend: FriendSummary) => void;
   onRemove: (childProfileId: string) => Promise<void>;
+  onlineFriendIds?: ReadonlySet<string>;
+  checkedFriendIds?: ReadonlySet<string>;
 }
 
-export function FriendListSheet({ code, friends, requests, loading = false, error, onClose, onSendRequest, onAccept, onDecline, onVisit, onRemove }: FriendListSheetProps) {
+export function FriendListSheet({ code, friends, requests, loading = false, error, onClose, onSendRequest, onAccept, onDecline, onVisit, onChat, onRemove, onlineFriendIds = new Set(), checkedFriendIds = new Set() }: FriendListSheetProps) {
   const [friendCode, setFriendCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const submitRequest = async (event: FormEvent) => {
     event.preventDefault();
@@ -46,6 +51,17 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
     }
   };
 
+  const copyFriendIdentifier = async () => {
+    if (!code || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/35 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="好友列表">
       <section className="max-h-[min(44rem,92vh)] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl">
@@ -54,12 +70,13 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
           <button type="button" className="min-h-11 min-w-11 rounded-xl font-black text-slate-600 hover:bg-slate-100" aria-label="關閉好友列表" onClick={onClose}>關閉</button>
         </header>
         <form className="mt-4 rounded-2xl bg-emerald-50 p-4" onSubmit={(event) => void submitRequest(event)}>
-          <label className="block text-sm font-black text-emerald-950" htmlFor="friend-code">輸入好友代碼</label>
+          <label className="block text-sm font-black text-emerald-950" htmlFor="friend-code">輸入好友帳號或代碼</label>
           <div className="mt-2 flex gap-2">
-            <input id="friend-code" value={friendCode} onChange={(event) => setFriendCode(event.target.value)} className="min-h-12 min-w-0 flex-1 rounded-xl border border-emerald-200 px-3 outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-emerald-500" autoComplete="off" aria-label="好友代碼" placeholder="32 碼好友代碼" />
+            <input id="friend-code" value={friendCode} onChange={(event) => setFriendCode(event.target.value)} className="min-h-12 min-w-0 flex-1 rounded-xl border border-emerald-200 px-3 outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-emerald-500" autoComplete="off" aria-label="好友帳號或代碼" placeholder="例如 xingya_01" />
             <button type="submit" className="min-h-12 rounded-xl bg-emerald-600 px-4 font-black text-white disabled:opacity-50" disabled={submitting || !friendCode.trim()}>送出</button>
           </div>
-          {code && <p className="mt-2 break-all text-xs font-bold text-emerald-800">我的好友代碼：{code}</p>}
+          {code && <div className="mt-2 flex items-center gap-2"><p className="min-w-0 break-all text-xs font-bold text-emerald-800">我的好友帳號：{code}</p><button type="button" className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-black text-emerald-700 hover:bg-emerald-100" aria-label="複製好友帳號" onClick={() => void copyFriendIdentifier()}><Copy size={14} aria-hidden="true" />複製</button></div>}
+          {copied && <p className="mt-1 flex items-center gap-1 text-xs font-bold text-emerald-700" role="status"><Check size={14} aria-hidden="true" />已複製</p>}
         </form>
         {error && <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700" role="alert">{error}</p>}
         {loading && <p className="mt-4 text-sm font-bold text-slate-500">好友資料載入中…</p>}
@@ -75,7 +92,13 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
           <h3 id="friends-title" className="font-black text-slate-900">好友 {friends.length}/50</h3>
           {friends.length === 0 ? <p className="mt-2 text-sm font-bold text-slate-500">尚無好友，輸入代碼開始邀請吧！</p> : <ul className="mt-2 space-y-2">{friends.map((friend) => {
             const isRemoving = removingFriendId === friend.childProfileId;
-            return <li key={friend.childProfileId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-3"><span className="min-w-0"><strong className="block truncate">{friend.displayName}</strong><small className={friend.isOnline ? 'text-emerald-600' : 'text-slate-500'}>{friend.isOnline ? '在線' : '離線世界'}</small></span><span className="flex shrink-0 gap-2">{isRemoving && <button type="button" className="min-h-11 rounded-lg px-3 text-sm font-black text-slate-600 hover:bg-slate-100" onClick={() => setRemovingFriendId(null)}>取消</button>}<button type="button" className={`min-h-11 rounded-lg px-3 text-sm font-black ${isRemoving ? 'bg-rose-600 text-white' : 'border border-rose-200 text-rose-700'}`} aria-label={`${isRemoving ? '確認刪除' : '刪除'}好友${friend.displayName}`} onClick={() => void removeFriend(friend.childProfileId)}>{isRemoving ? '確認刪除' : '刪除'}</button>{!isRemoving && <button type="button" className="min-h-11 rounded-lg bg-indigo-600 px-3 text-sm font-black text-white" onClick={() => void onVisit(friend)}>參觀</button>}</span></li>;
+            const isOnline = friend.isOnline || onlineFriendIds.has(friend.childProfileId);
+            const isCheckingPresence = !checkedFriendIds.has(friend.childProfileId);
+            const statusLabel = isCheckingPresence ? '檢查中…' : isOnline ? '在線' : '離線';
+            const friendName = onChat
+              ? <button type="button" className="min-w-0 max-w-full text-left" aria-label={`和${friend.displayName}聊天`} onClick={() => onChat(friend)}><strong className="block truncate text-indigo-800 underline-offset-2 hover:underline">{friend.displayName}</strong></button>
+              : <strong className="block truncate">{friend.displayName}</strong>;
+            return <li key={friend.childProfileId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-3"><span className="min-w-0">{friendName}<small className={isOnline ? 'text-emerald-600' : 'text-slate-500'}>{statusLabel}</small></span><span className="flex shrink-0 gap-2">{isRemoving && <button type="button" className="min-h-11 rounded-lg px-3 text-sm font-black text-slate-600 hover:bg-slate-100" onClick={() => setRemovingFriendId(null)}>取消</button>}<button type="button" className={`min-h-11 rounded-lg px-3 text-sm font-black ${isRemoving ? 'bg-rose-600 text-white' : 'border border-rose-200 text-rose-700'}`} aria-label={`${isRemoving ? '確認刪除' : '刪除'}好友${friend.displayName}`} onClick={() => void removeFriend(friend.childProfileId)}>{isRemoving ? '確認刪除' : '刪除'}</button>{!isRemoving && <button type="button" className="min-h-11 rounded-lg bg-indigo-600 px-3 text-sm font-black text-white" onClick={() => void onVisit(friend)}>參觀</button>}</span></li>;
           })}</ul>}
         </section>
       </section>

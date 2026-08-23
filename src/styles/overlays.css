@@ -402,6 +402,115 @@
   font-weight: 900;
 }
 
+.hh-world-chat-dock {
+  display: flex;
+  min-height: 48px;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 4px;
+  right: auto;
+  left: 50%;
+  bottom: calc(max(16px, calc(env(safe-area-inset-bottom) + 16px)) + 132px);
+  width: min(12rem, calc(50vw - 24px));
+  transform: translateX(-50%);
+}
+
+.hh-world-chat-dock-main {
+  flex: 1 1 auto;
+  color: inherit;
+  background: transparent;
+}
+
+.hh-world-chat-dock-toggle {
+  flex: 0 0 44px;
+  color: inherit;
+  background: transparent;
+}
+
+.hh-world-chat-dock.is-collapsed {
+  height: 44px;
+  min-height: 44px;
+  border-radius: 999px;
+}
+
+.hh-world-chat-dock.is-collapsed .hh-world-chat-dock-main,
+.hh-world-chat-dock.is-collapsed .hh-world-chat-dock-toggle {
+  min-height: 36px;
+}
+
+.hh-world-chat-dock.is-collapsed .hh-world-chat-dock-main {
+  padding-block: 4px;
+}
+
+.hh-world-chat-dock.is-collapsed .hh-world-chat-dock-toggle {
+  flex-basis: 36px;
+  min-width: 36px;
+}
+
+.hh-world-chat-dock-messages {
+  max-height: calc(1.45em * 6);
+  overflow: hidden;
+}
+
+.hh-world-chat-dock-message {
+  min-height: 1.45em;
+  line-height: 1.45;
+}
+
+.hh-friend-dock {
+  position: fixed;
+  bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px));
+  left: 16px;
+}
+
+.hh-friend-dock-unread {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgb(255 255 255 / 72%);
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+@media (orientation: portrait) {
+  .hh-world-chat-dock {
+    right: auto;
+    left: 50%;
+    bottom: calc(max(16px, calc(env(safe-area-inset-bottom) + 16px)) + 132px);
+    transform: translateX(-50%);
+  }
+
+  .hh-world-chat-dock-message:nth-last-child(n + 5) {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) {
+  .hh-world-chat-dock {
+    right: auto;
+    left: 50%;
+    bottom: max(8px, calc(env(safe-area-inset-bottom) + 8px));
+    width: min(14rem, calc(100vw - 32px));
+    transform: translateX(-50%);
+  }
+
+  .hh-friend-dock {
+    right: auto;
+    bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+    left: calc(max(16px, env(safe-area-inset-left, 0px) + 16px) + 240px);
+  }
+}
+
+@media (max-width: 760px) {
+  .hh-friend-dock {
+    right: calc(50% + 64px);
+    bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+    left: auto;
+  }
+}
+
 .hh-parent-content-modal-bar--child {
   top: 0;
   justify-content: flex-end;

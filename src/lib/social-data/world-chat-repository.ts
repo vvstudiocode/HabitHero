@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { ChatReportInput, WorldChatMessage } from '../../features/world-chat/contracts';
 import { MAX_CHAT_PAGE_SIZE } from '../../features/world-chat/limits';
 
@@ -16,6 +16,15 @@ export interface WorldChatRepository {
   report(input: ChatReportInput): Promise<void>;
   subscribe(worldOwnerChildProfileId: string, onMessage: (message: WorldChatMessage) => void): () => void;
 }
+
+interface SharedWorldChatChannel {
+  channel: RealtimeChannel;
+  listeners: Set<(message: WorldChatMessage) => void>;
+  active: boolean;
+  subscribed: boolean;
+}
+
+const sharedWorldChatChannels = new WeakMap<SupabaseClient, Map<string, SharedWorldChatChannel>>();
 
 export function createWorldChatRepository(client: SupabaseClient): WorldChatRepository {
   return {
@@ -74,10 +83,23 @@ async function reportMessage(client: SupabaseClient, input: ChatReportInput): Pr
 }
 
 function subscribeToMessages(client: SupabaseClient, owner: string, onMessage: (message: WorldChatMessage) => void): () => void {
-  void client.realtime.setAuth();
-  const channel = client
-    .channel(`friend-world:${owner}`, { config: { private: true } })
-    .on('postgres_changes', {
+  let channels = sharedWorldChatChannels.get(client);
+  if (!channels) {
+    channels = new Map();
+    sharedWorldChatChannels.set(client, channels);
+  }
+
+  let entry = channels.get(owner);
+  if (!entry) {
+    const channel = client.channel(`friend-world:${owner}`, { config: { private: true } });
+    entry = {
+      channel,
+      listeners: new Set(),
+      active: true,
+      subscribed: false,
+    };
+    channels.set(owner, entry);
+    channel.on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
       table: 'friend_world_messages',
@@ -86,10 +108,35 @@ function subscribeToMessages(client: SupabaseClient, owner: string, onMessage: (
       const message = mapMessage((payload as { new?: unknown }).new);
       // Postgres Changes is the canonical row stream. Broadcast is reserved
       // for hints and must never be treated as chat data.
-      if (message.id && message.status === 'visible') onMessage(message);
+      if (!message.id || message.status !== 'visible') return;
+      [...entry.listeners].forEach((listener) => listener(message));
     });
-  channel.subscribe();
-  return () => { void client.removeChannel(channel); };
+    void Promise.resolve()
+      .then(() => client.realtime.setAuth())
+      .then(() => {
+        if (!entry?.active || entry.listeners.size === 0 || channels?.get(owner) !== entry) return;
+        entry.subscribed = true;
+        entry.channel.subscribe();
+      })
+      .catch(() => {
+        if (channels?.get(owner) === entry) channels.delete(owner);
+        if (channels?.size === 0) sharedWorldChatChannels.delete(client);
+        entry.active = false;
+      });
+  }
+
+  entry.listeners.add(onMessage);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    entry?.listeners.delete(onMessage);
+    if (!entry || entry.listeners.size > 0) return;
+    entry.active = false;
+    channels?.delete(owner);
+    if (channels?.size === 0) sharedWorldChatChannels.delete(client);
+    if (entry.subscribed) void client.removeChannel(entry.channel).catch(() => undefined);
+  };
 }
 
 function mapMessage(value: unknown): WorldChatMessage {
