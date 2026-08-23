@@ -65,6 +65,12 @@ export interface FriendWorldSpawnDecision {
 
 export const FRIEND_WORLD_FIXED_SPAWN = Object.freeze({ x: 0, z: 2.08 });
 
+const FRIEND_WORLD_SPAWN_VARIANTS = [
+  { x: 1.35, z: 0 },
+  { x: 1.35, z: 0.24 },
+  { x: 1.35, z: -0.24 },
+] as const;
+
 export interface FriendWorldSpawnInput {
   reason: FriendWorldSpawnReason;
   fixedSpawn: WorldPoint;
@@ -78,6 +84,37 @@ function isFiniteWorldPoint(value: WorldPoint | null | undefined): value is Worl
 function copyPoint(point: WorldPoint): WorldPoint {
   return { x: point.x, z: point.z };
 }
+
+function stableProfileHash(value: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+export function getFriendWorldSpawnPosition(input: {
+  mode: FriendWorldVisitMode;
+  childProfileId: string;
+  worldOwnerChildProfileId?: string;
+  fixedSpawn?: WorldPoint;
+}): WorldPoint {
+  const fixedSpawn = input.fixedSpawn ?? FRIEND_WORLD_FIXED_SPAWN;
+  if (!isFiniteWorldPoint(fixedSpawn) || !input.childProfileId.trim()) {
+    throw new TypeError('好友世界多人出生點參數無效。');
+  }
+  const mode = input.worldOwnerChildProfileId
+    ? getFriendWorldVisitMode({ viewerChildProfileId: input.childProfileId, worldOwnerChildProfileId: input.worldOwnerChildProfileId })
+    : input.mode;
+  const variant = FRIEND_WORLD_SPAWN_VARIANTS[stableProfileHash(input.childProfileId) % FRIEND_WORLD_SPAWN_VARIANTS.length];
+  return {
+    x: fixedSpawn.x + (mode === 'owner' ? -variant.x : variant.x),
+    z: fixedSpawn.z + variant.z,
+  };
+}
+
+export const getFriendWorldMultiplayerSpawnPosition = getFriendWorldSpawnPosition;
 
 export function getFriendWorldReloadSpawnDecision(input: FriendWorldSpawnInput): FriendWorldSpawnDecision {
   if (!isFiniteWorldPoint(input.fixedSpawn)) {

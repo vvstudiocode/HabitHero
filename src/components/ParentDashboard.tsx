@@ -1328,9 +1328,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                     else onSwitchToChild();
                   }, '.hh-settings-drawer')}
                   disabled={state.children.length === 0}
-                  className="mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-bold text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="切換小孩視角"
+                  title="切換小孩視角"
+                  className="hh-parent-child-switch-action mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-bold text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Users size={18} /> 切換小孩視角
+                  <Users size={20} aria-hidden="true" className="hh-parent-child-switch-icon shrink-0 text-gray-900" /> 切換小孩視角
                 </button>
                 <section className="hh-notification-settings" aria-labelledby="parent-background-music-title">
                   <div className="hh-notification-settings-heading">

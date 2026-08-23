@@ -14,6 +14,7 @@ import { useWorldMultiplayer } from '../world-multiplayer/hooks/use-world-multip
 import { FriendWorldViewer } from '../friends/components/FriendWorldViewer';
 import { createCoopAdventureRepository } from '../../lib/social-data/coop-adventure-repository';
 import { useCoopAdventures } from '../co-op-adventures/hooks/use-coop-adventures';
+import { useAppStore } from '../../store';
 import { CoopAdventureCard } from '../co-op-adventures/components/CoopAdventureCard';
 import { CoopCompletionSummary } from '../co-op-adventures/components/CoopCompletionSummary';
 import { buildCoopCompletionSummary } from '../co-op-adventures/coop-adventure-state';
@@ -29,8 +30,11 @@ interface WorldSocialLayerProps {
 }
 
 export function WorldSocialLayer({ childProfileId, enabled = true, generalTaskId }: WorldSocialLayerProps) {
+  const { role } = useAppStore();
+  const previewMode = role === 'parent' && !enabled;
   const [friendsOpen, setFriendsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [previewNotice, setPreviewNotice] = useState<string | null>(null);
   const [worldOwnerChildProfileId, setWorldOwnerChildProfileId] = useState(childProfileId);
   const [snapshot, setSnapshot] = useState<FriendWorldSnapshot | null>(null);
   const [visitError, setVisitError] = useState<string | null>(null);
@@ -69,6 +73,14 @@ export function WorldSocialLayer({ childProfileId, enabled = true, generalTaskId
 
   useEffect(() => () => setWorldSocialSession(null), []);
 
+  useEffect(() => {
+    if (!previewMode) setPreviewNotice(null);
+  }, [previewMode]);
+
+  const showPreviewNotice = () => {
+    setPreviewNotice('目前是家長預覽模式；請用小孩帳號登入後，才能使用好友世界與聊天。');
+  };
+
   const visitFriend = async (friend: FriendSummary) => {
     if (!friendWorldRepository) return;
     setVisitError(null);
@@ -91,17 +103,18 @@ export function WorldSocialLayer({ childProfileId, enabled = true, generalTaskId
     await coop.reload();
   };
 
-  if (!enabled) return null;
+  if (!enabled && !previewMode) return null;
   return (
     <>
       {snapshot && <FriendWorldViewer snapshot={snapshot} onReturn={() => { setSnapshot(null); setWorldOwnerChildProfileId(childProfileId); setVisitError(null); }} />}
       {(multiplayer.crowded || multiplayer.error) && <div className="pointer-events-auto fixed bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-full bg-amber-50 px-4 py-2 text-sm font-black text-amber-900 shadow" role="status">{multiplayer.error ?? '這個世界目前有點擁擠，稍後再試。'}</div>}
-      {(snapshot || generalTaskId) && <div className="pointer-events-auto fixed right-4 top-24 z-30 w-72 max-w-[calc(100vw-2rem)]"><CoopAdventureCard adventure={coop.adventures[0]} loading={coop.loading} error={coop.error} onJoin={snapshot ? coop.join : undefined} onCreate={generalTaskId ? () => coop.createFromTask(generalTaskId).then(() => coop.reload()).then(() => undefined) : undefined} />{coopSummary && <CoopCompletionSummary summary={coopSummary} loading={coop.loading} error={coop.error} currentParticipantId={currentParticipant?.id} onSubmit={currentParticipant ? submitOwnCompletion : undefined} />}</div>}
+      {enabled && (snapshot || generalTaskId) && <div className="pointer-events-auto fixed right-4 top-24 z-30 w-72 max-w-[calc(100vw-2rem)]"><CoopAdventureCard adventure={coop.adventures[0]} loading={coop.loading} error={coop.error} onJoin={snapshot ? coop.join : undefined} onCreate={generalTaskId ? () => coop.createFromTask(generalTaskId).then(() => coop.reload()).then(() => undefined) : undefined} />{coopSummary && <CoopCompletionSummary summary={coopSummary} loading={coop.loading} error={coop.error} currentParticipantId={currentParticipant?.id} onSubmit={currentParticipant ? submitOwnCompletion : undefined} />}</div>}
       {(snapshot || visitError) && <div className="pointer-events-auto fixed top-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-black text-indigo-900 shadow-lg" role="status">{visitError ?? `正在參觀 ${snapshot?.displayName ?? '好友'} 的世界`}<button type="button" className="min-h-11 rounded-lg px-2 text-indigo-600 underline" onClick={() => { setSnapshot(null); setWorldOwnerChildProfileId(childProfileId); setVisitError(null); }}>回到我的世界</button></div>}
-      <FriendDock friendCount={friends.friends.length} pendingCount={friends.requests.filter((request) => request.direction === 'incoming').length} onOpen={() => setFriendsOpen(true)} />
-      <WorldChatDock messages={chat.messages} unreadCount={chat.unreadCount} onOpen={() => { setChatOpen(true); void chat.markRead(chat.messages.at(-1)?.id); }} />
-      {friendsOpen && <FriendListSheet code={friends.code} friends={friends.friends} requests={friends.requests} loading={friends.loading} error={friends.error ?? visitError} onClose={() => setFriendsOpen(false)} onSendRequest={async (code) => { await friends.sendRequest(code); }} onAccept={async (id) => { await friends.acceptRequest(id); }} onDecline={async (id) => { await friends.declineRequest(id); }} onVisit={visitFriend} onRemove={async (id) => { await friends.removeFriend(id); }} />}
-      {chatOpen && <WorldChatSheet messages={chat.messages} loading={chat.loading} sending={chat.sending} error={chat.error} onClose={() => setChatOpen(false)} onBack={() => setChatOpen(false)} onSend={chat.send} onReport={chat.report} />}
+      {previewNotice && <div className="pointer-events-auto fixed top-4 left-1/2 z-30 -translate-x-1/2 rounded-full bg-white/95 px-4 py-2 text-sm font-black text-indigo-900 shadow-lg" role="status">{previewNotice}</div>}
+      <FriendDock friendCount={friends.friends.length} pendingCount={friends.requests.filter((request) => request.direction === 'incoming').length} onOpen={previewMode ? showPreviewNotice : () => setFriendsOpen(true)} />
+      <WorldChatDock messages={chat.messages} unreadCount={chat.unreadCount} onOpen={previewMode ? showPreviewNotice : () => { setChatOpen(true); void chat.markRead(chat.messages.at(-1)?.id); }} />
+      {friendsOpen && enabled && <FriendListSheet code={friends.code} friends={friends.friends} requests={friends.requests} loading={friends.loading} error={friends.error ?? visitError} onClose={() => setFriendsOpen(false)} onSendRequest={async (code) => { await friends.sendRequest(code); }} onAccept={async (id) => { await friends.acceptRequest(id); }} onDecline={async (id) => { await friends.declineRequest(id); }} onVisit={visitFriend} onRemove={async (id) => { await friends.removeFriend(id); }} />}
+      {chatOpen && enabled && <WorldChatSheet messages={chat.messages} loading={chat.loading} sending={chat.sending} error={chat.error} onClose={() => setChatOpen(false)} onBack={() => setChatOpen(false)} onSend={chat.send} onReport={chat.report} />}
     </>
   );
 }

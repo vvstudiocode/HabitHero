@@ -2,11 +2,20 @@ import type { ChildGameData, GameCatalogItem } from './contracts';
 import { createWorldSceneGameDataSnapshot } from './world-scene-data';
 import { toDecorationPlacementTransform, type DecorationPlacementDraft } from './world-placement';
 import type { WorldRuntimeSession } from './world-runtime-multiplayer';
+import { getFriendWorldSpawnPosition, getFriendWorldVisitMode } from '../friends/friend-world-visit';
+
+type WorldSocialRuntimeSession = WorldRuntimeSession & {
+  worldOwnerChildProfileId?: string;
+  multiplayer?: WorldRuntimeSession['multiplayer'] & {
+    childProfileId?: string;
+    worldOwnerChildProfileId?: string;
+  };
+};
 
 interface TerrainWorldSceneInputArgs {
   gameData: ChildGameData;
   socialGameData?: ChildGameData;
-  session?: WorldRuntimeSession | null;
+  session?: WorldSocialRuntimeSession | null;
   placement?: { catalogItemId: string; entityId?: string; draft: DecorationPlacementDraft };
   placementValid: boolean;
   showPetNames: boolean;
@@ -29,7 +38,19 @@ export function createTerrainWorldSceneInput({
   getWorldCharacterModelUrl,
 }: TerrainWorldSceneInputArgs) {
   const sourceGameData = socialGameData ?? gameData;
-  const equippedCatalogItem = getEquippedCatalogItem(sourceGameData);
+  const sessionIdentity = session?.multiplayer;
+  const worldOwnerChildProfileId = sessionIdentity?.worldOwnerChildProfileId ?? session?.worldOwnerChildProfileId;
+  const childProfileId = sessionIdentity?.childProfileId;
+  const sessionMode = childProfileId && worldOwnerChildProfileId
+    ? getFriendWorldVisitMode({ viewerChildProfileId: childProfileId, worldOwnerChildProfileId })
+    : undefined;
+  const multiplayerSpawn = session && sessionMode && childProfileId
+    ? getFriendWorldSpawnPosition({ mode: sessionMode, childProfileId, worldOwnerChildProfileId, fixedSpawn: session.fixedSpawn })
+    : undefined;
+  const runtimeSession = session && multiplayerSpawn
+    ? { ...session, fixedSpawn: multiplayerSpawn }
+    : session;
+  const equippedCatalogItem = getEquippedCatalogItem(gameData);
   const placementItem = placement
     ? sourceGameData.catalog.find((item) => item.id === placement.catalogItemId && item.itemType === 'decoration')
     : undefined;
@@ -40,7 +61,7 @@ export function createTerrainWorldSceneInput({
     characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
     showPetNames,
     dayNightEnabled,
-    session,
+    session: runtimeSession,
     placement: placement && placementItem ? {
       item: placementItem,
       entityId: placement.entityId,

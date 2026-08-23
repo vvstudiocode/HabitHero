@@ -14,6 +14,22 @@ import {
   getPrivateFriendWorldChannelOptions,
   isFriendWorldTopic,
 } from '../src/features/world-multiplayer/world-topic';
+import { createPendingRemoteAvatarStateQueue } from '../src/features/world-multiplayer/pending-remote-avatar-state';
+import type { RemoteAvatarStateSnapshot } from '../src/features/world-multiplayer/remote-avatar-state';
+
+const remoteAvatarState: RemoteAvatarStateSnapshot = {
+  v: PROTOCOL_VERSION,
+  connectionId: 'connection-remote',
+  childProfileId: 'child-remote',
+  seq: 1,
+  x: 0.4,
+  z: 1.2,
+  rotationY: 0,
+  motion: 'idle',
+  emote: 'none',
+  sentAt: 100,
+  receivedAt: 100,
+};
 
 describe('world multiplayer protocol', () => {
   it('waits for an existing topic to be removed before registering presence handlers', () => {
@@ -21,6 +37,22 @@ describe('world multiplayer protocol', () => {
 
     assert.match(source, /await client\.removeChannel\(existingChannel\)/);
     assert.match(source, /if \(disposed\) return;/);
+    assert.match(source, /createPendingRemoteAvatarStateBuffer/);
+    assert.match(source, /flushPendingRemoteAvatars/);
+  });
+
+  it('keeps an avatar broadcast received before presence sync and flushes it after the matching member appears', () => {
+    const pending = createPendingRemoteAvatarStateQueue();
+
+    pending.enqueue(remoteAvatarState);
+    assert.deepEqual(pending.flush({ presenceMembers: [], acceptedConnectionIds: ['connection-local'] }), []);
+    assert.equal(pending.size(), 1);
+
+    assert.deepEqual(pending.flush({
+      presenceMembers: [{ connectionId: 'connection-remote', childProfileId: 'child-remote', joinedAt: 100 }],
+      acceptedConnectionIds: ['connection-local', 'connection-remote'],
+    }), [remoteAvatarState]);
+    assert.equal(pending.size(), 0);
   });
 
   it('builds one deterministic private topic for a world owner', () => {

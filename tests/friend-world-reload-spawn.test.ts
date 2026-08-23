@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { CENTRAL_TREE_KEEP_OUT, CHARACTER_COLLISION_RADIUS, WORLD_BOUNDARY, circlesOverlap, moveWorldCharacter } from '../src/features/world/world-collision';
 
 describe('friend world visit and reload spawn decisions', () => {
   it('marks the owner world as editable and friend worlds as read-only visits', async () => {
@@ -95,5 +96,26 @@ describe('friend world visit and reload spawn decisions', () => {
       clearMemoryPosition: true,
       shouldRebroadcast: true,
     });
+  });
+
+  it('assigns stable, separated, walkable multiplayer spawns by role and child profile', async () => {
+    const { getFriendWorldMultiplayerSpawnPosition } = await import('../src/features/friends/friend-world-visit');
+    const ownerInput = { mode: 'owner' as const, childProfileId: 'child-owner' };
+    const visitorInput = { mode: 'visitor' as const, childProfileId: 'child-visitor' };
+    const ownerSpawn = getFriendWorldMultiplayerSpawnPosition(ownerInput);
+    const visitorSpawn = getFriendWorldMultiplayerSpawnPosition(visitorInput);
+
+    assert.deepEqual(getFriendWorldMultiplayerSpawnPosition(ownerInput), ownerSpawn);
+    assert.deepEqual(getFriendWorldMultiplayerSpawnPosition(visitorInput), visitorSpawn);
+    assert.ok(Math.hypot(ownerSpawn.x - visitorSpawn.x, ownerSpawn.z - visitorSpawn.z) >= 1.2);
+    assert.ok(ownerSpawn.x < 0);
+    assert.ok(visitorSpawn.x > ownerSpawn.x);
+
+    for (const spawn of [ownerSpawn, visitorSpawn]) {
+      assert.ok(Math.abs(spawn.x) + CHARACTER_COLLISION_RADIUS <= WORLD_BOUNDARY);
+      assert.ok(Math.abs(spawn.z) + CHARACTER_COLLISION_RADIUS <= WORLD_BOUNDARY);
+      assert.equal(circlesOverlap({ ...spawn, radius: CHARACTER_COLLISION_RADIUS }, CENTRAL_TREE_KEEP_OUT), false);
+      assert.deepEqual(moveWorldCharacter(spawn, spawn, CHARACTER_COLLISION_RADIUS), spawn);
+    }
   });
 });

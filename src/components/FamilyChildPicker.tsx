@@ -26,13 +26,13 @@ export function FamilyChildPicker({ children, onSelect, onParentMode }: FamilyCh
         <p className="mt-1 text-sm leading-6 text-gray-500">請選擇要使用的孩子視角，或進入家長管理端。</p>
         <div className="mt-5 space-y-2">
           {children.map((child) => (
-            <button key={child.id} type="button" onClick={() => dismiss(() => onSelect(child.id))} className="hh-family-picker-child-option flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left font-black transition-colors">
-              <User size={20} aria-hidden="true" />
+            <button key={child.id} type="button" onClick={() => dismiss(() => onSelect(child.id))} aria-label={`切換到${child.name}視角`} title={`切換到${child.name}視角`} className="hh-family-picker-child-option flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left font-black transition-colors">
+              <User size={20} aria-hidden="true" className="hh-family-picker-option-icon shrink-0 text-[var(--hh-neutral-ink)]" />
               <span>{child.name}的任務</span>
             </button>
           ))}
-          <button type="button" onClick={() => dismiss(onParentMode)} className="hh-family-picker-parent-option flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left font-black transition-colors">
-            <LockKeyhole size={20} /> 家長管理端
+          <button type="button" onClick={() => dismiss(onParentMode)} aria-label="回到家長管理端" title="回到家長管理端" className="hh-family-picker-parent-option flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left font-black transition-colors">
+            <LockKeyhole size={20} aria-hidden="true" className="hh-family-picker-option-icon shrink-0 text-[var(--hh-neutral-ink)]" /> 家長管理端
           </button>
         </div>
       </div>

@@ -7,6 +7,8 @@ import type { AvatarStatePayload } from './contracts';
 import type { WorldEventEnvelope } from './contracts';
 import { WORLD_BOUNDARY } from './limits';
 
+export { createPendingRemoteAvatarStateBuffer } from './pending-remote-avatar-state';
+
 export interface RemoteAvatarStateSnapshot extends AvatarStatePayload {
   receivedAt: number;
 }

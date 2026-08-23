@@ -5,6 +5,7 @@ import { WORLD_REVISION_EVENT } from '../contracts';
 import { flattenPresenceState, getPresenceAdmissionDecision, type PresenceAdmissionDecision, type WorldPresenceMember } from '../world-presence';
 import { getFriendWorldTopic } from '../world-topic';
 import { createRemoteAvatarStateReceiver, type RemoteAvatarStateSnapshot } from '../remote-avatar-state';
+import { createPendingRemoteAvatarStateBuffer } from '../pending-remote-avatar-state';
 
 interface WorldMultiplayerOptions {
   client: SupabaseClient | null;
@@ -23,6 +24,7 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
   const connectionIdRef = useRef<string>(createConnectionId());
   const receiverRef = useRef(createRemoteAvatarStateReceiver());
   const controllerRef = useRef(createAvatarBroadcastController({ connectionId: connectionIdRef.current, childProfileId: childProfileId ?? 'unknown' }));
+  const pendingRemoteAvatarStatesRef = useRef(createPendingRemoteAvatarStateBuffer());
   const presenceMembersRef = useRef<WorldPresenceMember[]>([]);
   const admissionRef = useRef<PresenceAdmissionDecision>({ accepted: false, shouldUntrack: true, acceptedConnectionIds: [], rejectedConnectionIds: [] });
   const crowdedRef = useRef(false);
@@ -30,6 +32,7 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
 
   useEffect(() => {
     receiverRef.current.clear();
+    pendingRemoteAvatarStatesRef.current.clear();
     controllerRef.current = createAvatarBroadcastController({ connectionId: connectionIdRef.current, childProfileId: childProfileId ?? 'unknown' });
   }, [childProfileId]);
 
@@ -55,6 +58,10 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
       channel = client.channel(topic, { config: { private: true } });
       channelRef.current = channel;
       const activeChannel = channel;
+      const flushPendingRemoteAvatars = (input: {
+        presenceMembers: readonly WorldPresenceMember[];
+        acceptedConnectionIds: readonly string[];
+      }) => pendingRemoteAvatarStatesRef.current.flush(input);
       const updatePresence = () => {
         if (!trackedRef.current) return;
         const members = flattenPresenceState(activeChannel.presenceState());
@@ -66,6 +73,16 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
         setCrowded(decision.shouldUntrack);
         const acceptedConnections = new Set(decision.acceptedConnectionIds);
         setRemoteAvatars((current) => current.filter((avatar) => acceptedConnections.has(avatar.connectionId)));
+        const pendingStates = flushPendingRemoteAvatars({
+          presenceMembers: members,
+          acceptedConnectionIds: decision.acceptedConnectionIds,
+        });
+        if (pendingStates.length > 0) {
+          setRemoteAvatars((current) => pendingStates.reduce(
+            (next, state) => [...next.filter((avatar) => avatar.connectionId !== state.connectionId), state],
+            current,
+          ));
+        }
         if (decision.shouldUntrack) {
           void activeChannel.untrack();
           void client.removeChannel(activeChannel);
@@ -82,7 +99,10 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
         const member = presenceMembersRef.current.find((candidate) => candidate.connectionId === accepted.state.connectionId);
         if (!member
           || member.childProfileId !== accepted.state.childProfileId
-          || !admission.acceptedConnectionIds.includes(accepted.state.connectionId)) return;
+          || !admission.acceptedConnectionIds.includes(accepted.state.connectionId)) {
+          pendingRemoteAvatarStatesRef.current.enqueue(accepted.state);
+          return;
+        }
         setRemoteAvatars((current) => [...current.filter((avatar) => avatar.connectionId !== accepted.state.connectionId), accepted.state]);
       });
       activeChannel.on('broadcast', { event: AVATAR_EMOTE_EVENT }, () => undefined);
@@ -113,6 +133,7 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
       trackedRef.current = false;
       if (onVisibilityChange) document.removeEventListener('visibilitychange', onVisibilityChange);
       receiverRef.current.clear();
+      pendingRemoteAvatarStatesRef.current.clear();
       presenceMembersRef.current = [];
       admissionRef.current = { accepted: false, shouldUntrack: true, acceptedConnectionIds: [], rejectedConnectionIds: [] };
       crowdedRef.current = false;
@@ -137,7 +158,16 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
     return true;
   }, []);
 
-  return { connectionId: connectionIdRef.current, presenceMembers, remoteAvatars, crowded, error, broadcastState };
+  return {
+    connectionId: connectionIdRef.current,
+    childProfileId,
+    worldOwnerChildProfileId,
+    presenceMembers,
+    remoteAvatars,
+    crowded,
+    error,
+    broadcastState,
+  };
 }
 
 function createConnectionId(): string {
