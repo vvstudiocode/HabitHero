@@ -20,7 +20,6 @@ describe('friend world pet presentation', () => {
     const arcadia = getFriendWorldPetPresentation('pet.arcadia');
     assert.equal(arcadia.metadata.groundOffset, -0.44);
     assert.equal(getPetVisualScaleMultiplier('pet.arcadia', arcadia.metadata), 1.3 * 6.8);
-
     const unknown = getFriendWorldPetPresentation('pet.future-companion');
     assert.equal(unknown.displayName, '寵物夥伴');
   });

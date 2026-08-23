@@ -66,7 +66,6 @@ const FRIEND_WORLD_CANONICAL_PET_METADATA: Readonly<Record<string, Readonly<Reco
   'pet.star-diver': { groundOffset: -0.22, movementSpeedMultiplier: 0.65, visualScaleMultiplier: 2 },
   'pet.yaoguang-deer': { movementSpeedMultiplier: 0.6, visualScaleMultiplier: 8 / 3 },
 };
-
 const FRIEND_WORLD_NO_SHADOW_PETS = new Set(['pet.jasmine', 'pet.star-diver', 'pet.teddy-sou']);
 
 export function getFriendWorldPetPresentation(assetKey: string): FriendWorldPetPresentation {
