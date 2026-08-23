@@ -9,7 +9,9 @@ import {
   validateWorldEventEnvelope,
 } from '../src/features/world-multiplayer/world-broadcast';
 import {
+  FRIEND_WORLD_LIVE_TOPIC_PREFIX,
   FRIEND_WORLD_TOPIC_PREFIX,
+  getFriendWorldLiveTopic,
   getFriendWorldTopic,
   getPrivateFriendWorldChannelOptions,
   isFriendWorldTopic,
@@ -32,10 +34,13 @@ const remoteAvatarState: RemoteAvatarStateSnapshot = {
 };
 
 describe('world multiplayer protocol', () => {
-  it('waits for an existing topic to be removed before registering presence handlers', () => {
+  it('uses a dedicated live topic without removing the chat channel', () => {
     const source = readFileSync(new URL('../src/features/world-multiplayer/hooks/use-world-multiplayer.ts', import.meta.url), 'utf8');
 
-    assert.match(source, /await client\.removeChannel\(existingChannel\)/);
+    assert.doesNotMatch(source, /existingChannel/);
+    assert.match(source, /getFriendWorldLiveTopic/);
+    assert.match(source, /members\.some\(\(member\) => member\.connectionId === connectionIdRef\.current\)/);
+    assert.match(source, /const isCurrentChannel = \(\) => !disposed && channelRef\.current === activeChannel/);
     assert.match(source, /if \(disposed\) return;/);
     assert.match(source, /createPendingRemoteAvatarStateBuffer/);
     assert.match(source, /flushPendingRemoteAvatars/);
@@ -58,6 +63,9 @@ describe('world multiplayer protocol', () => {
   it('builds one deterministic private topic for a world owner', () => {
     assert.equal(getFriendWorldTopic('owner-child-1'), 'friend-world:owner-child-1');
     assert.equal(FRIEND_WORLD_TOPIC_PREFIX, 'friend-world:');
+    assert.equal(getFriendWorldLiveTopic('owner-child-1'), 'friend-world-live:owner-child-1');
+    assert.equal(FRIEND_WORLD_LIVE_TOPIC_PREFIX, 'friend-world-live:');
+    assert.notEqual(getFriendWorldTopic('owner-child-1'), getFriendWorldLiveTopic('owner-child-1'));
     assert.equal(isFriendWorldTopic('friend-world:owner-child-1'), true);
     assert.equal(isFriendWorldTopic('public-world:owner-child-1'), false);
     assert.deepEqual(getPrivateFriendWorldChannelOptions('owner-child-1'), {

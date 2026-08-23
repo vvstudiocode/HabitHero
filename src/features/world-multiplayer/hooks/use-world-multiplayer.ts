@@ -3,7 +3,7 @@ import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { AVATAR_EMOTE_EVENT, AVATAR_STATE_EVENT, createAvatarBroadcastController, type AvatarBroadcastInput } from '../world-broadcast';
 import { WORLD_REVISION_EVENT } from '../contracts';
 import { flattenPresenceState, getPresenceAdmissionDecision, type PresenceAdmissionDecision, type WorldPresenceMember } from '../world-presence';
-import { getFriendWorldTopic } from '../world-topic';
+import { getFriendWorldLiveTopic } from '../world-topic';
 import { createRemoteAvatarStateReceiver, type RemoteAvatarStateSnapshot } from '../remote-avatar-state';
 import { createPendingRemoteAvatarStateBuffer } from '../pending-remote-avatar-state';
 
@@ -43,28 +43,36 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
     trackedRef.current = false;
     setError(null);
     let disposed = false;
-    let channel: RealtimeChannel | null = null;
     let onVisibilityChange: (() => void) | null = null;
-    const topic = getFriendWorldTopic(worldOwnerChildProfileId);
+    let releaseChannel: (() => void) | null = null;
+    const topic = getFriendWorldLiveTopic(worldOwnerChildProfileId);
 
     const setupChannel = async () => {
-      const existingChannel = client.getChannels().find((candidate) => candidate.topic === `realtime:${topic}`);
-      if (existingChannel) await client.removeChannel(existingChannel);
-      if (disposed) return;
-
       await client.realtime.setAuth();
       if (disposed) return;
 
-      channel = client.channel(topic, { config: { private: true } });
-      channelRef.current = channel;
-      const activeChannel = channel;
+      const activeChannel = client.channel(topic, { config: { private: true } });
+      channelRef.current = activeChannel;
+      const isCurrentChannel = () => !disposed && channelRef.current === activeChannel;
+      let released = false;
+      releaseChannel = () => {
+        if (released) return;
+        released = true;
+        if (channelRef.current === activeChannel) channelRef.current = null;
+        trackedRef.current = false;
+        void (async () => {
+          await activeChannel.untrack().catch(() => undefined);
+          await client.removeChannel(activeChannel).catch(() => undefined);
+        })();
+      };
       const flushPendingRemoteAvatars = (input: {
         presenceMembers: readonly WorldPresenceMember[];
         acceptedConnectionIds: readonly string[];
       }) => pendingRemoteAvatarStatesRef.current.flush(input);
       const updatePresence = () => {
-        if (!trackedRef.current) return;
+        if (!isCurrentChannel() || !trackedRef.current) return;
         const members = flattenPresenceState(activeChannel.presenceState());
+        if (!members.some((member) => member.connectionId === connectionIdRef.current)) return;
         presenceMembersRef.current = members;
         setPresenceMembers(members);
         const decision = getPresenceAdmissionDecision(members, connectionIdRef.current);
@@ -84,15 +92,14 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
           ));
         }
         if (decision.shouldUntrack) {
-          void activeChannel.untrack();
-          void client.removeChannel(activeChannel);
-          if (channelRef.current === activeChannel) channelRef.current = null;
+          releaseChannel?.();
         }
       };
       activeChannel.on('presence', { event: 'sync' }, updatePresence);
       activeChannel.on('presence', { event: 'join' }, updatePresence);
       activeChannel.on('presence', { event: 'leave' }, updatePresence);
       activeChannel.on('broadcast', { event: AVATAR_STATE_EVENT }, (payload) => {
+        if (!isCurrentChannel()) return;
         const accepted = receiverRef.current.accept((payload as { payload?: unknown }).payload ?? payload, Date.now());
         if (!accepted.accepted || accepted.state.childProfileId === childProfileId) return;
         const admission = admissionRef.current;
@@ -106,21 +113,42 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
         setRemoteAvatars((current) => [...current.filter((avatar) => avatar.connectionId !== accepted.state.connectionId), accepted.state]);
       });
       activeChannel.on('broadcast', { event: AVATAR_EMOTE_EVENT }, () => undefined);
-      activeChannel.on('broadcast', { event: WORLD_REVISION_EVENT }, () => onWorldRevision?.());
+      activeChannel.on('broadcast', { event: WORLD_REVISION_EVENT }, () => {
+        if (isCurrentChannel()) onWorldRevision?.();
+      });
       activeChannel.subscribe((status) => {
+        if (!isCurrentChannel()) return;
         if (status === 'SUBSCRIBED') {
-          trackedRef.current = true;
-          void activeChannel.track({ connectionId: connectionIdRef.current, childProfileId, joinedAt: new Date().toISOString() });
+          void activeChannel.track({ connectionId: connectionIdRef.current, childProfileId, joinedAt: new Date().toISOString() })
+            .then(() => {
+              if (!isCurrentChannel()) return;
+              trackedRef.current = true;
+              updatePresence();
+            })
+            .catch(() => {
+              if (isCurrentChannel()) setError('多人世界連線目前不穩定。');
+            });
         }
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setError('多人世界連線目前不穩定。');
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          trackedRef.current = false;
+          setError('多人世界連線目前不穩定。');
+        }
       });
       onVisibilityChange = () => {
+        if (!isCurrentChannel()) return;
         if (document.visibilityState === 'hidden') {
           trackedRef.current = false;
-          void activeChannel.untrack();
+          void activeChannel.untrack().catch(() => undefined);
         } else {
-          trackedRef.current = true;
-          void activeChannel.track({ connectionId: connectionIdRef.current, childProfileId, joinedAt: new Date().toISOString() });
+          void activeChannel.track({ connectionId: connectionIdRef.current, childProfileId, joinedAt: new Date().toISOString() })
+            .then(() => {
+              if (!isCurrentChannel()) return;
+              trackedRef.current = true;
+              updatePresence();
+            })
+            .catch(() => {
+              if (isCurrentChannel()) setError('多人世界連線目前不穩定。');
+            });
         }
       };
       document.addEventListener('visibilitychange', onVisibilityChange);
@@ -138,11 +166,7 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
       admissionRef.current = { accepted: false, shouldUntrack: true, acceptedConnectionIds: [], rejectedConnectionIds: [] };
       crowdedRef.current = false;
       setRemoteAvatars([]);
-      if (channel) {
-        void channel.untrack();
-        void client.removeChannel(channel);
-        if (channelRef.current === channel) channelRef.current = null;
-      }
+      releaseChannel?.();
     };
   }, [childProfileId, client, enabled, onWorldRevision, worldOwnerChildProfileId]);
 

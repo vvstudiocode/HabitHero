@@ -1,4 +1,5 @@
 export const FRIEND_WORLD_TOPIC_PREFIX = 'friend-world:';
+export const FRIEND_WORLD_LIVE_TOPIC_PREFIX = 'friend-world-live:';
 
 function normalizeOwnerId(value: string): string {
   if (typeof value !== 'string') throw new TypeError('A world owner child profile ID is required.');
@@ -11,6 +12,10 @@ function normalizeOwnerId(value: string): string {
 
 export function getFriendWorldTopic(worldOwnerChildProfileId: string): string {
   return `${FRIEND_WORLD_TOPIC_PREFIX}${normalizeOwnerId(worldOwnerChildProfileId)}`;
+}
+
+export function getFriendWorldLiveTopic(worldOwnerChildProfileId: string): string {
+  return `${FRIEND_WORLD_LIVE_TOPIC_PREFIX}${normalizeOwnerId(worldOwnerChildProfileId)}`;
 }
 
 export const getPrivateFriendWorldTopic = getFriendWorldTopic;

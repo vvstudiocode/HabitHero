@@ -12,6 +12,22 @@ function readFriendWorldMigration(): string {
   return readFileSync(new URL(migrationNames[0], migrationDirectory), 'utf8');
 }
 
+function readFriendWorldLiveMigration(): string {
+  const migrationDirectory = new URL('supabase/migrations/', root);
+  const migrationNames = readdirSync(migrationDirectory)
+    .filter((name) => /_friend_world_live_channel_authorization\.sql$/.test(name));
+  assert.equal(migrationNames.length, 1, 'expected exactly one friend-world live channel migration');
+  return readFileSync(new URL(migrationNames[0], migrationDirectory), 'utf8');
+}
+
+function readFriendWorldLiveRevisionMigration(): string {
+  const migrationDirectory = new URL('supabase/migrations/', root);
+  const migrationNames = readdirSync(migrationDirectory)
+    .filter((name) => /_friend_world_live_revision_broadcast\.sql$/.test(name));
+  assert.equal(migrationNames.length, 1, 'expected exactly one friend-world live revision migration');
+  return readFileSync(new URL(migrationNames[0], migrationDirectory), 'utf8');
+}
+
 describe('friend world visit permission contract', () => {
   it('authorizes only the owner or an accepted, unblocked friendship', () => {
     const sql = readFriendWorldMigration();
@@ -70,5 +86,31 @@ describe('friend world visit permission contract', () => {
     assert.doesNotMatch(sql, /to\s+anon/i);
     assert.doesNotMatch(sql, /create policy\s+[^\n]+public/i);
     assert.match(sql, /on realtime\.messages/i);
+  });
+
+  it('authorizes the dedicated live channel for avatar Presence and Broadcast', () => {
+    const sql = readFriendWorldLiveMigration();
+    for (const policy of [
+      'friend_world_live_broadcast_select',
+      'friend_world_live_broadcast_insert',
+      'friend_world_live_presence_select',
+      'friend_world_live_presence_insert',
+    ]) {
+      assert.match(sql, new RegExp(`create policy ${policy}[\\s\\S]*on realtime\\.messages`, 'i'));
+      assert.match(sql, new RegExp(`create policy ${policy}[\\s\\S]*to authenticated`, 'i'));
+      assert.match(sql, new RegExp(`create policy ${policy}[\\s\\S]*friend-world-live:`, 'i'));
+      assert.match(sql, new RegExp(`create policy ${policy}[\\s\\S]*private\\.can_visit_friend_world`, 'i'));
+    }
+    assert.doesNotMatch(sql, /to\s+anon/i);
+    assert.doesNotMatch(sql, /public\s*:\s*true/i);
+  });
+
+  it('keeps world revision hints on both the legacy and live topics', () => {
+    const sql = readFriendWorldLiveRevisionMigration();
+    assert.match(sql, /create or replace function private\.broadcast_friend_world_revision/i);
+    assert.equal((sql.match(/'world_revision_v1'/g) ?? []).length, 2);
+    assert.match(sql, /'friend-world:'\s*\|\|\s*new\.child_profile_id/i);
+    assert.match(sql, /'friend-world-live:'\s*\|\|\s*new\.child_profile_id/i);
+    assert.match(sql, /revoke all on function private\.broadcast_friend_world_revision\(\)/i);
   });
 });
