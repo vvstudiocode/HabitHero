@@ -118,6 +118,12 @@ import {
   getCharacterAnimationClip,
   getWalkAnimationClip,
 } from './world-runtime-animation';
+import {
+  applyFixedSpawnIfChanged,
+  createRemoteAvatarRuntimeManager,
+  type WorldRuntimeSession,
+} from './world-runtime-multiplayer';
+import { createPlayerGroundMarker, createPlayerGroundShadowMaterial } from './world-player-marker';
 
 export {
   PROTOTYPE_WORLD_ASSETS,
@@ -331,6 +337,7 @@ export interface PrototypeWorldRuntimeOptions {
   showPetNames: boolean;
   dayNightEnabled: boolean;
   placement?: PrototypeWorldRuntimePlacement;
+  session?: WorldRuntimeSession;
   onPlacementPositionChange?: (position: { x: number; z: number }) => void;
   onPlacementGestureChange?: (gesture: { scaleFactor: number; rotationDelta: number }) => void;
   onDecorationSelect?: (selection: DecorationSelection | null) => void;
@@ -351,6 +358,7 @@ export interface PrototypeWorldRuntimeUpdate {
   showPetNames: boolean;
   dayNightEnabled: boolean;
   placement?: PrototypeWorldRuntimePlacement;
+  session?: WorldRuntimeSession;
 }
 
 export interface PrototypeWorldRuntimePlacement {
@@ -435,30 +443,6 @@ function applyPicturebookPetModelStyle(source: Object3D) {
     if (!mesh.isMesh || !mesh.material) return;
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach((material) => applyPicturebookPetMaterial(material));
-  });
-}
-
-function createPlayerGroundShadowMaterial(THREE: ThreeNamespace) {
-  return new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    uniforms: {},
-    vertexShader: `
-      varying vec2 vShadowUv;
-      void main() {
-        vShadowUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      precision highp float;
-      varying vec2 vShadowUv;
-      void main() {
-        float distanceFromCenter = length(vShadowUv - vec2(0.5)) * 2.0;
-        float alpha = smoothstep(1.0, 0.12, distanceFromCenter) * 0.28;
-        gl_FragColor = vec4(0.02, 0.09, 0.06, alpha);
-      }
-    `,
   });
 }
 
@@ -845,6 +829,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     showPetNames: options.showPetNames,
     dayNightEnabled: options.dayNightEnabled,
     placement: options.placement,
+    session: options.session,
   };
   const disposalTracker = createDisposalTracker();
   const resourceRoots: DisposableScene[] = [];
@@ -1176,7 +1161,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
       const playerRoot = new THREE.Group();
       playerRoot.name = 'player-root';
-      playerRoot.position.set(0, 0, terrainStep * 2.08);
+      playerRoot.position.set(options.session?.fixedSpawn?.x ?? 0, 0, options.session?.fixedSpawn?.z ?? terrainStep * 2.08);
+      let appliedFixedSpawn = options.session?.fixedSpawn ? { ...options.session.fixedSpawn } : null;
+      const remoteAvatarRuntime = createRemoteAvatarRuntimeManager({ THREE, scene: worldScene, createCharacter: options.createProceduralCharacter, disposeRoot: (root) => disposeObject3D(root, disposalTracker) });
       const playerFollowHistory: WorldPoint2D[] = [];
       let characterDefinition = defineAsset(THREE, characterSource);
       let characterScale = PROTOTYPE_WORLD_CONFIG.characterTargetHeight / Math.max(characterDefinition.size.y, 0.001);
@@ -1189,14 +1176,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       playerRoot.add(characterRoot);
       worldScene.add(playerRoot);
 
-      const playerMarker = new THREE.Mesh(
-        new THREE.CircleGeometry(0.2, 32),
-        createPlayerGroundShadowMaterial(THREE),
-      );
-      playerMarker.name = 'player-ground-shadow';
-      playerMarker.rotation.x = -Math.PI / 2;
-      playerMarker.scale.set(1.2, 0.74, 1);
-      playerMarker.position.y = 0.006;
+      const playerMarker = createPlayerGroundMarker(THREE);
       playerRoot.add(playerMarker);
 
       let roamingActor: {
@@ -2056,6 +2036,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const placementPointers = new Map<number, { point: { x: number; y: number }; startedOnDecoration: boolean }>();
       let placementGesture: { previousDistance: number; previousAngle: number } | null = null;
       updateScene = (next) => {
+        appliedFixedSpawn = applyFixedSpawnIfChanged(playerRoot, next.session?.fixedSpawn, appliedFixedSpawn, () => { playerFollowHistory.length = 0; controller?.reset(); });
         const wasPlacementActive = placementActive;
         placementActive = Boolean(next.placement);
         weatherRuntime.setDayNightEnabled(next.dayNightEnabled);
@@ -2078,6 +2059,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           optimisticPetActorsDirty = false;
         }
         updateDecorationObjects(next.gameData);
+        remoteAvatarRuntime.update(next.session?.multiplayer?.remoteAvatars ?? []);
       };
       updateScene(latestRuntimeUpdate);
 
@@ -2571,6 +2553,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             updatePetAnimation(actor, true, delta, prefersReducedMotion);
           }
         });
+        remoteAvatarRuntime.render(Date.now());
         if (mixer) mixer.update(delta);
         if (roamingMixer) roamingMixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
         groundCharacterOnGrass();
@@ -2589,6 +2572,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const cameraPosition = target.clone().add(cameraOffset);
         camera.position.lerp(cameraPosition, 1 - Math.pow(0.001, Math.min(delta, 0.05)));
         camera.lookAt(target);
+        const emote = interactionActionState?.action ?? 'none';
+        latestRuntimeUpdate.session?.multiplayer?.broadcastState({
+          now: Date.now(),
+          x: playerRoot.position.x,
+          z: playerRoot.position.z,
+          rotationY: characterRoot.rotation.y,
+          motion: isPlayerMoving ? 'walk' : 'idle',
+          emote,
+        });
         rendererInstance.render(worldScene, camera);
       };
 

@@ -40,6 +40,7 @@ import {
 } from '../features/world/clean-screen-mode';
 import { buildCollisionCircles } from '../features/world/world-collision';
 import { toWorldMutationErrorMessage } from '../features/world/world-errors';
+import { WorldSocialLayer } from '../features/world-social/WorldSocialLayer';
 import {
   applyDecorationPlacementGesture,
   applyDecorationPlacementControl,
@@ -1121,6 +1122,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             </button>
           </>
         )}
+      />
+      <WorldSocialLayer
+        childProfileId={activeChild.id}
+        enabled={role === 'child'}
+        generalTaskId={todayAdventureSummary.generalActive[0]?.id}
       />
       <ChildAdventureBoard
         tasks={adventureTasks}
