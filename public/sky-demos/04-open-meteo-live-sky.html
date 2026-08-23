@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sky Lab 04｜Open-Meteo 即時天空</title>
+    <link rel="stylesheet" href="./sky-demo.css">
+  </head>
+  <body>
+    <main class="demo-shell">
+      <section class="scene-panel" aria-label="可旋轉的 3D 天空示範">
+        <canvas id="scene" aria-label="可拖曳旋轉、滾輪縮放的 3D 小島"></canvas>
+        <div class="scene-hud">
+          <p class="eyebrow">Sky Lab 04 · Open-Meteo</p>
+          <h1>讓真實天氣控制天空</h1>
+          <p>這個版本讀取台北即時雲量、風速、溫度與天氣代碼，再把資料映射成 3D 世界的天空狀態。</p>
+        </div>
+        <div class="drag-hint">拖曳旋轉 3D 世界</div>
+      </section>
+      <aside class="control-panel">
+        <header class="panel-header">
+          <p class="eyebrow">Open-Meteo JS concept</p>
+          <h2>即時資料驅動</h2>
+          <p>開啟後會嘗試取得台北資料；若離線，仍會保留可操作的示範場景與手動日夜控制。</p>
+        </header>
+        <div class="control-group">
+          <label for="time-range">一天的時間 <span class="value" id="time-value">現在</span></label>
+          <input id="time-range" type="range" min="0" max="23.99" step="0.05" value="10.5">
+          <div class="range-scale"><span>00:00 夜</span><span>12:00 日</span><span>24:00 夜</span></div>
+        </div>
+        <div class="control-group">
+          <label for="cloud-range">雲量 <span class="value" id="cloud-value">即時</span></label>
+          <input id="cloud-range" type="range" min="0" max="100" step="1" value="30">
+        </div>
+        <div class="control-group button-row">
+          <button id="auto-time" class="primary" type="button">自動日夜</button>
+          <button id="reset-camera" type="button">重設視角</button>
+        </div>
+        <div class="status-card">
+          <strong id="weather-name"><span class="status-dot"></span>正在讀取台北天氣…</strong>
+          <p id="weather-details">等待 Open-Meteo 回應</p>
+        </div>
+        <nav class="demo-links" aria-label="其他天空示範">
+          <a href="./01-canvas-clouds.html">01 Canvas 雲層</a>
+          <a href="./02-nimbus-weather-card.html">02 Nimbus 立體雲</a>
+          <a href="./03-three-volumetric-clouds.html">03 Three.js 雲霧</a>
+          <a href="./04-open-meteo-live-sky.html" aria-current="page">04 Open-Meteo 即時資料</a>
+        </nav>
+        <p class="note">操作：滑鼠／觸控拖曳旋轉，滾輪縮放。這是獨立 demo，不會修改正式 3D 世界。</p>
+      </aside>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./sky-demo-core.js"></script>
+    <script>
+      SkyDemo.create({ variant: 'puffy', defaultHour: 10.5, cloudCover: 0.3, weather: '讀取中', liveWeather: true, daySpeed: 0.7 });
+    </script>
+  </body>
+</html>

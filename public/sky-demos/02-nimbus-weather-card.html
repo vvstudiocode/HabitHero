@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sky Lab 02｜Nimbus 立體雲</title>
+    <link rel="stylesheet" href="./sky-demo.css">
+  </head>
+  <body>
+    <main class="demo-shell">
+      <section class="scene-panel" aria-label="可旋轉的 3D 天空示範">
+        <canvas id="scene" aria-label="可拖曳旋轉、滾輪縮放的 3D 小島"></canvas>
+        <div class="scene-hud">
+          <p class="eyebrow">Sky Lab 02 · Nimbus-inspired</p>
+          <h1>柔軟的雲，環繞整座小島</h1>
+          <p>用多層柔焦雲與薄霧組成 360° 雲帶，雲層稍微降低，旋轉世界時前後左右都有自然的天空層次。</p>
+        </div>
+        <div class="drag-hint">拖曳旋轉 3D 世界</div>
+      </section>
+      <aside class="control-panel">
+        <header class="panel-header">
+          <p class="eyebrow">Nimbus Weather Card concept</p>
+          <h2>360° 柔焦雲霧</h2>
+          <p>雲朵由 JavaScript Canvas 柔焦貼圖疊成主雲、陰影與薄霧，會依雲量與日夜改變透明度和色調。</p>
+        </header>
+        <div class="control-group">
+          <label for="time-range">一天的時間 <span class="value" id="time-value">14:00</span></label>
+          <input id="time-range" type="range" min="0" max="23.99" step="0.05" value="14">
+          <div class="range-scale"><span>00:00 夜</span><span>12:00 日</span><span>24:00 夜</span></div>
+        </div>
+        <div class="control-group">
+          <label for="cloud-range">雲量 <span class="value" id="cloud-value">48%</span></label>
+          <input id="cloud-range" type="range" min="0" max="100" step="1" value="48">
+        </div>
+        <div class="control-group button-row">
+          <button id="auto-time" class="primary" type="button">自動日夜</button>
+          <button id="reset-camera" type="button">重設視角</button>
+        </div>
+        <div class="status-card">
+          <strong id="weather-name"><span class="status-dot"></span>晴朗 · 白天</strong>
+          <p id="weather-details">14:00 · 雲量 48%</p>
+        </div>
+        <nav class="demo-links" aria-label="其他天空示範">
+          <a href="./01-canvas-clouds.html">01 Canvas 雲層</a>
+          <a href="./02-nimbus-weather-card.html" aria-current="page">02 Nimbus 立體雲</a>
+          <a href="./03-three-volumetric-clouds.html">03 Three.js 雲霧</a>
+          <a href="./04-open-meteo-live-sky.html">04 Open-Meteo 即時資料</a>
+        </nav>
+        <p class="note">操作：滑鼠／觸控拖曳旋轉，滾輪縮放。這是獨立 demo，不會修改正式 3D 世界。</p>
+      </aside>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./sky-demo-core.js"></script>
+    <script>
+      SkyDemo.create({ variant: 'nimbus', defaultHour: 14, cloudCover: 0.48, weather: '多雲' });
+    </script>
+  </body>
+</html>

@@ -19,11 +19,11 @@ import { shouldPausePetForMenu, type PetAction } from './pet-action-state';
 import type { PetAnimationAction } from './pet-animation';
 import { getWorldQuality, type WorldQuality } from './world-quality';
 import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
-import { createWorldSceneGameDataSnapshot } from './world-scene-data';
 import { getTerrainWorldSceneKey } from './world-scene-key';
+import { useWorldSocialSession } from '../world-social/world-social-session';
+import { createTerrainWorldSceneInput } from './world-scene-input';
 import {
   getPlacementRotationDelta,
-  toDecorationPlacementTransform,
   type DecorationPlacementControl,
   type DecorationPlacementDraft,
   type DecorationPlacementGestureDelta,
@@ -263,27 +263,9 @@ export function TerrainWorldLayer({
   const placementRotationDragRef = useRef<{ pointerId: number; startX: number; lastX: number; moved: boolean } | null>(null);
   const runtimeRef = useRef<PrototypeWorldRuntime | null>(null);
   const worldQuality = useWorldQuality();
+  const session = useWorldSocialSession();
   const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames);
-  const sceneGameData = useMemo(() => createWorldSceneGameDataSnapshot(gameData), [gameData]);
-  const sceneInput = useMemo(() => {
-    const equippedCatalogItem = getEquippedCatalogItem(gameData);
-    const placementItem = placement
-      ? gameData.catalog.find((item) => item.id === placement.catalogItemId && item.itemType === 'decoration')
-      : undefined;
-    return {
-      gameData: sceneGameData,
-      equippedCatalogItem,
-      characterRenderMode: getCharacterRenderMode(equippedCatalogItem),
-      characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
-      showPetNames, dayNightEnabled,
-      placement: placement && placementItem ? {
-        item: placementItem,
-        entityId: placement.entityId,
-        transform: toDecorationPlacementTransform(placement.draft),
-        isValid: placementValid,
-      } : undefined,
-    };
-  }, [gameData, placement, placementValid, sceneGameData, showPetNames, dayNightEnabled]);
+  const sceneInput = useMemo(() => createTerrainWorldSceneInput({ gameData, socialGameData: session?.gameData, session, placement, placementValid, showPetNames, dayNightEnabled, getEquippedCatalogItem, getCharacterRenderMode, getWorldCharacterModelUrl }), [dayNightEnabled, gameData, placement, placementValid, session, showPetNames]);
   pausedRef.current = paused;
 
   useEffect(() => {
@@ -411,6 +393,7 @@ export function TerrainWorldLayer({
       characterRenderMode: sceneInput.characterRenderMode,
       characterModelUrl: sceneInput.characterModelUrl,
       showPetNames: sceneInput.showPetNames, dayNightEnabled: sceneInput.dayNightEnabled,
+      session: sceneInput.session,
       placement: sceneInput.placement,
       onPlacementPositionChange,
       onPlacementGestureChange,
