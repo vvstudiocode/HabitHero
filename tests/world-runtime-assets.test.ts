@@ -4,6 +4,8 @@ import {
   PROTOTYPE_WORLD_ASSETS,
   getDecorationCatalogItem,
   getDecorationCollisionInput,
+  getDecorationGroundCoverMask,
+  getDecorationGroundCoverMasks,
   getDecorationGroundOffset,
   getDecorationModelUrl,
 } from '../src/features/world/world-runtime-assets';
@@ -103,6 +105,43 @@ describe('world runtime asset metadata helpers', () => {
     assert.equal(getDecorationGroundOffset(catalogItem({ metadata: { groundOffset: Number.NaN } })), 0);
     assert.equal(getDecorationGroundOffset(catalogItem({ metadata: { groundOffset: '0.5' } })), 0);
     assert.equal(getDecorationGroundOffset(undefined), 0);
+  });
+
+  it('maps pass-through decorations to scaled ground cover masks', () => {
+    const rug = catalogItem({
+      id: 'decoration-blue-rug',
+      assetKey: 'decoration.blue-rug',
+      metadata: {
+        passThrough: true,
+        groundCoverWidth: 1.96,
+        groundCoverDepth: 1.96,
+        groundCoverEdgeSoftness: 0.12,
+      },
+    });
+    const entity = worldEntity({
+      catalogItemId: rug.id,
+      x: 2,
+      z: -3,
+      rotationY: Math.PI / 2,
+      scale: 0.85,
+    });
+
+    assert.deepEqual(getDecorationGroundCoverMask(rug, entity), {
+      x: 2,
+      z: -3,
+      rotationY: Math.PI / 2,
+      halfWidth: 1.96 * 0.85 * 0.5,
+      halfDepth: 1.96 * 0.85 * 0.5,
+      edgeSoftness: 0.12 * 0.85,
+      shape: 'rectangle',
+    });
+    assert.deepEqual(getDecorationGroundCoverMasks(gameData([rug], entity)), [
+      getDecorationGroundCoverMask(rug, entity),
+    ]);
+    assert.equal(
+      getDecorationGroundCoverMask({ ...rug, metadata: { ...rug.metadata, passThrough: false } }, entity),
+      undefined,
+    );
   });
 
   it('preserves decoration collision input and metadata-derived shape fields', () => {

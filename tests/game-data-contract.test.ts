@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createChildGameDataMap, loadChildGameData } from '../src/features/world/game-data';
+import { createChildGameDataMap, loadChildGameData, type SharedWorldDecorationRow } from '../src/features/world/game-data';
 
 function queryResult<T>(result: { data: T; error: unknown }) {
   return {
@@ -67,6 +67,62 @@ describe('child game data mapping', () => {
     assert.equal(data['child-a'].inventory.length, 0);
     assert.equal(data['child-a'].loadout, null);
     assert.equal(data['child-a'].worldEntities.length, 0);
+  });
+
+  it('merges active shared decorations into the owner world without adding fake inventory', () => {
+    const data = createChildGameDataMap(
+      ['child-owner'],
+      [{ id: 'shared-catalog', item_type: 'decoration', name: '共享地毯', description: '', scroll_price: 0, asset_key: 'decoration.shared-rug', thumbnail_url: null, is_active: true, is_starter: false, is_stackable: true, collision_radius: 0.7, min_scale: 0.5, max_scale: 2, sort_order: 2, metadata: {} }],
+      [],
+      [],
+      [],
+      [],
+      [{ child_profile_id: 'child-owner', revision: 4 }],
+      [],
+      [{ id: 'shared-entity', source_inventory_item_id: 'source-inventory', catalog_item_id: 'shared-catalog', asset_key: 'decoration.shared-rug', position_x: 1, position_y: 0, position_z: -1, rotation_x: 0, rotation_y: 0, rotation_z: 0, scale: 1, behavior_mode: 'static', is_active: true, shared_by_me: false, shared_source_display_name: '小明' } satisfies SharedWorldDecorationRow],
+    );
+
+    assert.equal(data['child-owner'].inventory.length, 0);
+    assert.deepEqual(data['child-owner'].worldEntities[0], {
+      id: 'shared-entity',
+      inventoryItemId: 'shared:shared-entity',
+      entityKind: 'decoration',
+      worldLayoutVersion: 1,
+      x: 1,
+      y: 0,
+      z: -1,
+      rotationX: 0,
+      rotationY: 0,
+      rotationZ: 0,
+      scale: 1,
+      behaviorMode: 'static',
+      roamingSlot: null,
+      isActive: true,
+      catalogItemId: 'shared-catalog',
+      collisionRadius: 0.7,
+      assetKey: 'decoration.shared-rug',
+      name: '共享地毯',
+      placementScope: 'shared',
+      canTransform: true,
+      canRemove: true,
+      sharedByMe: false,
+      sharedSourceDisplayName: '小明',
+    });
+  });
+
+  it('does not copy one child\'s shared decorations into another child\'s world', () => {
+    const data = createChildGameDataMap(
+      ['child-owner', 'child-other'],
+      [{ id: 'shared-catalog', item_type: 'decoration', name: '共享地毯', description: '', scroll_price: 0, asset_key: 'decoration.shared-rug', thumbnail_url: null, is_active: true, is_starter: false, is_stackable: true, collision_radius: 0.7, min_scale: 0.5, max_scale: 2, sort_order: 2, metadata: {} }],
+      [], [], [], [],
+      [{ child_profile_id: 'child-owner', revision: 4 }, { child_profile_id: 'child-other', revision: 8 }],
+      [],
+      [{ id: 'shared-entity', source_inventory_item_id: 'source-inventory', catalog_item_id: 'shared-catalog', asset_key: 'decoration.shared-rug', position_x: 1, position_y: 0, position_z: -1, rotation_x: 0, rotation_y: 0, rotation_z: 0, scale: 1, behavior_mode: 'static', is_active: true, shared_by_me: false } satisfies SharedWorldDecorationRow],
+      'child-owner',
+    );
+
+    assert.equal(data['child-owner'].worldEntities.length, 1);
+    assert.equal(data['child-other'].worldEntities.length, 0);
   });
 
   it('returns an empty per-child fallback when game tables are not deployed yet', async () => {

@@ -17,6 +17,10 @@ const childDashboardSource = readFileSync(
   new URL('../src/components/ChildDashboard.tsx', import.meta.url),
   'utf8',
 );
+const childDecorationActionsSource = readFileSync(
+  new URL('../src/features/shared-decorations/child-decoration-actions.ts', import.meta.url),
+  'utf8',
+);
 const dataAccessSource = readFileSync(
   new URL('../src/lib/data-access.ts', import.meta.url),
   'utf8',
@@ -236,7 +240,7 @@ describe('child game panel decoration editing', () => {
 
   it('lets children select an existing furniture item in the world and re-place it', () => {
     assert.match(childDashboardSource, /onStartDecorationPlacement={startExistingDecorationPlacement}/);
-    assert.match(childDashboardSource, /draft:\s*\{\s*x:\s*entity\.x/);
+    assert.match(childDecorationActionsSource, /draft:\s*\{\s*x:\s*entity\.x/);
     assert.match(terrainWorldLayerSource, /onStartDecorationPlacement/);
     assert.match(terrainWorldLayerSource, /重新擺放/);
     assert.match(runtimeSource, /onDecorationSelect/);
@@ -268,8 +272,8 @@ describe('child game panel decoration editing', () => {
     assert.match(worldPlacementSource, /Math\.max\(0\.1, bounds\?\.minScale \?\? 0\.1\)/);
     assert.match(terrainWorldLayerSource, /縮小/);
     assert.match(storeSource, /patchPlacedWorldEntity/);
-    assert.match(childDashboardSource, /const placementSession = decorationPlacement;/);
-    assert.match(childDashboardSource, /setDecorationPlacement\(null\);[\s\S]*?placeWorldEntity/);
+    assert.match(childDecorationActionsSource, /const placementSession = decorationPlacement;/);
+    assert.match(childDecorationActionsSource, /setDecorationPlacement\(null\);[\s\S]*?placeWorldEntity/);
   });
 
   it('keeps the furniture lightbox free of a visible page scrollbar', () => {

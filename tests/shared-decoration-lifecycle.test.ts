@@ -53,4 +53,12 @@ describe('shared decoration lifecycle cleanup contract', () => {
     assert.match(sql, /references public\.child_inventory_items\(id\) on delete cascade/i);
     assert.match(sql, /world_owner_child_profile_id[\s\S]*child_world_states[\s\S]*revision/i);
   });
+
+  it('keeps cleanup lock order compatible with mutation RPCs', () => {
+    const sql = readCleanupMigration();
+    const inventoryCleanup = sql.match(/create or replace function private\.deactivate_shared_world_decorations_for_inventory[\s\S]*?\n\$\$;/i)?.[0] ?? '';
+    const catalogCleanup = sql.match(/create or replace function private\.cleanup_shared_decorations_for_catalog_item[\s\S]*?\n\$\$;/i)?.[0] ?? '';
+    assert.ok(inventoryCleanup.indexOf('lock_shared_decoration_pair') < inventoryCleanup.indexOf('for update'));
+    assert.ok(catalogCleanup.indexOf('lock_shared_decoration_pair') < catalogCleanup.indexOf('for update'));
+  });
 });

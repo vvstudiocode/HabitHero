@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
-import { AVATAR_STATE_EVENT, createAvatarBroadcastController, type AvatarBroadcastInput } from '../world-broadcast';
-import { WORLD_REVISION_EVENT } from '../contracts';
-import { flattenPresenceState, getPresenceAdmissionDecision, type PresenceAdmissionDecision, type WorldPresenceMember } from '../world-presence';
+import {
+  AVATAR_STATE_EVENT,
+  createAvatarBroadcastController,
+  type AvatarBroadcastInput,
+} from '../world-broadcast';
+import { getPresenceAdmissionDecision, type PresenceAdmissionDecision, type WorldPresenceMember } from '../world-presence';
 import { getFriendWorldLiveTopic } from '../world-topic';
 import { createRemoteAvatarStateReceiver, type RemoteAvatarStateSnapshot } from '../remote-avatar-state';
 import { createPendingRemoteAvatarStateBuffer } from '../pending-remote-avatar-state';
+import { REMOTE_AVATAR_STALE_AFTER_MS } from '../limits';
+import { createWorldMultiplayerChannelManager } from '../world-multiplayer-channel';
 
 interface WorldMultiplayerOptions {
   client: SupabaseClient | null;
@@ -15,6 +20,8 @@ interface WorldMultiplayerOptions {
   enabled?: boolean;
   onWorldRevision?: () => void;
 }
+
+type LocalAvatarBroadcastInput = Omit<AvatarBroadcastInput, 'otherMemberCount'>;
 
 export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childProfileId, characterAssetKey, enabled = true, onWorldRevision }: WorldMultiplayerOptions) {
   const [presenceMembers, setPresenceMembers] = useState<WorldPresenceMember[]>([]);
@@ -26,16 +33,36 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
   const receiverRef = useRef(createRemoteAvatarStateReceiver());
   const controllerRef = useRef(createAvatarBroadcastController({ connectionId: connectionIdRef.current, childProfileId: childProfileId ?? 'unknown' }));
   const pendingRemoteAvatarStatesRef = useRef(createPendingRemoteAvatarStateBuffer());
+  const latestLocalAvatarInputRef = useRef<LocalAvatarBroadcastInput | null>(null);
+  const characterAssetKeyRef = useRef(characterAssetKey);
   const presenceMembersRef = useRef<WorldPresenceMember[]>([]);
-  const admissionRef = useRef<PresenceAdmissionDecision>({ accepted: false, shouldUntrack: true, acceptedConnectionIds: [], rejectedConnectionIds: [] });
+  const admissionRef = useRef<PresenceAdmissionDecision>(createEmptyAdmissionDecision());
   const crowdedRef = useRef(false);
   const trackedRef = useRef(false);
+  characterAssetKeyRef.current = characterAssetKey;
 
   useEffect(() => {
     receiverRef.current.clear();
     pendingRemoteAvatarStatesRef.current.clear();
+    latestLocalAvatarInputRef.current = null;
     controllerRef.current = createAvatarBroadcastController({ connectionId: connectionIdRef.current, childProfileId: childProfileId ?? 'unknown' });
   }, [childProfileId]);
+
+  const sendAvatarState = useCallback((input: LocalAvatarBroadcastInput, force = false): boolean => {
+    const channel = channelRef.current;
+    const admission = admissionRef.current;
+    if (!channel || !trackedRef.current || crowdedRef.current || !admission.accepted) return false;
+    const otherMemberCount = admission.acceptedConnectionIds.filter((id) => id !== connectionIdRef.current).length;
+    if (otherMemberCount < 1) return false;
+    const result = controllerRef.current.next({
+      ...input,
+      characterAssetKey: characterAssetKeyRef.current ?? undefined,
+      otherMemberCount,
+    }, { force });
+    if (!result.event) return false;
+    void channel.send({ type: 'broadcast', event: AVATAR_STATE_EVENT, payload: result.event });
+    return true;
+  }, []);
 
   useEffect(() => {
     if (!enabled || !client || !worldOwnerChildProfileId || !childProfileId) return undefined;
@@ -43,146 +70,105 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
     crowdedRef.current = false;
     trackedRef.current = false;
     setError(null);
-    let disposed = false;
-    let onVisibilityChange: (() => void) | null = null;
-    let releaseChannel: (() => void) | null = null;
-    const topic = getFriendWorldLiveTopic(worldOwnerChildProfileId);
+    let staleAvatarTimer: ReturnType<typeof setInterval> | null = null;
+    let manager: ReturnType<typeof createWorldMultiplayerChannelManager>;
 
-    const setupChannel = async () => {
-      await client.realtime.setAuth();
-      if (disposed) return;
-
-      const activeChannel = client.channel(topic, { config: { private: true } });
-      channelRef.current = activeChannel;
-      const isCurrentChannel = () => !disposed && channelRef.current === activeChannel;
-      let released = false;
-      releaseChannel = () => {
-        if (released) return;
-        released = true;
-        if (channelRef.current === activeChannel) channelRef.current = null;
-        trackedRef.current = false;
-        void (async () => {
-          await activeChannel.untrack().catch(() => undefined);
-          await client.removeChannel(activeChannel).catch(() => undefined);
-        })();
-      };
-      const flushPendingRemoteAvatars = (input: {
-        presenceMembers: readonly WorldPresenceMember[];
-        acceptedConnectionIds: readonly string[];
-      }) => pendingRemoteAvatarStatesRef.current.flush(input);
-      const updatePresence = () => {
-        if (!isCurrentChannel() || !trackedRef.current) return;
-        const members = flattenPresenceState(activeChannel.presenceState());
-        if (!members.some((member) => member.connectionId === connectionIdRef.current)) return;
-        presenceMembersRef.current = members;
-        setPresenceMembers(members);
-        const decision = getPresenceAdmissionDecision(members, connectionIdRef.current);
-        admissionRef.current = decision;
-        crowdedRef.current = decision.shouldUntrack;
-        setCrowded(decision.shouldUntrack);
-        const acceptedConnections = new Set(decision.acceptedConnectionIds);
-        setRemoteAvatars((current) => current.filter((avatar) => acceptedConnections.has(avatar.connectionId)));
-        const pendingStates = flushPendingRemoteAvatars({
-          presenceMembers: members,
-          acceptedConnectionIds: decision.acceptedConnectionIds,
-        });
-        if (pendingStates.length > 0) {
-          setRemoteAvatars((current) => pendingStates.reduce(
-            (next, state) => [...next.filter((avatar) => avatar.connectionId !== state.connectionId), state],
-            current,
-          ));
-        }
-        if (decision.shouldUntrack) {
-          releaseChannel?.();
-        }
-      };
-      activeChannel.on('presence', { event: 'sync' }, updatePresence);
-      activeChannel.on('presence', { event: 'join' }, updatePresence);
-      activeChannel.on('presence', { event: 'leave' }, updatePresence);
-      activeChannel.on('broadcast', { event: AVATAR_STATE_EVENT }, (payload) => {
-        if (!isCurrentChannel()) return;
-        const accepted = receiverRef.current.accept((payload as { payload?: unknown }).payload ?? payload, Date.now());
-        if (!accepted.accepted || accepted.state.childProfileId === childProfileId) return;
-        const admission = admissionRef.current;
-        const member = presenceMembersRef.current.find((candidate) => candidate.connectionId === accepted.state.connectionId);
-        if (!member
-          || member.childProfileId !== accepted.state.childProfileId
-          || !admission.acceptedConnectionIds.includes(accepted.state.connectionId)) {
-          pendingRemoteAvatarStatesRef.current.enqueue(accepted.state);
-          return;
-        }
-        setRemoteAvatars((current) => [...current.filter((avatar) => avatar.connectionId !== accepted.state.connectionId), accepted.state]);
-      });
-      // Emotes are carried in avatar_state_v1 so position, motion, and action
-      // remain one ordered snapshot for the remote avatar renderer.
-      activeChannel.on('broadcast', { event: WORLD_REVISION_EVENT }, () => {
-        if (isCurrentChannel()) onWorldRevision?.();
-      });
-      activeChannel.subscribe((status) => {
-        if (!isCurrentChannel()) return;
-        if (status === 'SUBSCRIBED') {
-          void activeChannel.track({ connectionId: connectionIdRef.current, childProfileId, joinedAt: new Date().toISOString() })
-            .then(() => {
-              if (!isCurrentChannel()) return;
-              trackedRef.current = true;
-              updatePresence();
-            })
-            .catch(() => {
-              if (isCurrentChannel()) setError('多人世界連線目前不穩定。');
-            });
-        }
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          trackedRef.current = false;
-          setError('多人世界連線目前不穩定。');
-        }
-      });
-      onVisibilityChange = () => {
-        if (!isCurrentChannel()) return;
-        if (document.visibilityState === 'hidden') {
-          trackedRef.current = false;
-          void activeChannel.untrack().catch(() => undefined);
-        } else {
-          void activeChannel.track({ connectionId: connectionIdRef.current, childProfileId, joinedAt: new Date().toISOString() })
-            .then(() => {
-              if (!isCurrentChannel()) return;
-              trackedRef.current = true;
-              updatePresence();
-            })
-            .catch(() => {
-              if (isCurrentChannel()) setError('多人世界連線目前不穩定。');
-            });
-        }
-      };
-      document.addEventListener('visibilitychange', onVisibilityChange);
+    const sendLatestAvatarState = () => {
+      const latest = latestLocalAvatarInputRef.current;
+      if (!latest) return;
+      sendAvatarState({ ...latest, now: Date.now() }, true);
     };
-    void setupChannel().catch(() => {
-      if (!disposed) setError('多人世界連線目前不穩定。');
+    const onPresence = (members: WorldPresenceMember[]) => {
+      if (!members.some((member) => member.connectionId === connectionIdRef.current) && members.length > 0) return;
+      presenceMembersRef.current = members;
+      setPresenceMembers(members);
+      const decision = getPresenceAdmissionDecision(members, connectionIdRef.current);
+      admissionRef.current = decision;
+      crowdedRef.current = decision.shouldUntrack;
+      setCrowded(decision.shouldUntrack);
+      const acceptedConnections = new Set(decision.acceptedConnectionIds);
+      const now = Date.now();
+      setRemoteAvatars((current) => current.filter((avatar) => {
+        if (acceptedConnections.has(avatar.connectionId)) return true;
+        const stillPresent = members.some((member) => member.connectionId === avatar.connectionId);
+        return !stillPresent && now - avatar.receivedAt < REMOTE_AVATAR_STALE_AFTER_MS;
+      }));
+      const pendingStates = pendingRemoteAvatarStatesRef.current.flush({
+        presenceMembers: members,
+        acceptedConnectionIds: decision.acceptedConnectionIds,
+      });
+      if (pendingStates.length > 0) {
+        setRemoteAvatars((current) => pendingStates.reduce(
+          (next, state) => [...next.filter((avatar) => avatar.connectionId !== state.connectionId), state],
+          current,
+        ));
+      }
+      if (decision.shouldUntrack) manager.reconnect();
+    };
+    const onAvatarState = (payload: unknown) => {
+      const accepted = receiverRef.current.accept(payload, Date.now());
+      if (!accepted.accepted || accepted.state.childProfileId === childProfileId) return;
+      const admission = admissionRef.current;
+      const member = presenceMembersRef.current.find((candidate) => candidate.connectionId === accepted.state.connectionId);
+      if (!member
+        || member.childProfileId !== accepted.state.childProfileId
+        || !admission.acceptedConnectionIds.includes(accepted.state.connectionId)) {
+        pendingRemoteAvatarStatesRef.current.enqueue(accepted.state);
+        return;
+      }
+      setRemoteAvatars((current) => [...current.filter((avatar) => avatar.connectionId !== accepted.state.connectionId), accepted.state]);
+    };
+
+    manager = createWorldMultiplayerChannelManager({
+      client,
+      topic: getFriendWorldLiveTopic(worldOwnerChildProfileId),
+      childProfileId,
+      connectionId: connectionIdRef.current,
+      onChannelChange: (channel) => { channelRef.current = channel; },
+      onPresence,
+      onAvatarState,
+      onAvatarStateRequest: sendLatestAvatarState,
+      onWorldRevision: () => onWorldRevision?.(),
+      onConnected: () => {
+        trackedRef.current = true;
+        setError(null);
+        sendLatestAvatarState();
+      },
+      onReconnecting: () => {
+        trackedRef.current = false;
+        presenceMembersRef.current = [];
+        admissionRef.current = createEmptyAdmissionDecision();
+        setPresenceMembers([]);
+        setError('多人世界正在重新連線。');
+      },
     });
+    staleAvatarTimer = setInterval(() => {
+      const cutoff = Date.now() - REMOTE_AVATAR_STALE_AFTER_MS;
+      setRemoteAvatars((current) => {
+        const next = current.filter((avatar) => avatar.receivedAt >= cutoff);
+        return next.length === current.length ? current : next;
+      });
+    }, 2000);
+    manager.start();
     return () => {
-      disposed = true;
       trackedRef.current = false;
-      if (onVisibilityChange) document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (staleAvatarTimer) clearInterval(staleAvatarTimer);
       receiverRef.current.clear();
       pendingRemoteAvatarStatesRef.current.clear();
+      latestLocalAvatarInputRef.current = null;
       presenceMembersRef.current = [];
-      admissionRef.current = { accepted: false, shouldUntrack: true, acceptedConnectionIds: [], rejectedConnectionIds: [] };
+      admissionRef.current = createEmptyAdmissionDecision();
       crowdedRef.current = false;
       setRemoteAvatars([]);
-      releaseChannel?.();
+      manager.dispose();
+      channelRef.current = null;
     };
-  }, [childProfileId, client, enabled, onWorldRevision, worldOwnerChildProfileId]);
+  }, [childProfileId, client, enabled, onWorldRevision, sendAvatarState, worldOwnerChildProfileId]);
 
-  const broadcastState = useCallback((input: Omit<AvatarBroadcastInput, 'otherMemberCount'>) => {
-    const channel = channelRef.current;
-    const admission = admissionRef.current;
-    if (!channel || crowdedRef.current || !admission.accepted) return false;
-    const otherMemberCount = admission.acceptedConnectionIds.filter((id) => id !== connectionIdRef.current).length;
-    if (otherMemberCount < 1) return false;
-    const result = controllerRef.current.next({ ...input, characterAssetKey: characterAssetKey ?? undefined, otherMemberCount });
-    if (!result.event) return false;
-    void channel.send({ type: 'broadcast', event: AVATAR_STATE_EVENT, payload: result.event });
-    return true;
-  }, [characterAssetKey]);
+  const broadcastState = useCallback((input: LocalAvatarBroadcastInput) => {
+    latestLocalAvatarInputRef.current = { ...input };
+    return sendAvatarState(input);
+  }, [sendAvatarState]);
 
   return {
     connectionId: connectionIdRef.current,
@@ -194,6 +180,10 @@ export function useWorldMultiplayer({ client, worldOwnerChildProfileId, childPro
     error,
     broadcastState,
   };
+}
+
+function createEmptyAdmissionDecision(): PresenceAdmissionDecision {
+  return { accepted: false, shouldUntrack: true, acceptedConnectionIds: [], rejectedConnectionIds: [] };
 }
 
 function createConnectionId(): string {

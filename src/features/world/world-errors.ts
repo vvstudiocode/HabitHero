@@ -22,7 +22,7 @@ export function toWorldMutationErrorMessage(error: unknown, fallback: string): s
   if (message.includes('outside the playable area')) {
     return '請把家具移回看得到的草地。';
   }
-  if (message.includes('world revision conflict')) {
+  if (message.includes('world revision conflict') || message.includes('世界剛被好友更新') || (error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'revision-conflict')) {
     return '世界剛剛有變化，請再試一次。';
   }
   if (message.includes('network') || message.includes('fetch')) {

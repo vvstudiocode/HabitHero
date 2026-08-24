@@ -46,6 +46,11 @@ export interface ChildWorldEntity extends WorldTransform {
   assetKey?: string;
   name?: string;
   displayName?: string;
+  placementScope?: 'owned' | 'shared';
+  canTransform?: boolean;
+  canRemove?: boolean;
+  sharedByMe?: boolean;
+  sharedSourceDisplayName?: string;
 }
 
 export interface ChildGameData {

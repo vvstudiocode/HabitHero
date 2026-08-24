@@ -201,6 +201,17 @@ test('child account creation shows a pending state and prevents duplicate submis
   assert.match(source, /childAccountSubmissionInFlight/);
 });
 
+test('child password reset shows a pending state and prevents duplicate submissions', () => {
+  const source = read('../src/components/ParentDashboard.tsx');
+
+  assert.match(source, /resetChildPasswordSubmitting/);
+  assert.match(source, /resetChildPasswordSubmissionInFlight/);
+  assert.match(source, /aria-busy=\{resetChildPasswordSubmitting\}/);
+  assert.match(source, /disabled=\{resetChildPasswordSubmitting\}/);
+  assert.match(source, /儲存中…/);
+  assert.match(source, /animate-spin motion-reduce:animate-none/);
+});
+
 test('duplicate child account names show a child-specific recovery message', () => {
   const source = read('../src/components/ParentDashboard.tsx');
 
@@ -352,6 +363,19 @@ test('completion review opens in a fading modal instead of expanding the card', 
   assert.doesNotMatch(panel, /reviewingTaskId === task\.id \? \(/);
   assert.match(overlays, /\.hh-review-dialog-overlay[\s\S]*animation:\s*hh-review-dialog-overlay-in/);
   assert.match(modals, /\.hh-review-dialog-panel[\s\S]*animation:\s*hh-review-dialog-panel-in/);
+});
+
+test('completion review form uses the forest-paper theme outside the app portal root', () => {
+  const form = read('../src/features/growth/components/ParentFeedbackForm.tsx');
+  const modals = read('../src/styles/modals.css');
+  const overlays = read('../src/styles/overlays.css');
+
+  assert.match(form, /hh-review-dialog-card/);
+  assert.doesNotMatch(form, /border-blue-100|bg-white|text-gray-|bg-orange-500|bg-blue-500/);
+  assert.match(modals, /\.hh-review-dialog-card[\s\S]*color:\s*var\(--hh-ink\)/);
+  assert.match(modals, /\.hh-review-dialog-request[\s\S]*background:\s*var\(--hh-accent\)/);
+  assert.match(modals, /\.hh-review-dialog-approve[\s\S]*background:\s*var\(--hh-success\)/);
+  assert.match(overlays, /\.hh-review-dialog-backdrop[\s\S]*background:\s*rgb\(18 57 59 \/ 52%\)/);
 });
 
 test('child growth menu opens the growth feature directly', () => {

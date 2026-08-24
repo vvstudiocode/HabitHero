@@ -3,6 +3,7 @@ import {
   AVATAR_MOTIONS,
   AVATAR_EMOTES,
   AVATAR_STATE_EVENT,
+  AVATAR_STATE_REQUEST_EVENT,
   PROTOCOL_VERSION,
   type AvatarEmote,
   type AvatarEmotePayload,
@@ -32,6 +33,7 @@ import {
 export {
   AVATAR_EMOTE_EVENT,
   AVATAR_STATE_EVENT,
+  AVATAR_STATE_REQUEST_EVENT,
   PROTOCOL_VERSION,
 } from './contracts';
 export {
@@ -210,7 +212,7 @@ export interface AvatarBroadcastResult {
 }
 
 export interface AvatarBroadcastController {
-  next(input: AvatarBroadcastInput): AvatarBroadcastResult;
+  next(input: AvatarBroadcastInput, options?: { force?: boolean }): AvatarBroadcastResult;
   getLastSent(): AvatarStatePayload | null;
   reset(): void;
 }
@@ -231,13 +233,13 @@ function isValidBroadcastInput(input: AvatarBroadcastInput): boolean {
 }
 
 export function createAvatarBroadcastController(
-  options: AvatarBroadcastControllerOptions,
+  controllerOptions: AvatarBroadcastControllerOptions,
 ): AvatarBroadcastController {
-  let sequence = options.initialSequence ?? 0;
+  let sequence = controllerOptions.initialSequence ?? 0;
   if (!Number.isInteger(sequence) || sequence < 0) throw new TypeError('initialSequence must be a non-negative integer.');
   let lastSent: AvatarStatePayload | null = null;
 
-  const next = (input: AvatarBroadcastInput): AvatarBroadcastResult => {
+  const next = (input: AvatarBroadcastInput, broadcastOptions: { force?: boolean } = {}): AvatarBroadcastResult => {
     if (!Number.isInteger(input.otherMemberCount) || input.otherMemberCount < 0) {
       return { event: null, reason: 'invalid-input' };
     }
@@ -245,8 +247,8 @@ export function createAvatarBroadcastController(
     if (!isValidBroadcastInput(input)) return { event: null, reason: 'invalid-input' };
 
     const candidate = buildAvatarStatePayload({
-      connectionId: options.connectionId,
-      childProfileId: options.childProfileId,
+      connectionId: controllerOptions.connectionId,
+      childProfileId: controllerOptions.childProfileId,
       characterAssetKey: input.characterAssetKey,
       seq: sequence + 1,
       x: input.x,
@@ -268,10 +270,10 @@ export function createAvatarBroadcastController(
     const keepaliveDue = Boolean(lastSent)
       && candidate.motion === 'idle'
       && candidate.sentAt - lastSent.sentAt >= AVATAR_KEEPALIVE_INTERVAL_MS;
-    if (!changedPosition && !changedRotation && !changedPresentation && !stopping && !keepaliveDue) {
+    if (!broadcastOptions.force && !changedPosition && !changedRotation && !changedPresentation && !stopping && !keepaliveDue) {
       return { event: null, reason: 'unchanged' };
     }
-    if (lastSent && candidate.sentAt - lastSent.sentAt < AVATAR_MIN_BROADCAST_INTERVAL_MS) {
+    if (!broadcastOptions.force && lastSent && candidate.sentAt - lastSent.sentAt < AVATAR_MIN_BROADCAST_INTERVAL_MS) {
       return { event: null, reason: 'throttled' };
     }
     sequence += 1;
@@ -283,7 +285,7 @@ export function createAvatarBroadcastController(
     next,
     getLastSent: () => (lastSent ? { ...lastSent } : null),
     reset: () => {
-      sequence = options.initialSequence ?? 0;
+      sequence = controllerOptions.initialSequence ?? 0;
       lastSent = null;
     },
   };

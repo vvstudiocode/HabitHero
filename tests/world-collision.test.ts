@@ -22,9 +22,11 @@ describe('world collision contract', () => {
     assert.equal(isTransformWithinWorld(valid, 0.2, [{ x: 2.45, z: 2, radius: 0.2 }]), true);
   });
 
-  it('uses a smaller positive navigation proxy without allowing a no-collision decoration', () => {
+  it('uses a smaller positive navigation proxy and supports explicit pass-through decorations', () => {
     assert.equal(getDecorationNavigationRadius({ navigationRadius: 0.24 }, 1), 0.24);
     assert.equal(getDecorationNavigationRadius({ navigationRadius: 0 }, 0.42), 0.42);
+    assert.equal(getDecorationNavigationRadius({ passThrough: true, navigationRadius: 0.24 }, 1), 0);
+    assert.equal(getDecorationCollisionSpec({ passThrough: true }, 0.42).collisionRadius, 0);
     assert.equal(isTransformWithinWorld(valid, 0), false);
     assert.deepEqual(buildCollisionCircles([
       { positionX: 1, positionZ: 2, collisionRadius: 0, scale: 1.25 },

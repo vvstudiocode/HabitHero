@@ -271,11 +271,13 @@ export async function loadAppData(client: SupabaseClient, userId: string): Promi
   state.adventureGroups = groups.map(adventureGroupRowToViewModel);
   state.taskSchedules = schedules.map(taskScheduleRowToViewModel);
   state.timerSessions = timerSessions.map(taskTimerSessionRowToViewModel);
+  const loggedInChildProfile = children.find((child) => child.profile_id === userId)?.id ?? children[0]?.id;
   state.gameDataByChildId = await loadChildGameData(
     client,
     familyId,
     children.map((child) => child.id),
     role === 'parent',
+    loggedInChildProfile,
   );
   state.children = applyTimerSessionsToChildren(state.children, state.timerSessions);
   const ownChild = children.find((child) => child.profile_id === userId);

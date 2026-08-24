@@ -11,7 +11,7 @@ import {
   getPreviewFitDistance,
   getPreviewMaxZoom,
   getPreviewModelScale,
-  getPreviewModelOffset,
+  getPreviewModelOffset, getPreviewModelRotation,
   type PreviewModelOffset,
 } from './game-item-preview-framing';
 
@@ -249,7 +249,7 @@ export function GameItem3DPreview({ item }: GameItem3DPreviewProps) {
             }
 
             modelRoot = new THREE.Group();
-            previewModel = gltf.scene;
+            previewModel = gltf.scene; Object.assign(previewModel.rotation, getPreviewModelRotation(item));
             previewRadiusRef.current = centerAndScaleModelForPreview(THREE, gltf.scene, previewOffset);
             previewMaxZoomRef.current = getPreviewMaxZoom();
             if (camera && previewRadiusRef.current !== null) {

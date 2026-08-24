@@ -1,6 +1,7 @@
 import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem } from '../world/contracts';
 import type { FriendWorldSnapshot } from './friend-world-snapshot';
 import { getFriendWorldPetPresentation } from './friend-world-pet-presentation';
+import { getLocalDecorationRuntimeDefaults } from '../world/game-content-assets';
 
 export function buildFriendWorldGameData(snapshot: FriendWorldSnapshot): ChildGameData {
   const characterInventoryId = `friend-character:${snapshot.worldOwnerChildProfileId}`;
@@ -37,6 +38,11 @@ export function buildFriendWorldGameData(snapshot: FriendWorldSnapshot): ChildGa
       assetKey: entity.assetKey,
       name: displayName ?? entity.assetKey,
       displayName,
+      placementScope: entity.placementScope,
+      canTransform: entity.canTransform,
+      canRemove: entity.canRemove,
+      sharedByMe: entity.sharedByMe,
+      sharedSourceDisplayName: entity.sharedSourceDisplayName,
       x: entity.x,
       y: entity.y,
       z: entity.z,
@@ -59,6 +65,7 @@ export function buildFriendWorldGameData(snapshot: FriendWorldSnapshot): ChildGa
 
 function createCatalogItem(assetKey: string, itemType: 'character' | 'pet' | 'decoration', displayName?: string): GameCatalogItem {
   const petPresentation = itemType === 'pet' ? getFriendWorldPetPresentation(assetKey) : undefined;
+  const decorationPresentation = itemType === 'decoration' ? getLocalDecorationRuntimeDefaults(assetKey) : undefined;
   return {
     id: itemType === 'character' ? assetKey : `friend-asset:${assetKey}`,
     itemType,
@@ -70,10 +77,10 @@ function createCatalogItem(assetKey: string, itemType: 'character' | 'pet' | 'de
     isActive: true,
     isStarter: true,
     isStackable: false,
-    collisionRadius: itemType === 'decoration' ? 0.35 : 0.28,
+    collisionRadius: decorationPresentation?.collisionRadius ?? 0.28,
     minScale: 0.25,
     maxScale: 3,
     sortOrder: 0,
-    metadata: petPresentation?.metadata ?? {},
+    metadata: decorationPresentation?.metadata ?? petPresentation?.metadata ?? {},
   };
 }

@@ -1,0 +1,96 @@
+-- Add the supplied sofa and premium floor lamp as separately purchasable
+-- decorations without changing the existing furniture catalog entries.
+
+insert into public.game_catalog_items (
+  item_type,
+  name,
+  description,
+  scroll_price,
+  asset_key,
+  thumbnail_url,
+  is_active,
+  is_starter,
+  is_stackable,
+  collision_radius,
+  min_scale,
+  max_scale,
+  sort_order,
+  metadata
+)
+values
+  (
+    'decoration',
+    '沙發',
+    '柔和花草圖樣的溫暖沙發，讓完成任務後的休息時光多一個舒服角落。',
+    10,
+    'decoration.sofa',
+    '/assets/decorations/sofa-thumbnail.png',
+    true,
+    false,
+    true,
+    0.95,
+    0.25,
+    0.95,
+    130,
+    jsonb_build_object(
+      'model', '/assets/decorations/sofa.glb',
+      'thumbnail', '/assets/decorations/sofa-thumbnail.png',
+      'renderMode', 'static-glb',
+      'defaultScale', 0.75,
+      'groundOffset', 0.5177779794,
+      'navigationRadius', 0.58,
+      'navigationInset', 0.25,
+      'allowDecorationOverlap', true,
+      'collisionShape', 'rectangle',
+      'collisionWidth', 1.9,
+      'collisionDepth', 1.11,
+      'triangleCount', 93866,
+      'textureSize', 1024,
+      'simplificationRatio', 0.5,
+      'compression', 'Draco geometry + WebP textures + seam-preserving attribute-aware mesh simplification + preserved MikkTSpace tangents'
+    )
+  ),
+  (
+    'decoration',
+    '高級地燈',
+    '帶著柔和暖光的復古地燈，替世界角落增添一點安靜又精緻的氣氛。',
+    7,
+    'decoration.floor-lamp',
+    '/assets/decorations/floor-lamp-thumbnail.png',
+    true,
+    false,
+    true,
+    0.5,
+    0.25,
+    0.8,
+    140,
+    jsonb_build_object(
+      'model', '/assets/decorations/floor-lamp.glb',
+      'thumbnail', '/assets/decorations/floor-lamp-thumbnail.png',
+      'renderMode', 'static-glb',
+      'defaultScale', 0.55,
+      'groundOffset', 0.9516010284,
+      'navigationRadius', 0.32,
+      'navigationInset', 0.25,
+      'allowDecorationOverlap', true,
+      'collisionShape', 'circle',
+      'triangleCount', 47338,
+      'textureSize', 1024,
+      'simplificationRatio', 0.5,
+      'compression', 'Draco geometry + WebP textures + seam-preserving attribute-aware mesh simplification + preserved MikkTSpace tangents'
+    )
+  )
+on conflict (item_type, asset_key) do update
+set name = excluded.name,
+    description = excluded.description,
+    scroll_price = excluded.scroll_price,
+    thumbnail_url = excluded.thumbnail_url,
+    is_active = excluded.is_active,
+    is_starter = excluded.is_starter,
+    is_stackable = excluded.is_stackable,
+    collision_radius = excluded.collision_radius,
+    min_scale = excluded.min_scale,
+    max_scale = excluded.max_scale,
+    sort_order = excluded.sort_order,
+    metadata = excluded.metadata,
+    updated_at = timezone('utc', now());

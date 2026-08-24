@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   getPresenceAdmissionDecision,
   getPresenceLifecycleDecision,
+  getWorldCapacityMessage,
   selectWorldMembers,
   type WorldPresenceMember,
 } from '../src/features/world-multiplayer/world-presence';
@@ -15,6 +16,10 @@ const members: WorldPresenceMember[] = Array.from({ length: 9 }, (_, index) => (
 }));
 
 describe('world multiplayer capacity', () => {
+  it('provides a Chinese message for a full world', () => {
+    assert.equal(getWorldCapacityMessage(), '這個世界目前已滿，最多只能 3 人。請稍後再試。');
+  });
+
   it('allows the local client while the initial presence sync is still empty', () => {
     assert.deepEqual(getPresenceAdmissionDecision([], 'connection-01'), {
       accepted: true,
@@ -24,12 +29,12 @@ describe('world multiplayer capacity', () => {
     });
   });
 
-  it('keeps exactly eight members using joinedAt then connectionId order', () => {
+  it('keeps exactly three members using joinedAt then connectionId order', () => {
     const selected = selectWorldMembers([...members].reverse());
 
-    assert.equal(MAX_WORLD_MEMBERS, 8);
-    assert.deepEqual(selected.accepted.map((member) => member.connectionId), members.slice(0, 8).map((member) => member.connectionId));
-    assert.deepEqual(selected.rejected.map((member) => member.connectionId), ['connection-09']);
+    assert.equal(MAX_WORLD_MEMBERS, 3);
+    assert.deepEqual(selected.accepted.map((member) => member.connectionId), members.slice(0, 3).map((member) => member.connectionId));
+    assert.deepEqual(selected.rejected.map((member) => member.connectionId), members.slice(3).map((member) => member.connectionId));
   });
 
   it('produces the same admission result for every shuffled race', () => {
@@ -50,8 +55,8 @@ describe('world multiplayer capacity', () => {
 
     assert.equal(decision.shouldUntrack, true);
     assert.equal(decision.accepted, false);
-    assert.deepEqual(decision.acceptedConnectionIds, members.slice(0, 8).map((member) => member.connectionId));
-    assert.deepEqual(decision.rejectedConnectionIds, ['connection-09']);
+    assert.deepEqual(decision.acceptedConnectionIds, members.slice(0, 3).map((member) => member.connectionId));
+    assert.deepEqual(decision.rejectedConnectionIds, members.slice(3).map((member) => member.connectionId));
   });
 
   it('untracks presence while backgrounded without invoking channel lifecycle code', () => {

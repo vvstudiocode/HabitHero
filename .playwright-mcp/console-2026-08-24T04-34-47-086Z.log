@@ -1,0 +1,20 @@
+[ 2940861ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/src/features/world-multiplayer/hooks/use-world-multiplayer.ts?t=1787549027808:0
+[ 2940862ms] [ERROR] [vite] Failed to reload /src/features/world-social/WorldSocialLayer.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[ 3178910ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/src/features/world-multiplayer/hooks/use-world-multiplayer.ts?t=1787549265980:0
+[ 3178910ms] [ERROR] [vite] Failed to reload /src/features/world-social/WorldSocialLayer.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[12665004ms] Error: useAppStore must be used within an AppProvider
+    at useAppStore (http://localhost:3000/src/store.tsx?t=1787557553262:766:23)
+    at MainApp (http://localhost:3000/src/App.tsx?t=1787557553262:23:150)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:8525:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:12424:43)
+    at renderRootSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:12408:13)
+[12665002ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainApp> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:6965

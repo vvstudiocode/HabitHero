@@ -23,6 +23,9 @@ import {
   GRASS_COLOR_LAYER_THRESHOLDS,
   getGrassColorLayer,
 } from '../terrain-prototype/procedural-grass-scene.js';
+import {
+  getGroundCoverMaskVisibility,
+} from '../terrain-prototype/ground-cover-mask.js';
 
 describe('terrain prototype procedural grass', () => {
   it('uses a several-times denser but device-aware blade budget', () => {
@@ -135,6 +138,36 @@ describe('terrain prototype procedural grass', () => {
     const grassSceneSource = readFileSync(new URL('../terrain-prototype/procedural-grass-scene.js', import.meta.url), 'utf8');
     assert.doesNotMatch(grassSceneSource, /uWindStrength|primaryWave|detailWave|float gust/);
     assert.match(grassSceneSource, /getInteractionOffset/);
+    assert.match(grassSceneSource, /uGroundCoverMasks/);
+    assert.match(grassSceneSource, /getGroundCoverVisibility/);
+  });
+
+  it('hides grass and flowers under a rotated rectangular ground cover', () => {
+    const mask = {
+      x: 0,
+      z: 0,
+      rotationY: Math.PI / 4,
+      halfWidth: 1,
+      halfDepth: 0.8,
+      edgeSoftness: 0.12,
+    };
+    const inside = {
+      x: Math.cos(mask.rotationY) * 0.4 - Math.sin(mask.rotationY) * 0.2,
+      z: Math.sin(mask.rotationY) * 0.4 + Math.cos(mask.rotationY) * 0.2,
+    };
+    const outside = {
+      x: Math.cos(mask.rotationY) * 1.2,
+      z: Math.sin(mask.rotationY) * 1.2,
+    };
+    const edge = {
+      x: Math.cos(mask.rotationY) * 1.04,
+      z: Math.sin(mask.rotationY) * 1.04,
+    };
+
+    assert.equal(getGroundCoverMaskVisibility(inside, [mask]), 0);
+    assert.equal(getGroundCoverMaskVisibility(outside, [mask]), 1);
+    assert.equal(getGroundCoverMaskVisibility(edge, [mask]) > 0, true);
+    assert.equal(getGroundCoverMaskVisibility(edge, [mask]) < 1, true);
   });
 
   it('maps meadow distance into edge, middle, and distant rendering layers', () => {

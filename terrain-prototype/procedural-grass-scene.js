@@ -3,6 +3,7 @@ import {
   createProceduralGrassLayout,
   getProceduralGrassCount,
 } from './procedural-grass-field.js';
+import { MAX_GROUND_COVER_MASKS } from './ground-cover-mask.js';
 
 export const GRASS_COLOR_LAYER_THRESHOLDS = Object.freeze({
   edgeEnd: 0.24,
@@ -161,6 +162,13 @@ function createGrassMaterial(THREE, {
       uAmbientColor: { value: new THREE.Color(ambientColor) },
       uWalkableHalf: { value: walkableHalf },
       uFieldHalf: { value: fieldHalf },
+      uGroundCoverMaskCount: { value: 0 },
+      uGroundCoverMasks: {
+        value: Array.from({ length: MAX_GROUND_COVER_MASKS }, () => new THREE.Vector4(1000, 1000, 0, 0)),
+      },
+      uGroundCoverMaskRotations: { value: new Float32Array(MAX_GROUND_COVER_MASKS) },
+      uGroundCoverMaskSoftness: { value: new Float32Array(MAX_GROUND_COVER_MASKS) },
+      uGroundCoverMaskShapes: { value: new Float32Array(MAX_GROUND_COVER_MASKS) },
     },
   ]);
 
@@ -185,6 +193,11 @@ function createGrassMaterial(THREE, {
       uniform float uInteractorStrengthB;
       uniform float uWalkableHalf;
       uniform float uFieldHalf;
+      uniform float uGroundCoverMaskCount;
+      uniform vec4 uGroundCoverMasks[${MAX_GROUND_COVER_MASKS}];
+      uniform float uGroundCoverMaskRotations[${MAX_GROUND_COVER_MASKS}];
+      uniform float uGroundCoverMaskSoftness[${MAX_GROUND_COVER_MASKS}];
+      uniform float uGroundCoverMaskShapes[${MAX_GROUND_COVER_MASKS}];
 
       varying float vBladeHeight;
       varying float vVariation;
@@ -193,6 +206,31 @@ function createGrassMaterial(THREE, {
       varying float vGrassDistantFactor;
 
       #include <fog_pars_vertex>
+
+      float getGroundCoverVisibility(vec2 point) {
+        float visibility = 1.0;
+        for (int index = 0; index < ${MAX_GROUND_COVER_MASKS}; index += 1) {
+          if (float(index) < uGroundCoverMaskCount) {
+            vec4 mask = uGroundCoverMasks[index];
+            vec2 delta = point - mask.xy;
+            float cosine = cos(uGroundCoverMaskRotations[index]);
+            float sine = sin(uGroundCoverMaskRotations[index]);
+            vec2 localPoint = vec2(
+              cosine * delta.x + sine * delta.y,
+              -sine * delta.x + cosine * delta.y
+            );
+            float edgeDistance = min(mask.z - abs(localPoint.x), mask.w - abs(localPoint.y));
+            if (uGroundCoverMaskShapes[index] > 0.5) {
+              float ellipseDistance = length(localPoint / max(mask.zw, vec2(0.001)));
+              edgeDistance = min(mask.z, mask.w) * (1.0 - ellipseDistance);
+            }
+            float softness = max(uGroundCoverMaskSoftness[index], 0.001);
+            float maskVisibility = 1.0 - smoothstep(-softness, 0.0, edgeDistance);
+            visibility = min(visibility, maskVisibility);
+          }
+        }
+        return visibility;
+      }
 
       vec2 getInteractionOffset(
         vec2 bladePosition,
@@ -239,11 +277,12 @@ function createGrassMaterial(THREE, {
           bladeHeight
         );
 
+        float groundCoverVisibility = getGroundCoverVisibility(instanceOffset.xz);
+        localPosition.y *= groundCoverVisibility;
         vec3 worldPosition = vec3(worldXZ.x, instanceOffset.y + localPosition.y, worldXZ.y);
         vec4 mvPosition = modelViewMatrix * vec4(worldPosition, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
 
-        vBladeHeight = bladeHeight;
+        vBladeHeight = bladeHeight * groundCoverVisibility;
         vVariation = instanceVariation;
         vWaveLight = 0.0;
         float grassDistance = max(abs(instanceOffset.x), abs(instanceOffset.z));
@@ -255,6 +294,11 @@ function createGrassMaterial(THREE, {
         vGrassEdgeFactor = smoothstep(0.0, 0.08, grassOuterProgress)
           * (1.0 - smoothstep(0.20, 0.30, grassOuterProgress));
         vGrassDistantFactor = smoothstep(0.58, 0.92, grassOuterProgress);
+
+        gl_Position = projectionMatrix * mvPosition;
+        if (groundCoverVisibility < 0.001) {
+          gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+        }
 
         #include <fog_vertex>
       }
@@ -324,6 +368,7 @@ export function createProceduralGrassField(THREE, {
   sunDirection,
   sunColor,
   ambientColor,
+  groundCoverMasks = [],
 }) {
   const baseCount = count ?? getProceduralGrassCount({ width: viewportWidth, pixelRatio });
   const layout = createProceduralGrassLayout({
@@ -416,8 +461,31 @@ export function createProceduralGrassField(THREE, {
     },
   ];
 
-  function update({ time, interactors = [] }) {
+  function updateGroundCoverMasks(masks = []) {
+    const safeMasks = masks.slice(0, MAX_GROUND_COVER_MASKS);
+    uniforms.uGroundCoverMaskCount.value = safeMasks.length;
+    for (let index = 0; index < MAX_GROUND_COVER_MASKS; index += 1) {
+      const mask = safeMasks[index];
+      const target = uniforms.uGroundCoverMasks.value[index];
+      if (!mask) {
+        target.set(1000, 1000, 0, 0);
+        uniforms.uGroundCoverMaskRotations.value[index] = 0;
+        uniforms.uGroundCoverMaskSoftness.value[index] = 0.001;
+        uniforms.uGroundCoverMaskShapes.value[index] = 0;
+        continue;
+      }
+      target.set(mask.x, mask.z, mask.halfWidth, mask.halfDepth);
+      uniforms.uGroundCoverMaskRotations.value[index] = mask.rotationY ?? 0;
+      uniforms.uGroundCoverMaskSoftness.value[index] = Math.max(mask.edgeSoftness ?? 0.08, 0.001);
+      uniforms.uGroundCoverMaskShapes.value[index] = mask.shape === 'circle' ? 1 : 0;
+    }
+  }
+
+  updateGroundCoverMasks(groundCoverMasks);
+
+  function update({ time, interactors = [], groundCoverMasks: nextGroundCoverMasks = undefined }) {
     uniforms.uTime.value = time;
+    if (nextGroundCoverMasks) updateGroundCoverMasks(nextGroundCoverMasks);
 
     for (let index = 0; index < MAX_GRASS_INTERACTORS; index += 1) {
       const target = interactorUniforms[index];
@@ -435,5 +503,5 @@ export function createProceduralGrassField(THREE, {
     }
   }
 
-  return { count: instanceCount, ground, mesh, update };
+  return { count: instanceCount, ground, mesh, update, updateGroundCoverMasks };
 }

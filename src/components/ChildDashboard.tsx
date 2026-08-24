@@ -26,7 +26,7 @@ import { ChildDashboardBackgroundMusic } from './ChildDashboardBackgroundMusic';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
-import { emptyChildGameData, type GameCatalogItem, type GamePurchaseResult, type WorldMutationResult } from '../features/world/contracts';
+import { emptyChildGameData, type GamePurchaseResult, type WorldMutationResult } from '../features/world/contracts';
 import { getFollowingPetInventoryIds } from '../features/world/following-pet-state';
 import { getPetActionPlan, type PetAction } from '../features/world/pet-action-state';
 import { getRoamingPetSnapshot } from '../features/world/components/roaming-pet-state';
@@ -41,16 +41,15 @@ import {
 import { buildCollisionCircles } from '../features/world/world-collision';
 import { toWorldMutationErrorMessage } from '../features/world/world-errors';
 import { WorldSocialLayer } from '../features/world-social/WorldSocialLayer';
+import { useWorldSocialSession } from '../features/world-social/world-social-session';
+import { SharedDecorationShareDialog } from '../features/shared-decorations/SharedDecorationShareDialog';
+import { isDecorationPlacementValid } from '../features/world/world-placement';
 import {
-  applyDecorationPlacementGesture,
-  applyDecorationPlacementControl,
-  createDecorationPlacementDraft,
-  isDecorationPlacementValid,
-  toDecorationPlacementTransform,
-  type DecorationPlacementControl,
-  type DecorationPlacementDraft,
-  type DecorationPlacementGestureDelta,
-} from '../features/world/world-placement';
+  createChildDecorationActions,
+  type DecorationPlacementSession,
+  type DecorationPurchasePrompt,
+  type SharedDecorationItem,
+} from '../features/shared-decorations/child-decoration-actions';
 import { getBackgroundMusicPreference, setBackgroundMusicPreference } from '../lib/background-music-preference';
 import { useDayNightPreference } from '../features/world/use-day-night-preference';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
@@ -93,17 +92,6 @@ type ChildMenuGroup = ChildFeature | 'backpack';
 type ChildAdventureRewardNotice =
   | { mode: 'submitted'; taskName: string; pendingStars: number }
   | { mode: 'approved'; bundle: AdventureRewardBundle };
-interface DecorationPurchasePrompt {
-  inventoryItemId: string;
-  item: GameCatalogItem;
-}
-interface DecorationPlacementSession {
-  inventoryItemId: string;
-  catalogItemId: string;
-  draft: DecorationPlacementDraft;
-  entityId?: string;
-}
-
 const HERO_MENU_EXIT_MS = 1200;
 const REWARDS_PER_PAGE = 18;
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
@@ -150,6 +138,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [decorationPurchasePrompt, setDecorationPurchasePrompt] = useState<DecorationPurchasePrompt | null>(null);
   const [decorationPlacement, setDecorationPlacement] = useState<DecorationPlacementSession | null>(null);
   const [decorationPlacementPending, setDecorationPlacementPending] = useState(false);
+  const [shareDecorationItem, setShareDecorationItem] = useState<SharedDecorationItem | null>(null);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
   const [isVisitingFriendWorld, setIsVisitingFriendWorld] = useState(false);
@@ -186,8 +175,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     ? state.children.find(c => c.id === activeChildId)
     : undefined;
   const gameData = activeChildId ? state.gameDataByChildId[activeChildId] ?? emptyChildGameData() : emptyChildGameData();
+  const socialSession = useWorldSocialSession();
+  const worldGameData = socialSession?.gameData ?? gameData;
   const activeDecorationCollisionCircles = buildCollisionCircles(
-    gameData.worldEntities
+    worldGameData.worldEntities
       .filter((entity) => entity.entityKind === 'decoration' && entity.isActive && entity.id !== decorationPlacement?.entityId)
       .map((entity) => ({
         positionX: entity.x,
@@ -197,7 +188,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       })),
   );
   const placementItem = decorationPlacement
-    ? gameData.catalog.find((item) => item.id === decorationPlacement.catalogItemId && item.itemType === 'decoration')
+    ? worldGameData.catalog.find((item) => item.id === decorationPlacement.catalogItemId && item.itemType === 'decoration')
     : undefined;
   const placementValid = Boolean(
     decorationPlacement
@@ -212,6 +203,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setBackgroundMusicEnabled(getBackgroundMusicPreference(activeChildId ?? ''));
     setDecorationPurchasePrompt(null);
     setDecorationPlacement(null);
+    setShareDecorationItem(null);
     setCleanMode(false);
     setCleanModeHintVisible(false);
     hasShownCleanModeHint.current = false;
@@ -752,62 +744,43 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setHeroMenuVisible(false);
   };
 
-  const startDecorationPlacement = () => {
-    if (!decorationPurchasePrompt) return;
-    const prompt = decorationPurchasePrompt;
-    setDecorationPurchasePrompt(null);
-    closeChildFeature(() => setDecorationPlacement({
-      inventoryItemId: prompt.inventoryItemId,
-      catalogItemId: prompt.item.id,
-      draft: createDecorationPlacementDraft(prompt.item),
-    }));
-  };
-
-  const startOwnedDecorationPlacement = (inventoryItemId: string, catalogItemId: string) => {
-    const item = gameData.catalog.find((candidate) => candidate.id === catalogItemId && candidate.itemType === 'decoration');
-    if (!item) return;
-    closeChildFeature(() => setDecorationPlacement({
-      inventoryItemId,
-      catalogItemId,
-      draft: createDecorationPlacementDraft(item),
-    }));
-  };
-
-  const startExistingDecorationPlacement = (entityId: string) => {
-    const entity = gameData.worldEntities.find((candidate) => candidate.id === entityId && candidate.entityKind === 'decoration' && candidate.isActive);
-    if (!entity) return;
-    const inventory = gameData.inventory.find((candidate) => candidate.id === entity.inventoryItemId);
-    const catalogItemId = entity.catalogItemId ?? inventory?.catalogItemId;
-    const item = catalogItemId
-      ? gameData.catalog.find((candidate) => candidate.id === catalogItemId && candidate.itemType === 'decoration')
-      : undefined;
-    if (!item) return;
-    setHeroFeature(null);
-    setHeroMenuGroup(null);
-    setHeroMenuVisible(false);
-    setDecorationPlacement({
-      inventoryItemId: entity.inventoryItemId,
-      catalogItemId: item.id,
-      entityId: entity.id,
-      draft: { x: entity.x, z: entity.z, rotationY: entity.rotationY, scale: entity.scale },
-    });
-  };
-
-  const collectSelectedDecoration = async (entityId: string) => {
-    if (!activeChildId) return;
-    const entity = gameData.worldEntities.find((candidate) => candidate.id === entityId && candidate.entityKind === 'decoration' && candidate.isActive);
-    if (!entity) return;
-    try {
-      await removeWorldEntity(activeChildId, {
-        entityId: entity.id,
-        inventoryItemId: entity.inventoryItemId,
-        expectedRevision: gameData.worldRevision,
-      });
-      showToast('裝飾已收回背包。');
-    } catch (error) {
-      showToast(toWorldMutationErrorMessage(error, '收回裝飾失敗，請再試一次。'));
-    }
-  };
+  const {
+    startDecorationPlacement,
+    startOwnedDecorationPlacement,
+    startExistingDecorationPlacement,
+    collectSelectedDecoration,
+    leaveDecorationInInventory,
+    handleDecorationPlacementPositionChange,
+    handleDecorationPlacementControl,
+    handleDecorationPlacementGesture,
+    completeDecorationPlacement,
+    shareDecorationWithFriend,
+    collectAllSharedDecorations,
+    cancelDecorationPlacement,
+  } = createChildDecorationActions({
+    activeChildId,
+    gameData,
+    worldGameData,
+    socialSession,
+    decorationPurchasePrompt,
+    decorationPlacement,
+    placementItem,
+    placementValid,
+    decorationPlacementPending,
+    shareDecorationItem,
+    closeChildFeature,
+    showToast,
+    setDecorationPurchasePrompt,
+    setDecorationPlacement,
+    setDecorationPlacementPending,
+    setShareDecorationItem,
+    setHeroFeature,
+    setHeroMenuGroup,
+    setHeroMenuVisible,
+    removeWorldEntity,
+    updateWorldEntityTransform,
+    placeWorldEntity,
+  });
 
   const handlePetAction = async (selection: PetSelection, action: PetAction) => {
     if (!activeChildId || mutationPending) return false;
@@ -909,74 +882,6 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       showToast(toWorldMutationErrorMessage(error, '寵物動作更新失敗，請再試一次。'));
       return false;
     }
-  };
-
-  const leaveDecorationInInventory = () => {
-    setDecorationPurchasePrompt(null);
-    closeChildFeature(() => showToast('裝飾已放進背包，之後想放再來找它。'));
-  };
-
-  const handleDecorationPlacementPositionChange = (position: { x: number; z: number }) => {
-    setDecorationPlacement((current) => current ? { ...current, draft: { ...current.draft, ...position } } : current);
-  };
-
-  const handleDecorationPlacementControl = (control: DecorationPlacementControl) => {
-    setDecorationPlacement((current) => {
-      if (!current) return current;
-      const item = gameData.catalog.find((candidate) => candidate.id === current.catalogItemId && candidate.itemType === 'decoration');
-      return item
-        ? { ...current, draft: applyDecorationPlacementControl(current.draft, control, item) }
-        : current;
-    });
-  };
-
-  const handleDecorationPlacementGesture = (gesture: DecorationPlacementGestureDelta) => {
-    setDecorationPlacement((current) => {
-      if (!current) return current;
-      const item = gameData.catalog.find((candidate) => candidate.id === current.catalogItemId && candidate.itemType === 'decoration');
-      return item
-        ? { ...current, draft: applyDecorationPlacementGesture(current.draft, gesture, item) }
-        : current;
-    });
-  };
-
-  const completeDecorationPlacement = async () => {
-    if (!activeChildId || !decorationPlacement || !placementItem || !placementValid || decorationPlacementPending) return;
-    const placementSession = decorationPlacement;
-    const expectedRevision = gameData.worldRevision;
-    setDecorationPlacement(null);
-    setDecorationPlacementPending(true);
-    try {
-      const transform = toDecorationPlacementTransform(placementSession.draft);
-      if (placementSession.entityId) {
-        await updateWorldEntityTransform(activeChildId, {
-          inventoryItemId: placementSession.inventoryItemId,
-          entityId: placementSession.entityId,
-          expectedRevision,
-          transform,
-        });
-        showToast('家具位置已更新！');
-      } else {
-        await placeWorldEntity(activeChildId, {
-          inventoryItemId: placementSession.inventoryItemId,
-          expectedRevision,
-          transform,
-          behaviorMode: 'static',
-        });
-        showToast('裝飾已放到世界！');
-      }
-    } catch (error) {
-      setDecorationPlacement(placementSession);
-      showToast(toWorldMutationErrorMessage(error, '這裡不能放置，換一個草地位置試試看。'));
-    } finally {
-      setDecorationPlacementPending(false);
-    }
-  };
-
-  const cancelDecorationPlacement = () => {
-    if (decorationPlacementPending) return;
-    setDecorationPlacement(null);
-    showToast('裝飾先留在背包裡。');
   };
 
   const toggleHeroMenuGroup = (tab: ChildMenuGroup) => {
@@ -1129,6 +1034,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       <WorldSocialLayer
         childProfileId={activeChild.id}
         enabled={role === 'child'}
+        cleanMode={cleanMode}
+        placementMode={Boolean(decorationPlacement)}
         leaveFriendWorldRequest={leaveFriendWorldRequest}
         onVisitingChange={setIsVisitingFriendWorld}
       />
@@ -1158,11 +1065,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       />
 
       {/* Main Content */}
+      {heroFeature && <div className="hh-child-feature-backdrop" aria-hidden="true" />}
       <main
         ref={featureContentRef}
         className={cn(
           "flex-1 p-6 pb-28",
-          heroFeature ? "hh-parent-content-modal" : "hh-parent-content-hidden"
+          heroFeature ? "hh-parent-content-modal hh-parent-content-modal--child" : "hh-parent-content-hidden"
         )}
         role={heroFeature ? 'dialog' : undefined}
         aria-modal={heroFeature ? true : undefined}
@@ -1221,9 +1129,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onSetRoamingPets={(inventoryItemIds): Promise<WorldMutationResult> => setRoamingPets(activeChild.id, inventoryItemIds)}
               onStartDecorationPlacement={startOwnedDecorationPlacement}
               onStartExistingDecorationPlacement={startExistingDecorationPlacement}
+              onShareDecoration={role === 'child' ? (inventoryItemId, item) => setShareDecorationItem({ inventoryItemId, item }) : undefined}
               onUpdateDecoration={(payload) => updateWorldEntityTransform(activeChild.id, payload)}
               onRemoveDecoration={(entityId, inventoryItemId, expectedRevision) => removeWorldEntity(activeChild.id, { entityId, inventoryItemId, expectedRevision })}
               onCollectAllDecorations={(expectedRevision) => collectAllWorldDecorations(activeChild.id, expectedRevision)}
+              onCollectAllSharedDecorations={!socialSession?.snapshot && socialSession?.worldOwnerChildProfileId === activeChild.id ? collectAllSharedDecorations : undefined}
               onSwitchChild={onSwitchChild}
               onLogout={onLogout}
               showPetNames={showPetNames}
@@ -1548,6 +1458,15 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           pendingStars={adventureRewardNotice.mode === 'submitted' ? adventureRewardNotice.pendingStars : undefined}
           bundle={adventureRewardNotice.mode === 'approved' ? adventureRewardNotice.bundle : undefined}
           onDismiss={dismissAdventureRewardNotice}
+        />
+      )}
+
+      {shareDecorationItem && socialSession?.friends && (
+        <SharedDecorationShareDialog
+          item={shareDecorationItem.item}
+          friends={socialSession.friends}
+          onClose={() => setShareDecorationItem(null)}
+          onShare={shareDecorationWithFriend}
         />
       )}
 

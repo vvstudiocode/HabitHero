@@ -21,6 +21,12 @@ function readFunction(sql: string, functionName: string): string {
   return match[0];
 }
 
+function stripSqlComments(sql: string): string {
+  return sql
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/--[^\r\n]*/g, '');
+}
+
 describe('shared decoration database contract', () => {
   it('defines ownership-safe schema without duplicating inventory metadata', () => {
     const sql = readSharedDecorationMigrations();
@@ -56,7 +62,7 @@ describe('shared decoration database contract', () => {
     for (const functionName of functionNames) {
       const functionSource = readFunction(sql, functionName);
       assert.match(functionSource, /security definer/i, functionName);
-      assert.match(functionSource, /set search_path\s*=\s*pg_catalog, public, private/i, functionName);
+      assert.match(functionSource, /set search_path\s*=\s*(?:pg_catalog, public, private|''\s*)/i, functionName);
       assert.match(functionSource, /auth\.uid\(\)/i, functionName);
       assert.doesNotMatch(functionSource, /jsonb\s*[,)]/i, `${functionName} must not accept an untyped JSON input`);
       assert.match(sql, new RegExp(`revoke all on function (?:public|private)\\.${functionName}`, 'i'));
@@ -86,5 +92,22 @@ describe('shared decoration database contract', () => {
     }
 
     assert.doesNotMatch(sql, /realtime\.send|realtime\.messages/i);
+  });
+
+  it('does not project the source inventory key into the owner world response', () => {
+    const sql = readFileSync(new URL('../supabase/migrations/20260824213000_shared_decoration_own_world_projection.sql', import.meta.url), 'utf8');
+    assert.match(sql, /null::uuid/i);
+    assert.doesNotMatch(sql, /select\s+shared\.source_inventory_item_id/i);
+  });
+
+  it('rechecks relationship state after the target-world lock', () => {
+    const sql = stripSqlComments(readSharedDecorationMigrations());
+    const place = readFunction(sql, 'place_shared_world_decoration');
+    const update = readFunction(sql, 'update_shared_world_decoration_transform');
+    const collaboration = readFunction(sql, 'set_friend_world_decoration_collaboration');
+    assert.ok(place.indexOf('for update') < place.indexOf('private.are_accepted_unblocked_friends'), 'place must lock before its final friendship check');
+    assert.ok(update.indexOf('for update') < update.indexOf('private.are_accepted_unblocked_friends'), 'update must lock before its final friendship check');
+    assert.ok(collaboration.indexOf('for update') < collaboration.lastIndexOf('private.are_accepted_unblocked_friends'), 'permission changes must lock before their final friendship check');
+    assert.match(collaboration, /previous_can_collaborate\s+is\s+null\s+and\s+target_can_collaborate\s*=\s*false/i);
   });
 });

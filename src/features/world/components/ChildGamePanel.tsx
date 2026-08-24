@@ -13,6 +13,7 @@ import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns 
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
 import type { useNotificationSettings } from '../../../hooks/useNotificationSettings';
 import { WorldDisplaySettings } from './WorldDisplaySettings';
+import { SharedDecorationCollectionButton, SharedDecorationShareButton, type SharedDecorationPanelProps } from './SharedDecorationActions';
 
 export type ChildGamePanelKind = 'inventory' | 'shop' | 'settings';
 type DecorationMutationKind = 'update' | 'remove';
@@ -21,7 +22,7 @@ interface WorldMutationLifecycle {
   onFailure?: () => string | undefined;
 }
 
-interface ChildGamePanelProps {
+interface ChildGamePanelProps extends SharedDecorationPanelProps {
   kind: ChildGamePanelKind;
   gameData: ChildGameData;
   mutationPending: boolean;
@@ -69,9 +70,11 @@ export function ChildGamePanel({
   onSetRoamingPets,
   onStartDecorationPlacement,
   onStartExistingDecorationPlacement,
+  onShareDecoration,
   onUpdateDecoration,
   onRemoveDecoration,
   onCollectAllDecorations,
+  onCollectAllSharedDecorations,
   onSwitchChild,
   onLogout,
   showPetNames,
@@ -108,7 +111,7 @@ export function ChildGamePanel({
   const followingMutationPendingRef = useRef(false);
   const [followingMutationPending, setFollowingMutationPending] = useState(false);
   const ownedCatalogIds = new Set(gameData.inventory.map((item) => item.catalogItemId));
-  const activeDecorationCount = gameData.worldEntities.filter((entity) => entity.entityKind === 'decoration' && entity.isActive).length;
+  const activeDecorationCount = gameData.worldEntities.filter((entity) => entity.entityKind === 'decoration' && entity.placementScope !== 'shared' && entity.isActive).length;
   const title = kind === 'inventory' ? '我的背包' : kind === 'shop' ? '冒險商店' : '世界設定';
   const previewPrice = kind === 'shop' && previewItem ? gameData.prices[previewItem.id] ?? previewItem.scrollPrice : undefined;
   const use3DPreview = kind === 'shop' && previewItem !== null && isLocalGameItem3DPreviewEnabled(previewItem);
@@ -466,6 +469,7 @@ export function ChildGamePanel({
             </div>
           );
         })}
+        {onShareDecoration && <SharedDecorationShareButton inventoryItemId={inventory.id} item={item} mutationPending={mutationPending} onClose={closePreview} onShare={onShareDecoration} />}
         {hasRoom && <button
           type="button"
           className="hh-game-action-button hh-game-action-button--primary"
@@ -506,8 +510,9 @@ export function ChildGamePanel({
                 disabled={mutationPending || activeDecorationCount === 0}
                 onClick={() => void commitWorldMutation((expectedRevision) => onCollectAllDecorations(expectedRevision), '全部裝飾已收回背包。')}
               >
-                全部收回
+                全部收回我的裝飾
               </button>
+              {onCollectAllSharedDecorations && <SharedDecorationCollectionButton worldEntities={gameData.worldEntities} mutationPending={mutationPending} onCollect={onCollectAllSharedDecorations} commitWorldMutation={commitWorldMutation} />}
             </div>
           )}
           <div className={`hh-game-catalog-grid hh-game-catalog-grid--${inventoryColumns}`}>

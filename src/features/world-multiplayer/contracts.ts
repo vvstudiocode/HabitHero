@@ -1,6 +1,7 @@
 export const PROTOCOL_VERSION = 1 as const;
 
 export const AVATAR_STATE_EVENT = 'avatar_state_v1' as const;
+export const AVATAR_STATE_REQUEST_EVENT = 'avatar_state_request_v1' as const;
 export const AVATAR_EMOTE_EVENT = 'avatar_emote_v1' as const;
 export const WORLD_REVISION_EVENT = 'world_revision_v1' as const;
 

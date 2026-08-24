@@ -1012,6 +1012,74 @@
   }
 }
 
+@media (orientation: landscape) {
+  .hh-parent-content-modal--child .hh-game-panel {
+    width: 100%;
+    padding-bottom: 16px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-panel-header {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-panel h2 {
+    font-size: clamp(24px, 5vw, 32px);
+  }
+
+  .hh-parent-content-modal--child .hh-game-panel-section {
+    gap: 10px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-panel-section h3 {
+    margin-top: 4px;
+    font-size: 16px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-tabs {
+    gap: 6px;
+    padding: 4px;
+    border-radius: 14px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-tabs button {
+    min-height: 44px;
+    border-radius: 11px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-tabs--icons button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-catalog-grid {
+    gap: 6px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-catalog-card {
+    border-radius: 16px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-catalog-card-overlay {
+    min-height: 44px;
+    padding: 8px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-catalog-card-title,
+  .hh-parent-content-modal--child .hh-game-catalog-card-price {
+    font-size: 12px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-settings-card {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-action-button {
+    min-height: 44px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hh-terrain-world-canvas {
     cursor: default;

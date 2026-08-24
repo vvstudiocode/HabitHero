@@ -45,7 +45,13 @@ function mapRequests(result: { data: unknown; error: { message?: string } | null
 
 function mapFriend(value: unknown): FriendSummary {
   const row = asRecord(value);
-  return { childProfileId: stringValue(row.child_profile_id), displayName: stringValue(row.display_name), isOnline: row.is_online === true, worldRevision: numberValue(row.world_revision) };
+  return {
+    childProfileId: stringValue(row.child_profile_id),
+    displayName: stringValue(row.display_name),
+    isOnline: row.is_online === true,
+    worldRevision: numberValue(row.world_revision),
+    canCollaborateInMyWorld: row.can_collaborate_in_my_world === true,
+  };
 }
 
 function mapRequest(value: unknown): FriendRequest {
@@ -53,8 +59,16 @@ function mapRequest(value: unknown): FriendRequest {
   return { id: stringValue(row.id), direction: row.direction === 'outgoing' ? 'outgoing' : 'incoming', childProfileId: stringValue(row.child_profile_id), displayName: stringValue(row.display_name), createdAt: stringValue(row.created_at) };
 }
 
+export function getFriendOperationMessage(rawMessage?: string): string {
+  const message = rawMessage?.toLowerCase() ?? '';
+  if (message.includes('friend request already sent')) return '好友邀請已送出，等待對方接受。';
+  if (message.includes('friend request received')) return '對方已送出好友邀請，請到待處理邀請接受。';
+  if (message.includes('already friends')) return '你們已經是好友。';
+  return '好友操作目前無法完成。';
+}
+
 function run(result: { error: { message?: string } | null }): void {
-  if (result.error) throw new Error('好友操作目前無法完成。');
+  if (result.error) throw new Error(getFriendOperationMessage(result.error.message));
 }
 
 function asRecord(value: unknown): Record<string, unknown> { return typeof value === 'object' && value !== null ? value as Record<string, unknown> : {}; }

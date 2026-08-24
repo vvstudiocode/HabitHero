@@ -78,6 +78,10 @@ export function selectWorldMembers(
   };
 }
 
+export function getWorldCapacityMessage(capacity = MAX_WORLD_MEMBERS): string {
+  return `這個世界目前已滿，最多只能 ${capacity} 人。請稍後再試。`;
+}
+
 export function getPresenceAdmissionDecision(
   members: readonly WorldPresenceMember[],
   connectionId: string,

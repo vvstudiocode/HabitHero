@@ -32,11 +32,12 @@ test('opens own-world chat from the same live message state shown in the dock', 
   assert.match(social, /displayedChat\.messages/);
 });
 
-test('does not surface transient multiplayer connection warnings in the world UI', () => {
+test('surfaces a Chinese capacity warning without exposing transient connection warnings', () => {
   const social = read('../src/features/world-social/WorldSocialLayer.tsx');
 
   assert.doesNotMatch(social, /multiplayer\.error/);
-  assert.doesNotMatch(social, /multiplayer\.crowded/);
+  assert.match(social, /multiplayer\.crowded/);
+  assert.match(social, /getWorldCapacityMessage/);
 });
 
 test('the visiting friend world exposes a leave action under settings', () => {

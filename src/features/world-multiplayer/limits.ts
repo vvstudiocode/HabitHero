@@ -2,7 +2,7 @@ import { WORLD_BOUNDARY } from '../world/world-collision';
 
 export { WORLD_BOUNDARY };
 
-export const MAX_WORLD_MEMBERS = 8;
+export const MAX_WORLD_MEMBERS = 3;
 export const MAX_AVATAR_BROADCASTS_PER_SECOND = 8;
 export const AVATAR_MIN_BROADCAST_INTERVAL_MS = 1000 / MAX_AVATAR_BROADCASTS_PER_SECOND;
 export const AVATAR_POSITION_DELTA_THRESHOLD = 0.08;
@@ -14,4 +14,5 @@ export const MAX_REALTIME_EVENT_BYTES = 2048;
 export const MAX_PRESENCE_ID_LENGTH = 128;
 export const MAX_CHARACTER_ASSET_KEY_LENGTH = 128;
 export const REMOTE_AVATAR_MAX_EXTRAPOLATION_MS = 180;
+export const REMOTE_AVATAR_STALE_AFTER_MS = 8000;
 export const MIN_SEQUENCE = 1;

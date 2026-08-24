@@ -103,9 +103,12 @@ import {
   PROTOTYPE_WORLD_ASSETS,
   getDecorationCatalogItem,
   getDecorationCollisionInput,
+  getDecorationGroundCoverMasks,
   getDecorationGroundOffset,
   getDecorationModelUrl,
 } from './world-runtime-assets';
+import { updateDecorationGroundCoverMasks } from './world-decoration-ground-cover';
+import { addDecorationPointLight, setDecorationObjectScale } from './world-decoration-effects';
 import {
   createDisposalTracker,
   disposeObject3D,
@@ -503,7 +506,7 @@ function createDecorationObject(
     model.position.y = getDecorationGroundOffset(item);
     group.add(model);
     prepareDecorationMaterials(group, opacity);
-    return group;
+    return addDecorationPointLight(THREE, group, item, opacity);
   }
 
   const transparent = opacity < 1;
@@ -519,7 +522,7 @@ function createDecorationObject(
   fallback.position.y = 0.275;
   group.add(fallback);
   prepareDecorationMaterials(group, opacity);
-  return group;
+  return addDecorationPointLight(THREE, group, item, opacity);
 }
 
 function getPetModelUrl(item: GameCatalogItem | undefined): string | undefined {
@@ -1071,6 +1074,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const terrainWidth = terrainStep * (PROTOTYPE_WORLD_CONFIG.gridSize + PROTOTYPE_WORLD_CONFIG.scenePadding * 2);
       const terrain = new THREE.Group();
       terrain.name = `${PROTOTYPE_WORLD_CONFIG.gridSize}x${PROTOTYPE_WORLD_CONFIG.gridSize}-terrain`;
+      const groundCoverMasks = getDecorationGroundCoverMasks(options.gameData);
       const proceduralGrass = createProceduralGrassField(THREE, {
         fieldSize: terrainWidth * 0.98,
         walkableSize: walkableWidth,
@@ -1087,9 +1091,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         sunDirection: visualSettings.sunDirection,
         sunColor: visualSettings.sunColor,
         ambientColor: visualSettings.grassAmbientColor,
+        groundCoverMasks,
       });
       terrain.add(proceduralGrass.ground, proceduralGrass.mesh);
-      terrain.add(createProceduralFlowerField(THREE, {
+      const proceduralFlowers = createProceduralFlowerField(THREE, {
         walkableSize: walkableWidth,
         baseHeight: 0.006,
         viewportWidth: window.innerWidth,
@@ -1098,7 +1103,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           quality,
           'flower',
         ),
-      }));
+        groundCoverMasks,
+      });
+      terrain.add(proceduralFlowers);
       const ambientPollen = createAmbientPollenField(THREE, {
         fieldSize: terrainWidth * 0.9,
         count: visualSettings.pollenCount,
@@ -1434,7 +1441,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (!isPet) {
           object.position.set(entity.x, entity.y, entity.z);
           object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
-          object.scale.setScalar(entity.scale);
+          setDecorationObjectScale(object, entity.scale);
         } else {
           const spawn = getDistributedPetSpawnPosition(petSpawnIndex, petRadius, petSpawnObstacles);
           petSpawnIndex += 1;
@@ -1861,7 +1868,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           object.visible = true;
           object.position.set(entity.x, entity.y, entity.z);
           object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
-          object.scale.setScalar(entity.scale);
+          setDecorationObjectScale(object, entity.scale);
         };
         const replaceDecorationModel = (entityId: string, previousObject: Object3D, item: GameCatalogItem, modelSource: Object3D) => {
           const entry = decorationObjects.find((candidate) => candidate.entityId === entityId && candidate.object === previousObject);
@@ -1905,6 +1912,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           .map((entity) => getDecorationCollisionInput(nextGameData, entity)));
         decorationCollisions.splice(0, decorationCollisions.length, ...nextCollisions);
         wanderObstacles.splice(1, wanderObstacles.length - 1, ...nextCollisions);
+        updateDecorationGroundCoverMasks(proceduralGrass, proceduralFlowers, nextGameData, latestRuntimeUpdate.placement);
       };
 
       let placementPreview: Object3D | undefined;
@@ -1956,7 +1964,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
         placementPreview.position.set(placement.transform.x, placement.transform.y, placement.transform.z);
         placementPreview.rotation.set(placement.transform.rotationX, placement.transform.rotationY, placement.transform.rotationZ);
-        placementPreview.scale.setScalar(placement.transform.scale);
+        setDecorationObjectScale(placementPreview, placement.transform.scale);
         const footprint = placementPreview.getObjectByName('decoration-placement-footprint') as import('three').Mesh | undefined;
         if (footprint?.material && !Array.isArray(footprint.material) && 'color' in footprint.material) {
           footprint.material.color.set(placement.isValid ? 0x9cdda4 : 0xef8b83);

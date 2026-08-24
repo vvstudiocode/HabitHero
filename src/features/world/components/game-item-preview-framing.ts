@@ -20,6 +20,14 @@ const MIXAMO_PET_PREVIEW_ASSET_KEYS = new Set([
   'pet.arcadia',
 ]);
 
+const FRONT_FACING_RUG_ASSET_KEYS = new Set([
+  'decoration.blue-rug',
+  'decoration.patchwork-rug',
+  'decoration.pawprint-rug',
+  'decoration.lavender-pattern-rug',
+  'decoration.royal-crest-rug',
+]);
+
 export interface PreviewModelSize {
   x: number;
   y: number;
@@ -32,12 +40,25 @@ export interface PreviewModelOffset {
   z: number;
 }
 
+export interface PreviewModelRotation {
+  x: number;
+  y: number;
+  z: number;
+}
+
 export function getPreviewModelOffset(item: { itemType: 'character' | 'pet' | 'decoration'; assetKey: string }): PreviewModelOffset {
   if (item.itemType === 'character') {
     return { x: 0, y: CHARACTER_PREVIEW_Y_OFFSET, z: 0 };
   }
   if (item.itemType === 'pet' && MIXAMO_PET_PREVIEW_ASSET_KEYS.has(item.assetKey)) {
     return { x: 0, y: MIXAMO_PREVIEW_Y_OFFSET, z: 0 };
+  }
+  return { x: 0, y: 0, z: 0 };
+}
+
+export function getPreviewModelRotation(item: { itemType: 'character' | 'pet' | 'decoration'; assetKey: string }): PreviewModelRotation {
+  if (item.itemType === 'decoration' && FRONT_FACING_RUG_ASSET_KEYS.has(item.assetKey)) {
+    return { x: Math.PI / 2, y: 0, z: 0 };
   }
   return { x: 0, y: 0, z: 0 };
 }

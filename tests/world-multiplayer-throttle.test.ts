@@ -68,4 +68,14 @@ describe('world multiplayer avatar throttle', () => {
 
     assert.equal(changed.event?.characterAssetKey, 'character.elina');
   });
+
+  it('can force one latest-state broadcast after reconnect without resetting sequence', () => {
+    const sender = createAvatarBroadcastController({ connectionId: 'connection-1', childProfileId: 'child-1' });
+    const first = sender.next(input({ now: 1000 }));
+    const forced = sender.next(input({ now: 1050 }), { force: true });
+
+    assert.equal(first.event?.seq, 1);
+    assert.equal(forced.event?.seq, 2);
+    assert.equal(forced.event?.x, first.event?.x);
+  });
 });

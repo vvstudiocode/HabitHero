@@ -3,6 +3,7 @@ export interface FriendSummary {
   displayName: string;
   isOnline: boolean;
   worldRevision: number;
+  canCollaborateInMyWorld?: boolean;
 }
 
 export interface FriendRequest {

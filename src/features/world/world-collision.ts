@@ -72,14 +72,14 @@ export const CHARACTER_COLLISION_RADIUS = 0.35;
 export const DEFAULT_DECORATION_NAVIGATION_INSET = 0.25;
 
 /**
- * Decorations keep a positive, server-valid catalog radius, but their
- * navigation proxy can be smaller than the full placement footprint. This
- * lets the player approach the visible mesh without walking through it.
+ * passThrough decorations keep a positive server radius for placement but
+ * add no navigation obstacle; other decorations can use smaller proxies.
  */
 export function getDecorationNavigationRadius(
   metadata: Record<string, unknown> | undefined,
   fallbackRadius: number,
 ): number {
+  if (metadata?.passThrough === true) return 0;
   const configuredRadius = metadata?.navigationRadius;
   if (typeof configuredRadius === 'number' && Number.isFinite(configuredRadius) && configuredRadius > 0) {
     return configuredRadius;

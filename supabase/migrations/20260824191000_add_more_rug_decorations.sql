@@ -1,0 +1,96 @@
+-- Add two more supplied floor rugs as pass-through decorations.
+-- Their visual footprints suppress meadow grass while keeping navigation open.
+
+insert into public.game_catalog_items (
+  item_type,
+  name,
+  description,
+  scroll_price,
+  asset_key,
+  thumbnail_url,
+  is_active,
+  is_starter,
+  is_stackable,
+  collision_radius,
+  min_scale,
+  max_scale,
+  sort_order,
+  metadata
+)
+values
+(
+  'decoration',
+  '薰衣草花紋地毯',
+  '繽紛薰衣草花紋地毯，鋪在冒險世界裡也不會阻擋行走。',
+  6,
+  'decoration.lavender-pattern-rug',
+  '/assets/decorations/lavender-pattern-rug-thumbnail.png',
+  true,
+  false,
+  true,
+  0.05,
+  0.4,
+  1.35,
+  170,
+  jsonb_build_object(
+    'model', '/assets/decorations/lavender-pattern-rug.glb',
+    'thumbnail', '/assets/decorations/lavender-pattern-rug-thumbnail.png',
+    'renderMode', 'static-glb',
+    'defaultScale', 0.85,
+    'groundOffset', 0.00819,
+    'passThrough', true,
+    'groundCoverWidth', 1.96,
+    'groundCoverDepth', 1.96,
+    'groundCoverEdgeSoftness', 0.12,
+    'allowDecorationOverlap', true,
+    'triangleCount', 11928,
+    'textureSize', 1024,
+    'simplificationRatio', 0.5,
+    'compression', 'Draco geometry + WebP textures + seam-preserving attribute-aware mesh simplification + preserved MikkTSpace tangents'
+  )
+),
+(
+  'decoration',
+  '皇家徽章地毯',
+  '帶有皇家徽章的典雅地毯，鋪在冒險世界裡也不會阻擋行走。',
+  6,
+  'decoration.royal-crest-rug',
+  '/assets/decorations/royal-crest-rug-thumbnail.png',
+  true,
+  false,
+  true,
+  0.05,
+  0.4,
+  1.35,
+  171,
+  jsonb_build_object(
+    'model', '/assets/decorations/royal-crest-rug.glb',
+    'thumbnail', '/assets/decorations/royal-crest-rug-thumbnail.png',
+    'renderMode', 'static-glb',
+    'defaultScale', 0.85,
+    'groundOffset', 0.01101,
+    'passThrough', true,
+    'groundCoverWidth', 1.96,
+    'groundCoverDepth', 1.96,
+    'groundCoverEdgeSoftness', 0.12,
+    'allowDecorationOverlap', true,
+    'triangleCount', 9488,
+    'textureSize', 1024,
+    'simplificationRatio', 0.5,
+    'compression', 'Draco geometry + WebP textures + seam-preserving attribute-aware mesh simplification + preserved MikkTSpace tangents'
+  )
+)
+on conflict (item_type, asset_key) do update
+set name = excluded.name,
+    description = excluded.description,
+    scroll_price = excluded.scroll_price,
+    thumbnail_url = excluded.thumbnail_url,
+    is_active = excluded.is_active,
+    is_starter = excluded.is_starter,
+    is_stackable = excluded.is_stackable,
+    collision_radius = excluded.collision_radius,
+    min_scale = excluded.min_scale,
+    max_scale = excluded.max_scale,
+    sort_order = excluded.sort_order,
+    metadata = excluded.metadata,
+    updated_at = timezone('utc', now());

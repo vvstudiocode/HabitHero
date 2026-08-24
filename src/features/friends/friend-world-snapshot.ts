@@ -16,6 +16,12 @@ export interface FriendWorldSnapshotEntity {
   scale: number;
   behaviorMode: FriendWorldBehaviorMode;
   displayName?: string;
+  placementScope?: 'owned' | 'shared';
+  canTransform?: boolean;
+  canRemove?: boolean;
+  sharedByMe?: boolean;
+  sharedSourceDisplayName?: string;
+  isActive?: boolean;
 }
 
 export interface FriendWorldSnapshot {
@@ -24,6 +30,7 @@ export interface FriendWorldSnapshot {
   characterAssetKey: string;
   revision: number;
   entities: FriendWorldSnapshotEntity[];
+  canShareDecorations?: boolean;
 }
 
 type RecordValue = Record<string, unknown>;
@@ -64,6 +71,20 @@ function readOptionalDisplayName(record: RecordValue): string | undefined {
   return normalized;
 }
 
+function readBooleanWithDefault(record: RecordValue, field: string, fallback: boolean): boolean {
+  const value = record[field];
+  if (value === undefined) return fallback;
+  if (typeof value !== 'boolean') throw new TypeError(`好友世界資料的 ${field} 無效。`);
+  return value;
+}
+
+function readPlacementScope(record: RecordValue): 'owned' | 'shared' {
+  const value = record.placement_scope;
+  if (value === undefined) return 'owned';
+  if (value !== 'owned' && value !== 'shared') throw new TypeError('好友世界資料的 placement_scope 無效。');
+  return value;
+}
+
 function normalizeEntity(value: unknown): FriendWorldSnapshotEntity {
   const record = asRecord(value, 'entity');
   const entityKind = record.entity_kind;
@@ -88,8 +109,21 @@ function normalizeEntity(value: unknown): FriendWorldSnapshotEntity {
     scale: readNumber(record, 'scale'),
     behaviorMode,
   };
+  if (entityKind === 'decoration') {
+    entity.placementScope = readPlacementScope(record);
+    entity.canTransform = readBooleanWithDefault(record, 'can_transform', false);
+    entity.canRemove = readBooleanWithDefault(record, 'can_remove', false);
+    entity.sharedByMe = readBooleanWithDefault(record, 'shared_by_me', false);
+  }
   const displayName = readOptionalDisplayName(record);
   if (displayName) entity.displayName = displayName;
+  const sharedSourceDisplayName = record.shared_source_display_name;
+  if (sharedSourceDisplayName !== null && sharedSourceDisplayName !== undefined) {
+    if (typeof sharedSourceDisplayName !== 'string' || !sharedSourceDisplayName.trim() || sharedSourceDisplayName.length > 80 || /[\u0000-\u001f\u007f]/u.test(sharedSourceDisplayName)) {
+      throw new TypeError('好友世界資料的 shared_source_display_name 無效。');
+    }
+    entity.sharedSourceDisplayName = sharedSourceDisplayName.trim();
+  }
   return entity;
 }
 
@@ -120,6 +154,9 @@ export function normalizeFriendWorldSnapshot(value: unknown): FriendWorldSnapsho
     characterAssetKey: readString(record, 'character_asset_key', 120),
     revision,
     entities,
+    ...(record.can_share_decorations !== undefined || entities.some((entity) => entity.entityKind === 'decoration')
+      ? { canShareDecorations: readBooleanWithDefault(record, 'can_share_decorations', false) }
+      : {}),
   };
 }
 

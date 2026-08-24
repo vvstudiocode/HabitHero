@@ -3,6 +3,7 @@ import {
   createProceduralFlowerLayout,
   getProceduralFlowerCount,
 } from './procedural-flower-layout.js';
+import { getGroundCoverMaskVisibility } from './ground-cover-mask.js';
 
 function setMatrix(THREE, mesh, index, position, quaternion, scale) {
   const matrix = new THREE.Matrix4();
@@ -15,6 +16,7 @@ export function createProceduralFlowerField(THREE, {
   baseHeight = 0,
   viewportWidth = 375,
   count,
+  groundCoverMasks = [],
 }) {
   const flowers = createProceduralFlowerLayout({
     count: count ?? getProceduralFlowerCount({ width: viewportWidth }),
@@ -55,6 +57,7 @@ export function createProceduralFlowerField(THREE, {
     flowers.length,
   );
   centerMesh.name = 'wildflower-centers';
+  const flowerPetalGroups = [];
 
   FLOWER_COLORS.forEach(color => {
     const colorFlowers = flowers.filter(flower => flower.color === color);
@@ -69,6 +72,7 @@ export function createProceduralFlowerField(THREE, {
     );
     petals.name = `wildflower-${color}-petals`;
     colorFlowers.forEach((flower, index) => {
+      flowerPetalGroups.push({ mesh: petals, flower, index });
       for (let petalIndex = 0; petalIndex < 5; petalIndex += 1) {
         const petalAngle = flower.rotation + (petalIndex / 5) * Math.PI * 2;
         const petalRadius = flower.size * 0.48;
@@ -97,12 +101,72 @@ export function createProceduralFlowerField(THREE, {
         new THREE.Vector3(flower.size * 0.36, flower.size * 0.36, flower.size),
       );
     });
-    petals.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    petals.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     field.add(petals);
   });
 
-  centerMesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+  centerMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   field.add(centerMesh);
+
+  function updateGroundCoverMasks(masks = []) {
+    flowers.forEach((flower, index) => {
+      const visible = getGroundCoverMaskVisibility(flower, masks) > 0.18;
+      const visibilityScale = visible ? 1 : 0;
+      setMatrix(
+        THREE,
+        stems,
+        index,
+        new THREE.Vector3(flower.x, flower.y + flower.height * 0.5, flower.z),
+        new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP, flower.rotation),
+        new THREE.Vector3(visibilityScale, flower.height * visibilityScale, visibilityScale),
+      );
+      setMatrix(
+        THREE,
+        centerMesh,
+        index,
+        new THREE.Vector3(flower.x, flower.y + flower.height + 0.004, flower.z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)),
+        new THREE.Vector3(
+          flower.size * 0.36 * visibilityScale,
+          flower.size * 0.36 * visibilityScale,
+          flower.size * visibilityScale,
+        ),
+      );
+    });
+
+    flowerPetalGroups.forEach(({ mesh, flower, index }) => {
+      const visible = getGroundCoverMaskVisibility(flower, masks) > 0.18;
+      const visibilityScale = visible ? 1 : 0;
+      for (let petalIndex = 0; petalIndex < 5; petalIndex += 1) {
+        const petalAngle = flower.rotation + (petalIndex / 5) * Math.PI * 2;
+        const petalRadius = flower.size * 0.48;
+        setMatrix(
+          THREE,
+          mesh,
+          index * 5 + petalIndex,
+          new THREE.Vector3(
+            flower.x + Math.cos(petalAngle) * petalRadius,
+            flower.y + flower.height,
+            flower.z + Math.sin(petalAngle) * petalRadius,
+          ),
+          new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(-Math.PI / 2 + 0.12, 0, petalAngle),
+          ),
+          new THREE.Vector3(
+            flower.size * 0.72 * visibilityScale,
+            flower.size * 0.48 * visibilityScale,
+            flower.size * visibilityScale,
+          ),
+        );
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    });
+    stems.instanceMatrix.needsUpdate = true;
+    centerMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  updateGroundCoverMasks(groundCoverMasks);
+  field.updateGroundCoverMasks = updateGroundCoverMasks;
 
   return field;
 }

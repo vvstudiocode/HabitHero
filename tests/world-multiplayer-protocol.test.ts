@@ -37,14 +37,16 @@ const remoteAvatarState: RemoteAvatarStateSnapshot = {
 describe('world multiplayer protocol', () => {
   it('uses a dedicated live topic without removing the chat channel', () => {
     const source = readFileSync(new URL('../src/features/world-multiplayer/hooks/use-world-multiplayer.ts', import.meta.url), 'utf8');
+    const channelSource = readFileSync(new URL('../src/features/world-multiplayer/world-multiplayer-channel.ts', import.meta.url), 'utf8');
 
     assert.doesNotMatch(source, /existingChannel/);
     assert.match(source, /getFriendWorldLiveTopic/);
     assert.match(source, /members\.some\(\(member\) => member\.connectionId === connectionIdRef\.current\)/);
-    assert.match(source, /const isCurrentChannel = \(\) => !disposed && channelRef\.current === activeChannel/);
-    assert.match(source, /if \(disposed\) return;/);
+    assert.match(channelSource, /const isCurrentChannel = \(\) => !disposed && activeChannel === channel/);
+    assert.match(channelSource, /if \(disposed\) return;/);
     assert.match(source, /createPendingRemoteAvatarStateBuffer/);
-    assert.match(source, /flushPendingRemoteAvatars/);
+    assert.match(source, /pendingRemoteAvatarStatesRef\.current\.flush/);
+    assert.match(channelSource, /AVATAR_STATE_REQUEST_EVENT/);
   });
 
   it('keeps an avatar broadcast received before presence sync and flushes it after the matching member appears', () => {

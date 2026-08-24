@@ -29,6 +29,7 @@ import {
   type DecorationPlacementDraft,
   type DecorationPlacementGestureDelta,
 } from './world-placement';
+import { getSharedDecorationActionState } from '../shared-decorations/permissions';
 
 // The shared loadout owner keeps `character.arthur` as the safe fallback
 // (`assetKey: 'character.arthur'`) for incomplete or legacy child data.
@@ -410,18 +411,28 @@ export function TerrainWorldLayer({
   }, [sceneInput]);
 
   const equippedCatalogItem = getEquippedCharacterCatalogItem(gameData);
+  const displayGameData = session?.gameData ?? gameData;
   const staticCharacterName = equippedCatalogItem?.name ?? '冒險旅人';
   const staticCharacterAccent = equippedCatalogItem?.assetKey === 'character.starlight-adventurer' ? '#7f8cff' : '#6ca477';
   const selectedEntity = selectedDecoration
-    ? gameData.worldEntities.find((entity) => entity.id === selectedDecoration.entityId && entity.entityKind === 'decoration' && entity.isActive)
+    ? displayGameData.worldEntities.find((entity) => entity.id === selectedDecoration.entityId && entity.entityKind === 'decoration' && entity.isActive)
     : undefined;
-  const selectedItem = selectedEntity ? decorationCatalogItemForEntity(gameData, selectedEntity.id) : undefined;
+  const selectedItem = selectedEntity ? decorationCatalogItemForEntity(displayGameData, selectedEntity.id) : undefined;
+  const selectedDecorationActions = selectedEntity
+    ? getSharedDecorationActionState({
+      canShareDecorations: selectedEntity.placementScope === undefined ? !session?.snapshot : undefined,
+      canTransform: selectedEntity.placementScope === undefined ? !session?.snapshot : selectedEntity.canTransform,
+      canRemove: selectedEntity.placementScope === undefined ? !session?.snapshot : selectedEntity.canRemove,
+      placementScope: selectedEntity.placementScope,
+      sharedByMe: selectedEntity.sharedByMe,
+    })
+    : { canPlace: false, canTransform: false, canRemove: false };
   const selectedDecorationCanvasRect = selectedDecoration ? canvasRef.current?.getBoundingClientRect() : undefined;
   const selectedPetInventory = selectedPet
-    ? gameData.inventory.find((inventory) => inventory.id === selectedPet.inventoryItemId)
+    ? displayGameData.inventory.find((inventory) => inventory.id === selectedPet.inventoryItemId)
     : undefined;
   const selectedPetItem = selectedPetInventory
-    ? gameData.catalog.find((item) => item.id === selectedPetInventory.catalogItemId && item.itemType === 'pet')
+    ? displayGameData.catalog.find((item) => item.id === selectedPetInventory.catalogItemId && item.itemType === 'pet')
     : undefined;
   const selectedPetCanvasRect = selectedPet ? canvasRef.current?.getBoundingClientRect() : undefined;
   const commitPetAction = (action: PetAction) => {
@@ -505,14 +516,14 @@ export function TerrainWorldLayer({
         hidden={showStaticFallback}
         aria-hidden={showStaticFallback}
       />
-      {selectedDecoration && selectedEntity && selectedItem && !placement && onStartDecorationPlacement && selectedDecorationCanvasRect && createPortal(
+      {selectedDecoration && selectedEntity && selectedItem && !placement && onStartDecorationPlacement && selectedDecorationCanvasRect && (selectedDecorationActions.canTransform || selectedDecorationActions.canRemove) && createPortal(
         <div
           className="hh-world-decoration-selection"
           data-world-decoration-action
           style={{ left: selectedDecorationCanvasRect.left + selectedDecoration.x, top: selectedDecorationCanvasRect.top + selectedDecoration.y }}
         >
           <div className="hh-world-decoration-actions">
-            <button
+            {selectedDecorationActions.canTransform && <button
               type="button"
               className="hh-world-decoration-action"
               aria-label={`重新擺放${selectedItem.name}`}
@@ -531,8 +542,8 @@ export function TerrainWorldLayer({
               }}
             >
               重新擺放
-            </button>
-            {onCollectDecoration && (
+            </button>}
+            {onCollectDecoration && selectedDecorationActions.canRemove && (
               <button
                 type="button"
                 className="hh-world-decoration-action"

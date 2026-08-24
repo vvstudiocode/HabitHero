@@ -47,6 +47,23 @@ interface WorldEntityRow {
   is_active: boolean;
   entity_kind: ChildWorldEntity['entityKind'];
 }
+export interface SharedWorldDecorationRow {
+  id: string;
+  source_inventory_item_id?: string | null;
+  catalog_item_id: string;
+  asset_key: string;
+  position_x: number | string;
+  position_y: number | string;
+  position_z: number | string;
+  rotation_x: number | string;
+  rotation_y: number | string;
+  rotation_z: number | string;
+  scale: number | string;
+  behavior_mode: 'static';
+  is_active: boolean;
+  shared_by_me: boolean;
+  shared_source_display_name?: string | null;
+}
 interface GameDataQueryError {
   code?: string | null;
   message?: string | null;
@@ -122,6 +139,8 @@ export function createChildGameDataMap(
   loadoutRows: LoadoutRow[],
   worldStateRows: WorldStateRow[],
   entityRows: WorldEntityRow[],
+  sharedDecorationRows: SharedWorldDecorationRow[] = [],
+  sharedDecorationOwnerChildProfileId = childIds[0],
 ): Record<string, ChildGameData> {
   const catalog = catalogRows.map(toCatalogItem);
   const catalogById = new Map(catalog.map((item) => [item.id, item]));
@@ -160,7 +179,7 @@ export function createChildGameDataMap(
       }
       : null;
     data.worldRevision = Number(worldStateRows.find((row) => row.child_profile_id === childId)?.revision ?? 0);
-    data.worldEntities = entityRows.filter((row) => row.child_profile_id === childId && row.is_active && supportedInventoryIds.has(row.inventory_item_id)).map((row) => {
+    const ownedEntities = entityRows.filter((row) => row.child_profile_id === childId && row.is_active && supportedInventoryIds.has(row.inventory_item_id)).map((row) => {
       const inventory = supportedInventoryRows.find((item) => item.id === row.inventory_item_id);
       const item = inventory ? catalogById.get(inventory.catalog_item_id) : undefined;
       return {
@@ -185,6 +204,42 @@ export function createChildGameDataMap(
         displayName: inventory?.display_name ?? undefined,
       } satisfies ChildWorldEntity;
     });
+    const sharedEntities = childId === sharedDecorationOwnerChildProfileId
+      ? sharedDecorationRows
+      .filter((row) => row.is_active)
+      .flatMap((row) => {
+        const item = catalogById.get(row.catalog_item_id);
+        if (!item || item.itemType !== 'decoration') return [];
+        return [{
+          id: row.id,
+          // The source inventory id is an internal server key. Keep it out of
+          // the synthetic world entity exposed to the owner of this world.
+          inventoryItemId: `shared:${row.id}`,
+          entityKind: 'decoration' as const,
+          worldLayoutVersion: 1,
+          x: Number(row.position_x),
+          y: Number(row.position_y),
+          z: Number(row.position_z),
+          rotationX: Number(row.rotation_x),
+          rotationY: Number(row.rotation_y),
+          rotationZ: Number(row.rotation_z),
+          scale: Number(row.scale),
+          behaviorMode: row.behavior_mode,
+          roamingSlot: null,
+          isActive: true,
+          catalogItemId: item.id,
+          collisionRadius: item.collisionRadius,
+          assetKey: row.asset_key || item.assetKey,
+          name: item.name,
+          placementScope: 'shared' as const,
+          canTransform: true,
+          canRemove: true,
+          sharedByMe: row.shared_by_me === true,
+          sharedSourceDisplayName: row.shared_source_display_name ?? undefined,
+        } satisfies ChildWorldEntity];
+      })
+      : [];
+    data.worldEntities = [...ownedEntities, ...sharedEntities];
     return [childId, data];
   }));
 }
@@ -194,13 +249,17 @@ export async function loadChildGameData(
   familyId: string,
   childIds: string[],
   includeInactiveCatalog = false,
+  sharedDecorationOwnerChildProfileId = childIds[0],
 ): Promise<Record<string, ChildGameData>> {
   if (childIds.length === 0) return {};
   // Keep retired catalog rows available so supported historical inventory,
   // loadout, and world references can still resolve. Unsupported references
   // are filtered after the catalog is mapped against packaged app assets.
   const catalogQuery = client.from('game_catalog_items').select('*').order('sort_order');
-  const [catalog, prices, wallets, inventory, loadouts, worldStates, entities] = await Promise.all([
+  const sharedDecorationsQuery = typeof client.rpc === 'function'
+    ? loadOptionalGameData(client.rpc('get_my_shared_world_decorations', { target_child_profile_id: sharedDecorationOwnerChildProfileId }), [])
+    : Promise.resolve([] as SharedWorldDecorationRow[]);
+  const [catalog, prices, wallets, inventory, loadouts, worldStates, entities, sharedDecorations] = await Promise.all([
     loadOptionalGameData(catalogQuery, []),
     loadOptionalGameData(client.from('family_game_item_prices').select('catalog_item_id, scroll_price').eq('family_id', familyId), []),
     loadOptionalGameData(client.from('child_game_wallets').select('*').in('child_profile_id', childIds), []),
@@ -208,6 +267,7 @@ export async function loadChildGameData(
     loadOptionalGameData(client.from('child_game_loadouts').select('*').in('child_profile_id', childIds), []),
     loadOptionalGameData(client.from('child_world_states').select('*').in('child_profile_id', childIds), []),
     loadOptionalGameData(client.from('child_world_entities').select('*').in('child_profile_id', childIds).eq('is_active', true), []),
+    sharedDecorationsQuery,
   ]);
   return createChildGameDataMap(
     childIds,
@@ -218,5 +278,7 @@ export async function loadChildGameData(
     loadouts as LoadoutRow[],
     worldStates as WorldStateRow[],
     entities as WorldEntityRow[],
+    sharedDecorations as SharedWorldDecorationRow[],
+    sharedDecorationOwnerChildProfileId,
   );
 }

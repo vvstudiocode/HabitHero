@@ -4,7 +4,7 @@ import { dismissWithAnimation } from '../lib/utils';
 import { groupParentTodoTasks, type GroupedTask } from '../lib/parent-task-grouping';
 import { groupParentRewards, type GroupedReward } from '../lib/parent-reward-grouping';
 import { TaipeiTimeInput } from './TaipeiTimeInput';
-import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LogOut, MinusCircle, Plus, PlusCircle, ShoppingBag, Star, Users, X, Trash2, Edit2, PlayCircle, Settings } from 'lucide-react';
+import { CalendarDays, Check, Circle, Clock, Eye, EyeOff, Gift, LoaderCircle, LogOut, MinusCircle, Plus, PlusCircle, ShoppingBag, Star, Users, X, Trash2, Edit2, PlayCircle, Settings } from 'lucide-react';
 import { TaskStatus, Task, Reward, type ChildGender } from '../types';
 import { validateChildPassword, validateChildUsername, validatePasswordConfirmation } from '../lib/auth-validation';
 import { CategoryBadge } from '../features/growth/components/CategoryBadge';
@@ -222,6 +222,8 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   const [showResetChildPassword, setShowResetChildPassword] = useState(false);
   const [showResetChildPasswordConfirmation, setShowResetChildPasswordConfirmation] = useState(false);
   const [resetChildError, setResetChildError] = useState('');
+  const [resetChildPasswordSubmitting, setResetChildPasswordSubmitting] = useState(false);
+  const resetChildPasswordSubmissionInFlight = useRef(false);
   const [newParentPin, setNewParentPin] = useState('');
   const [oldParentPin, setOldParentPin] = useState('');
   const [showParentPasswordForm, setShowParentPasswordForm] = useState(false);
@@ -770,6 +772,26 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     } finally {
       childAccountSubmissionInFlight.current = false;
       setChildAccountSubmitting(false);
+    }
+  };
+
+  const handleResetChildPassword = async () => {
+    if (!resetChildId || resetChildPasswordSubmissionInFlight.current) return;
+
+    const valid = validateChildPassword(resetChildPassword);
+    if ('message' in valid) { setResetChildError(valid.message); return; }
+    const confirmed = validatePasswordConfirmation(resetChildPassword, resetChildPasswordConfirmation);
+    if ('message' in confirmed) { setResetChildError(confirmed.message); return; }
+
+    resetChildPasswordSubmissionInFlight.current = true;
+    setResetChildPasswordSubmitting(true);
+    try {
+      await updateChildPassword(resetChildId, resetChildPassword);
+      dismissWithAnimation(() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); }, '.hh-parent-confirm-panel');
+    } catch { /* provider error is shown above the tabs; keep the form open */
+    } finally {
+      resetChildPasswordSubmissionInFlight.current = false;
+      setResetChildPasswordSubmitting(false);
     }
   };
 
@@ -1775,16 +1797,10 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               {resetChildError && <p role="alert" className="text-sm text-red-500">{resetChildError}</p>}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => dismissWithAnimation(() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); setResetChildError(''); }, '.hh-parent-confirm-panel')} className="flex-1 rounded-xl bg-gray-100 p-4 font-bold text-gray-600">取消</button>
-                <button onClick={() => void (async () => {
-                  const valid = validateChildPassword(resetChildPassword);
-                  if ('message' in valid) { setResetChildError(valid.message); return; }
-                  const confirmed = validatePasswordConfirmation(resetChildPassword, resetChildPasswordConfirmation);
-                  if ('message' in confirmed) { setResetChildError(confirmed.message); return; }
-                  try {
-                    await updateChildPassword(resetChildId, resetChildPassword);
-                    dismissWithAnimation(() => { setResetChildId(null); setResetChildPassword(''); setResetChildPasswordConfirmation(''); }, '.hh-parent-confirm-panel');
-                  } catch { /* provider error is shown above the tabs */ }
-                })()} className="flex-1 rounded-xl bg-blue-500 p-4 font-bold text-white">儲存</button>
+                <button onClick={() => void handleResetChildPassword()} disabled={resetChildPasswordSubmitting} aria-busy={resetChildPasswordSubmitting} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-500 p-4 font-bold text-white disabled:cursor-wait disabled:opacity-50">
+                  {resetChildPasswordSubmitting && <LoaderCircle size={20} aria-hidden="true" className="animate-spin motion-reduce:animate-none" />}
+                  {resetChildPasswordSubmitting ? '儲存中…' : '儲存'}
+                </button>
               </div>
             </div>
         </ModalShell>

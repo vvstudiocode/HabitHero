@@ -155,6 +155,16 @@ describe('optimistic decoration world mutations', () => {
     assert.equal(collected.worldEntities.every((entity) => !entity.isActive), true);
   });
 
+  it('does not collect shared decorations through the native collect-all patch', () => {
+    const gameData = createGameData([
+      { id: 'owned', inventoryItemId: 'owned-inventory', entityKind: 'decoration', worldLayoutVersion: 1, x: 0, y: 0, z: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1, behaviorMode: 'static', roamingSlot: null, isActive: true },
+      { id: 'shared', inventoryItemId: 'source-inventory', entityKind: 'decoration', placementScope: 'shared', worldLayoutVersion: 1, x: 1, y: 0, z: 1, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1, behaviorMode: 'static', roamingSlot: null, isActive: true },
+    ]);
+    const collected = patchCollectedWorldDecorations(gameData);
+    assert.equal(collected.worldEntities.find((entity) => entity.id === 'owned')?.isActive, false);
+    assert.equal(collected.worldEntities.find((entity) => entity.id === 'shared')?.isActive, true);
+  });
+
   it('reconciles an updated decoration without dropping its scene metadata', () => {
     const existingEntity: ChildWorldEntity = {
       id: 'server-decoration-1',

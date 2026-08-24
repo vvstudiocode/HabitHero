@@ -40,4 +40,10 @@ test('parent child preview keeps social controls visible without impersonating a
   assert.match(socialSource, /const previewMode = role === 'parent' && !enabled;/);
   assert.match(socialSource, /if \(!enabled && !previewMode\) return null;/);
   assert.match(socialSource, /請用小孩帳號登入後，才能使用好友世界與聊天/);
+  assert.match(socialSource, /showPreviewNotice/);
+  assert.match(socialSource, /role="dialog"/);
+  assert.match(socialSource, /aria-label="關閉提示"/);
+  assert.match(socialSource, /<X size=\{22\}/);
+  assert.match(socialSource, /hh-preview-notice/);
+  assert.doesNotMatch(socialSource, /previewNotice && <div[^>]*top-4/);
 });

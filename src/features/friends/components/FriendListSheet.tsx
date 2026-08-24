@@ -17,13 +17,15 @@ interface FriendListSheetProps {
   onRemove: (childProfileId: string) => Promise<void>;
   onlineFriendIds?: ReadonlySet<string>;
   checkedFriendIds?: ReadonlySet<string>;
+  onToggleCollaboration?: (friend: FriendSummary) => Promise<void>;
 }
 
-export function FriendListSheet({ code, friends, requests, loading = false, error, onClose, onSendRequest, onAccept, onDecline, onVisit, onChat, onRemove, onlineFriendIds = new Set(), checkedFriendIds = new Set() }: FriendListSheetProps) {
+export function FriendListSheet({ code, friends, requests, loading = false, error, onClose, onSendRequest, onAccept, onDecline, onVisit, onChat, onRemove, onlineFriendIds = new Set(), checkedFriendIds = new Set(), onToggleCollaboration }: FriendListSheetProps) {
   const [friendCode, setFriendCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [collaborationPendingId, setCollaborationPendingId] = useState<string | null>(null);
 
   const submitRequest = async (event: FormEvent) => {
     event.preventDefault();
@@ -80,12 +82,18 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
         </form>
         {error && <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700" role="alert">{error}</p>}
         {loading && <p className="mt-4 text-sm font-bold text-slate-500">好友資料載入中…</p>}
-        {!loading && requests.length > 0 && <section className="mt-5" aria-labelledby="friend-requests-title">
+        {!loading && requests.some((request) => request.direction === 'incoming') && <section className="mt-5" aria-labelledby="friend-requests-title">
           <h3 id="friend-requests-title" className="font-black text-slate-900">待處理邀請</h3>
           <ul className="mt-2 space-y-2">
             {requests.map((request) => request.direction === 'incoming' ? (
               <li key={request.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3"><span className="min-w-0 truncate font-bold">{request.displayName}</span><span className="flex shrink-0 gap-2"><button type="button" className="min-h-11 rounded-lg bg-emerald-600 px-3 text-sm font-black text-white" onClick={() => void onAccept(request.id)}>接受</button><button type="button" className="min-h-11 rounded-lg px-3 text-sm font-black text-slate-600 hover:bg-white" onClick={() => void onDecline(request.id)}>拒絕</button></span></li>
             ) : null)}
+          </ul>
+        </section>}
+        {!loading && requests.some((request) => request.direction === 'outgoing') && <section className="mt-5" aria-labelledby="outgoing-friend-requests-title">
+          <h3 id="outgoing-friend-requests-title" className="font-black text-slate-900">已送出的邀請</h3>
+          <ul className="mt-2 space-y-2">
+            {requests.map((request) => request.direction === 'outgoing' ? <li key={request.id} className="flex items-center justify-between gap-3 rounded-xl bg-amber-50 p-3"><span className="min-w-0 truncate font-bold">{request.displayName}</span><span className="shrink-0 text-sm font-black text-amber-800">等待對方接受</span></li> : null)}
           </ul>
         </section>}
         <section className="mt-5" aria-labelledby="friends-title">
@@ -98,7 +106,13 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
             const friendName = onChat
               ? <button type="button" className="min-w-0 max-w-full text-left" aria-label={`和${friend.displayName}聊天`} onClick={() => onChat(friend)}><strong className="block truncate text-indigo-800 underline-offset-2 hover:underline">{friend.displayName}</strong></button>
               : <strong className="block truncate">{friend.displayName}</strong>;
-            return <li key={friend.childProfileId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-3"><span className="min-w-0">{friendName}<small className={isOnline ? 'text-emerald-600' : 'text-slate-500'}>{statusLabel}</small></span><span className="flex shrink-0 gap-2">{isRemoving && <button type="button" className="min-h-11 rounded-lg px-3 text-sm font-black text-slate-600 hover:bg-slate-100" onClick={() => setRemovingFriendId(null)}>取消</button>}<button type="button" className={`min-h-11 rounded-lg px-3 text-sm font-black ${isRemoving ? 'bg-rose-600 text-white' : 'border border-rose-200 text-rose-700'}`} aria-label={`${isRemoving ? '確認刪除' : '刪除'}好友${friend.displayName}`} onClick={() => void removeFriend(friend.childProfileId)}>{isRemoving ? '確認刪除' : '刪除'}</button>{!isRemoving && <button type="button" className="min-h-11 rounded-lg bg-indigo-600 px-3 text-sm font-black text-white" onClick={() => void onVisit(friend)}>參觀</button>}</span></li>;
+            const collaborationPending = collaborationPendingId === friend.childProfileId;
+            const toggleCollaboration = async () => {
+              if (!onToggleCollaboration || collaborationPending) return;
+              setCollaborationPendingId(friend.childProfileId);
+              try { await onToggleCollaboration(friend); } finally { setCollaborationPendingId(null); }
+            };
+            return <li key={friend.childProfileId} className="rounded-xl border border-slate-100 p-3"><div className="flex items-center justify-between gap-3"><span className="min-w-0">{friendName}<small className={isOnline ? 'text-emerald-600' : 'text-slate-500'}>{statusLabel}</small></span><span className="flex shrink-0 gap-2">{isRemoving && <button type="button" className="min-h-11 rounded-lg px-3 text-sm font-black text-slate-600 hover:bg-slate-100" onClick={() => setRemovingFriendId(null)}>取消</button>}<button type="button" className={`min-h-11 rounded-lg px-3 text-sm font-black ${isRemoving ? 'bg-rose-600 text-white' : 'border border-rose-200 text-rose-700'}`} aria-label={`${isRemoving ? '確認刪除' : '刪除'}好友${friend.displayName}`} onClick={() => void removeFriend(friend.childProfileId)}>{isRemoving ? '確認刪除' : '刪除'}</button>{!isRemoving && <button type="button" className="min-h-11 rounded-lg bg-indigo-600 px-3 text-sm font-black text-white" onClick={() => void onVisit(friend)}>參觀</button>}</span></div>{onToggleCollaboration && !isRemoving && <button type="button" className="mt-2 min-h-10 rounded-lg border border-emerald-200 px-3 text-xs font-black text-emerald-700 hover:bg-emerald-50 disabled:opacity-50" disabled={collaborationPending} onClick={() => void toggleCollaboration()}>{collaborationPending ? '同步中…' : friend.canCollaborateInMyWorld ? '已允許調整我的共享裝飾' : '允許調整我的共享裝飾'}</button>}</li>;
           })}</ul>}
         </section>
       </section>

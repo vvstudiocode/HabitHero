@@ -72,7 +72,7 @@ export function patchRemovedWorldEntity(
 }
 
 export function patchCollectedWorldDecorations(gameData: ChildGameData): ChildGameData {
-  const worldEntities = gameData.worldEntities.map((entity) => entity.entityKind === 'decoration' && entity.isActive
+  const worldEntities = gameData.worldEntities.map((entity) => entity.entityKind === 'decoration' && entity.placementScope !== 'shared' && entity.isActive
     ? { ...entity, isActive: false, behaviorMode: 'idle' as const, roamingSlot: null }
     : entity);
   return worldEntities.some((entity, index) => entity !== gameData.worldEntities[index])

@@ -10,6 +10,7 @@ import {
   getPreviewMaxZoom,
   getPreviewModelScale,
   getPreviewModelOffset,
+  getPreviewModelRotation,
 } from '../src/features/world/components/game-item-preview-framing';
 import type { GameCatalogItem } from '../src/features/world/contracts';
 const previewSource = readFileSync(new URL('../src/features/world/components/GameItemImagePreview.tsx', import.meta.url), 'utf8');
@@ -99,6 +100,18 @@ test('preview framing applies only the requested Mixamo and character visual off
   assert.ok(getPreviewModelOffset({ itemType: 'pet', assetKey: 'pet.qifu-er' }).y < 0);
   assert.ok(getPreviewModelOffset({ itemType: 'character', assetKey: 'character.arthur' }).y < 0);
   assert.deepEqual(getPreviewModelOffset({ itemType: 'decoration', assetKey: 'decoration.study-desk' }), { x: 0, y: 0, z: 0 });
+});
+
+test('only rug decorations stand up for a front-facing 3D preview', () => {
+  assert.deepEqual(getPreviewModelRotation({ itemType: 'decoration', assetKey: 'decoration.blue-rug' }), { x: Math.PI / 2, y: 0, z: 0 });
+  assert.deepEqual(getPreviewModelRotation({ itemType: 'decoration', assetKey: 'decoration.patchwork-rug' }), { x: Math.PI / 2, y: 0, z: 0 });
+  assert.deepEqual(getPreviewModelRotation({ itemType: 'decoration', assetKey: 'decoration.pawprint-rug' }), { x: Math.PI / 2, y: 0, z: 0 });
+  assert.deepEqual(getPreviewModelRotation({ itemType: 'decoration', assetKey: 'decoration.lavender-pattern-rug' }), { x: Math.PI / 2, y: 0, z: 0 });
+  assert.deepEqual(getPreviewModelRotation({ itemType: 'decoration', assetKey: 'decoration.royal-crest-rug' }), { x: Math.PI / 2, y: 0, z: 0 });
+  assert.deepEqual(getPreviewModelRotation({ itemType: 'decoration', assetKey: 'decoration.study-desk' }), { x: 0, y: 0, z: 0 });
+  const modelPreviewSource = readFileSync(new URL('../src/features/world/components/GameItem3DPreview.tsx', import.meta.url), 'utf8');
+  assert.match(modelPreviewSource, /getPreviewModelRotation/);
+  assert.match(modelPreviewSource, /Object\.assign\(previewModel\.rotation, getPreviewModelRotation/);
 });
 
 test('the Arcadia preview matches the world palette without a ground shadow or visible instructions', () => {

@@ -68,6 +68,39 @@ describe('clean screenshot mode', () => {
     assert.match(dashboardSource, /pointerup/);
   });
 
+  it('hides social controls and closes social panels while clean mode is active', () => {
+    const socialSource = readFileSync(
+      new URL('../src/features/world-social/WorldSocialLayer.tsx', import.meta.url),
+      'utf8',
+    );
+
+    assert.match(dashboardSource, /cleanMode=\{cleanMode\}/);
+    assert.match(socialSource, /cleanMode\?: boolean/);
+    assert.match(socialSource, /setFriendsOpen\(false\)/);
+    assert.match(socialSource, /setChatOpen\(false\)/);
+    assert.match(socialSource, /const socialControlsHidden = cleanMode \|\| placementMode/);
+    assert.match(socialSource, /!socialControlsHidden && <FriendDock/);
+    assert.match(socialSource, /const showWorldChatDock = !socialControlsHidden &&/);
+    assert.match(socialSource, /!socialControlsHidden && showWorldChatDock/);
+    assert.match(socialSource, /!socialControlsHidden && friendsOpen/);
+    assert.match(socialSource, /!socialControlsHidden && chatOpen/);
+  });
+
+  it('hides social controls while a decoration is being placed', () => {
+    const socialSource = readFileSync(
+      new URL('../src/features/world-social/WorldSocialLayer.tsx', import.meta.url),
+      'utf8',
+    );
+
+    assert.match(dashboardSource, /placementMode=\{Boolean\(decorationPlacement\)\}/);
+    assert.match(socialSource, /placementMode\?: boolean/);
+    assert.match(socialSource, /const socialControlsHidden = cleanMode \|\| placementMode/);
+    assert.match(socialSource, /!socialControlsHidden && <FriendDock/);
+    assert.match(socialSource, /!socialControlsHidden && showWorldChatDock/);
+    assert.match(socialSource, /!socialControlsHidden && friendsOpen/);
+    assert.match(socialSource, /!socialControlsHidden && chatOpen/);
+  });
+
   it('keeps clean mode selectors owned by the existing control style layers', () => {
     assert.match(characterStyles, /is-clean-mode[\s\S]*?hh-character-stats/);
     assert.match(characterStyles, /is-clean-mode[\s\S]*?hh-child-adventure-board/);

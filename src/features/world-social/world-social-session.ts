@@ -2,6 +2,9 @@ import { useSyncExternalStore } from 'react';
 import type { FriendWorldSnapshot } from '../friends/friend-world-snapshot';
 import type { ChildGameData } from '../world/contracts';
 import type { WorldRuntimeSession } from '../world/world-runtime-multiplayer';
+import type { FriendSummary } from '../friends/contracts';
+import type { FriendWorldRepository } from '../../lib/social-data/friend-world-repository';
+import type { SharedDecorationRepository } from '../../lib/social-data/shared-decoration-repository';
 
 export interface WorldSocialSession extends WorldRuntimeSession {
   worldOwnerChildProfileId: string;
@@ -9,6 +12,10 @@ export interface WorldSocialSession extends WorldRuntimeSession {
   gameData?: ChildGameData;
   fixedSpawn: { x: number; z: number };
   multiplayer: NonNullable<WorldRuntimeSession['multiplayer']>;
+  friends: FriendSummary[];
+  friendWorldRepository?: FriendWorldRepository;
+  sharedDecorationRepository?: SharedDecorationRepository;
+  reloadSnapshot?: () => Promise<void>;
 }
 
 let currentSession: WorldSocialSession | null = null;
