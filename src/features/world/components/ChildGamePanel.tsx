@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Crown, Flower2, PawPrint, Settings, Sparkles, X } from 'lucide-react';
+import { Check, Settings, Sparkles, X } from 'lucide-react';
 import type { ChildGameData, ChildInventoryItem, ChildWorldEntity, GameCatalogItem, GamePurchaseResult, WorldMutationResult, WorldTransformMutationPayload } from '../contracts';
-import { degreesToRadians, getActiveDecorationEntities, getWorldRevisionAfterMutation, radiansToDegrees, toDecorationDraft, type DecorationDraft } from './decoration-editing';
+import { degreesToRadians, getActiveDecorationEntities, getWorldRevisionAfterMutation, getWorldRevisionAfterRefresh, radiansToDegrees, toDecorationDraft, type DecorationDraft } from './decoration-editing';
 import { buildCollisionCircles } from '../world-collision';
 import { toWorldMutationErrorMessage } from '../world-errors';
 import { isDecorationPlacementValid } from '../world-placement';
@@ -10,6 +10,7 @@ import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pe
 import { isLocalGameItem3DPreviewEnabled, isLocalGameItemInventorySupported, isLocalGameItemShopSupported } from '../game-content-assets';
 import { GameItemLightbox } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
+import { GameCategoryTabs, type GameCatalogSection } from './GameCategoryTabs';
 import { PushNotificationSettings } from '../../../components/PushNotificationSettings';
 import type { useNotificationSettings } from '../../../hooks/useNotificationSettings';
 import { WorldDisplaySettings } from './WorldDisplaySettings';
@@ -170,7 +171,7 @@ export function ChildGamePanel({
   }, [gameData.worldRevision, gameData.worldEntities]);
 
   useEffect(() => {
-    worldRevisionRef.current = Math.max(worldRevisionRef.current, gameData.worldRevision);
+    worldRevisionRef.current = getWorldRevisionAfterRefresh(worldRevisionRef.current, gameData.worldRevision);
   }, [gameData.worldRevision]);
 
   const run = async (action: () => Promise<unknown>, success: string) => {
@@ -488,6 +489,8 @@ export function ChildGamePanel({
       <div className="hh-game-panel-header">
         <div className="hh-game-panel-title-row">
           <h2 id="hh-game-panel-title">{title}</h2>
+          {kind === 'inventory' && <GameCategoryTabs ariaLabel="背包分類" selected={inventorySection} onChange={setInventorySection} />}
+          {kind === 'shop' && <GameCategoryTabs ariaLabel="商店分類" selected={shopSection} onChange={setShopSection} />}
           {kind === 'inventory' && <GameCatalogLayoutControls columns={inventoryColumns} onChange={setInventoryColumns} />}
           {kind === 'shop' && <GameCatalogLayoutControls columns={shopColumns} onChange={setShopColumns} />}
         </div>
@@ -495,13 +498,6 @@ export function ChildGamePanel({
 
       {kind === 'inventory' && (
         <div className={`hh-game-panel-section${kind === 'inventory' ? ' hh-game-panel-section--inventory' : ''}`}>
-          <div className="hh-game-tabs hh-game-tabs--icons" role="tablist" aria-label="背包分類">
-            {([['character', '角色'], ['pet', '寵物'], ['decoration', '裝飾']] as const).map(([value, label]) => (
-              <button key={value} type="button" role="tab" aria-label={label} title={label} aria-selected={inventorySection === value} className={inventorySection === value ? 'is-selected' : ''} onClick={() => setInventorySection(value)}>
-                {value === 'character' ? <Crown size={16} /> : value === 'pet' ? <PawPrint size={16} /> : <Flower2 size={16} />}
-              </button>
-            ))}
-          </div>
           {inventorySection === 'decoration' && (
             <div className="hh-game-store-toolbar">
               <button
@@ -538,13 +534,6 @@ export function ChildGamePanel({
 
       {kind === 'shop' && (
         <div className="hh-game-panel-section">
-          <div className="hh-game-tabs hh-game-tabs--icons" role="tablist" aria-label="商店分類">
-            {([['character', '角色'], ['pet', '寵物'], ['decoration', '裝飾']] as const).map(([value, label]) => (
-              <button key={value} type="button" role="tab" aria-label={label} title={label} aria-selected={shopSection === value} className={shopSection === value ? 'is-selected' : ''} onClick={() => setShopSection(value)}>
-                {value === 'character' ? <Crown size={16} /> : value === 'pet' ? <PawPrint size={16} /> : <Flower2 size={16} />}
-              </button>
-            ))}
-          </div>
           <div className={`hh-game-catalog-grid hh-game-catalog-grid--${shopColumns}`}>
             {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection && isLocalGameItemShopSupported(item)).map((item) => {
               const price = gameData.prices[item.id] ?? item.scrollPrice;

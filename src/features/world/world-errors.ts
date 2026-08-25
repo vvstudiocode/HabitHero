@@ -8,6 +8,12 @@ function getErrorText(error: unknown): string {
   return '';
 }
 
+export function isWorldRevisionConflict(error: unknown): boolean {
+  const message = getErrorText(error).toLowerCase();
+  return message.includes('world revision conflict')
+    || (error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'revision-conflict');
+}
+
 export function toWorldMutationErrorMessage(error: unknown, fallback: string): string {
   const message = getErrorText(error).toLowerCase();
   if (message.includes('child_world_entities_rotation_y_check') || message.includes('rotation_y')) {
@@ -22,7 +28,7 @@ export function toWorldMutationErrorMessage(error: unknown, fallback: string): s
   if (message.includes('outside the playable area')) {
     return '請把家具移回看得到的草地。';
   }
-  if (message.includes('world revision conflict') || message.includes('世界剛被好友更新') || (error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'revision-conflict')) {
+  if (isWorldRevisionConflict(error) || message.includes('世界剛被好友更新')) {
     return '世界剛剛有變化，請再試一次。';
   }
   if (message.includes('network') || message.includes('fetch')) {

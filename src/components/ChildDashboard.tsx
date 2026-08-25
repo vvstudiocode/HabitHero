@@ -138,6 +138,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [decorationPurchasePrompt, setDecorationPurchasePrompt] = useState<DecorationPurchasePrompt | null>(null);
   const [decorationPlacement, setDecorationPlacement] = useState<DecorationPlacementSession | null>(null);
   const [decorationPlacementPending, setDecorationPlacementPending] = useState(false);
+  const placementSubmissionInFlightRef = useRef(false);
   const [shareDecorationItem, setShareDecorationItem] = useState<SharedDecorationItem | null>(null);
   const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [heroMenuVisible, setHeroMenuVisible] = useState(false);
@@ -767,6 +768,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     placementItem,
     placementValid,
     decorationPlacementPending,
+    placementSubmissionInFlight: placementSubmissionInFlightRef,
     shareDecorationItem,
     closeChildFeature,
     showToast,
@@ -947,7 +949,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900">
         <p role="alert">登入狀態已失效或此帳號不是孩子成員，無法顯示孩子資料。</p>
         <div className="flex gap-3">
-          <button type="button" onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 font-bold text-white">重試</button>
+          <button type="button" onClick={() => void retry({ recoverWorldMutations: true })} className="rounded-xl bg-blue-500 px-5 py-3 font-bold text-white">重試</button>
           <button type="button" onClick={onLogout} className="rounded-xl bg-gray-200 px-5 py-3 font-bold text-gray-700">登出</button>
         </div>
       </div>
@@ -959,7 +961,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-900">
         <p role="alert">{error || '找不到目前帳號對應的孩子資料。'}</p>
         <div className="flex gap-3">
-          <button type="button" onClick={() => void retry()} className="rounded-xl bg-blue-500 px-5 py-3 font-bold text-white">重試</button>
+          <button type="button" onClick={() => void retry({ recoverWorldMutations: true })} className="rounded-xl bg-blue-500 px-5 py-3 font-bold text-white">重試</button>
           <button type="button" onClick={onLogout} className="rounded-xl bg-gray-200 px-5 py-3 font-bold text-gray-700">登出</button>
         </div>
       </div>
@@ -1109,7 +1111,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         {isOffline && (
           <div role="status" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             <span>目前離線，變更尚未同步。</span>
-            <button type="button" onClick={() => void retry()} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
+            <button type="button" onClick={() => void retry({ recoverWorldMutations: true })} disabled={loading} className="shrink-0 font-bold underline disabled:opacity-50">重試</button>
           </div>
         )}
         {isGameFeature && (
@@ -1195,8 +1197,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         )}
 
         {!isGameFeature && activeTab === 'wishlist' && (
-          <div className="space-y-6">
-            <section className="space-y-3" aria-labelledby="pending-wishlist-title">
+          <div className="hh-child-feature-page hh-child-feature-page--wishlist space-y-6">
+            <section className="hh-child-feature-section space-y-3" aria-labelledby="pending-wishlist-title">
               <div className="flex items-center justify-between px-2">
                 <div>
                   <h2 id="pending-wishlist-title" className="text-lg font-black text-gray-800">正在許願</h2>
@@ -1206,9 +1208,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               {wishlist.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400">目前沒有等待核准的願望。</div>
               ) : (
-                <div className="space-y-3">
+                <div className="hh-child-wishlist-list space-y-3">
                   {wishlist.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                    <div key={item.id} className="hh-child-wishlist-item flex items-center justify-between gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
                       <div className="min-w-0">
                         <div className="break-words font-bold text-gray-800">{item.name}</div>
                         <div className="mt-1 text-xs font-bold text-yellow-700">等待爸媽核准</div>
@@ -1228,7 +1230,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               )}
             </section>
 
-            <section className="space-y-3" aria-labelledby="available-rewards-title">
+            <section className="hh-child-feature-section space-y-3" aria-labelledby="available-rewards-title">
               <div className="flex items-center justify-between gap-3 px-2">
                 <h2 id="available-rewards-title" className="flex items-center gap-2 text-lg font-black text-gray-900">
                   <Gift size={19} className="text-yellow-500" aria-hidden="true" />
@@ -1241,16 +1243,16 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                   目前還沒有可兌換的獎勵，請等爸媽設定喔。
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="hh-child-reward-grid grid grid-cols-3 gap-3">
                   {visibleRewards.map(reward => {
                     const canAfford = childPoints >= reward.points;
                     return (
-                      <div key={reward.id} className={cn("flex min-w-0 flex-col items-center rounded-3xl border bg-white p-3 text-center shadow-sm", canAfford ? "border-yellow-200" : "border-gray-100 opacity-80")}>
-                        <div className={cn("mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full", canAfford ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-400")}>
+                      <div key={reward.id} className={cn("hh-child-reward-card flex min-w-0 flex-col items-center rounded-3xl border bg-white p-3 text-center shadow-sm", canAfford ? "border-yellow-200" : "border-gray-100 opacity-80")}>
+                        <div className={cn("hh-child-reward-icon mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full", canAfford ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-400")}>
                           <Gift size={25} aria-hidden="true" />
                         </div>
-                        <div className="mb-1 min-h-10 w-full break-words text-sm font-bold leading-5 text-gray-800 line-clamp-2">{reward.name}</div>
-                        <div className={cn("text-base font-black", canAfford ? "text-yellow-500" : "text-gray-400")}>
+                        <div className="hh-child-reward-name mb-1 min-h-10 w-full break-words text-sm font-bold leading-5 text-gray-800 line-clamp-2">{reward.name}</div>
+                        <div className={cn("hh-child-reward-price text-base font-black", canAfford ? "text-yellow-500" : "text-gray-400")}>
                           <PointValue value={reward.points} iconSize={15} />
                         </div>
                         <div className="min-h-5 text-xs font-bold text-rose-600">
@@ -1261,7 +1263,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
                           onClick={() => setRewardToConfirm(reward)}
                           disabled={!canAfford || actionPending}
                           className={cn(
-                            "mt-2 min-h-11 w-full rounded-xl px-1 py-2 text-sm font-bold transition-all",
+                            "hh-child-reward-action mt-2 min-h-11 w-full rounded-xl px-1 py-2 text-sm font-bold transition-all",
                             canAfford ? "bg-yellow-400 text-yellow-900 hover:bg-yellow-500 shadow-md active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           )}
                         >

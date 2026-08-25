@@ -806,6 +806,16 @@
 }
 
 @media (orientation: landscape) {
+  .hh-child-adventure-board {
+    left: max(var(--hh-character-content-left), calc(env(safe-area-inset-left, 0px) + 12px));
+    width: min(var(--hh-adventure-board-width), calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px));
+  }
+
+  .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
+    right: max(16px, calc(env(safe-area-inset-right, 0px) + 16px));
+    max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 32px);
+  }
+
   .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
     max-height: calc(100dvh - (17px + var(--hh-menu-submenu-offset)));
     gap: 0;
@@ -818,8 +828,8 @@
   .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: min(232px, calc(100vw - 16px));
-    max-width: calc(100vw - 16px);
+    width: min(232px, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 16px));
+    max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 16px);
     gap: 6px;
     overflow-y: auto;
   }
@@ -1468,6 +1478,13 @@
   .hh-character-stats[data-stat-count="3"]>div:has(.hh-character-stat-points) {
     width: auto;
     min-width: 0;
+  }
+}
+
+@media (orientation: landscape) {
+  .hh-character-stats,
+  .hh-character-hero-panel > .hh-character-dashboard-actions {
+    top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
   }
 }
 

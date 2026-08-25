@@ -65,6 +65,7 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
       throw error;
     }
   }, [childProfileId, friendWorldRepository, worldOwnerChildProfileId]);
+  const reloadOwnWorld = useCallback(() => retry({ recoverWorldMutations: true }), [retry]);
   const localGameData = state.gameDataByChildId[childProfileId];
   const characterAssetKey = getEquippedCharacterCatalogItem(localGameData ?? emptyChildGameData()).assetKey;
   const multiplayer = useWorldMultiplayer({ client: supabase, worldOwnerChildProfileId, childProfileId, characterAssetKey, enabled, onWorldRevision: reloadVisitorWorld });
@@ -90,9 +91,9 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
       friends: friends.friends,
       friendWorldRepository: friendWorldRepository ?? undefined,
       sharedDecorationRepository: sharedDecorationRepository ?? undefined,
-      reloadSnapshot: worldOwnerChildProfileId !== childProfileId ? reloadVisitorWorld : retry,
+      reloadSnapshot: worldOwnerChildProfileId !== childProfileId ? reloadVisitorWorld : reloadOwnWorld,
     });
-  }, [childProfileId, enabled, friendWorldRepository, friends.friends, multiplayer.broadcastState, multiplayer.remoteAvatars, reloadVisitorWorld, retry, sharedDecorationRepository, snapshot, worldOwnerChildProfileId]);
+  }, [childProfileId, enabled, friendWorldRepository, friends.friends, multiplayer.broadcastState, multiplayer.remoteAvatars, reloadOwnWorld, reloadVisitorWorld, retry, sharedDecorationRepository, snapshot, worldOwnerChildProfileId]);
 
   useEffect(() => () => setWorldSocialSession(null), []);
 

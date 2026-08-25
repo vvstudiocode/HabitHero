@@ -33,3 +33,9 @@ export function getWorldRevisionAfterMutation(previousRevision: number, returned
     ? returnedRevision
     : previousRevision + 1;
 }
+
+export function getWorldRevisionAfterRefresh(localRevision: number, serverRevision: number): number {
+  return Number.isInteger(serverRevision) && serverRevision >= 0
+    ? serverRevision
+    : localRevision;
+}

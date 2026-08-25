@@ -57,6 +57,7 @@ export interface ChildDecorationActionDependencies {
   placementItem?: GameCatalogItem;
   placementValid: boolean;
   decorationPlacementPending: boolean;
+  placementSubmissionInFlight?: { current: boolean };
   shareDecorationItem: SharedDecorationItem | null;
   closeChildFeature: (afterClose?: () => void) => void;
   showToast: (message: string) => void;

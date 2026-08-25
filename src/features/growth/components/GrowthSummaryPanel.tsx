@@ -63,8 +63,8 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', tasks = 
   };
 
   return (
-    <section className="space-y-5" aria-labelledby="growth-summary-title">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="hh-child-feature-page hh-child-feature-page--growth space-y-5" aria-labelledby="growth-summary-title">
+      <div className="hh-child-feature-growth-header flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="growth-summary-title" className="text-xl font-black text-gray-900">{title}</h2>
         </div>
@@ -88,19 +88,19 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', tasks = 
           目前沒有可顯示的成長紀錄。
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="hh-child-feature-summary-list space-y-3">
           {summaries.map((summary) => {
             const stats = statsByChild.get(summary.childId);
             if (!stats) return null;
             const expanded = expandedChildId === summary.childId;
             return (
-              <article key={summary.childId} className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+              <article key={summary.childId} className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm hh-child-feature-summary-card">
                 <button
                   type="button"
                   aria-expanded={expanded}
                   aria-controls={`growth-card-content-${summary.childId}`}
                   onClick={() => toggleChild(summary.childId)}
-                  className="flex min-h-20 w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-gray-50 sm:px-5"
+                  className="hh-child-feature-summary-trigger flex min-h-20 w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-gray-50 sm:px-5"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -119,7 +119,7 @@ export function GrowthSummaryPanel({ summaries, title = '成長紀錄', tasks = 
                 </button>
 
                 {expanded && (
-                  <div id={`growth-card-content-${summary.childId}`} className="space-y-6 border-t border-gray-100 bg-gray-50/70 p-4 sm:p-5">
+                  <div id={`growth-card-content-${summary.childId}`} className="hh-child-feature-summary-content space-y-6 border-t border-gray-100 bg-gray-50/70 p-4 sm:p-5">
                     <PeriodOverview stats={stats} />
                     <DailyProgressSection
                       stats={stats}
@@ -359,7 +359,7 @@ function GrowthDayTaskRow({ task }: { key?: string; task: GrowthTaskWithChild | 
 
 function ProgressText({ stats }: { stats: GrowthPeriodStats }) {
   return (
-    <div className="text-right" aria-label={stats.plannedCount > 0 ? `完成 ${stats.completedCount} / ${stats.plannedCount} 個任務` : '這段期間無安排任務'}>
+    <div className="hh-child-feature-summary-progress text-right" aria-label={stats.plannedCount > 0 ? `完成 ${stats.completedCount} / ${stats.plannedCount} 個任務` : '這段期間無安排任務'}>
       <div className="text-lg font-black tabular-nums text-gray-900">{stats.plannedCount > 0 ? `${stats.completedCount}/${stats.plannedCount}` : '—'}</div>
       <div className="text-xs font-bold text-gray-500">{stats.plannedCount > 0 ? '已完成' : '無安排'}</div>
     </div>
@@ -368,7 +368,7 @@ function ProgressText({ stats }: { stats: GrowthPeriodStats }) {
 
 function OverviewTile({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3">
+    <div className="hh-child-feature-overview-tile rounded-2xl border border-gray-200 bg-white p-3">
       <div className="text-lg font-black tabular-nums text-gray-900">{value}</div>
       <div className="mt-1 text-xs font-bold text-gray-500">{label}</div>
     </div>

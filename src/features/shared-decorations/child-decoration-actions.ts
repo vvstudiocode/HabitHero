@@ -5,7 +5,7 @@ import {
   createDecorationPlacementDraft,
   toDecorationPlacementTransform,
 } from '../world/world-placement';
-import { toWorldMutationErrorMessage } from '../world/world-errors';
+import { isWorldRevisionConflict, toWorldMutationErrorMessage } from '../world/world-errors';
 import {
   SharedDecorationRepositoryError,
 } from '../../lib/social-data/shared-decoration-repository';
@@ -41,6 +41,7 @@ export function createChildDecorationActions(
     placementItem,
     placementValid,
     decorationPlacementPending,
+    placementSubmissionInFlight: placementSubmissionInFlightRef,
     shareDecorationItem,
     closeChildFeature,
     showToast,
@@ -55,6 +56,7 @@ export function createChildDecorationActions(
     updateWorldEntityTransform,
     placeWorldEntity,
   } = dependencies;
+  const placementSubmissionInFlight = placementSubmissionInFlightRef ?? { current: false };
 
   const startDecorationPlacement = () => {
     if (!decorationPurchasePrompt) return;
@@ -151,7 +153,8 @@ export function createChildDecorationActions(
   };
 
   const completeDecorationPlacement = async () => {
-    if (!activeChildId || !decorationPlacement || !placementItem || !placementValid || decorationPlacementPending) return;
+    if (!activeChildId || !decorationPlacement || !placementItem || !placementValid || decorationPlacementPending || placementSubmissionInFlight.current) return;
+    placementSubmissionInFlight.current = true;
     const placementSession = decorationPlacement;
     const expectedRevision = worldGameData.worldRevision;
     setDecorationPlacement(null);
@@ -181,13 +184,15 @@ export function createChildDecorationActions(
         showToast('裝飾已放到世界！');
       }
     } catch (error) {
-      setDecorationPlacement(placementSession);
-      if (error instanceof SharedDecorationRepositoryError && error.code === 'revision-conflict') {
+      if (isWorldRevisionConflict(error)) {
         await socialSession?.reloadSnapshot?.().catch(() => undefined);
+      } else {
+        setDecorationPlacement(placementSession);
       }
       showToast(toWorldMutationErrorMessage(error, '這裡不能放置，換一個草地位置試試看。'));
     } finally {
       setDecorationPlacementPending(false);
+      placementSubmissionInFlight.current = false;
     }
   };
 

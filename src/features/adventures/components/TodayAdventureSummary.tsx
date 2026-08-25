@@ -51,7 +51,7 @@ function AdventureSummaryTask({ task, historical = false, onSelect }: { key?: st
     <li>
       <button
         type="button"
-        className="w-full rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+        className="hh-child-feature-task w-full rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         onClick={() => onSelect(task)}
         aria-label={`${task.name}，${statusLabel}，時間 ${taskWindow}`}
       >
@@ -66,8 +66,8 @@ function AdventureSummaryTask({ task, historical = false, onSelect }: { key?: st
                 : 'mt-0.5 shrink-0 text-gray-400'}
           />
           <div className="min-w-0 flex-1">
-            <p className="break-words font-black text-gray-900">{task.name}</p>
-            <p className="mt-1 text-sm font-bold text-gray-500">
+            <p className="hh-child-feature-task-name break-words font-black text-gray-900">{task.name}</p>
+            <p className="hh-child-feature-task-status mt-1 text-sm font-bold text-gray-500">
               {state === 'available' ? `時間 ${taskWindow}` : statusLabel}{historyTime ? ` · ${historyTime} ${state === 'cancelled' ? '放棄' : '完成'}` : ''}
             </p>
           </div>
@@ -113,8 +113,8 @@ export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdv
   const dailyProgress = getAdventureProgress(summary.daily);
 
   return (
-    <div className="space-y-6" aria-label="今日冒險進度">
-      <section className="space-y-3" aria-labelledby="today-daily-adventure-title">
+    <div className="hh-child-feature-page hh-child-feature-page--adventure space-y-6" aria-label="今日冒險進度">
+      <section className="hh-child-feature-section space-y-3" aria-labelledby="today-daily-adventure-title">
         <div className="flex items-end justify-between gap-3 px-2">
           <div>
             <h2 id="today-daily-adventure-title" className="font-black text-gray-800">每日冒險</h2>
@@ -131,7 +131,7 @@ export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdv
       </section>
 
       {(summary.generalActive.length > 0 || summary.generalHistoryByDate.length > 0) && (
-        <section className="space-y-3" aria-labelledby="today-general-adventure-title">
+        <section className="hh-child-feature-section space-y-3" aria-labelledby="today-general-adventure-title">
           <div className="px-2">
             <h2 id="today-general-adventure-title" className="font-black text-gray-800">一般冒險</h2>
           </div>

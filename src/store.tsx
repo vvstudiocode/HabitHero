@@ -41,6 +41,8 @@ import { shouldBlockAppForDataLoad, shouldMarkInitialLoadDone, shouldRefreshAppD
 import { pauseTaskTimerInState, startTaskTimerInState } from './lib/task-timer-state';
 import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
 import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
+import { isWorldRevisionConflict } from './features/world/world-errors';
+import { createWorldMutationGate } from './features/world/world-mutation-gate';
 import {
   patchEquippedCharacter,
   patchFollowingPets,
@@ -71,7 +73,7 @@ export interface AppContextType {
   stale: boolean;
   isOffline: boolean;
   error: string | null;
-  retry: () => Promise<void>;
+  retry: (options?: { recoverWorldMutations?: boolean }) => Promise<void>;
   role: 'parent' | 'child' | null;
   hasSession: boolean;
   updateState: (newState: Partial<AppState>) => void;
@@ -229,6 +231,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const activeMutationCount = useRef(0);
   const mutationEpoch = useRef(0);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const worldMutationGateRef = useRef(createWorldMutationGate());
   const stateRef = useRef(state);
   const dataReadyRef = useRef(dataReady);
   const loadedUserIdRef = useRef(loadedUserId);
@@ -246,10 +249,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
   }, []);
 
-  const retry = useCallback(async () => {
+  const retry = useCallback(async ({ recoverWorldMutations = false }: { recoverWorldMutations?: boolean } = {}) => {
     if (!session || !repository) return;
     if (activeMutationCount.current > 0) return;
     if (loadInFlight.current) return loadInFlight.current;
+    if (recoverWorldMutations) worldMutationGateRef.current.clear();
     const loadMutationEpoch = mutationEpoch.current;
     // Only reset dataReady on the very first load (no existing data).
     // For subsequent refreshes (realtime, reconnect) keep the dashboard
@@ -326,6 +330,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })) return;
     setInitialLoadDone(true);
   }, [initialLoadDone, sessionLoading, session, dataReady, dataError]);
+
+  useEffect(() => {
+    worldMutationGateRef.current.clear();
+  }, [session?.user.id]);
 
   useEffect(() => {
     if (!session) {
@@ -462,6 +470,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const message = error instanceof Error ? error.message : '資料更新失敗，請重試。';
       setDataError(message);
       setStale(true);
+      if (isWorldRevisionConflict(error)) scheduleBackgroundRefresh();
       throw new Error(message);
     } finally {
       activeMutationCount.current = Math.max(0, activeMutationCount.current - 1);
@@ -487,6 +496,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return next;
     });
   };
+
+  const reconcileWorldMutationResult = <T extends WorldMutationResult>(childId: string, resultPromise: Promise<T>) => resultPromise.then((result) => (reconcileWorldMutation(childId, result), result));
+
+  const runWorldMutation = useCallback(<T,>(childId: string, operation: () => Promise<T>) => (
+    worldMutationGateRef.current.run(childId, async () => {
+      try {
+        return await operation();
+      } catch (error) {
+        if (isWorldRevisionConflict(error)) worldMutationGateRef.current.block(childId);
+        throw error;
+      }
+    })
+  ), []);
 
   const updateState = (updates: Partial<AppState>) => setState((previous) => ({ ...previous, ...updates }));
   const setParentPin = (parentPin: string) => updateState({ parentPin });
@@ -606,83 +628,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       },
     ),
-    setFollowingPets: (childId: string, inventoryItemIds: string[]) => mutate(
-      (repo) => repo.setFollowingPets(childId, inventoryItemIds),
-      (previous) => {
-        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-        return {
-          ...previous,
-          gameDataByChildId: {
-            ...previous.gameDataByChildId,
-            [childId]: patchFollowingPets(currentGameData, inventoryItemIds),
-          },
-        };
-      },
-      (current, previous) => {
-        const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-        const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
-        return {
-          ...current,
-          gameDataByChildId: {
-            ...current.gameDataByChildId,
-            [childId]: {
-              ...currentGameData,
-              loadout: previousGameData.loadout,
-              worldEntities: previousGameData.worldEntities,
+    setFollowingPets: (childId: string, inventoryItemIds: string[]) => runWorldMutation(childId, () => reconcileWorldMutationResult(childId, mutate(
+        (repo) => repo.setFollowingPets(childId, inventoryItemIds),
+        (previous) => {
+          const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...previous,
+            gameDataByChildId: {
+              ...previous.gameDataByChildId,
+              [childId]: patchFollowingPets(currentGameData, inventoryItemIds),
             },
-          },
-        };
-      },
-    ),
-    setFollowingPet: (childId: string, inventoryItemId: string | null) => mutate(
-      (repo) => repo.setFollowingPet(childId, inventoryItemId),
-      (previous) => {
-        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-        return {
-          ...previous,
-          gameDataByChildId: {
-            ...previous.gameDataByChildId,
-            [childId]: patchFollowingPets(currentGameData, inventoryItemId ? [inventoryItemId] : []),
-          },
-        };
-      },
-      (current, previous) => {
-        const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-        const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
-        return {
-          ...current,
-          gameDataByChildId: {
-            ...current.gameDataByChildId,
-            [childId]: { ...currentGameData, loadout: previousGameData.loadout, worldEntities: previousGameData.worldEntities },
-          },
-        };
-      },
-    ),
-    setRoamingPets: (childId: string, inventoryItemIds: string[], positionOverrides?: Readonly<Record<string, WorldTransform>>) => mutate(
-      (repo) => repo.setRoamingPets(childId, inventoryItemIds),
-      (previous) => {
-        const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-        return {
-          ...previous,
-          gameDataByChildId: {
-            ...previous.gameDataByChildId,
-            [childId]: patchRoamingPets(currentGameData, inventoryItemIds, positionOverrides),
-          },
-        };
-      },
-      (current, previous) => {
-        const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-        const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
-        return {
-          ...current,
-          gameDataByChildId: {
-            ...current.gameDataByChildId,
-            [childId]: { ...currentGameData, worldEntities: previousGameData.worldEntities },
-          },
-        };
-      },
-    ),
-    placeWorldEntity: async (childId: string, payload: WorldMutationPayload) => {
+          };
+        },
+        (current, previous) => {
+          const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+          const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...current,
+            gameDataByChildId: {
+              ...current.gameDataByChildId,
+              [childId]: {
+                ...currentGameData,
+                loadout: previousGameData.loadout,
+                worldEntities: previousGameData.worldEntities,
+              },
+            },
+          };
+        },
+      ))),
+    setFollowingPet: (childId: string, inventoryItemId: string | null) => runWorldMutation(childId, () => reconcileWorldMutationResult(childId, mutate(
+        (repo) => repo.setFollowingPet(childId, inventoryItemId),
+        (previous) => {
+          const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...previous,
+            gameDataByChildId: {
+              ...previous.gameDataByChildId,
+              [childId]: patchFollowingPets(currentGameData, inventoryItemId ? [inventoryItemId] : []),
+            },
+          };
+        },
+        (current, previous) => {
+          const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+          const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...current,
+            gameDataByChildId: {
+              ...current.gameDataByChildId,
+              [childId]: { ...currentGameData, loadout: previousGameData.loadout, worldEntities: previousGameData.worldEntities },
+            },
+          };
+        },
+      ))),
+    setRoamingPets: (childId: string, inventoryItemIds: string[], positionOverrides?: Readonly<Record<string, WorldTransform>>) => runWorldMutation(childId, () => reconcileWorldMutationResult(childId, mutate(
+        (repo) => repo.setRoamingPets(childId, inventoryItemIds),
+        (previous) => {
+          const currentGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...previous,
+            gameDataByChildId: {
+              ...previous.gameDataByChildId,
+              [childId]: patchRoamingPets(currentGameData, inventoryItemIds, positionOverrides),
+            },
+          };
+        },
+        (current, previous) => {
+          const previousGameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
+          const currentGameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
+          return {
+            ...current,
+            gameDataByChildId: {
+              ...current.gameDataByChildId,
+              [childId]: { ...currentGameData, worldEntities: previousGameData.worldEntities },
+            },
+          };
+        },
+      ))),
+    placeWorldEntity: (childId: string, payload: WorldMutationPayload) => runWorldMutation(childId, async () => {
       const localEntityId = createLocalId();
       const result = await mutate(
         (repo) => repo.placeWorldEntity(childId, payload),
@@ -690,31 +712,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
       reconcileWorldMutation(childId, result, localEntityId);
       return result;
-    },
-    updateWorldEntityTransform: async (childId: string, payload: WorldTransformMutationPayload) => {
+    }),
+    updateWorldEntityTransform: (childId: string, payload: WorldTransformMutationPayload) => runWorldMutation(childId, async () => {
       const result = await mutate(
         (repo) => repo.updateWorldEntityTransform(childId, payload),
         (previous) => patchGameData(previous, childId, (gameData) => patchUpdatedWorldEntity(gameData, payload)),
       );
       reconcileWorldMutation(childId, result);
       return result;
-    },
-    removeWorldEntity: async (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => {
+    }),
+    removeWorldEntity: (childId: string, payload: Pick<WorldMutationPayload, 'inventoryItemId' | 'entityId' | 'expectedRevision'>) => runWorldMutation(childId, async () => {
       const result = await mutate(
         (repo) => repo.removeWorldEntity(childId, payload),
         (previous) => patchGameData(previous, childId, (gameData) => patchRemovedWorldEntity(gameData, payload.inventoryItemId, payload.entityId)),
       );
       reconcileWorldMutation(childId, result);
       return result;
-    },
-    collectAllWorldDecorations: async (childId: string, expectedRevision: number) => {
+    }),
+    collectAllWorldDecorations: (childId: string, expectedRevision: number) => runWorldMutation(childId, async () => {
       const result = await mutate(
         (repo) => repo.collectAllWorldDecorations(childId, expectedRevision),
         (previous) => patchGameData(previous, childId, patchCollectedWorldDecorations),
       );
       reconcileWorldMutation(childId, result);
       return result;
-    },
+    }),
     setFamilyGameItemPrice: (catalogItemId: string, scrollPrice: number) => mutate((repo) => repo.setFamilyGameItemPrice(catalogItemId, scrollPrice)),
     resetFamilyGameItemPrice: (catalogItemId: string) => mutate((repo) => repo.resetFamilyGameItemPrice(catalogItemId)),
     revokeTaskApproval: (taskId: string) => mutate((repo) => repo.revokeTaskApproval(taskId)),

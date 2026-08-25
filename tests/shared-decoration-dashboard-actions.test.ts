@@ -7,7 +7,10 @@ import {
   type SharedDecorationItem,
 } from '../src/features/shared-decorations/child-decoration-actions';
 import type { GameCatalogItem } from '../src/features/world/contracts';
-import type { SharedDecorationRepository } from '../src/lib/social-data/shared-decoration-repository';
+import {
+  SharedDecorationRepositoryError,
+  type SharedDecorationRepository,
+} from '../src/lib/social-data/shared-decoration-repository';
 
 const catalogItem: GameCatalogItem = {
   id: 'catalog-sofa',
@@ -188,6 +191,20 @@ describe('child dashboard shared-decoration actions', () => {
     assert.deepEqual(state.pendingStateUpdates, [true, false]);
   });
 
+  it('drops a stale placement draft after a revision conflict and reloads the snapshot', async () => {
+    const { dependencies, repository, state } = createDependencies();
+    repository.updateTransform = async () => {
+      throw new SharedDecorationRepositoryError('revision-conflict', '世界版本已更新。');
+    };
+
+    const actions = createChildDecorationActions(dependencies);
+    await actions.completeDecorationPlacement();
+
+    assert.equal(state.placement, null);
+    assert.equal(state.reloadCount, 1);
+    assert.deepEqual(state.pendingStateUpdates, [true, false]);
+  });
+
   it('removes a selected shared placement through the shared repository', async () => {
     const { dependencies, repository, state } = createDependencies();
     let removeInput: unknown;
@@ -240,5 +257,34 @@ describe('child dashboard shared-decoration actions', () => {
     });
     assert.deepEqual(state.shareStateUpdates, [null]);
     assert.deepEqual(state.toasts, ['已將沙發分享給小華。']);
+  });
+
+  it('submits an owned placement only once when completion is triggered twice', async () => {
+    const { dependencies } = createDependencies({
+      socialSession: null,
+      decorationPlacement: {
+        inventoryItemId: 'inventory-sofa',
+        catalogItemId: catalogItem.id,
+        draft: { x: 1, z: -1, rotationY: 0, scale: 1 },
+        placementScope: 'owned',
+      },
+      placementSubmissionInFlight: { current: false },
+    });
+    let resolvePlacement: (() => void) | undefined;
+    let placeCalls = 0;
+    dependencies.placeWorldEntity = async () => {
+      placeCalls += 1;
+      if (placeCalls === 1) await new Promise<void>((resolve) => { resolvePlacement = resolve; });
+      return { revision: 4 };
+    };
+
+    const actions = createChildDecorationActions(dependencies);
+    const firstSubmission = actions.completeDecorationPlacement();
+    const rerenderedActions = createChildDecorationActions(dependencies);
+    const duplicateSubmission = rerenderedActions.completeDecorationPlacement();
+    resolvePlacement?.();
+    await Promise.all([firstSubmission, duplicateSubmission]);
+
+    assert.equal(placeCalls, 1);
   });
 });

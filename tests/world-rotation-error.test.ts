@@ -8,7 +8,7 @@ import {
   toDecorationPlacementTransform,
   type DecorationPlacementDraft,
 } from '../src/features/world/world-placement';
-import { toWorldMutationErrorMessage } from '../src/features/world/world-errors';
+import { isWorldRevisionConflict, toWorldMutationErrorMessage } from '../src/features/world/world-errors';
 
 const draft: DecorationPlacementDraft = { x: 1.8, z: -1.5, rotationY: 0, scale: 1 };
 
@@ -30,6 +30,12 @@ describe('world decoration rotation persistence', () => {
 });
 
 describe('world mutation error messages', () => {
+  it('recognizes revision conflicts without treating them as retryable writes', () => {
+    assert.equal(isWorldRevisionConflict(new Error('world revision conflict')), true);
+    assert.equal(isWorldRevisionConflict({ code: 'revision-conflict' }), true);
+    assert.equal(isWorldRevisionConflict(new Error('world entity not found')), false);
+  });
+
   it('translates the rotation constraint error into a child-friendly message', () => {
     const message = toWorldMutationErrorMessage(
       new Error('new row for relation "child_world_entities" violates check constraint "child_world_entities_rotation_y_check"'),

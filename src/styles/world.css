@@ -223,6 +223,40 @@
   min-width: 0;
 }
 
+.hh-game-category-tabs {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.hh-game-category-tabs button {
+  display: inline-flex;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #668077;
+  border-radius: 12px;
+  font-size: 0;
+  font-weight: 900;
+}
+
+.hh-game-category-tabs button.is-selected {
+  color: var(--hh-primary);
+  background: color-mix(in srgb, var(--hh-primary-soft) 72%, transparent);
+}
+
+.hh-game-category-tabs button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
 .hh-game-panel h2 {
   margin: 0;
   color: #23413f;
@@ -455,6 +489,10 @@
   border-radius: 22px;
   box-shadow: none;
   cursor: pointer;
+}
+
+.hh-parent-content-modal--child .hh-game-catalog-card {
+  background: rgb(255 253 248 / 58%);
 }
 
 .hh-game-catalog-card:focus-visible {
@@ -1024,7 +1062,7 @@
   }
 
   .hh-parent-content-modal--child .hh-game-panel h2 {
-    font-size: clamp(24px, 5vw, 32px);
+    font-size: 18px;
   }
 
   .hh-parent-content-modal--child .hh-game-panel-section {
@@ -1052,8 +1090,26 @@
     height: 18px;
   }
 
+  .hh-parent-content-modal--child .hh-game-layout-controls {
+    display: none;
+  }
+
   .hh-parent-content-modal--child .hh-game-catalog-grid {
     gap: 6px;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .hh-parent-content-modal--child .hh-game-category-tabs {
+    gap: 0;
+  }
+
+  .hh-parent-content-modal--child .hh-game-category-tabs button {
+    border-radius: 10px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-category-tabs button svg {
+    width: 16px;
+    height: 16px;
   }
 
   .hh-parent-content-modal--child .hh-game-catalog-card {
@@ -1071,8 +1127,24 @@
   }
 
   .hh-parent-content-modal--child .hh-game-settings-card {
-    padding: 12px;
+    padding: 8px 12px;
     border-radius: 16px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-settings-card--toggle {
+    gap: 10px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-settings-card--toggle > div {
+    gap: 2px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-settings-card--toggle strong {
+    font-size: 14px;
+  }
+
+  .hh-parent-content-modal--child .hh-game-settings-card--toggle span {
+    font-size: 12px;
   }
 
   .hh-parent-content-modal--child .hh-game-action-button {

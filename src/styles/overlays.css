@@ -528,8 +528,8 @@
     right: auto;
     bottom: auto;
     left: 50%;
-    width: min(960px, calc(100vw - 32px));
-    height: min(480px, calc(100dvh - 24px));
+    width: min(760px, calc(100vw - 48px));
+    height: min(350px, calc(100dvh - 40px));
     min-height: 0;
     padding: 14px 24px max(18px, env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
@@ -549,10 +549,20 @@
     top: 0;
     min-height: 56px;
     margin: -14px -24px 14px;
-    padding: 8px 16px;
+    padding: 16px 16px 8px;
     background: var(--hh-surface) !important;
     border-bottom: 1px solid rgb(18 57 59 / 10%);
     box-shadow: 0 4px 12px rgb(18 57 59 / 6%);
+  }
+
+  .hh-parent-content-modal--child .hh-child-feature-balance-pill {
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .hh-parent-content-modal--child .hh-child-feature-balance-pill strong {
+    font-size: 16px;
   }
 
   @keyframes hh-child-feature-backdrop-in {

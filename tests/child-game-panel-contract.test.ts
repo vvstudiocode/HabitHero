@@ -5,12 +5,17 @@ import {
   degreesToRadians,
   getActiveDecorationEntities,
   getWorldRevisionAfterMutation,
+  getWorldRevisionAfterRefresh,
   radiansToDegrees,
   toDecorationDraft,
 } from '../src/features/world/components/decoration-editing';
 
 const childGamePanelSource = readFileSync(
   new URL('../src/features/world/components/ChildGamePanel.tsx', import.meta.url),
+  'utf8',
+);
+const categoryTabsSource = readFileSync(
+  new URL('../src/features/world/components/GameCategoryTabs.tsx', import.meta.url),
   'utf8',
 );
 const childDashboardSource = readFileSync(
@@ -43,6 +48,10 @@ const worldPlacementSource = readFileSync(
 );
 const modalSourceForOverflow = readFileSync(
   new URL('../src/styles/modals.css', import.meta.url),
+  'utf8',
+);
+const worldStylesSource = readFileSync(
+  new URL('../src/styles/world.css', import.meta.url),
   'utf8',
 );
 const characterStylesSource = readFileSync(
@@ -106,9 +115,9 @@ describe('child game panel decoration editing', () => {
     assert.doesNotMatch(childGamePanelSource, /Coins size=\{20\}/);
     assert.match(childDashboardSource, /heroFeature === 'inventory' \|\| heroFeature === 'shop'/);
     assert.match(childDashboardSource, /目前有 \$\{displayedScrolls\} 張卷軸/);
-    assert.match(childGamePanelSource, /hh-game-tabs hh-game-tabs--icons/);
-    assert.match(childGamePanelSource, /aria-label=\{label\}/);
-    assert.match(childGamePanelSource, /title=\{label\}/);
+    assert.match(categoryTabsSource, /hh-game-category-tabs/);
+    assert.match(categoryTabsSource, /aria-label=\{label\}/);
+    assert.match(categoryTabsSource, /title=\{label\}/);
     assert.match(childGamePanelSource, /hh-game-lightbox-pet-rename-row/);
     assert.doesNotMatch(childGamePanelSource, /hh-game-inventory-heading/);
     assert.doesNotMatch(childGamePanelSource, /用卷軸交換/);
@@ -124,6 +133,21 @@ describe('child game panel decoration editing', () => {
     const titleRow = childGamePanelSource.match(/className="hh-game-panel-title-row"[\s\S]*?<\/div>/)?.[0] ?? '';
     assert.match(titleRow, /<h2 id="hh-game-panel-title">\{title\}<\/h2>/);
     assert.match(titleRow, /GameCatalogLayoutControls columns=\{inventoryColumns\}/);
+  });
+
+  it('keeps child category tabs beside the title with compact visuals and 44px targets', () => {
+    const titleRow = childGamePanelSource.match(/className="hh-game-panel-title-row"[\s\S]*?<\/div>/)?.[0] ?? '';
+    assert.match(titleRow, /<GameCategoryTabs/);
+    assert.match(childGamePanelSource, /selected=\{inventorySection\}/);
+    assert.match(childGamePanelSource, /selected=\{shopSection\}/);
+    assert.match(worldStylesSource, /\.hh-game-category-tabs[\s\S]*?display:\s*inline-flex/);
+    assert.match(worldStylesSource, /\.hh-game-category-tabs button[\s\S]*?min-width:\s*44px/);
+    assert.match(worldStylesSource, /\.hh-game-category-tabs button[\s\S]*?min-height:\s*44px/);
+    assert.match(worldStylesSource, /\.hh-game-category-tabs button svg[\s\S]*?width:\s*16px/);
+  });
+
+  it('keeps child catalog cards translucent in the modal', () => {
+    assert.match(worldStylesSource, /\.hh-parent-content-modal--child \.hh-game-catalog-card[\s\S]*?background:\s*rgb\(255 253 248 \/ 58%\)/);
   });
 
   it('removes the redundant adventure-world eyebrow', () => {
@@ -144,6 +168,11 @@ describe('child game panel decoration editing', () => {
   it('uses the returned revision and safely advances when a legacy callback returns no revision', () => {
     assert.equal(getWorldRevisionAfterMutation(4, 9), 9);
     assert.equal(getWorldRevisionAfterMutation(4), 5);
+  });
+
+  it('lets an authoritative refresh replace a stale optimistic revision', () => {
+    assert.equal(getWorldRevisionAfterRefresh(860, 859), 859);
+    assert.equal(getWorldRevisionAfterRefresh(859, Number.NaN), 859);
   });
 
   it('keeps follow and roaming mutations typed and wired as world revision results', () => {

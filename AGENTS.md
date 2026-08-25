@@ -49,6 +49,7 @@ The user has installed several global skills and MCP/CLI tools. Use them when th
 - **CSS 修改前必讀**：請先閱讀 [`CSS_RULES.md`](./CSS_RULES.md)。它是 HabitHero 的 CSS 分層、selector owner、responsive、狀態與驗證流程的唯一維護規則；禁止直接追加覆蓋式 CSS 來修問題。
 - **可維護性／模組邊界修改前必讀**：請先閱讀 [`docs/code-maintainability.md`](./docs/code-maintainability.md)。它是 TypeScript、React、domain module、import boundary、檔案規模與 extraction gate 的唯一治理規格；禁止為了降行數刪空行或改變產品行為。
 - **寵物資產修改前必讀**：請先閱讀 [`docs/pet-system.md`](./docs/pet-system.md)。它是五個 FBX 整合成單一多動作 GLB、root motion、ground／scale／shadow／label metadata 與驗收流程的唯一 canonical 文件；現有寵物呈現是 golden baseline，沒有另開修正計畫與使用者批准時，不得修改 runtime、GLB、FBX、exporter、migration、catalog 或 pet tests。
+- **Supabase migration 修改前必讀**：請先閱讀 [`docs/supabase-migration-and-deployment.md`](./docs/supabase-migration-and-deployment.md)。它定義本地／遠端 migration history drift 的稽核、`db pull`／`db diff`／`db push` 流程與禁止未確認就使用 `--include-all` 的停止條件。
 - For ordinary coding tasks, inspect the repo first and use the existing project patterns.
 - For visual/frontend work, prefer `ui-ux-pro-max` as the general design skill and add `apple-design` only when the interaction or requested style calls for it.
 - For design-token extraction from an external site, use `extract-design-system` instead of hand-copying colors or typography.

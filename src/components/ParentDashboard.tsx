@@ -897,7 +897,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
         isOffline={isOffline}
         error={error}
         loading={loading}
-        onRetry={() => void retry()}
+        onRetry={() => void retry({ recoverWorldMutations: true })}
       >
         {activeTab === 'review' && (
           <GoalReviewPanel
@@ -1234,7 +1234,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               catalog={priceGameData?.catalog ?? []}
               prices={priceGameData?.prices ?? {}}
               loading={loading || mutationPending}
-              onRetry={() => void retry()}
+              onRetry={() => void retry({ recoverWorldMutations: true })}
               onSave={async (catalogItemId, scrollPrice) => {
                 await setFamilyGameItemPrice(catalogItemId, scrollPrice);
               }}
