@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   APP_URL_SCHEME,
   buildAppDeepLink,
+  getAppLinkIntent,
   getAuthCallbackParams,
+  hasAuthSessionPayload,
   isPasswordRecoveryCallbackUrl,
 } from '../src/lib/auth-deep-link';
 import {
@@ -59,6 +62,33 @@ test('password recovery deep link does not copy unrelated query data', () => {
   assert.equal(appUrl.includes('utm_source'), false);
   assert.equal(appUrl.includes('evil.example'), false);
   assert.equal(appUrl.includes('access-123'), true);
+});
+
+test('app link intent separates login from password recovery', () => {
+  assert.equal(getAppLinkIntent(`${APP_URL_SCHEME}://login`), 'login');
+  assert.equal(getAppLinkIntent(`${APP_URL_SCHEME}://reset-password`), 'password-recovery');
+  assert.equal(getAppLinkIntent('https://habit-hero-gilt.vercel.app/?type=oauth'), null);
+});
+
+test('recovery handoff requires a complete session payload or authorization code', () => {
+  assert.equal(hasAuthSessionPayload('com.vvstudiocode.habithero://reset-password#access_token=only'), false);
+  assert.equal(hasAuthSessionPayload('com.vvstudiocode.habithero://reset-password#access_token=a&refresh_token=b'), true);
+  assert.equal(hasAuthSessionPayload('com.vvstudiocode.habithero://reset-password?code=one-time-code'), true);
+});
+
+test('native recovery wiring registers App URL handling and a custom URL scheme', () => {
+  const appSource = readFileSync(new URL('../src/lib/app-links.ts', import.meta.url), 'utf8');
+  const adapterSource = readFileSync(new URL('../src/auth/adapter.ts', import.meta.url), 'utf8');
+  const androidManifest = readFileSync(new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8');
+  const iosInfo = readFileSync(new URL('../ios/App/App/Info.plist', import.meta.url), 'utf8');
+  const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { dependencies?: Record<string, string> };
+
+  assert.match(appSource, /addListener\(['"]appUrlOpen['"]/);
+  assert.match(appSource, /getLaunchUrl\(/);
+  assert.match(adapterSource, /resumeAuthSessionFromUrl/);
+  assert.match(androidManifest, /android:scheme="com\.vvstudiocode\.habithero"/);
+  assert.match(iosInfo, /CFBundleURLTypes/);
+  assert.equal(typeof packageJson.dependencies?.['@capacitor/app'], 'string');
 });
 
 test('parent reset password uses the same strong password policy as signup', () => {

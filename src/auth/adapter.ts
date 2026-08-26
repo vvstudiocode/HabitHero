@@ -1,6 +1,12 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
 import { getSupabaseClient } from '../lib/supabase';
-import { childAccountEmail, getPasswordRecoveryRedirectUrl } from '../lib/auth-validation';
+import {
+  childAccountEmail,
+  getPasswordRecoveryRedirectUrl,
+  getPublicWebOrigin,
+} from '../lib/auth-validation';
+import { getAuthCallbackParams } from '../lib/auth-deep-link';
 import { disablePushDevicesForProfile } from '../lib/push-notifications';
 
 export interface AuthCredentials {
@@ -35,15 +41,43 @@ export async function updateCurrentParentPassword(password: string) {
 }
 
 export async function requestParentPasswordReset(email: string) {
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
   const redirectTo = typeof window === 'undefined'
     ? undefined
-    : getPasswordRecoveryRedirectUrl(window.location.origin);
+    : getPasswordRecoveryRedirectUrl(window.location.origin, {
+      isNative: Capacitor.isNativePlatform(),
+      publicWebOrigin: getPublicWebOrigin(viteEnv?.VITE_PUBLIC_WEB_ORIGIN),
+    });
   return getSupabaseClient().auth.resetPasswordForEmail(email.trim(), redirectTo ? { redirectTo } : undefined);
 }
 
 export async function resetCurrentParentPassword(password: string) {
   const { error } = await getSupabaseClient().auth.updateUser({ password });
   if (error) throw new Error(error.message);
+}
+
+export async function resumeAuthSessionFromUrl(rawUrl: string): Promise<Session | null> {
+  const params = getAuthCallbackParams(rawUrl);
+  if (params.error) {
+    throw new Error(params.errorDescription || params.error);
+  }
+
+  if (params.accessToken && params.refreshToken) {
+    const { data, error } = await getSupabaseClient().auth.setSession({
+      access_token: params.accessToken,
+      refresh_token: params.refreshToken,
+    });
+    if (error || !data.session) throw new Error(error?.message ?? '登入連結已失效，請重新取得連結。');
+    return data.session;
+  }
+
+  if (params.code) {
+    const { data, error } = await getSupabaseClient().auth.exchangeCodeForSession(params.code);
+    if (error || !data.session) throw new Error(error?.message ?? '登入連結已失效，請重新取得連結。');
+    return data.session;
+  }
+
+  return null;
 }
 
 export async function switchChildToParent(password: string) {
