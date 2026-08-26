@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AppProvider, useAppStore } from './store';
-import { getSession, onAuthStateChange, resumeAuthSessionFromUrl, signOut, switchChildToParent, verifyCurrentParentPassword, toAuthErrorMessage } from './auth';
+import { onAuthStateChange, signOut, switchChildToParent, verifyCurrentParentPassword, toAuthErrorMessage } from './auth';
 import { AccountLogin } from './components/AccountLogin';
 import { ParentSetup } from './components/ParentSetup';
 import { ParentDashboard } from './components/ParentDashboard';
@@ -17,8 +17,10 @@ import { isPublicAuthView, PARENT_IDLE_LOCK_MS } from './lib/view-access';
 import { canOpenFamilyPicker, resolveActiveChildId } from './lib/family-switch';
 import { PasswordRecovery } from './components/PasswordRecovery';
 import { WorldPreparingScreen } from './components/WorldPreparingScreen';
-import { getAppLinkIntent, getAuthCallbackParams, getInitialAuthCallbackUrl, hasAuthSessionPayload } from './lib/auth-deep-link';
-import { isNativeApp, openAppLink, registerAppLinkListener } from './lib/app-links';
+import { AuthLinkBridge } from './components/AuthLinkBridge';
+import { getAppLinkIntent, getInitialAuthCallbackUrl } from './lib/auth-deep-link';
+import { isNativeApp, openAppLink } from './lib/app-links';
+import { openPasswordRecoveryInApp } from './lib/auth-recovery-handoff';
 
 function MainApp() {
   const { state, clearProtectedState, hasSession, loading, initialLoading, dataReady, role, error, retry, setChildLoggedIn, setParentActiveChild } = useAppStore();
@@ -45,50 +47,6 @@ function MainApp() {
       if (event === 'PASSWORD_RECOVERY') setCurrentView('resetPassword');
     });
     return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const handledUrls = new Set<string>();
-
-    const handleAppUrl = async (rawUrl: string) => {
-      if (!active || handledUrls.has(rawUrl)) return;
-      handledUrls.add(rawUrl);
-      const intent = getAppLinkIntent(rawUrl);
-      if (!intent) return;
-
-      if (intent === 'login') {
-        setRecoveryError(null);
-        setCurrentView('login');
-        return;
-      }
-
-      setCurrentView('resetPassword');
-      setRecoveryError(null);
-      if (!hasAuthSessionPayload(rawUrl)) {
-        setRecoveryError('重設連結無效或已過期，請回到網頁重新寄送重設連結。');
-        return;
-      }
-
-      try {
-        await resumeAuthSessionFromUrl(rawUrl);
-      } catch (failure) {
-        if (active) setRecoveryError(toAuthErrorMessage(failure));
-      }
-    };
-
-    let removeListener: (() => void) | null = null;
-    void registerAppLinkListener(handleAppUrl).then((remove) => {
-      if (!active) remove();
-      else removeListener = remove;
-    }).catch(() => {
-      // A native listener is optional for browser recovery and must not block login.
-    });
-
-    return () => {
-      active = false;
-      removeListener?.();
-    };
   }, []);
 
   useEffect(() => {
@@ -206,36 +164,30 @@ function MainApp() {
     openAppLink('login');
   };
 
-  const handleOpenAppRecovery = async () => {
-    const callbackUrl = initialAuthCallbackUrl ?? (typeof window === 'undefined' ? null : window.location.href);
-    try {
-      const { data, error: sessionError } = await getSession();
-      if (sessionError) throw sessionError;
-      const params = callbackUrl ? getAuthCallbackParams(callbackUrl) : null;
-      const hasRecoveryPayload = Boolean(params?.accessToken && params.refreshToken || params?.code);
-      if (!hasRecoveryPayload && !data.session) {
-        setRecoveryError('目前找不到有效的重設狀態，請重新點擊 Email 中的重設連結。');
-        return;
-      }
-      if (!openAppLink('reset-password', callbackUrl, data.session)) {
-        setRecoveryError('目前無法開啟 App，仍可直接在此頁完成密碼重設。');
-      }
-    } catch (failure) {
-      setRecoveryError(toAuthErrorMessage(failure));
-    }
-  };
+  const handleOpenAppRecovery = () => openPasswordRecoveryInApp(initialAuthCallbackUrl, setRecoveryError);
 
   const webAppLoginAction = isNativeApp() ? undefined : handleOpenAppLogin;
   const webAppRecoveryAction = isNativeApp() ? undefined : handleOpenAppRecovery;
 
+  const authLinkBridge = (
+    <AuthLinkBridge
+      onLoginLink={() => { setRecoveryError(null); setCurrentView('login'); }}
+      onRecoveryLink={() => { setRecoveryError(null); setCurrentView('resetPassword'); }}
+      onRecoveryError={setRecoveryError}
+    />
+  );
+  const renderWithAuthLinkBridge = (content: React.ReactNode) => <>{authLinkBridge}{content}</>;
+
   const renderLoginBackgroundScreen = (content: React.ReactNode) => (
-    <div className="hh-login-screen hh-login-screen--loading">
-      <SpriteLoginScene />
-      <div className="hh-login-sun" />
-      <div className="hh-login-vignette" />
-      <div className="hh-login-grain" />
-      <main className="hh-loading-content">{content}</main>
-    </div>
+    renderWithAuthLinkBridge(
+      <div className="hh-login-screen hh-login-screen--loading">
+        <SpriteLoginScene />
+        <div className="hh-login-sun" />
+        <div className="hh-login-vignette" />
+        <div className="hh-login-grain" />
+        <main className="hh-loading-content">{content}</main>
+      </div>,
+    )
   );
 
   const childWorldTransition = pendingView === 'childDashboard'
@@ -243,7 +195,7 @@ function MainApp() {
     || role === 'child'
     || loginMode === 'child';
 
-  const renderChildLoadError = () => (
+  const renderChildLoadError = () => renderWithAuthLinkBridge(
     <main className="hh-world-preparing-screen" role="alert" aria-live="assertive">
       <div className="hh-world-preparing-card flex flex-col items-center gap-4 text-center">
         <span className="hh-world-preparing-mark" aria-hidden="true" />
@@ -262,7 +214,7 @@ function MainApp() {
   );
 
   if (initialLoading) {
-    if (childWorldTransition) return <WorldPreparingScreen detail="正在載入孩子的冒險世界…" />;
+    if (childWorldTransition) return renderWithAuthLinkBridge(<WorldPreparingScreen detail="正在載入孩子的冒險世界…" />);
     return renderLoginBackgroundScreen(
       <div className="flex flex-col items-center text-center">
         <p className="hh-loading-title text-lg font-bold text-white drop-shadow-lg">習慣冒險島</p>
@@ -273,7 +225,7 @@ function MainApp() {
   }
 
   if (loading && !error) {
-    if (childWorldTransition) return <WorldPreparingScreen detail="正在同步孩子的世界資料…" />;
+    if (childWorldTransition) return renderWithAuthLinkBridge(<WorldPreparingScreen detail="正在同步孩子的世界資料…" />);
     return renderLoginBackgroundScreen(<p className="font-bold text-white drop-shadow-lg">正在更新資料…</p>);
   }
   if (error && hasSession && !dataReady) {
@@ -283,23 +235,23 @@ function MainApp() {
 
   switch (currentView) {
     case 'login':
-      return <AccountLogin initialMode={loginMode} notice={loginNotice} onOpenApp={webAppLoginAction} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setLoginNotice(null); setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
+      return <>{authLinkBridge}<AccountLogin initialMode={loginMode} notice={loginNotice} onOpenApp={webAppLoginAction} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setLoginNotice(null); setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} /></>;
     case 'parentSetup':
-      return <ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={(consentAccepted) => { setSignupConsentAccepted(Boolean(consentAccepted)); setPendingView('parentDashboard'); setSigningOut(false); }} />;
+      return <>{authLinkBridge}<ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={(consentAccepted) => { setSignupConsentAccepted(Boolean(consentAccepted)); setPendingView('parentDashboard'); setSigningOut(false); }} /></>;
     case 'forgotPassword':
-      return <PasswordRecovery mode="request" onBack={() => setCurrentView('login')} onResetComplete={() => setCurrentView('login')} />;
+      return <>{authLinkBridge}<PasswordRecovery mode="request" onBack={() => setCurrentView('login')} onResetComplete={() => setCurrentView('login')} /></>;
     case 'resetPassword':
-      return <PasswordRecovery mode="reset" initialError={recoveryError} onOpenApp={webAppRecoveryAction} onBack={() => { void signOut(); setRecoveryError(null); setCurrentView('login'); }} onResetComplete={() => { setRecoveryError(null); setLoginNotice('密碼已更新，請使用新密碼登入。'); setSigningOut(false); setPendingView(null); setLoginMode('parent'); setCurrentView('login'); }} />;
+      return <>{authLinkBridge}<PasswordRecovery mode="reset" initialError={recoveryError} onOpenApp={webAppRecoveryAction} onBack={() => { void signOut(); setRecoveryError(null); setCurrentView('login'); }} onResetComplete={() => { setRecoveryError(null); setLoginNotice('密碼已更新，請使用新密碼登入。'); setSigningOut(false); setPendingView(null); setLoginMode('parent'); setCurrentView('login'); }} /></>;
     case 'parentDashboard':
-      return (
+      return renderWithAuthLinkBridge(
         <>
           {parentUnlockedAt !== null && <ParentDashboard onSwitchToChild={handleSwitchToChild} onLogout={handleLogout} signupConsentAccepted={signupConsentAccepted} />}
           {parentUnlockedAt === null && <ParentUnlockModal title="家長模式已鎖定" description="為了保護家庭資料，請輸入家長密碼解鎖。" loading={unlockLoading} error={unlockError} onUnlock={handleUnlock} />}
           {showFamilyPicker && <FamilyChildPicker children={state.children} onSelect={handleSelectFamilyChild} onParentMode={handleStayInParentMode} />}
-        </>
-        );
-      case 'childDashboard':
-      return (
+        </>,
+      );
+    case 'childDashboard':
+      return renderWithAuthLinkBridge(
         <>
           <ChildDashboard onLogout={handleLogout} onSwitchChild={handleSwitchFromChild} />
           {unlockPurpose && (
@@ -319,10 +271,10 @@ function MainApp() {
               onParentMode={handleStayInParentMode}
             />
           )}
-        </>
+        </>,
       );
     default:
-      return <AccountLogin initialMode={loginMode} notice={loginNotice} onOpenApp={webAppLoginAction} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setLoginNotice(null); setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
+      return <>{authLinkBridge}<AccountLogin initialMode={loginMode} notice={loginNotice} onOpenApp={webAppLoginAction} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setLoginNotice(null); setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} /></>;
   }
 
 }

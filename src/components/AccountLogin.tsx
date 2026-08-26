@@ -97,6 +97,9 @@ export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, onOpenA
             </button>
           </div>
 
+          {notice && <p className="hh-login-note" role="status">{notice}</p>}
+          {mode === 'parent' && onOpenApp && <button type="button" onClick={onOpenApp} className="hh-secondary-button">已安裝 App？開啟 App 登入</button>}
+
           {revealed && (
             <div className="hh-login-fields">
               <label htmlFor="login-account">{mode === 'parent' ? '家長 Email' : '小孩帳號名稱'}</label>
@@ -116,8 +119,6 @@ export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, onOpenA
               </div>
 
               {(error || sessionError) && <p role="alert" className="hh-login-error">{error || sessionError}</p>}
-              {notice && <p className="hh-login-note" role="status">{notice}</p>}
-
               <button type="submit" disabled={!account || !password || submitting} className="hh-primary-button">
                 {submitting ? '登入中…' : '登入任務森林'}
               </button>
@@ -125,7 +126,6 @@ export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, onOpenA
                 <div className="hh-login-secondary-actions flex flex-col gap-1">
                   <button type="button" onClick={onGoSignup} className="hh-secondary-button">沒有家長帳號？註冊</button>
                   <button type="button" onClick={onForgotPassword} className="hh-secondary-inline text-[13px]">忘記家長密碼？</button>
-                  {onOpenApp && <button type="button" onClick={onOpenApp} className="hh-secondary-button">已安裝 App？開啟 App 登入</button>}
                 </div>
               )}
               {mode === 'child' && <p className="hh-login-note">小孩帳號由家長在管理端建立，無法自行註冊。</p>}

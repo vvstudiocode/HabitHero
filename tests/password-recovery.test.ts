@@ -93,15 +93,17 @@ test('native recovery wiring registers App URL handling and a custom URL scheme'
 
 test('app shell keeps recovery links on the reset screen and exposes safe handoff actions', () => {
   const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const bridgeSource = readFileSync(new URL('../src/components/AuthLinkBridge.tsx', import.meta.url), 'utf8');
+  const handoffSource = readFileSync(new URL('../src/lib/auth-recovery-handoff.ts', import.meta.url), 'utf8');
   const loginSource = readFileSync(new URL('../src/components/AccountLogin.tsx', import.meta.url), 'utf8');
   const recoverySource = readFileSync(new URL('../src/components/PasswordRecovery.tsx', import.meta.url), 'utf8');
   const supabaseSource = readFileSync(new URL('../src/lib/supabase.ts', import.meta.url), 'utf8');
   const deepLinkSource = readFileSync(new URL('../src/lib/auth-deep-link.ts', import.meta.url), 'utf8');
 
   assert.match(appSource, /getInitialAuthCallbackUrl/);
-  assert.match(appSource, /registerAppLinkListener/);
-  assert.match(appSource, /resumeAuthSessionFromUrl/);
-  assert.match(appSource, /openAppLink\(['"]reset-password['"]/);
+  assert.match(bridgeSource, /registerAppLinkListener/);
+  assert.match(bridgeSource, /resumeAuthSessionFromUrl/);
+  assert.match(handoffSource, /openAppLink\(['"]reset-password['"]/);
   assert.match(loginSource, /onOpenApp/);
   assert.match(recoverySource, /onOpenApp/);
   assert.match(supabaseSource, /import ['"]\.\/auth-deep-link['"]/);
