@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AppProvider, useAppStore } from './store';
-import { onAuthStateChange, signOut, switchChildToParent, verifyCurrentParentPassword, toAuthErrorMessage } from './auth';
+import { getSession, onAuthStateChange, resumeAuthSessionFromUrl, signOut, switchChildToParent, verifyCurrentParentPassword, toAuthErrorMessage } from './auth';
 import { AccountLogin } from './components/AccountLogin';
 import { ParentSetup } from './components/ParentSetup';
 import { ParentDashboard } from './components/ParentDashboard';
@@ -17,11 +17,15 @@ import { isPublicAuthView, PARENT_IDLE_LOCK_MS } from './lib/view-access';
 import { canOpenFamilyPicker, resolveActiveChildId } from './lib/family-switch';
 import { PasswordRecovery } from './components/PasswordRecovery';
 import { WorldPreparingScreen } from './components/WorldPreparingScreen';
+import { getAppLinkIntent, getAuthCallbackParams, getInitialAuthCallbackUrl, hasAuthSessionPayload } from './lib/auth-deep-link';
+import { isNativeApp, openAppLink, registerAppLinkListener } from './lib/app-links';
 
 function MainApp() {
   const { state, clearProtectedState, hasSession, loading, initialLoading, dataReady, role, error, retry, setChildLoggedIn, setParentActiveChild } = useAppStore();
-  
-  const [currentView, setCurrentView] = useState<'login' | 'parentSetup' | 'forgotPassword' | 'resetPassword' | 'parentDashboard' | 'childDashboard'>('login');
+  const initialAuthCallbackUrl = getInitialAuthCallbackUrl();
+  const initialView = getAppLinkIntent(initialAuthCallbackUrl ?? '') === 'password-recovery' ? 'resetPassword' : 'login';
+
+  const [currentView, setCurrentView] = useState<'login' | 'parentSetup' | 'forgotPassword' | 'resetPassword' | 'parentDashboard' | 'childDashboard'>(initialView);
   const [loginMode, setLoginMode] = useState<'parent' | 'child'>('parent');
   const [pendingView, setPendingView] = useState<'parentDashboard' | 'childDashboard' | null>(null);
   const [signupConsentAccepted, setSignupConsentAccepted] = useState(false);
@@ -33,12 +37,58 @@ function MainApp() {
   const [showFamilyPicker, setShowFamilyPicker] = useState(false);
   const [familyPickerRequested, setFamilyPickerRequested] = useState(false);
   const [childPreview, setChildPreview] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setCurrentView('resetPassword');
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const handledUrls = new Set<string>();
+
+    const handleAppUrl = async (rawUrl: string) => {
+      if (!active || handledUrls.has(rawUrl)) return;
+      handledUrls.add(rawUrl);
+      const intent = getAppLinkIntent(rawUrl);
+      if (!intent) return;
+
+      if (intent === 'login') {
+        setRecoveryError(null);
+        setCurrentView('login');
+        return;
+      }
+
+      setCurrentView('resetPassword');
+      setRecoveryError(null);
+      if (!hasAuthSessionPayload(rawUrl)) {
+        setRecoveryError('重設連結無效或已過期，請回到網頁重新寄送重設連結。');
+        return;
+      }
+
+      try {
+        await resumeAuthSessionFromUrl(rawUrl);
+      } catch (failure) {
+        if (active) setRecoveryError(toAuthErrorMessage(failure));
+      }
+    };
+
+    let removeListener: (() => void) | null = null;
+    void registerAppLinkListener(handleAppUrl).then((remove) => {
+      if (!active) remove();
+      else removeListener = remove;
+    }).catch(() => {
+      // A native listener is optional for browser recovery and must not block login.
+    });
+
+    return () => {
+      active = false;
+      removeListener?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -152,6 +202,32 @@ function MainApp() {
     setParentUnlockedAt(Date.now());
   };
 
+  const handleOpenAppLogin = () => {
+    openAppLink('login');
+  };
+
+  const handleOpenAppRecovery = async () => {
+    const callbackUrl = initialAuthCallbackUrl ?? (typeof window === 'undefined' ? null : window.location.href);
+    try {
+      const { data, error: sessionError } = await getSession();
+      if (sessionError) throw sessionError;
+      const params = callbackUrl ? getAuthCallbackParams(callbackUrl) : null;
+      const hasRecoveryPayload = Boolean(params?.accessToken && params.refreshToken || params?.code);
+      if (!hasRecoveryPayload && !data.session) {
+        setRecoveryError('目前找不到有效的重設狀態，請重新點擊 Email 中的重設連結。');
+        return;
+      }
+      if (!openAppLink('reset-password', callbackUrl, data.session)) {
+        setRecoveryError('目前無法開啟 App，仍可直接在此頁完成密碼重設。');
+      }
+    } catch (failure) {
+      setRecoveryError(toAuthErrorMessage(failure));
+    }
+  };
+
+  const webAppLoginAction = isNativeApp() ? undefined : handleOpenAppLogin;
+  const webAppRecoveryAction = isNativeApp() ? undefined : handleOpenAppRecovery;
+
   const renderLoginBackgroundScreen = (content: React.ReactNode) => (
     <div className="hh-login-screen hh-login-screen--loading">
       <SpriteLoginScene />
@@ -207,13 +283,13 @@ function MainApp() {
 
   switch (currentView) {
     case 'login':
-      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
+      return <AccountLogin initialMode={loginMode} notice={loginNotice} onOpenApp={webAppLoginAction} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setLoginNotice(null); setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
     case 'parentSetup':
       return <ParentSetup onBack={() => setCurrentView('login')} onGoLogin={() => { setLoginMode('parent'); setCurrentView('login'); }} onComplete={(consentAccepted) => { setSignupConsentAccepted(Boolean(consentAccepted)); setPendingView('parentDashboard'); setSigningOut(false); }} />;
     case 'forgotPassword':
       return <PasswordRecovery mode="request" onBack={() => setCurrentView('login')} onResetComplete={() => setCurrentView('login')} />;
     case 'resetPassword':
-      return <PasswordRecovery mode="reset" onBack={() => { void signOut(); setCurrentView('login'); }} onResetComplete={() => { setSigningOut(false); setPendingView(null); setLoginMode('parent'); setCurrentView('login'); }} />;
+      return <PasswordRecovery mode="reset" initialError={recoveryError} onOpenApp={webAppRecoveryAction} onBack={() => { void signOut(); setRecoveryError(null); setCurrentView('login'); }} onResetComplete={() => { setRecoveryError(null); setLoginNotice('密碼已更新，請使用新密碼登入。'); setSigningOut(false); setPendingView(null); setLoginMode('parent'); setCurrentView('login'); }} />;
     case 'parentDashboard':
       return (
         <>
@@ -221,8 +297,8 @@ function MainApp() {
           {parentUnlockedAt === null && <ParentUnlockModal title="家長模式已鎖定" description="為了保護家庭資料，請輸入家長密碼解鎖。" loading={unlockLoading} error={unlockError} onUnlock={handleUnlock} />}
           {showFamilyPicker && <FamilyChildPicker children={state.children} onSelect={handleSelectFamilyChild} onParentMode={handleStayInParentMode} />}
         </>
-      );
-    case 'childDashboard':
+        );
+      case 'childDashboard':
       return (
         <>
           <ChildDashboard onLogout={handleLogout} onSwitchChild={handleSwitchFromChild} />
@@ -246,7 +322,7 @@ function MainApp() {
         </>
       );
     default:
-      return <AccountLogin initialMode={loginMode} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
+      return <AccountLogin initialMode={loginMode} notice={loginNotice} onOpenApp={webAppLoginAction} onGoSignup={() => setCurrentView('parentSetup')} onForgotPassword={() => setCurrentView('forgotPassword')} onComplete={(mode) => { setLoginNotice(null); setPendingView(mode === 'parent' ? 'parentDashboard' : 'childDashboard'); setSigningOut(false); }} />;
   }
 
 }

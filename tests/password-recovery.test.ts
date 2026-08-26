@@ -91,6 +91,19 @@ test('native recovery wiring registers App URL handling and a custom URL scheme'
   assert.equal(typeof packageJson.dependencies?.['@capacitor/app'], 'string');
 });
 
+test('app shell keeps recovery links on the reset screen and exposes safe handoff actions', () => {
+  const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const loginSource = readFileSync(new URL('../src/components/AccountLogin.tsx', import.meta.url), 'utf8');
+  const recoverySource = readFileSync(new URL('../src/components/PasswordRecovery.tsx', import.meta.url), 'utf8');
+
+  assert.match(appSource, /getInitialAuthCallbackUrl/);
+  assert.match(appSource, /registerAppLinkListener/);
+  assert.match(appSource, /resumeAuthSessionFromUrl/);
+  assert.match(appSource, /openAppLink\(['"]reset-password['"]/);
+  assert.match(loginSource, /onOpenApp/);
+  assert.match(recoverySource, /onOpenApp/);
+});
+
 test('parent reset password uses the same strong password policy as signup', () => {
   assert.equal(validateParentResetPassword('short').ok, false);
   assert.equal(validateParentResetPassword('lowercase8').ok, false);

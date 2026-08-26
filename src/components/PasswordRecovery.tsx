@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import { requestParentPasswordReset, resetCurrentParentPassword, signOut, toAuthErrorMessage } from '../auth';
 import { validateParentLoginCredentials, validateParentResetPassword } from '../lib/auth-validation';
@@ -8,15 +8,21 @@ interface PasswordRecoveryProps {
   mode: 'request' | 'reset';
   onBack: () => void;
   onResetComplete: () => void;
+  onOpenApp?: () => void | Promise<void>;
+  initialError?: string | null;
 }
 
-export function PasswordRecovery({ mode, onBack, onResetComplete }: PasswordRecoveryProps) {
+export function PasswordRecovery({ mode, onBack, onResetComplete, onOpenApp, initialError }: PasswordRecoveryProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialError ?? '');
+
+  useEffect(() => {
+    if (initialError) setError(initialError);
+  }, [initialError]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -75,6 +81,12 @@ export function PasswordRecovery({ mode, onBack, onResetComplete }: PasswordReco
           {message && <p className="hh-login-note" role="status">{message}</p>}
           {error && <p className="hh-login-error" role="alert">{error}</p>}
           <button type="submit" disabled={submitting} className="hh-primary-button">{submitting ? '處理中…' : mode === 'request' ? '寄送重設連結' : '更新密碼'}</button>
+          {mode === 'reset' && onOpenApp && (
+            <>
+              <button type="button" onClick={() => void onOpenApp()} className="hh-secondary-button">在 App 設定新密碼</button>
+              <p className="hh-login-note">如果 App 沒有開啟，仍可直接在此頁完成密碼重設。</p>
+            </>
+          )}
           {mode === 'request' && <p className="hh-login-note">為保護帳號，即使 Email 不存在也會顯示相同提示。</p>}
         </section>
       </main>

@@ -56,6 +56,19 @@ export function getPasswordRecoveryRedirectUrl(
   return redirectOrigin.replace(/\/$/, '');
 }
 
+export function getPublicWebOrigin(configuredOrigin?: string): string {
+  const fallback = 'https://habit-hero-gilt.vercel.app';
+  if (!configuredOrigin) return fallback;
+
+  try {
+    const parsed = new URL(configuredOrigin);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return fallback;
+    return parsed.origin;
+  } catch {
+    return fallback;
+  }
+}
+
 export function validateChildPassword(password: string): ValidationResult {
   if (!childPasswordPattern.test(password)) {
     return { ok: false, message: '小孩密碼需至少 6 碼，且只能使用英文字母與數字。' };
