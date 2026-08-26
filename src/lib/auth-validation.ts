@@ -46,8 +46,14 @@ export function validateParentResetPassword(password: string): ValidationResult 
   return validateParentRegistrationCredentials('reset@example.com', password);
 }
 
-export function getPasswordRecoveryRedirectUrl(origin: string): string {
-  return origin.replace(/\/$/, '');
+export function getPasswordRecoveryRedirectUrl(
+  origin: string,
+  options: { isNative?: boolean; publicWebOrigin?: string } = {},
+): string {
+  const redirectOrigin = options.isNative && options.publicWebOrigin
+    ? options.publicWebOrigin
+    : origin;
+  return redirectOrigin.replace(/\/$/, '');
 }
 
 export function validateChildPassword(password: string): ValidationResult {
