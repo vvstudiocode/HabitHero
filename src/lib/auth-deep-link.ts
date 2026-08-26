@@ -35,7 +35,7 @@ const callbackParamNames = [
   'state',
 ] as const;
 
-let initialAuthCallbackUrl: string | null | undefined;
+const initialAuthCallbackUrl: string | null = typeof window === 'undefined' ? null : window.location.href;
 
 function parseUrl(rawUrl: string): URL | null {
   try {
@@ -158,9 +158,6 @@ export function buildAppDeepLink(
 }
 
 export function getInitialAuthCallbackUrl(): string | null {
-  if (initialAuthCallbackUrl === undefined) {
-    initialAuthCallbackUrl = typeof window === 'undefined' ? null : window.location.href;
-  }
   return initialAuthCallbackUrl;
 }
 

@@ -95,6 +95,8 @@ test('app shell keeps recovery links on the reset screen and exposes safe handof
   const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
   const loginSource = readFileSync(new URL('../src/components/AccountLogin.tsx', import.meta.url), 'utf8');
   const recoverySource = readFileSync(new URL('../src/components/PasswordRecovery.tsx', import.meta.url), 'utf8');
+  const supabaseSource = readFileSync(new URL('../src/lib/supabase.ts', import.meta.url), 'utf8');
+  const deepLinkSource = readFileSync(new URL('../src/lib/auth-deep-link.ts', import.meta.url), 'utf8');
 
   assert.match(appSource, /getInitialAuthCallbackUrl/);
   assert.match(appSource, /registerAppLinkListener/);
@@ -102,6 +104,8 @@ test('app shell keeps recovery links on the reset screen and exposes safe handof
   assert.match(appSource, /openAppLink\(['"]reset-password['"]/);
   assert.match(loginSource, /onOpenApp/);
   assert.match(recoverySource, /onOpenApp/);
+  assert.match(supabaseSource, /import ['"]\.\/auth-deep-link['"]/);
+  assert.match(deepLinkSource, /^const initialAuthCallbackUrl[^\n]*window\.location\.href/m);
 });
 
 test('parent reset password uses the same strong password policy as signup', () => {

@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
+import './auth-deep-link';
 
 const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
 const supabaseUrl = resolveSupabaseUrl(viteEnv?.VITE_SUPABASE_URL);
