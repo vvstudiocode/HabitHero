@@ -1,0 +1,6 @@
+- main [ref=f12e3]:
+  - generic "HabitHero 吉爾特大型世界" [ref=f12e4]
+  - generic: 拖曳移動
+  - generic:
+    - generic: 吉爾特的遠境
+    - generic: WASD／方向鍵移動 ・ 拖曳旋轉視角

@@ -22,23 +22,12 @@ export interface ParentGeneralAdventureInput {
 
 interface ParentGeneralAdventureFormProps {
   children: AdventureChildOption[];
-  generalTitle: string;
   submitting?: boolean;
   onCancel?: () => void;
-  onUpdateTitle?: (title: string) => Promise<void> | void;
   onSubmit: (input: ParentGeneralAdventureInput) => Promise<void> | void;
 }
 
 const fieldClass = 'hh-adventure-field min-h-12 w-full rounded-xl border p-3 outline-none';
-
-export function validateGeneralAdventureTitle(value: string): string | null {
-  const title = value.trim();
-  if (!title) return '請輸入一般冒險名稱。';
-  if (title === '每日冒險') return '一般冒險不能命名為「每日冒險」。';
-  if ([...title].length > 12) return '一般冒險名稱最多 12 個字。';
-  if (!/[\p{L}\p{N}]/u.test(title)) return '一般冒險名稱必須包含文字或數字。';
-  return null;
-}
 
 export function validateGeneralAdventure(input: ParentGeneralAdventureInput): string | null {
   if (!input.name.trim()) return '請輸入冒險名稱。';
@@ -60,14 +49,10 @@ const todayInTaipei = () => new Intl.DateTimeFormat('en-CA', {
 
 export function ParentGeneralAdventureForm({
   children,
-  generalTitle,
   submitting = false,
   onCancel,
-  onUpdateTitle,
   onSubmit,
 }: ParentGeneralAdventureFormProps) {
-  const [titleDraft, setTitleDraft] = useState(generalTitle);
-  const [titleError, setTitleError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [childIds, setChildIds] = useState(() => children.map(child => child.id));
@@ -95,16 +80,6 @@ export function ParentGeneralAdventureForm({
     points,
   }), [category, childIds, description, dueOn, durationMinutes, endTime, name, points, reportMode, requiresTimer, startTime]);
 
-  const saveTitle = async () => {
-    const validationError = validateGeneralAdventureTitle(titleDraft);
-    if (validationError) {
-      setTitleError(validationError);
-      return;
-    }
-    setTitleError(null);
-    await onUpdateTitle?.(titleDraft.trim());
-  };
-
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const validationError = validateGeneralAdventure(input);
@@ -118,18 +93,6 @@ export function ParentGeneralAdventureForm({
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="general-adventure-title-heading" className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-        <h3 id="general-adventure-title-heading" className="font-bold text-gray-900">孩子看到的卡片名稱</h3>
-        <p className="mt-1 text-sm leading-5 text-gray-500">改名只影響顯示，不會重設任務或歷史紀錄。</p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input aria-label="一般冒險卡片名稱" className={fieldClass} value={titleDraft} maxLength={12} onChange={event => setTitleDraft(event.target.value)} />
-          <button type="button" disabled={submitting} className="hh-adventure-primary-action min-h-12 shrink-0 rounded-xl px-5 font-bold disabled:cursor-wait disabled:opacity-50" onClick={() => void saveTitle()}>
-            {submitting ? '儲存中…' : '儲存名稱'}
-          </button>
-        </div>
-        {titleError && <p role="alert" className="mt-2 text-sm text-red-700">{titleError}</p>}
-      </section>
-
       <form className="space-y-5" onSubmit={event => void submit(event)} noValidate>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="general-adventure-name">冒險名稱</label>

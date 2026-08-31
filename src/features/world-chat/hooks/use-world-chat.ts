@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WorldChatMessage, WorldChatState } from '../contracts';
 import { createWorldChatService } from '../chat-service';
 import { MAX_CHAT_HISTORY } from '../limits';
@@ -14,15 +14,22 @@ export function useWorldChat(repository: WorldChatRepository | null, worldOwnerC
     [repository, worldOwnerChildProfileId],
   );
   const [state, setState] = useState<WorldChatState>(initialState);
+  const [latestMessage, setLatestMessage] = useState<WorldChatMessage | null>(null);
+  const deliveredMessageIdRef = useRef<string | null>(null);
   useEffect(() => {
     setState(initialState);
+    setLatestMessage(null);
+    deliveredMessageIdRef.current = null;
   }, [enabled, service]);
 
   useEffect(() => {
     if (!enabled || !service) return undefined;
     return service.subscribe((message) => {
+      if (!message.id || deliveredMessageIdRef.current === message.id) return;
+      deliveredMessageIdRef.current = message.id;
+      setLatestMessage(message);
       setState((current) => {
-        if (!message.id || current.messages.some((item) => item.id === message.id)) return current;
+        if (current.messages.some((item) => item.id === message.id)) return current;
         return {
           ...current,
           messages: [...current.messages, message].slice(-MAX_CHAT_HISTORY),
@@ -37,6 +44,10 @@ export function useWorldChat(repository: WorldChatRepository | null, worldOwnerC
     setState((current) => ({ ...current, sending: true, error: null }));
     try {
       const message = await service.send(body);
+      if (message.id && deliveredMessageIdRef.current !== message.id) {
+        deliveredMessageIdRef.current = message.id;
+        setLatestMessage(message);
+      }
       setState((current) => ({
         ...current,
         messages: message.id && !current.messages.some((item) => item.id === message.id)
@@ -50,5 +61,5 @@ export function useWorldChat(repository: WorldChatRepository | null, worldOwnerC
     }
   }, [service]);
 
-  return { ...state, send, report: service?.report ?? (async () => undefined) };
+  return { ...state, latestMessage, send, report: service?.report ?? (async () => undefined) };
 }

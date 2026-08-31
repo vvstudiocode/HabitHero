@@ -1,6 +1,6 @@
 import type { WorldChatMessage } from './contracts';
 
-export const BUBBLE_DURATION_MS = 4_000;
+export const BUBBLE_DURATION_MS = 3_000;
 
 export interface ChatBubbleEntry {
   message: WorldChatMessage;

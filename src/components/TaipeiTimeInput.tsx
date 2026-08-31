@@ -9,6 +9,13 @@ interface TaipeiTimeInputProps {
 const hours = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'));
 const minutes = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
 
+export function getTimeSelectionParts(nextHour: string, nextMinute: string): { hour: string; minute: string } {
+  return {
+    hour: nextHour,
+    minute: nextHour && !nextMinute ? '00' : nextMinute,
+  };
+}
+
 export function TaipeiTimeInput({ value, onChange, className = '' }: TaipeiTimeInputProps) {
   const [hour, setHour] = useState(value ? value.slice(0, 2) : '');
   const [minute, setMinute] = useState(value ? value.slice(3, 5) : '');
@@ -19,10 +26,11 @@ export function TaipeiTimeInput({ value, onChange, className = '' }: TaipeiTimeI
   }, [value]);
 
   const updateTime = (nextHour: string, nextMinute: string) => {
-    setHour(nextHour);
-    setMinute(nextMinute);
-    if (nextHour && nextMinute) onChange(`${nextHour}:${nextMinute}`);
-    else if (!nextHour && !nextMinute) onChange('');
+    const nextParts = getTimeSelectionParts(nextHour, nextMinute);
+    setHour(nextParts.hour);
+    setMinute(nextParts.minute);
+    if (nextParts.hour && nextParts.minute) onChange(`${nextParts.hour}:${nextParts.minute}`);
+    else if (!nextParts.hour && !nextParts.minute) onChange('');
   };
 
   const selectClass = `min-h-12 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-base font-bold text-gray-800 outline-none focus:ring-2 focus:ring-teal-400 ${className}`;

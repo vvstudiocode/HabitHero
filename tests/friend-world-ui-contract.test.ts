@@ -4,14 +4,16 @@ import test from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('friend world hides the deferred co-op card and gates return navigation behind the backpack', () => {
+test('friend world hides the deferred co-op card and exposes an independent leave icon', () => {
   const social = read('../src/features/world-social/WorldSocialLayer.tsx');
   const dashboard = read('../src/components/ChildDashboard.tsx');
 
   assert.doesNotMatch(social, /<CoopAdventureCard/);
   assert.doesNotMatch(social, /FriendWorldViewer/);
   assert.match(social, /leaveFriendWorldRequest/);
-  assert.match(dashboard, /leave-friend-world/);
+  assert.match(dashboard, /hh-character-leave-button/);
+  assert.match(dashboard, /isVisitingFriendWorld/);
+  assert.doesNotMatch(dashboard, /id: 'leave-friend-world'/);
 });
 
 test('a friend entering my world keeps the live chat dock visible', () => {
@@ -40,13 +42,16 @@ test('surfaces a Chinese capacity warning without exposing transient connection 
   assert.match(social, /getWorldCapacityMessage/);
 });
 
-test('the visiting friend world exposes a leave action under settings', () => {
+test('the visiting friend world exposes the leave icon with an accessible label', () => {
   const social = read('../src/features/world-social/WorldSocialLayer.tsx');
   const dashboard = read('../src/components/ChildDashboard.tsx');
+  const characterStyles = read('../src/styles/character.css');
 
   assert.match(social, /leaveFriendWorldRequest/);
   assert.match(social, /onVisitingChange/);
-  assert.match(dashboard, /leave-friend-world/);
-  assert.match(dashboard, /設定[\s\S]*leave-friend-world/);
-  assert.match(dashboard, /LogOut[\s\S]*#050505/);
+  assert.match(dashboard, /aria-label="離開好友世界"/);
+  assert.match(dashboard, /title="離開好友世界"/);
+  assert.match(dashboard, /LogOut/);
+  assert.match(characterStyles, /orientation:\s*portrait[\s\S]*?\.hh-character-leave-button[\s\S]*?right:\s*calc\(50% \+ 116px\)/);
+  assert.match(characterStyles, /orientation:\s*landscape[\s\S]*?\.hh-character-leave-button[\s\S]*?order:\s*-1/);
 });

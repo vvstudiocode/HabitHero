@@ -7,7 +7,7 @@ import { toWorldMutationErrorMessage } from '../world-errors';
 import { isDecorationPlacementValid } from '../world-placement';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
 import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
-import { isLocalGameItem3DPreviewEnabled, isLocalGameItemInventorySupported, isLocalGameItemShopSupported } from '../game-content-assets';
+import { isLocalGameItem3DPreviewEnabled, isLocalGameItemInventorySupported, isLocalGameItemShopVisible } from '../game-content-assets';
 import { GameItemLightbox } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 import { GameCategoryTabs, type GameCatalogSection } from './GameCategoryTabs';
@@ -535,7 +535,7 @@ export function ChildGamePanel({
       {kind === 'shop' && (
         <div className="hh-game-panel-section">
           <div className={`hh-game-catalog-grid hh-game-catalog-grid--${shopColumns}`}>
-            {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection && isLocalGameItemShopSupported(item)).map((item) => {
+            {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection && isLocalGameItemShopVisible(item)).map((item) => {
               const price = gameData.prices[item.id] ?? item.scrollPrice;
               return (
                 <GameItemCard

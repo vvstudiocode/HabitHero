@@ -97,7 +97,7 @@ describe('world scene game data snapshot', () => {
 
     assert.deepEqual(
       getRequiredWorldDecorationCatalogItems(data, placement).map((item) => item.assetKey),
-      ['decoration.study-desk', 'decoration.study-chair'],
+      ['decoration.study-desk', 'decoration.study-chair', 'decoration.adventure-table'],
     );
   });
 

@@ -28,6 +28,16 @@ test('parent login keeps password recovery below signup as one vertical action g
   assert.match(loginStyles, /\.hh-secondary-button\s*\{[\s\S]*?width:\s*100%;/);
 });
 
+test('app login action appears for either revealed login form below the submit action', () => {
+  const login = read('../src/components/AccountLogin.tsx');
+  const appActionIndex = login.indexOf('已安裝 App？開啟 App 登入');
+  const submitIndex = login.indexOf('type="submit"');
+
+  assert.ok(appActionIndex > submitIndex, 'App login action should follow the login submit button');
+  assert.match(login, /\{onOpenApp && <button type="button"[\s\S]*已安裝 App？開啟 App 登入/);
+  assert.doesNotMatch(login, /mode === 'parent' && onOpenApp && <button[\s\S]*已安裝 App？開啟 App 登入/);
+});
+
 test('login entry keeps the title compact and the selected surfaces translucent', () => {
   const loginStyles = read('../src/styles/login.css');
   const dashboardStyles = read('../src/styles/dashboard.css');

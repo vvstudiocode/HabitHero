@@ -31,7 +31,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
   };
 
   return (
-    <section className="rounded-3xl border border-yellow-100 bg-white p-4 shadow-sm">
+    <section className="hh-goal-proposal-form">
       <div className="mb-4">
         <h2 className="text-lg font-black text-gray-900">建立一般冒險</h2>
         <p className="mt-1 text-sm leading-6 text-gray-500">建立後會回到一般冒險項目，想開始時再點開。</p>
@@ -48,7 +48,7 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             placeholder="例如：自己整理明天的書包"
           />
         </label>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,132px)_minmax(0,132px)]">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-3">
           <label className="block min-w-0 w-full">
             <span className="mb-2 block text-sm font-bold text-gray-700">目標分類</span>
             <select
@@ -72,14 +72,6 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
             />
           </label>
           <label className="block min-w-0 w-full">
-            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">開始時間</span>
-            <TaipeiTimeInput value={dueTime} onChange={setDueTime} className="focus:ring-yellow-400" />
-          </label>
-          <label className="block min-w-0 w-full">
-            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">最晚開始時間</span>
-            <TaipeiTimeInput value={endTime} onChange={setEndTime} className="focus:ring-yellow-400" />
-          </label>
-          <label className="block min-w-0 w-full">
             <span className="mb-2 block text-sm font-bold text-gray-700">想做多久？</span>
             <input
               type="number"
@@ -89,6 +81,14 @@ export function GoalProposalForm({ templates = [], loading = false, onSubmit }: 
               placeholder="分鐘"
               className="min-h-12 w-full rounded-2xl border border-gray-200 p-3 text-base outline-none focus:ring-2 focus:ring-yellow-400"
             />
+          </label>
+          <label className="block min-w-0 w-full">
+            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">開始時間</span>
+            <TaipeiTimeInput value={dueTime} onChange={setDueTime} className="focus:ring-yellow-400" />
+          </label>
+          <label className="block min-w-0 w-full">
+            <span className="mb-2 block text-sm font-bold text-gray-700 truncate">最晚開始時間</span>
+            <TaipeiTimeInput value={endTime} onChange={setEndTime} className="focus:ring-yellow-400" />
           </label>
         </div>
         <button

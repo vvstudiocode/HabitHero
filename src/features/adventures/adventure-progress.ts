@@ -58,6 +58,12 @@ export function getAdventureProgress(
   };
 }
 
+export function getInitialAdventureTask(
+  groups: { daily: ReadonlyArray<AdventureTask>; general: ReadonlyArray<AdventureTask> },
+): AdventureTask | null {
+  return groups.daily[0] ?? groups.general[0] ?? null;
+}
+
 export function splitAdventureTasks(
   tasks: ReadonlyArray<AdventureTask>,
   today: string,

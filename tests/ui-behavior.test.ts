@@ -29,6 +29,17 @@ test('parent dashboard reuses shared modal and empty-state primitives', () => {
   assert.doesNotMatch(dashboard, /fixed inset-0 bg-black\/40 flex items-center justify-center p-6 z-\[70\]/);
 });
 
+test('shared modal close action matches the feature page transparent black close control', () => {
+  const sharedUi = read('../src/components/shared/ParentDashboardUI.tsx');
+  const parentContent = read('../src/components/parent-dashboard/ParentDashboardContent.tsx');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(sharedUi, /className="hh-character-icon-button hh-modal-close-button"/);
+  assert.match(parentContent, /className="hh-character-icon-button hh-modal-close-button ml-auto"/);
+  assert.doesNotMatch(sharedUi, /rounded-full bg-gray-100 text-gray-400/);
+  assert.match(neutralTheme, /\.hh-modal-close-button,[\s\n]*\.hh-modal-close-button:hover,[\s\n]*\.hh-modal-close-button:focus-visible\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?color:\s*var\(--hh-neutral-ink\);[\s\S]*?box-shadow:\s*none;/);
+});
+
 test('forest-paper theme keeps surfaces warm without applying a grayscale filter', () => {
   const entry = read('../src/main.tsx');
   const neutralTheme = read('../src/styles/neutral-theme.css');
@@ -378,36 +389,32 @@ test('completion review form uses the forest-paper theme outside the app portal 
   assert.match(overlays, /\.hh-review-dialog-backdrop[\s\S]*background:\s*rgb\(18 57 59 \/ 52%\)/);
 });
 
-test('child growth menu opens the growth feature directly', () => {
+test('child feature pages expose one compact navigation row', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
-  const hero = read('../src/components/DashboardCharacterHero.tsx');
 
-  assert.match(dashboard, /backpack: \[[\s\S]*?id: 'goals', title: '冒險',[\s\S]*?id: 'growth', title: '成長'/);
-  assert.match(dashboard, /const heroRootMenuActions: CharacterMenuAction\[\] = \[\]/);
-  assert.match(hero, /const hasMenu = rootActions\.length > 0 \|\| subActions\.length > 0/);
-  assert.match(dashboard, /toggleHeroMenuGroup\('backpack'\)/);
+  assert.match(dashboard, /const childFeatureNavigation[\s\S]*?id: 'inventory', title: '背包',[\s\S]*?id: 'goals', title: '冒險',[\s\S]*?id: 'shop', title: '商店',[\s\S]*?id: 'wishlist', title: '獎勵',[\s\S]*?id: 'growth', title: '成長',[\s\S]*?id: 'settings', title: '設定'/);
+  assert.match(dashboard, /hh-child-feature-nav/);
+  assert.match(dashboard, /aria-label="小孩功能導覽"/);
+  assert.match(dashboard, /heroFeature === item\.id/);
+  assert.match(dashboard, /onClick=\{\(\) => openChildFeature\(item\.id\)\}/);
+  assert.match(dashboard, /onClick=\{\(\) => openChildFeature\('inventory'\)\}/);
+  assert.doesNotMatch(dashboard, /toggleHeroMenuGroup/);
   assert.match(dashboard, /<Backpack size=\{18\}/);
-  assert.match(dashboard, /id: 'wishlist', title: '獎勵'/);
   assert.doesNotMatch(dashboard, /id: 'history'/);
   assert.match(dashboard, /child-redemption-history-title/);
-  assert.match(dashboard, /id: 'inventory', title: '背包'/);
-  assert.match(dashboard, /id: 'shop', title: '商店'/);
-  assert.match(dashboard, /id: 'settings', title: '設定'/);
   assert.match(dashboard, /activeTab === 'goals'[\s\S]*?>\s*冒險\s*\{/);
   assert.doesNotMatch(dashboard, /冒險日記/);
   assert.doesNotMatch(dashboard, /id: 'switch-child', title: '切換視角'/);
   assert.doesNotMatch(dashboard, /id: 'logout', title: '登出'/);
 });
 
-test('child submenu keeps settings as the account entry point and animates every action', () => {
+test('child feature navigation keeps settings as the account entry point', () => {
   const dashboard = read('../src/components/ChildDashboard.tsx');
-  const characterStyles = read('../src/styles/character.css');
 
-  assert.match(dashboard, /id: 'wishlist',[\s\S]*id: 'growth',[\s\S]*id: 'settings'/);
+  assert.match(dashboard, /const childFeatureNavigation[\s\S]*id: 'wishlist',[\s\S]*id: 'growth',[\s\S]*id: 'settings'/);
   assert.match(dashboard, /onSwitchChild=\{onSwitchChild\}/);
   assert.match(dashboard, /onLogout=\{onLogout\}/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?nth-child\(7\)[\s\S]*?transition-delay: 900ms/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?is-collapsed[\s\S]*?nth-child\(7\)[\s\S]*?transition-delay: 0ms/);
+  assert.doesNotMatch(dashboard, /toggleHeroMenuGroup/);
 });
 
 test('switching child views does not disable the saved notification preference', () => {
@@ -423,22 +430,15 @@ test('child 3D world does not render foreground push notifications as a toast', 
   assert.doesNotMatch(dashboard, /onForegroundNotification: \(title, body\) => showToast/);
 });
 
-test('child feature menu keeps the submenu mounted while it animates closed', () => {
+test('child backpack opens the feature page directly instead of a hero submenu', () => {
   const hero = read('../src/components/DashboardCharacterHero.tsx');
   const dashboard = read('../src/components/ChildDashboard.tsx');
-  const characterStyles = read('../src/styles/character.css');
 
-  assert.match(hero, /menuOpen === false \? 'is-collapsed' : ''/);
-  assert.match(dashboard, /const HERO_MENU_EXIT_MS = 1200/);
-  assert.match(dashboard, /window\.setTimeout\(\(\) => \{[\s\S]*setHeroMenuGroup\(null\)[\s\S]*\}, HERO_MENU_EXIT_MS\)/);
-  assert.match(dashboard, /requestAnimationFrame\(\(\) => \{[\s\S]*setHeroMenuVisible\(true\)/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?translateY\(-6px\)/);
-  assert.match(characterStyles, /data-active-menu="backpack"[\s\S]*?top: calc\(17px \+ var\(--hh-menu-submenu-offset\)\)/);
-  assert.match(characterStyles, /nth-child\(2\)[\s\S]*?transition-delay: 150ms/);
-  assert.match(characterStyles, /nth-child\(3\)[\s\S]*?transition-delay: 300ms/);
-  assert.match(characterStyles, /nth-child\(5\)[\s\S]*?transition-delay: 0ms/);
-  assert.match(characterStyles, /prefers-reduced-motion: reduce/);
-  assert.match(characterStyles, /data-menu-variant="child"[\s\S]*?--hh-menu-action-size: 84px/);
+  assert.match(hero, /const hasMenu = rootActions\.length > 0 \|\| subActions\.length > 0/);
+  assert.match(dashboard, /onClick=\{\(\) => openChildFeature\('inventory'\)\}/);
+  assert.match(dashboard, /aria-label="開啟背包"/);
+  assert.doesNotMatch(dashboard, /toggleHeroMenuGroup/);
+  assert.doesNotMatch(dashboard, /menuActions=\{heroMenuActions\}/);
 });
 
 test('character menu floating animation remains compositor-safe on iOS touch browsers', () => {
@@ -455,9 +455,10 @@ test('child feature pages omit the duplicate modal title while keeping the close
   const overlays = read('../src/styles/overlays.css');
   const characterStyles = read('../src/styles/character.css');
 
-  assert.match(dashboard, /<div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">\s*<div className="hh-child-feature-balance-pill">[\s\S]*?<button/);
-  assert.match(overlays, /\.hh-parent-content-modal-bar--child[\s\S]*?justify-content: flex-end[\s\S]*?min-height: 48px/);
+  assert.match(dashboard, /<div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">\s*<nav className="hh-child-feature-nav"/);
+  assert.match(overlays, /\.hh-parent-content-modal-bar--child[\s\S]*?justify-content: initial[\s\S]*?min-height: 48px/);
   assert.match(characterStyles, /\.hh-dashboard-screen\s*\{[\s\S]*?--hh-character-top-offset:\s*44px/);
-  assert.match(overlays, /\.hh-parent-content-modal-bar--child\s*\{[\s\S]*?top:\s*0[\s\S]*?justify-content: flex-end/);
+  assert.match(overlays, /\.hh-parent-content-modal-bar--child\s*\{[\s\S]*?top:\s*0[\s\S]*?justify-content: initial/);
   assert.match(overlays, /@media \(max-width: 760px\)[\s\S]*?\.hh-parent-content-modal-bar--child[\s\S]*?padding-top:\s*calc\(16px \+ var\(--hh-character-top-offset\)\)/);
+  assert.match(overlays, /@media \(max-width: 760px\)[\s\S]*?\.hh-child-feature-nav[\s\S]*?order:\s*2/);
 });

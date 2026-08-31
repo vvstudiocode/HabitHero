@@ -11,6 +11,8 @@
 .hh-dashboard-screen {
   --hh-character-content-left: 28px;
   --hh-character-top-offset: 44px;
+  --hh-character-stats-top: calc(16px + var(--hh-character-top-offset));
+  --hh-adventure-board-gap: 8px;
 }
 
 .hh-sprite-theme .hh-dashboard-screen>.hh-character-dashboard-header {
@@ -58,6 +60,15 @@
 
 .hh-character-icon-button:active {
   transform: scale(0.96);
+}
+
+/* The friend-world return control stays independent from the backpack menu. */
+.hh-character-leave-button {
+  order: -1;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
 }
 
 .hh-character-hero-panel {
@@ -176,22 +187,101 @@
 }
 
 .hh-child-adventure-board {
-  position: fixed;
-  z-index: 7;
-  top: max(152px, calc(env(safe-area-inset-top) + 128px));
-  left: var(--hh-character-content-left);
-  display: grid;
-  gap: 4px;
-  width: min(var(--hh-adventure-board-width), calc(100vw - (var(--hh-character-content-left) * 2)));
-  max-height: calc(100dvh - max(152px, calc(env(safe-area-inset-top) + 128px)) - 28px);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, var(--hh-adventure-board-max-width));
+  max-height: min(86dvh, 760px);
   overflow-x: hidden;
   overflow-y: auto;
+  padding: 22px;
+  border-radius: 24px;
   overscroll-behavior: contain;
   scrollbar-width: none;
 }
 
 .hh-child-adventure-board::-webkit-scrollbar {
   display: none;
+}
+
+.hh-adventure-board-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 0 0 auto;
+}
+
+.hh-adventure-board-header h2,
+.hh-adventure-board-empty h3,
+.hh-adventure-board-empty p {
+  margin: 0;
+}
+
+.hh-adventure-board-header h2 {
+  overflow-wrap: anywhere;
+  font-family: var(--hh-font-display);
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.hh-adventure-board-close {
+  display: grid;
+  min-width: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.hh-adventure-board-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, .78fr) minmax(0, 1.5fr);
+  gap: 18px;
+  min-height: 0;
+  margin-top: 20px;
+}
+
+.hh-adventure-board-categories,
+.hh-adventure-board-detail {
+  min-width: 0;
+}
+
+.hh-adventure-board-categories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hh-adventure-board-gap);
+}
+
+.hh-adventure-board-detail {
+  min-height: 300px;
+  padding: 4px;
+  border-left: 1px solid var(--hh-neutral-line);
+}
+
+.hh-adventure-board-empty {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+
+.hh-adventure-board-empty h3 {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.hh-adventure-board-empty p {
+  max-width: 260px;
+  color: var(--hh-neutral-muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .hh-adventure-sync-status {
@@ -763,10 +853,6 @@
   transition-delay: 750ms;
 }
 
-.hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-open:not(.is-collapsed) .hh-character-menu-submenu .hh-character-menu-action:nth-child(7) {
-  transition-delay: 900ms;
-}
-
 .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-collapsed .hh-character-menu-submenu {
   pointer-events: none;
 }
@@ -801,14 +887,9 @@
   transition-delay: 0ms;
 }
 
-.hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"].is-collapsed .hh-character-menu-submenu .hh-character-menu-action:nth-child(7) {
-  transition-delay: 0ms;
-}
-
 @media (orientation: landscape) {
-  .hh-child-adventure-board {
-    left: max(var(--hh-character-content-left), calc(env(safe-area-inset-left, 0px) + 12px));
-    width: min(var(--hh-adventure-board-width), calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px));
+  .hh-dashboard-screen {
+    --hh-character-stats-top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
   }
 
   .hh-character-menu[data-menu-variant="child"][data-active-menu="backpack"] .hh-character-menu-submenu {
@@ -1353,8 +1434,22 @@
   }
 
   .hh-child-adventure-board {
-    top: max(142px, calc(env(safe-area-inset-top) + 118px));
-    max-height: calc(100dvh - max(142px, calc(env(safe-area-inset-top) + 118px)) - 104px);
+    width: 100%;
+    max-height: min(92dvh, 760px);
+    padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .hh-adventure-board-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hh-adventure-board-detail {
+    min-height: 0;
+    padding: 0;
+    border-top: 1px solid var(--hh-neutral-line);
+    border-left: 0;
   }
 
   .hh-character-hero-copy {
@@ -1432,7 +1527,7 @@
   }
 
   .hh-character-stats {
-    top: calc(16px + var(--hh-character-top-offset));
+    top: var(--hh-character-stats-top);
     bottom: auto;
     gap: 6px;
     max-width: 62%;
@@ -1485,6 +1580,24 @@
   .hh-character-stats,
   .hh-character-hero-panel > .hh-character-dashboard-actions {
     top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
+  }
+
+  .hh-character-hero-panel > .hh-character-dashboard-actions:has(.hh-character-leave-button) {
+    gap: 8px;
+  }
+
+  .hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-leave-button {
+    order: -1;
+  }
+}
+
+@media (orientation: portrait) {
+  .hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-leave-button {
+    position: fixed;
+    z-index: 31;
+    right: calc(50% + 116px);
+    bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+    left: auto;
   }
 }
 

@@ -49,14 +49,12 @@ interface ParentAdventureWorkspaceProps {
   children: { id: string; name: string }[];
   tasks: ParentCalendarAdventureTask[];
   schedules: TaskSchedule[];
-  generalTitle: string;
   activeFrom: string;
   loading?: boolean;
   legacyTaskList: ReactNode;
   onOpenReview: () => void;
   onCreateSchedule: (input: CreateAdventureScheduleInput) => Promise<void>;
   onCreateGeneral: (input: CreateGeneralAdventureInput) => Promise<void>;
-  onUpdateGeneralTitle: (childId: string, title: string) => Promise<void>;
   onBatchReviewDaily: (taskIds: string[]) => Promise<{ failedTaskIds: string[] }>;
   onEditTask: (task: ParentCalendarAdventureTask) => void;
   onDeleteTask: (task: ParentCalendarAdventureTask) => void;
@@ -73,14 +71,12 @@ export function ParentAdventureWorkspace({
   children,
   tasks,
   schedules,
-  generalTitle,
   activeFrom,
   loading = false,
   legacyTaskList,
   onOpenReview,
   onCreateSchedule,
   onCreateGeneral,
-  onUpdateGeneralTitle,
   onBatchReviewDaily,
   onEditTask,
   onDeleteTask,
@@ -194,18 +190,6 @@ export function ParentAdventureWorkspace({
       closeForm();
     } catch (caught) {
       setFormError(toErrorMessage(caught, '新增一般冒險失敗，請稍後再試。'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const updateTitle = async (title: string) => {
-    setSubmitting(true);
-    setFormError(null);
-    try {
-      await Promise.all(children.map(child => onUpdateGeneralTitle(child.id, title)));
-    } catch (caught) {
-      setFormError(toErrorMessage(caught, '儲存一般冒險名稱失敗。'));
     } finally {
       setSubmitting(false);
     }
@@ -369,7 +353,7 @@ export function ParentAdventureWorkspace({
           panelClassName="hh-adventure-form-dialog"
         >
           {formError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{formError}</p>}
-          <ParentGeneralAdventureForm children={children} generalTitle={generalTitle} submitting={submitting} onCancel={closeForm} onUpdateTitle={updateTitle} onSubmit={createGeneral} />
+          <ParentGeneralAdventureForm children={children} submitting={submitting} onCancel={closeForm} onSubmit={createGeneral} />
         </ParentDashboardFormModal>
       )}
 

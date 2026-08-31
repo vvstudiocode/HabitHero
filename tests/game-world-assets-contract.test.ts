@@ -39,11 +39,12 @@ describe('production terrain asset contract', () => {
     assert.match(prototypeRuntimeSource, /applyCentralTreeMaterialFallback\(THREE, treeDefinition\.source\)/);
     assert.match(prototypeRuntimeSource, /tree\.scale\.y \*= PROTOTYPE_WORLD_CONFIG\.treeHeightScale/);
     assert.match(prototypeRuntimeSource, /createProceduralGrassField\(THREE/);
+    assert.match(prototypeRuntimeSource, /enableInteractions:\s*false/);
     assert.match(prototypeRuntimeSource, /outerDensityMultiplier: qualitySettings\.outerDensityMultiplier/);
     assert.match(prototypeRuntimeSource, /createProceduralFlowerField\(THREE/);
     assert.match(prototypeRuntimeSource, /createProceduralForest\(THREE/);
     assert.doesNotMatch(prototypeRuntimeSource, /updateGrassInteractionState\(/);
-    assert.match(prototypeRuntimeSource, /proceduralGrass\.update\(/);
+    assert.doesNotMatch(prototypeRuntimeSource, /proceduralGrass\.update\(/);
     assert.match(prototypeRuntimeSource, /createWorldWeatherRuntime/);
     assert.match(weatherRuntimeSource, /scene\.background = loadedTexture/);
     assert.match(prototypeRuntimeSource, /rendererInstance\.toneMapping = THREE\.ACESFilmicToneMapping/);

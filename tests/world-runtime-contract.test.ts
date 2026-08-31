@@ -164,8 +164,8 @@ describe('prototype world runtime contracts', () => {
   });
 
   it('wires the portrait control band to independent movement, camera, and pinch input', () => {
-    assert.match(runtimeSource, /getWorldInputZone\(point, rect\.height, rect\.width\)/);
-    assert.match(runtimeSource, /zone: event\.pointerType === 'mouse' \? 'camera' : getWorldInputZone/);
+    assert.match(runtimeSource, /getWorldInputZone\(point, rect\.height, rect\.width, getJoystickMovementCircle\(rect\)\)/);
+    assert.match(runtimeSource, /zone: event\.pointerType === 'mouse'\s*\?\s*'camera'\s*:\s*getWorldInputZone/);
     assert.match(worldLayerSource, /data-world-input-layout="responsive-control-bands"/);
     assert.match(worldLayerSource, /橫向左下控制區拖曳移動，其餘區域單指調整視角，雙指捏合縮放/);
     assert.equal(PROTOTYPE_WORLD_CONFIG.cameraPitchMax, Math.PI * (89 / 180));
@@ -268,8 +268,18 @@ describe('prototype world runtime contracts', () => {
 
   it('does not render or query animation work while a feature panel is paused', () => {
     assert.match(runtimeSource, /if \(options\.pausedRef\.current\) \{[\s\S]{0,260}setTimeout/);
-    assert.match(runtimeSource, /proceduralGrass\.update\(/);
+    assert.doesNotMatch(runtimeSource, /proceduralGrass\.update\(/);
     assert.equal((runtimeSource.match(/matchMedia\(/g) ?? []).length, 1);
+  });
+
+  it('keeps the world at 60fps while a visible actor or camera is active', () => {
+    assert.match(runtimeSource, /createWorldFrameRateState\(/);
+    assert.match(runtimeSource, /updateWorldFrameRateState\(/);
+    assert.match(runtimeSource, /maxFps: worldFrameRateState\.maxFps/);
+    assert.match(runtimeSource, /wakeWorldFrames\(\)/);
+    assert.match(runtimeSource, /petMoving: isPetMoving/);
+    assert.match(runtimeSource, /roamingCharacterMoving: isRoamingCharacterMoving/);
+    assert.match(runtimeSource, /cameraMoving: isCameraMoving/);
   });
 
   it('does not preload hero media when a 3D scene owns the hero surface', () => {

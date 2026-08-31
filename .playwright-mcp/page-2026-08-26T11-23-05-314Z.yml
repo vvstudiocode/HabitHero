@@ -1,0 +1,83 @@
+- generic [ref=f1e4]:
+  - banner [ref=f1e5]:
+    - generic [ref=f1e6]:
+      - generic:
+        - generic "家長功能主選單":
+          - button [ref=f1e9]:
+            - strong [ref=f1e14]: 審核
+          - button [ref=f1e15]:
+            - strong [ref=f1e19]: 任務
+          - button [ref=f1e20]:
+            - strong [ref=f1e24]: 成長
+          - button [ref=f1e25]:
+            - strong [ref=f1e31]: 獎勵
+          - button [ref=f1e32]:
+            - strong [ref=f1e37]: 商店
+      - generic "儀表板統計":
+        - generic "家庭總點數：0":
+          - strong:
+            - generic: "0"
+        - generic "待審核項目：0待審核":
+          - strong:
+            - generic: "0"
+            - emphasis: 待審核
+      - button "設定" [ref=f1e39]
+  - generic [ref=f1e217]:
+    - generic [ref=f1e218]:
+      - heading "設定" [level=3] [ref=f1e219]
+      - button [ref=f1e223]
+    - generic [ref=f1e227]:
+      - generic [ref=f1e228]:
+        - heading "小孩帳號管理" [level=4] [ref=f1e229]
+        - generic [ref=f1e235]:
+          - generic [ref=f1e236]:
+            - generic [ref=f1e237]:
+              - textbox "小孩名字" [ref=f1e238]: 樂樂
+              - button "刪除小孩" [ref=f1e239]
+            - generic [ref=f1e243]: 登入帳號：lala123。密碼不會顯示在這裡，忘記時請由家長重新設定。
+            - button "重設小孩密碼" [ref=f1e248]
+          - generic [ref=f1e249]:
+            - generic [ref=f1e250]:
+              - textbox "小孩名字" [ref=f1e251]: 宣宣
+              - button "刪除小孩" [ref=f1e252]
+            - generic [ref=f1e256]: 登入帳號：sharon。密碼不會顯示在這裡，忘記時請由家長重新設定。
+            - button "重設小孩密碼" [ref=f1e261]
+      - button "新增小孩" [ref=f1e262]
+      - generic [ref=f1e264]:
+        - heading "帳號與家庭安全" [level=4] [ref=f1e265]
+        - generic [ref=f1e266]:
+          - button "修改家長密碼 更新管理家庭資料的家長登入密碼。" [ref=f1e267] [cursor=pointer]:
+            - generic [ref=f1e268]:
+              - strong [ref=f1e269]: 修改家長密碼
+              - generic [ref=f1e270]: 更新管理家庭資料的家長登入密碼。
+            - generic [ref=f1e271]: ›
+          - button "隱私政策 了解習慣冒險島如何處理家庭與兒童資料。" [ref=f1e272] [cursor=pointer]:
+            - generic [ref=f1e273]:
+              - strong [ref=f1e274]: 隱私政策
+              - generic [ref=f1e275]: 了解習慣冒險島如何處理家庭與兒童資料。
+            - generic [ref=f1e276]: ›
+          - button "支援中心 登入、同步、點數與資料刪除的協助。" [ref=f1e277] [cursor=pointer]:
+            - generic [ref=f1e278]:
+              - strong [ref=f1e279]: 支援中心
+              - generic [ref=f1e280]: 登入、同步、點數與資料刪除的協助。
+            - generic [ref=f1e281]: ›
+          - button "兒童與家長同意 查看家長責任與記錄本版本同意。" [ref=f1e282] [cursor=pointer]:
+            - generic [ref=f1e283]:
+              - strong [ref=f1e284]: 兒童與家長同意
+              - generic [ref=f1e285]: 查看家長責任與記錄本版本同意。
+            - generic [ref=f1e286]: ›
+          - button "刪除帳號與資料 永久刪除家庭資料與所有帳號。" [ref=f1e287] [cursor=pointer]:
+            - generic [ref=f1e288]:
+              - strong [ref=f1e289]: 刪除帳號與資料
+              - generic [ref=f1e290]: 永久刪除家庭資料與所有帳號。
+            - generic [ref=f1e291]: ›
+      - generic [ref=f1e292]:
+        - button "切換小孩視角" [ref=f1e293]
+        - region [ref=f1e299]:
+          - heading "背景音樂" [level=4] [ref=f1e301]
+          - switch "背景音樂" [ref=f1e302]
+        - region [ref=f1e305]:
+          - heading "通知" [level=4] [ref=f1e307]
+          - switch "背景通知" [checked] [disabled] [ref=f1e308]
+        - button "重新觀看新手指引" [ref=f1e311]
+        - button "登出家長端" [ref=f1e312]

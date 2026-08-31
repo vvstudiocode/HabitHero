@@ -35,3 +35,22 @@ test('child feature header places points and scrolls before the close control', 
   assert.match(header, /onClick=\{\(\) => closeChildFeature\(\)\}/);
   assert.doesNotMatch(header, /onClick=\{\s*closeChildFeature\s*\}/);
 });
+
+test('child feature header keeps navigation touch-sized and horizontally scrollable', () => {
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+  const overlays = read('../src/styles/overlays.css');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(dashboard, /<nav className="hh-child-feature-nav" aria-label="小孩功能導覽">/);
+  assert.match(overlays, /\.hh-child-feature-nav[\s\S]*?overflow-x:\s*auto/);
+  assert.match(overlays, /\.hh-child-feature-nav-button[\s\S]*?min-width:\s*44px/);
+  assert.match(overlays, /\.hh-child-feature-nav-button[\s\S]*?min-height:\s*44px/);
+  assert.match(overlays, /\.hh-child-feature-nav-button[\s\S]*?font-size:\s*13px/);
+  assert.match(neutralTheme, /\.hh-child-feature-nav-button[\s\S]*?box-shadow:\s*none/);
+  assert.match(dashboard, /PointValue value=\{childPoints\} iconSize=\{15\} className="hh-child-feature-points"/);
+  assert.match(overlays, /\.hh-child-feature-points > span[\s\S]*?font-size:\s*20px/);
+  assert.match(dashboard, /item\.id === 'settings'[\s\S]*?hh-child-feature-nav-label/);
+  assert.match(dashboard, /openChildFeature\('settings'\)[\s\S]*?hh-child-feature-settings-button/);
+  assert.match(overlays, /@media \(max-width: 760px\)[\s\S]*?\.hh-child-feature-nav-button\.is-settings[\s\S]*?display:\s*none/);
+  assert.match(overlays, /@media \(max-width: 760px\)[\s\S]*?\.hh-child-feature-settings-button[\s\S]*?display:\s*grid/);
+});

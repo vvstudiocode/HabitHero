@@ -18,6 +18,11 @@ export interface WorldPoint {
   y: number;
 }
 
+export interface WorldMovementHitCircle {
+  center: WorldPoint;
+  radius: number;
+}
+
 export interface JoystickVector {
   x: number;
   y: number;
@@ -46,13 +51,28 @@ export type WorldInputEvent =
   | { type: 'clear-camera-delta' };
 
 export const JOYSTICK_RADIUS = 56;
+export const JOYSTICK_TOUCH_PADDING = 20;
+export const JOYSTICK_TOUCH_RADIUS = JOYSTICK_RADIUS + JOYSTICK_TOUCH_PADDING;
 export const JOYSTICK_DEAD_ZONE = 10;
 export const WORLD_CONTROL_BAND_RATIO = 0.25;
 export const LANDSCAPE_MOVEMENT_BAND_RATIO = 0.34;
 
-export function getWorldInputZone(point: WorldPoint, viewportHeight: number, viewportWidth = 0): WorldInputZone {
+export function getWorldInputZone(
+  point: WorldPoint,
+  viewportHeight: number,
+  viewportWidth = 0,
+  landscapeMovementCircle?: WorldMovementHitCircle,
+): WorldInputZone {
   const isLandscape = viewportWidth > viewportHeight && viewportHeight > 0;
-  const inMovementBand = point.y >= viewportHeight * (1 - WORLD_CONTROL_BAND_RATIO);
+  if (isLandscape && landscapeMovementCircle) {
+    const distanceFromJoystick = Math.hypot(
+      point.x - landscapeMovementCircle.center.x,
+      point.y - landscapeMovementCircle.center.y,
+    );
+    return distanceFromJoystick <= landscapeMovementCircle.radius ? 'movement' : 'camera';
+  }
+  const movementBandRatio = isLandscape ? LANDSCAPE_MOVEMENT_BAND_RATIO : WORLD_CONTROL_BAND_RATIO;
+  const inMovementBand = point.y >= viewportHeight * (1 - movementBandRatio);
   const inLandscapeLeftBand = viewportWidth > 0 && point.x <= viewportWidth * LANDSCAPE_MOVEMENT_BAND_RATIO;
   return inMovementBand && (!isLandscape || inLandscapeLeftBand)
     ? 'movement'

@@ -250,7 +250,6 @@ export function createWorldWeatherEffects(
     const firefliesMaterial = fireflies.material as import('three').ShaderMaterial;
     const rainMaterial = rain.material as import('three').ShaderMaterial;
     stars.position.copy(camera.position);
-    stars.quaternion.copy(camera.quaternion);
     stars.visible = isNight;
     fireflies.visible = isNight;
     rain.visible = isRain;

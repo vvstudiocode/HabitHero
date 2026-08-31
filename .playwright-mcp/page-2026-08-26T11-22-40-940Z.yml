@@ -1,0 +1,349 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e4]:
+    - banner [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - generic:
+          - generic "家長功能主選單":
+            - button [ref=f1e9]:
+              - strong [ref=f1e14]: 審核
+            - button [ref=f1e15]:
+              - strong [ref=f1e19]: 任務
+            - button [ref=f1e20]:
+              - strong [ref=f1e24]: 成長
+            - button [ref=f1e25]:
+              - strong [ref=f1e31]: 獎勵
+            - button [ref=f1e32]:
+              - strong [ref=f1e37]: 商店
+        - generic "儀表板統計":
+          - generic "家庭總點數：0":
+            - strong:
+              - generic: "0"
+          - generic "待審核項目：0待審核":
+            - strong:
+              - generic: "0"
+              - emphasis: 待審核
+        - button "設定" [ref=f1e39]
+    - dialog "家長功能頁面" [ref=f1e56]:
+      - button "關閉功能頁面" [ref=f1e58]
+      - generic [ref=f1e62]:
+        - generic [ref=f1e63]:
+          - group "冒險管理檢視" [ref=f1e64]:
+            - button "行事曆" [pressed] [ref=f1e65]
+            - button "任務清單" [ref=f1e66]
+          - generic [ref=f1e67]:
+            - button "＋ 每日冒險" [ref=f1e68]
+            - button "＋ 一般冒險" [ref=f1e69]
+        - region [ref=f1e70]:
+          - generic [ref=f1e71]:
+            - heading "任務行事曆" [level=2] [ref=f1e72]
+            - generic [ref=f1e73]:
+              - button "上一個月" [ref=f1e74]
+              - strong [ref=f1e77]: 2026 年 8 月
+              - button "下一個月" [ref=f1e78]
+          - generic [ref=f1e81]:
+            - generic [ref=f1e82]:
+              - generic [ref=f1e83]: 一
+              - generic [ref=f1e84]: 二
+              - generic [ref=f1e85]: 三
+              - generic [ref=f1e86]: 四
+              - generic [ref=f1e87]: 五
+              - generic [ref=f1e88]: 六
+              - generic [ref=f1e89]: 日
+            - generic [ref=f1e90]:
+              - button "2026-07-27，0 個冒險" [ref=f1e91]: "27"
+              - button "2026-07-28，0 個冒險" [ref=f1e92]: "28"
+              - button "2026-07-29，0 個冒險" [ref=f1e93]: "29"
+              - button "2026-07-30，0 個冒險" [ref=f1e94]: "30"
+              - button "2026-07-31，0 個冒險" [ref=f1e95]: "31"
+              - button "2026-08-01，0 個冒險" [ref=f1e96]: "1"
+              - button "2026-08-02，0 個冒險" [ref=f1e97]: "2"
+              - button "2026-08-03，0 個冒險" [ref=f1e98]: "3"
+              - button "2026-08-04，0 個冒險" [ref=f1e99]: "4"
+              - button "2026-08-05，0 個冒險" [ref=f1e100]: "5"
+              - button "2026-08-06，0 個冒險" [ref=f1e101]: "6"
+              - button "2026-08-07，0 個冒險" [ref=f1e102]: "7"
+              - button "2026-08-08，0 個冒險" [ref=f1e103]: "8"
+              - button "2026-08-09，0 個冒險" [ref=f1e104]: "9"
+              - button "2026-08-10，0 個冒險" [ref=f1e105]: "10"
+              - button "2026-08-11，0 個冒險" [ref=f1e106]: "11"
+              - button "2026-08-12，0 個冒險" [ref=f1e107]: "12"
+              - button "2026-08-13，0 個冒險" [ref=f1e108]: "13"
+              - button "2026-08-14，0 個冒險" [ref=f1e109]: "14"
+              - button "2026-08-15，0 個冒險" [ref=f1e110]: "15"
+              - button "2026-08-16，0 個冒險" [ref=f1e111]: "16"
+              - button "2026-08-17，0 個冒險" [ref=f1e112]: "17"
+              - button "2026-08-18，0 個冒險" [ref=f1e113]: "18"
+              - button "2026-08-19，0 個冒險" [ref=f1e114]: "19"
+              - button "2026-08-20，0 個冒險" [ref=f1e115]: "20"
+              - button "2026-08-21，0 個冒險" [ref=f1e116]: "21"
+              - button "2026-08-22，0 個冒險" [ref=f1e117]: "22"
+              - button "2026-08-23，0 個冒險" [ref=f1e118]: "23"
+              - button "2026-08-24，0 個冒險" [ref=f1e119]: "24"
+              - button "2026-08-25，0 個冒險" [ref=f1e120]: "25"
+              - button "2026-08-26，今天，0 個冒險" [pressed] [ref=f1e121]:
+                - text: "26"
+                - generic [ref=f1e122]: 今
+              - button "2026-08-27，0 個冒險" [ref=f1e123]: "27"
+              - button "2026-08-28，0 個冒險" [ref=f1e124]: "28"
+              - button "2026-08-29，0 個冒險" [ref=f1e125]: "29"
+              - button "2026-08-30，0 個冒險" [ref=f1e126]: "30"
+              - button "2026-08-31，0 個冒險" [ref=f1e127]: "31"
+              - button "2026-09-01，0 個冒險" [ref=f1e128]: "1"
+              - button "2026-09-02，0 個冒險" [ref=f1e129]: "2"
+              - button "2026-09-03，0 個冒險" [ref=f1e130]: "3"
+              - button "2026-09-04，0 個冒險" [ref=f1e131]: "4"
+              - button "2026-09-05，0 個冒險" [ref=f1e132]: "5"
+              - button "2026-09-06，0 個冒險" [ref=f1e133]: "6"
+          - region [ref=f1e134]:
+            - generic [ref=f1e136]:
+              - heading "當日冒險" [level=3] [ref=f1e137]
+              - paragraph [ref=f1e138]: 2026-08-26（今天）
+            - paragraph [ref=f1e140]: 這一天沒有安排冒險。
+        - region [ref=f1e141]:
+          - heading "每日冒險卡片" [level=3] [ref=f1e142]
+          - paragraph [ref=f1e144]: 目前沒有啟用中的每日排程。
+  - dialog [ref=f1e146]:
+    - generic [ref=f1e147]:
+      - heading "新增一般冒險" [level=3] [ref=f1e148]
+      - button "關閉新增一般冒險" [ref=f1e149]
+    - generic [ref=f1e154]:
+      - generic [ref=f1e155]:
+        - generic [ref=f1e156]: 冒險名稱
+        - textbox "冒險名稱" [ref=f1e157]:
+          - /placeholder: 例如：完成英文作業
+      - generic [ref=f1e158]:
+        - generic [ref=f1e159]: 任務說明
+        - textbox "任務說明" [ref=f1e160]:
+          - /placeholder: 例如：完成第 18～20 頁
+      - generic [ref=f1e161]:
+        - generic [ref=f1e162]: 固定分類
+        - combobox "固定分類" [ref=f1e163]:
+          - option "生活自理" [selected]
+          - option "學習成長"
+          - option "健康體能"
+          - option "人際情緒"
+          - option "家庭貢獻"
+          - option "創造探索"
+      - group "安排給" [ref=f1e164]:
+        - generic [ref=f1e166]:
+          - generic [ref=f1e167] [cursor=pointer]:
+            - checkbox "樂樂" [checked] [ref=f1e168]
+            - generic [ref=f1e169]: 樂樂
+          - generic [ref=f1e170] [cursor=pointer]:
+            - checkbox "宣宣" [checked] [ref=f1e171]
+            - generic [ref=f1e172]: 宣宣
+      - generic [ref=f1e173]:
+        - generic [ref=f1e174]: 日期
+        - textbox "日期" [ref=f1e175]: 2026-08-26
+      - generic [ref=f1e176]:
+        - generic [ref=f1e177]:
+          - generic [ref=f1e178]: 開始時間
+          - generic "開始時間" [ref=f1e179]:
+            - combobox "小時" [ref=f1e180]:
+              - option "--" [selected]
+              - option "00"
+              - option "01"
+              - option "02"
+              - option "03"
+              - option "04"
+              - option "05"
+              - option "06"
+              - option "07"
+              - option "08"
+              - option "09"
+              - option "10"
+              - option "11"
+              - option "12"
+              - option "13"
+              - option "14"
+              - option "15"
+              - option "16"
+              - option "17"
+              - option "18"
+              - option "19"
+              - option "20"
+              - option "21"
+              - option "22"
+              - option "23"
+            - generic [ref=f1e181]: ":"
+            - combobox "分鐘" [ref=f1e182]:
+              - option "--" [selected]
+              - option "00"
+              - option "01"
+              - option "02"
+              - option "03"
+              - option "04"
+              - option "05"
+              - option "06"
+              - option "07"
+              - option "08"
+              - option "09"
+              - option "10"
+              - option "11"
+              - option "12"
+              - option "13"
+              - option "14"
+              - option "15"
+              - option "16"
+              - option "17"
+              - option "18"
+              - option "19"
+              - option "20"
+              - option "21"
+              - option "22"
+              - option "23"
+              - option "24"
+              - option "25"
+              - option "26"
+              - option "27"
+              - option "28"
+              - option "29"
+              - option "30"
+              - option "31"
+              - option "32"
+              - option "33"
+              - option "34"
+              - option "35"
+              - option "36"
+              - option "37"
+              - option "38"
+              - option "39"
+              - option "40"
+              - option "41"
+              - option "42"
+              - option "43"
+              - option "44"
+              - option "45"
+              - option "46"
+              - option "47"
+              - option "48"
+              - option "49"
+              - option "50"
+              - option "51"
+              - option "52"
+              - option "53"
+              - option "54"
+              - option "55"
+              - option "56"
+              - option "57"
+              - option "58"
+              - option "59"
+        - generic [ref=f1e183]:
+          - generic [ref=f1e184]: 最晚開始時間
+          - generic "開始時間" [ref=f1e185]:
+            - combobox "小時" [ref=f1e186]:
+              - option "--" [selected]
+              - option "00"
+              - option "01"
+              - option "02"
+              - option "03"
+              - option "04"
+              - option "05"
+              - option "06"
+              - option "07"
+              - option "08"
+              - option "09"
+              - option "10"
+              - option "11"
+              - option "12"
+              - option "13"
+              - option "14"
+              - option "15"
+              - option "16"
+              - option "17"
+              - option "18"
+              - option "19"
+              - option "20"
+              - option "21"
+              - option "22"
+              - option "23"
+            - generic [ref=f1e187]: ":"
+            - combobox "分鐘" [ref=f1e188]:
+              - option "--" [selected]
+              - option "00"
+              - option "01"
+              - option "02"
+              - option "03"
+              - option "04"
+              - option "05"
+              - option "06"
+              - option "07"
+              - option "08"
+              - option "09"
+              - option "10"
+              - option "11"
+              - option "12"
+              - option "13"
+              - option "14"
+              - option "15"
+              - option "16"
+              - option "17"
+              - option "18"
+              - option "19"
+              - option "20"
+              - option "21"
+              - option "22"
+              - option "23"
+              - option "24"
+              - option "25"
+              - option "26"
+              - option "27"
+              - option "28"
+              - option "29"
+              - option "30"
+              - option "31"
+              - option "32"
+              - option "33"
+              - option "34"
+              - option "35"
+              - option "36"
+              - option "37"
+              - option "38"
+              - option "39"
+              - option "40"
+              - option "41"
+              - option "42"
+              - option "43"
+              - option "44"
+              - option "45"
+              - option "46"
+              - option "47"
+              - option "48"
+              - option "49"
+              - option "50"
+              - option "51"
+              - option "52"
+              - option "53"
+              - option "54"
+              - option "55"
+              - option "56"
+              - option "57"
+              - option "58"
+              - option "59"
+      - group "完成回報" [ref=f1e189]:
+        - generic [ref=f1e191]:
+          - radio "簡單回報 孩子選擇很順利、有點難或需要幫忙。" [checked] [ref=f1e192] [cursor=pointer]
+          - generic [ref=f1e193]:
+            - strong [ref=f1e194]: 簡單回報
+            - text: 孩子選擇很順利、有點難或需要幫忙。
+        - generic [ref=f1e195]:
+          - radio "完整文字心得 孩子需選擇感受並填寫非空白心得。" [ref=f1e196] [cursor=pointer]
+          - generic [ref=f1e197]:
+            - strong [ref=f1e198]: 完整文字心得
+            - text: 孩子需選擇感受並填寫非空白心得。
+      - group "計時" [ref=f1e199]:
+        - generic [ref=f1e201]:
+          - radio "不需要" [checked] [ref=f1e202] [cursor=pointer]
+          - generic [ref=f1e203]: 不需要
+        - generic [ref=f1e204]:
+          - radio "需要完成 分鐘" [ref=f1e205] [cursor=pointer]
+          - generic [ref=f1e206]: 需要完成
+          - spinbutton "計時分鐘" [disabled] [ref=f1e207]
+          - generic [ref=f1e208]: 分鐘
+      - generic [ref=f1e209]:
+        - generic [ref=f1e210]: 完成點數
+        - spinbutton "完成點數" [ref=f1e211]: "10"
+        - paragraph [ref=f1e212]: 可以設定為 0 點；孩子仍能完成冒險，但不會新增點數紀錄。
+      - generic [ref=f1e213]:
+        - button "取消" [ref=f1e214]
+        - button "新增冒險" [ref=f1e215]

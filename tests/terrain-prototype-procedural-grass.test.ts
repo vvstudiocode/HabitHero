@@ -20,12 +20,12 @@ import {
   getProceduralFlowerCount,
 } from '../terrain-prototype/procedural-flower-layout.js';
 import {
+  createProceduralGrassField,
   GRASS_COLOR_LAYER_THRESHOLDS,
   getGrassColorLayer,
 } from '../terrain-prototype/procedural-grass-scene.js';
-import {
-  getGroundCoverMaskVisibility,
-} from '../terrain-prototype/ground-cover-mask.js';
+import * as THREE from 'three';
+import { getGroundCoverMaskVisibility } from '../terrain-prototype/ground-cover-mask.js';
 
 describe('terrain prototype procedural grass', () => {
   it('uses a several-times denser but device-aware blade budget', () => {
@@ -140,6 +140,43 @@ describe('terrain prototype procedural grass', () => {
     assert.match(grassSceneSource, /getInteractionOffset/);
     assert.match(grassSceneSource, /uGroundCoverMasks/);
     assert.match(grassSceneSource, /getGroundCoverVisibility/);
+  });
+
+  it('omits unused interactor shader work from the production grass variant', () => {
+    const staticGrass = createProceduralGrassField(THREE, {
+      fieldSize: 12,
+      walkableSize: 6,
+      baseHeight: 0,
+      viewportWidth: 375,
+      pixelRatio: 1,
+      count: 4,
+      enableInteractions: false,
+      sunDirection: [-0.52, 0.78, -0.36],
+      sunColor: 0xffe2b0,
+      ambientColor: 0xc1dfc4,
+    });
+    const staticMaterial = staticGrass.mesh.material as THREE.ShaderMaterial;
+
+    assert.doesNotMatch(staticMaterial.vertexShader, /getInteractionOffset|uInteractor/);
+    assert.match(staticMaterial.vertexShader, /getGroundCoverVisibility/);
+
+    const interactiveGrass = createProceduralGrassField(THREE, {
+      fieldSize: 12,
+      walkableSize: 6,
+      baseHeight: 0,
+      viewportWidth: 375,
+      pixelRatio: 1,
+      count: 4,
+      enableInteractions: true,
+      sunDirection: [-0.52, 0.78, -0.36],
+      sunColor: 0xffe2b0,
+      ambientColor: 0xc1dfc4,
+    });
+    const interactiveMaterial = interactiveGrass.mesh.material as THREE.ShaderMaterial;
+    assert.match(interactiveMaterial.vertexShader, /getInteractionOffset/);
+
+    staticGrass.mesh.geometry.dispose();
+    interactiveGrass.mesh.geometry.dispose();
   });
 
   it('hides grass and flowers under a rotated rectangular ground cover', () => {

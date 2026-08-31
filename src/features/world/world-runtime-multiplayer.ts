@@ -1,4 +1,4 @@
-import type { AnimationAction, AnimationClip, AnimationMixer, Object3D } from 'three';
+import type { AnimationAction, AnimationClip, AnimationMixer, Camera, Object3D } from 'three';
 import type { AvatarBroadcastInput } from '../world-multiplayer/world-broadcast';
 import type { AvatarEmote } from '../world-multiplayer/contracts';
 import { createRemoteAvatarController, type RemoteAvatarController, type RemoteAvatarRenderState } from '../world-multiplayer/remote-avatar-controller';
@@ -23,6 +23,8 @@ export interface WorldRuntimePlayerState {
 }
 
 export interface WorldRuntimeMultiplayer {
+  childProfileId?: string;
+  worldOwnerChildProfileId?: string;
   remoteAvatars: readonly RemoteAvatarStateSnapshot[];
   broadcastState: (input: LocalAvatarBroadcastInput) => boolean;
 }
@@ -40,6 +42,11 @@ export interface RemoteAvatarRuntimeActor {
   characterAssetKey?: string;
   characterLoadVersion: number;
   animation?: RemoteAvatarAnimationState;
+}
+
+export interface AvatarScreenPosition {
+  x: number;
+  y: number;
 }
 
 interface RemoteAvatarAnimationState {
@@ -199,7 +206,25 @@ export function applyRemoteAvatarRenderState(
 export interface RemoteAvatarRuntimeManager {
   update: (snapshots: readonly RemoteAvatarStateSnapshot[]) => void;
   render: (now: number) => void;
+  getScreenPositions: (camera: Camera, viewport: { left: number; top: number; width: number; height: number }) => ReadonlyMap<string, AvatarScreenPosition>;
   dispose: () => void;
+}
+
+export function projectWorldAvatarPosition(
+  THREE: ThreeNamespace,
+  camera: Camera,
+  viewport: { left: number; top: number; width: number; height: number },
+  root: Object3D,
+  verticalOffset: number,
+): AvatarScreenPosition | undefined {
+  const point = root.getWorldPosition(new THREE.Vector3());
+  point.y += verticalOffset;
+  point.project(camera);
+  if (point.z < -1 || point.z > 1 || point.x < -1 || point.x > 1 || point.y < -1 || point.y > 1) return undefined;
+  return {
+    x: viewport.left + ((point.x + 1) / 2) * viewport.width,
+    y: viewport.top + ((1 - point.y) / 2) * viewport.height,
+  };
 }
 
 export function createRemoteAvatarRuntimeManager(options: {
@@ -277,6 +302,22 @@ export function createRemoteAvatarRuntimeManager(options: {
           footNodes: actor.footNodes,
         });
       });
+    },
+    getScreenPositions: (camera, viewport) => {
+      const positions = new Map<string, AvatarScreenPosition>();
+      actors.forEach((actor) => {
+        const childProfileId = actor.controller.getLatest()?.childProfileId;
+        if (!childProfileId) return;
+        const position = projectWorldAvatarPosition(
+          options.THREE,
+          camera,
+          viewport,
+          actor.root,
+          PROTOTYPE_WORLD_CONFIG.characterTargetHeight + 0.18,
+        );
+        if (position) positions.set(childProfileId, position);
+      });
+      return positions;
     },
     dispose: () => {
       if (disposed) return;

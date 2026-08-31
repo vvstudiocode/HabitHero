@@ -41,8 +41,8 @@ export function ModalShell({
           <div className="flex justify-between items-center mb-6">
             <h3 id={titleId} className="text-xl font-bold">{title}</h3>
             {onClose && closeLabel && (
-              <button onClick={onClose} className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400" aria-label={closeLabel}>
-                <X size={20} />
+              <button type="button" onClick={onClose} className="hh-character-icon-button hh-modal-close-button" aria-label={closeLabel}>
+                <X size={20} aria-hidden="true" />
               </button>
             )}
           </div>

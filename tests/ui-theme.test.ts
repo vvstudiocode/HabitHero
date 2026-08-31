@@ -18,7 +18,7 @@ test('shared hero uses persisted theme values without a legacy character catalog
   assert.match(hero, /theme\?\.accentColor \?\?/);
 });
 
-test('dashboard menu actions expose semantic tones and colored icons', () => {
+test('dashboard menu actions and child feature navigation keep semantic controls', () => {
   const hero = read('../src/components/DashboardCharacterHero.tsx');
   const parent = read('../src/components/ParentDashboard.tsx');
   const child = read('../src/components/ChildDashboard.tsx');
@@ -31,8 +31,9 @@ test('dashboard menu actions expose semantic tones and colored icons', () => {
   for (const tone of ['attention', 'action', 'growth', 'reward', 'explore']) {
     assert.match(parent, new RegExp(`tone: '${tone}'`));
   }
+  assert.match(child, /const childFeatureNavigation/);
+  assert.match(child, /hh-child-feature-nav-button/);
   for (const tone of ['attention', 'action', 'explore', 'reward', 'growth', 'neutral']) {
-    assert.match(child, new RegExp(`tone: '${tone}'`));
     assert.match(tokens, new RegExp(`--hh-menu-tone-${tone}:`));
   }
   assert.match(hero, /className="hh-character-menu-icon" style=\{action\.tone/);
@@ -63,10 +64,16 @@ test('shared hero exposes one theme color for all dashboard controls', () => {
 test('child adventure cards let the character scene show through', () => {
   const neutralTheme = read('../src/styles/neutral-theme.css');
 
-  assert.match(neutralTheme, /\.hh-adventure-card\s*\{[\s\S]*?background:\s*color-mix\(in srgb, var\(--hh-neutral-surface\) 68%, transparent\)/);
-  assert.doesNotMatch(neutralTheme, /\.hh-adventure-card\s*\{[\s\S]*?backdrop-filter:/);
+  assert.match(neutralTheme, /\.hh-adventure-card\s*\{[\s\S]*?background:\s*var\(--hh-world-overlay-surface\)/);
+  assert.doesNotMatch(neutralTheme, /\.hh-adventure-card\s*\{[^}]*backdrop-filter:/);
   assert.match(neutralTheme, /\.hh-character-icon-button,[\s\S]*?background:\s*color-mix\(in srgb, var\(--hh-neutral-surface\) 68%, transparent\)/);
-  assert.doesNotMatch(neutralTheme, /\.hh-character-icon-button,[\s\S]*?backdrop-filter:/);
+  assert.doesNotMatch(neutralTheme, /\.hh-character-icon-button,[^{]*\{[^}]*backdrop-filter:/);
+});
+
+test('parent hero menu actions use the same translucent surface as settings', () => {
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(neutralTheme, /\.hh-sprite-theme \.hh-character-menu\[data-menu-variant="parent"\] \.hh-character-menu-root > \.hh-character-menu-action[\s\S]*?background:\s*var\(--hh-world-overlay-surface\)/);
 });
 
 test('completed adventure checks use the neutral black ink', () => {

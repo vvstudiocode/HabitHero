@@ -13,14 +13,14 @@ test('mobile world layout has separate portrait and landscape interaction contra
   const overlays = read('../src/styles/overlays.css');
 
   assert.match(controls, /orientation:\s*landscape/);
-  assert.match(controls, /left:\s*max\(/);
+  assert.match(controls, /var\(--hh-character-content-left,\s*12px\)/);
   assert.match(controls, /bottom:\s*max\(/);
   assert.match(world, /height:\s*100dvh/);
   assert.match(character, /\.hh-dashboard-screen--child[\s\S]*height:\s*100dvh/);
   assert.match(runtime, /ResizeObserver/);
   assert.match(runtime, /orientationchange/);
   assert.match(input, /viewportWidth/);
-  assert.match(overlays, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-friend-dock[\s\S]*?left:\s*calc\(/);
+  assert.match(overlays, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-friend-dock[\s\S]*?left:\s*calc\(50% \+ var\(--hh-world-chat-landscape-half-width\)/);
   assert.match(character, /@media \(orientation:\s*landscape\)[\s\S]*?data-active-menu="backpack"[\s\S]*?gap:\s*0/);
 });
 
@@ -51,7 +51,7 @@ test('world chat is only docked for a visited friend world and supports own-worl
   assert.doesNotMatch(dock, /未讀/);
   assert.match(overlays, /\.hh-world-chat-dock\s*\{[\s\S]*?left:\s*50%[\s\S]*?transform:\s*translateX\(-50%\)/);
   assert.match(overlays, /orientation:\s*landscape[\s\S]*?\.hh-world-chat-dock[\s\S]*?left:\s*50%[\s\S]*?bottom:\s*max\(/);
-  assert.match(overlays, /orientation:\s*landscape[\s\S]*?width:\s*min\(14rem,\s*calc\(100vw - 32px\)\)/);
+  assert.match(overlays, /orientation:\s*landscape[\s\S]*?width:\s*min\(var\(--hh-world-chat-landscape-width\),\s*calc\(100vw - var\(--hh-world-landscape-controls-reserved-width\)\)\)/);
   assert.match(character, /max-width:\s*760px[\s\S]*?orientation:\s*landscape[\s\S]*?grid-template-columns:\s*repeat\(2/);
   assert.doesNotMatch(social, /hh-world-visit-status/);
 });

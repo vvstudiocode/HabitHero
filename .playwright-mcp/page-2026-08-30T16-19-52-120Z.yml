@@ -1,0 +1,9 @@
+- main [ref=f12e3]:
+  - generic "HabitHero 吉爾特大型世界" [ref=f12e4]
+  - generic: 拖曳移動
+  - generic:
+    - generic: 吉爾特的遠境
+    - generic: WASD／方向鍵移動 ・ 拖曳旋轉視角
+  - status [ref=f12e5]:
+    - strong [ref=f12e6]: 正在載入大型世界
+    - generic [ref=f12e7]: 讀取草地與大樹模型…

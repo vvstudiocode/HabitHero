@@ -18,7 +18,10 @@ import {
   isWorldMovementKey,
 } from './input/keyboard-input';
 import { PointerInputController } from './input/pointer-input-controller';
-import { getWorldInputZone } from './input/world-input-types';
+import {
+  getWorldInputZone,
+  JOYSTICK_TOUCH_PADDING,
+} from './input/world-input-types';
 import {
   applySinglePointerCameraDrag,
   getGroundedCameraTargetHeight,
@@ -40,7 +43,14 @@ import {
   scaleWorldBudget,
   WORLD_QUALITY_SETTINGS,
 } from './world-quality';
-import { getWorldPixelRatio, shouldRenderWorldFrame } from './world-performance';
+import {
+  ACTIVE_WORLD_MAX_FPS,
+  createWorldFrameRateState,
+  getWorldPixelRatio,
+  shouldRenderWorldFrame,
+  updateWorldFrameRateState,
+  type WorldFrameActivity,
+} from './world-performance';
 import { createWorldWeatherRuntime } from './world-weather-runtime';
 import {
   createWanderState,
@@ -124,12 +134,23 @@ import {
 import {
   applyFixedSpawnIfChanged,
   createRemoteAvatarRuntimeManager,
+  projectWorldAvatarPosition,
+  type AvatarScreenPosition,
   type WorldRuntimeSession,
 } from './world-runtime-multiplayer';
 import { createPlayerGroundMarker, createPlayerGroundShadowMaterial } from './world-player-marker';
 import { createRemoteCharacterLoader } from './world-runtime-remote-character';
 import { createCharacterFallbackCatalogItem } from './world-character-loadout';
 import { groundWorldCharacter, getWorldCharacterFootNodes, mountWorldCharacterModel } from './world-character-runtime';
+import {
+  type AdventureTableScreenPosition,
+  getAdventureTableCatalogItem,
+  getAdventureTableCollisionInput,
+  getAdventureTablePromptHeight,
+  getAdventureTablePromptScale,
+  getAdventureTableWorldTransform,
+  isAdventureTableNearby as isAdventureTableWithinInteractionRadius,
+} from './adventure-table';
 
 export {
   PROTOTYPE_WORLD_ASSETS,
@@ -346,8 +367,11 @@ export interface PrototypeWorldRuntimeOptions {
   session?: WorldRuntimeSession;
   onPlacementPositionChange?: (position: { x: number; z: number }) => void;
   onPlacementGestureChange?: (gesture: { scaleFactor: number; rotationDelta: number }) => void;
+  onAvatarScreenPositionsChange?: (positions: ReadonlyMap<string, AvatarScreenPosition>) => void;
   onDecorationSelect?: (selection: DecorationSelection | null) => void;
   onPetSelect?: (selection: PetSelection | null) => void;
+  onAdventureTableScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
+  onAdventureTableIndicatorScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
   onStatus: (status: RuntimeStatus) => void;
@@ -818,6 +842,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let playPetAnimation: (inventoryItemId: string, action: PetAnimationAction) => boolean = () => false;
   let stopPetAnimation: (inventoryItemId: string) => void = () => undefined;
   let playInteractionAction: (action: PetAnimationAction) => boolean = () => false;
+  let lastAvatarScreenPositionsAt = Number.NEGATIVE_INFINITY;
+  let lastAdventureTableScreenPositionAt = Number.NEGATIVE_INFINITY;
+  let adventureTableScreenPosition: AdventureTableScreenPosition | null = null;
   let optimisticPetActorsDirty = false;
   const optimisticPetIdles = new Map<string, PetSelection>();
   let latestRuntimeUpdate: PrototypeWorldRuntimeUpdate = {
@@ -1035,6 +1062,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       }
       if (disposed) return;
 
+      const adventureTableItem = getAdventureTableCatalogItem(options.gameData);
       const decorationModelSources = new Map<string, Object3D>();
       const decorationModelLoads = new Map<string, Promise<Object3D | undefined>>();
       const loadDecorationModelSource = (item: GameCatalogItem, loadSignal: AbortSignal) => {
@@ -1088,6 +1116,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         ),
         outerDensityMultiplier: qualitySettings.outerDensityMultiplier,
         boundaryDensityMultiplier: qualitySettings.boundaryDensityMultiplier,
+        enableInteractions: false,
         sunDirection: visualSettings.sunDirection,
         sunColor: visualSettings.sunColor,
         ambientColor: visualSettings.grassAmbientColor,
@@ -1132,6 +1161,52 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       }, treePlacement.scale);
       tree.scale.y *= PROTOTYPE_WORLD_CONFIG.treeHeightScale;
       terrain.add(tree);
+      const adventureTableTransform = getAdventureTableWorldTransform({
+        x: treePlacement.x,
+        z: treePlacement.z,
+      });
+      const adventureTableObject = createDecorationObject(
+        THREE,
+        adventureTableItem,
+        1,
+        decorationModelSources.get(adventureTableItem.id),
+      );
+      adventureTableObject.name = 'adventure-table-landmark';
+      adventureTableObject.userData.isAdventureTable = true;
+      adventureTableObject.position.set(
+        adventureTableTransform.x,
+        adventureTableTransform.y,
+        adventureTableTransform.z,
+      );
+      adventureTableObject.rotation.y = adventureTableTransform.rotationY;
+      setDecorationObjectScale(adventureTableObject, adventureTableTransform.scale);
+      (adventureTableObject as Object3D & { castShadow?: boolean }).castShadow = true;
+      terrain.add(adventureTableObject);
+      const adventureTablePromptPoint = new THREE.Vector3();
+      const adventureTableBounds = new THREE.Box3();
+      const getAdventureTableScreenPosition = (viewport: DOMRect): AdventureTableScreenPosition | undefined => {
+        adventureTableObject.updateMatrixWorld(true);
+        adventureTableBounds.setFromObject(adventureTableObject);
+        adventureTablePromptPoint.set(
+          adventureTableTransform.x,
+          getAdventureTablePromptHeight(
+            Math.max(adventureTableBounds.max.y + 0.2, 0.9),
+            adventureTableBounds.min.y,
+          ),
+          adventureTableTransform.z,
+        );
+        adventureTablePromptPoint.project(camera);
+        if (adventureTablePromptPoint.z < -1 || adventureTablePromptPoint.z > 1 || adventureTablePromptPoint.x < -1 || adventureTablePromptPoint.x > 1 || adventureTablePromptPoint.y < -1 || adventureTablePromptPoint.y > 1) return undefined;
+        return {
+          x: viewport.left + ((adventureTablePromptPoint.x + 1) / 2) * viewport.width,
+          y: viewport.top + ((1 - adventureTablePromptPoint.y) / 2) * viewport.height,
+          scale: getAdventureTablePromptScale(
+            cameraDistance,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceMax,
+          ),
+        };
+      };
       const centralTreeHeight = treeDefinition.size.y * treePlacement.scale * PROTOTYPE_WORLD_CONFIG.treeHeightScale;
       terrain.add(createProceduralForest(THREE, {
         terrainLimit,
@@ -1328,9 +1403,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
       groundCharacterOnGrass();
 
+      const adventureTableCollision = buildCollisionCircles([
+        getAdventureTableCollisionInput(adventureTableTransform, adventureTableItem),
+      ])[0];
       const decorationCollisions = buildCollisionCircles(options.gameData.worldEntities
         .filter((entity) => entity.entityKind === 'decoration')
         .map((entity) => getDecorationCollisionInput(options.gameData, entity)));
+      if (adventureTableCollision) decorationCollisions.push(adventureTableCollision);
       const wanderObstacles = [CENTRAL_TREE_KEEP_OUT, ...decorationCollisions];
       const petSpawnObstacles = [CHARACTER_SPAWN, ...wanderObstacles];
       let petSpawnIndex = 0;
@@ -1910,6 +1989,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
         const nextCollisions = buildCollisionCircles([...activeDecorations.values()]
           .map((entity) => getDecorationCollisionInput(nextGameData, entity)));
+        if (adventureTableCollision) nextCollisions.push(adventureTableCollision);
         decorationCollisions.splice(0, decorationCollisions.length, ...nextCollisions);
         wanderObstacles.splice(1, wanderObstacles.length - 1, ...nextCollisions);
         updateDecorationGroundCoverMasks(proceduralGrass, proceduralFlowers, nextGameData, latestRuntimeUpdate.placement);
@@ -2049,6 +2129,18 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let placementActive = false;
       const placementPointers = new Map<number, { point: { x: number; y: number }; startedOnDecoration: boolean }>();
       let placementGesture: { previousDistance: number; previousAngle: number } | null = null;
+      let adventureTableNearby = false;
+      const updateAdventureTableProximity = () => {
+        if (placementActive) return;
+        const distance = Math.hypot(
+          playerRoot.position.x - adventureTableTransform.x,
+          playerRoot.position.z - adventureTableTransform.z,
+        );
+        const nextNearby = isAdventureTableWithinInteractionRadius(distance, adventureTableNearby);
+        if (nextNearby === adventureTableNearby) return;
+        adventureTableNearby = nextNearby;
+        adventureTableScreenPosition = null;
+      };
       updateScene = (next) => {
         appliedFixedSpawn = applyFixedSpawnIfChanged(playerRoot, next.session?.fixedSpawn, appliedFixedSpawn, () => { playerFollowHistory.length = 0; controller?.reset(); });
         const wasPlacementActive = placementActive;
@@ -2081,6 +2173,20 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const keys = new Set<string>();
       const clock = new THREE.Clock();
       let lastRenderedAt = Number.NEGATIVE_INFINITY;
+      let worldFrameRateState = createWorldFrameRateState(window.performance.now());
+      let worldFrameActivity: WorldFrameActivity = {
+        playerMoving: false,
+        petMoving: false,
+        cameraMoving: false,
+        roamingCharacterMoving: false,
+        interactionActive: false,
+      };
+      const wakeWorldFrames = () => {
+        worldFrameRateState = {
+          lastActiveAt: window.performance.now(),
+          maxFps: ACTIVE_WORLD_MAX_FPS,
+        };
+      };
 
       const resize = () => {
         const rect = options.canvas.getBoundingClientRect();
@@ -2103,6 +2209,20 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const pointFromEvent = (event: PointerEvent) => {
         const rect = options.canvas.getBoundingClientRect();
         return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      };
+      const getJoystickMovementCircle = (canvasRect: DOMRect) => {
+        const joystick = options.canvas.parentElement?.querySelector<HTMLElement>('.hh-world-joystick');
+        if (!joystick) return undefined;
+        const joystickRect = joystick.getBoundingClientRect();
+        const visibleDiameter = Math.min(joystickRect.width, joystickRect.height);
+        if (visibleDiameter <= 0) return undefined;
+        return {
+          center: {
+            x: joystickRect.left - canvasRect.left + joystickRect.width * 0.5,
+            y: joystickRect.top - canvasRect.top + joystickRect.height * 0.5,
+          },
+          radius: visibleDiameter * 0.5 + JOYSTICK_TOUCH_PADDING,
+        };
       };
       const decorationSelectionFromEvent = (event: PointerEvent): DecorationSelection | null => {
         const point = pointFromEvent(event);
@@ -2211,6 +2331,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let pendingPetSelection: { pointerId: number; selection: PetSelection | null } | null = null;
       const onPointerDown = (event: PointerEvent) => {
         if (options.pausedRef.current || isInteractiveTarget(event.target)) return;
+        wakeWorldFrames();
         if (placementActive) {
           const point = pointFromEvent(event);
           const worldPoint = worldPointFromEvent(event);
@@ -2239,7 +2360,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           pointerId: event.pointerId,
           pointerType: event.pointerType === 'mouse' ? 'mouse' : event.pointerType === 'pen' ? 'pen' : 'touch',
           point,
-          zone: event.pointerType === 'mouse' ? 'camera' : getWorldInputZone(point, rect.height, rect.width),
+          zone: event.pointerType === 'mouse'
+            ? 'camera'
+            : getWorldInputZone(point, rect.height, rect.width, getJoystickMovementCircle(rect)),
         });
       };
       const onPointerMove = (event: PointerEvent) => {
@@ -2247,6 +2370,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (placementActive) {
           const pointer = placementPointers.get(event.pointerId);
           if (!pointer) return;
+          wakeWorldFrames();
           event.preventDefault();
           pointer.point = pointFromEvent(event);
           if (placementPointers.size === 2 && placementGesture) {
@@ -2264,6 +2388,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             options.onPlacementPositionChange?.(worldPoint);
           }
           return;
+        }
+        if (event.buttons !== 0 || event.pressure > 0 || pendingDecorationSelection?.pointerId === event.pointerId) {
+          wakeWorldFrames();
         }
         const point = pointFromEvent(event);
         if (pendingDecorationSelection?.pointerId === event.pointerId) {
@@ -2300,6 +2427,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const onKeyDown = (event: KeyboardEvent) => {
         const key = event.key.toLowerCase();
         if (options.pausedRef.current || placementActive || isInteractiveTarget(event.target) || (!isWorldMovementKey(key) && !isWorldCameraKey(key))) return;
+        wakeWorldFrames();
         keys.add(key);
         event.preventDefault();
       };
@@ -2348,8 +2476,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           }, 250);
           return;
         }
+        worldFrameRateState = updateWorldFrameRateState({
+          now: frameTime,
+          state: worldFrameRateState,
+          activity: worldFrameActivity,
+        });
         animationFrame = window.requestAnimationFrame(animate);
-        if (!shouldRenderWorldFrame({ now: frameTime, lastRenderedAt })) return;
+        if (!shouldRenderWorldFrame({ now: frameTime, lastRenderedAt, maxFps: worldFrameRateState.maxFps })) return;
         lastRenderedAt = frameTime;
         const delta = Math.min(clock.getDelta(), 0.05);
         sceneElapsedTime += delta;
@@ -2360,9 +2493,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         });
         const currentInput = controller?.getSnapshot();
         let isPlayerMoving = false;
+        let isCameraMoving = false;
         if (currentInput && !options.pausedRef.current && !placementActive) {
           const cameraDelta = controller?.consumeCameraDeltas();
           if (cameraDelta && (cameraDelta.cameraDelta.x !== 0 || cameraDelta.cameraDelta.y !== 0)) {
+            isCameraMoving = true;
             const nextCamera = applySinglePointerCameraDrag(
               { yaw: cameraYaw, pitch: cameraPitch },
               { dx: cameraDelta.cameraDelta.x, dy: cameraDelta.cameraDelta.y },
@@ -2374,9 +2509,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             cameraYaw = nextCamera.yaw;
             cameraPitch = nextCamera.pitch;
           }
-          if (cameraDelta?.zoomDelta) cameraDistance = Math.min(PROTOTYPE_WORLD_CONFIG.cameraDistanceMax, Math.max(PROTOTYPE_WORLD_CONFIG.cameraDistanceMin, cameraDistance - cameraDelta.zoomDelta * 0.012));
+          if (cameraDelta?.zoomDelta) {
+            isCameraMoving = true;
+            cameraDistance = Math.min(PROTOTYPE_WORLD_CONFIG.cameraDistanceMax, Math.max(PROTOTYPE_WORLD_CONFIG.cameraDistanceMin, cameraDistance - cameraDelta.zoomDelta * 0.012));
+          }
           const keyboardCamera = getKeyboardCameraInput(keys);
           if (keyboardCamera.yaw || keyboardCamera.pitch) {
+            isCameraMoving = true;
             cameraYaw += keyboardCamera.yaw * delta * 1.8;
             cameraPitch = Math.min(
               PROTOTYPE_WORLD_CONFIG.cameraPitchMax,
@@ -2384,6 +2523,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             );
           }
           if (keyboardCamera.zoom) {
+            isCameraMoving = true;
             cameraDistance = Math.min(
               PROTOTYPE_WORLD_CONFIG.cameraDistanceMax,
               Math.max(PROTOTYPE_WORLD_CONFIG.cameraDistanceMin, cameraDistance - keyboardCamera.zoom * delta * 3.2),
@@ -2417,6 +2557,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             characterRoot.rotation.y += yawDelta * Math.min(1, delta * 12);
           }
         }
+        updateAdventureTableProximity();
         if (interactionActionState) {
           if (isPlayerMoving) {
             finishInteractionAction('walk');
@@ -2425,11 +2566,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (!interactionActionState) {
           playCharacterAction(isPlayerMoving ? 'walk' : 'idle');
         }
-        proceduralGrass.update({ time: sceneElapsedTime });
         ambientPollen.update(sceneElapsedTime);
         butterflies.update(sceneElapsedTime);
         eastFairytaleScenery.update(sceneElapsedTime);
         const now = clock.elapsedTime;
+        let isRoamingCharacterMoving = false;
         if (roamingActor) {
           const current = { x: roamingActor.object.position.x, z: roamingActor.object.position.z };
           const step = getWanderStep(
@@ -2442,6 +2583,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             now,
           );
           const isWalking = step.walking && !step.blocked;
+          isRoamingCharacterMoving = isWalking;
           roamingActor.facing = step.facing;
           roamingActor.object.position.x = step.next.x;
           roamingActor.object.position.z = step.next.z;
@@ -2477,9 +2619,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           if (!left.follow && right.follow) return 1;
           return left.follow && right.follow ? left.followIndex - right.followIndex : 0;
         });
+        let isPetMoving = false;
         petActors.forEach((actor) => {
           if (!actor.active) return;
           if (actor.petAction) {
+            isPetMoving = true;
             actor.target = null;
             actor.followHistory.length = 0;
             actor.state = 'idle';
@@ -2529,6 +2673,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             actor.object.position.z = followingStep.next.z;
             actor.object.position.y = actor.baseY;
             if (moved > 0.0001) {
+              isPetMoving = true;
               actor.facing = followingStep.facing;
               const targetYaw = Math.atan2(followingStep.facing.x, followingStep.facing.z);
               const yawDelta = Math.atan2(
@@ -2562,6 +2707,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           actor.facing = step.facing;
           actor.object.position.x = step.next.x;
           actor.object.position.z = step.next.z;
+          if (step.walking && !step.blocked) isPetMoving = true;
           if (!step.walking || step.blocked) {
             actor.state = 'idle';
             actor.object.position.y = actor.baseY;
@@ -2597,6 +2743,40 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const cameraPosition = target.clone().add(cameraOffset);
         camera.position.lerp(cameraPosition, 1 - Math.pow(0.001, Math.min(delta, 0.05)));
         camera.lookAt(target);
+        if (
+          (options.onAdventureTableScreenPositionChange || options.onAdventureTableIndicatorScreenPositionChange)
+          && frameTime - lastAdventureTableScreenPositionAt >= 50
+        ) {
+          camera.updateMatrixWorld();
+          const viewport = options.canvas.getBoundingClientRect();
+          const tableScreenPosition = getAdventureTableScreenPosition(viewport) ?? null;
+          adventureTableScreenPosition = adventureTableNearby ? tableScreenPosition : null;
+          options.onAdventureTableScreenPositionChange?.(adventureTableScreenPosition);
+          options.onAdventureTableIndicatorScreenPositionChange?.(tableScreenPosition);
+          lastAdventureTableScreenPositionAt = frameTime;
+        }
+        if (options.onAvatarScreenPositionsChange && frameTime - lastAvatarScreenPositionsAt >= 50) {
+          camera.updateMatrixWorld();
+          const viewport = options.canvas.getBoundingClientRect();
+          const positions = new Map<string, AvatarScreenPosition>();
+          const localChildProfileId = latestRuntimeUpdate.session?.multiplayer?.childProfileId;
+          const localPosition = localChildProfileId
+            ? projectWorldAvatarPosition(THREE, camera, viewport, playerRoot, characterDefinition.size.y * characterScale + 0.18)
+            : undefined;
+          if (localChildProfileId && localPosition) positions.set(localChildProfileId, localPosition);
+          activeRemoteAvatarRuntime.getScreenPositions(camera, viewport).forEach((position, childProfileId) => {
+            positions.set(childProfileId, position);
+          });
+          options.onAvatarScreenPositionsChange(positions);
+          lastAvatarScreenPositionsAt = frameTime;
+        }
+        worldFrameActivity = {
+          playerMoving: isPlayerMoving,
+          petMoving: isPetMoving,
+          cameraMoving: isCameraMoving,
+          roamingCharacterMoving: isRoamingCharacterMoving,
+          interactionActive: Boolean(interactionActionState) || placementActive,
+        };
         const emote = interactionActionState?.action ?? 'none';
         latestRuntimeUpdate.session?.multiplayer?.broadcastState({
           now: Date.now(),

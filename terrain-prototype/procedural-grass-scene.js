@@ -144,19 +144,24 @@ function createGrassMaterial(THREE, {
   sunDirection = [-0.52, 0.78, -0.36],
   sunColor = 0xffe2b0,
   ambientColor = 0xc1dfc4,
+  enableInteractions = true,
 } = {}) {
   const walkableHalf = Math.min(walkableSize, fieldSize) * 0.5;
   const fieldHalf = fieldSize * 0.5;
   const uniforms = THREE.UniformsUtils.merge([
     THREE.UniformsLib.fog,
     {
-      uTime: { value: 0 },
-      uInteractorPositionA: { value: new THREE.Vector2(1000, 1000) },
-      uInteractorPositionB: { value: new THREE.Vector2(1000, 1000) },
-      uInteractorDirectionA: { value: new THREE.Vector2(0, 1) },
-      uInteractorDirectionB: { value: new THREE.Vector2(0, 1) },
-      uInteractorStrengthA: { value: 0 },
-      uInteractorStrengthB: { value: 0 },
+      ...(enableInteractions
+        ? {
+            uTime: { value: 0 },
+            uInteractorPositionA: { value: new THREE.Vector2(1000, 1000) },
+            uInteractorPositionB: { value: new THREE.Vector2(1000, 1000) },
+            uInteractorDirectionA: { value: new THREE.Vector2(0, 1) },
+            uInteractorDirectionB: { value: new THREE.Vector2(0, 1) },
+            uInteractorStrengthA: { value: 0 },
+            uInteractorStrengthB: { value: 0 },
+          }
+        : {}),
       uSunDirection: { value: new THREE.Vector3(...sunDirection).normalize() },
       uSunColor: { value: new THREE.Color(sunColor) },
       uAmbientColor: { value: new THREE.Color(ambientColor) },
@@ -184,6 +189,7 @@ function createGrassMaterial(THREE, {
       attribute float instanceRotation;
       attribute float instanceVariation;
 
+      ${enableInteractions ? `
       uniform float uTime;
       uniform vec2 uInteractorPositionA;
       uniform vec2 uInteractorPositionB;
@@ -191,6 +197,7 @@ function createGrassMaterial(THREE, {
       uniform vec2 uInteractorDirectionB;
       uniform float uInteractorStrengthA;
       uniform float uInteractorStrengthB;
+      ` : ''}
       uniform float uWalkableHalf;
       uniform float uFieldHalf;
       uniform float uGroundCoverMaskCount;
@@ -232,6 +239,7 @@ function createGrassMaterial(THREE, {
         return visibility;
       }
 
+      ${enableInteractions ? `
       vec2 getInteractionOffset(
         vec2 bladePosition,
         vec2 interactorPosition,
@@ -250,6 +258,7 @@ function createGrassMaterial(THREE, {
         vec2 ripplePush = radialDirection * ripple * 0.022;
         return (contactPush + trailingPush + ripplePush) * pow(bladeHeight, 1.36);
       }
+      ` : ''}
 
       void main() {
         float bladeHeight = position.y;
@@ -262,6 +271,7 @@ function createGrassMaterial(THREE, {
         float sine = sin(instanceRotation);
         vec2 rotated = mat2(cosine, -sine, sine, cosine) * localPosition.xz;
         vec2 worldXZ = instanceOffset.xz + rotated;
+        ${enableInteractions ? `
         worldXZ += getInteractionOffset(
           instanceOffset.xz,
           uInteractorPositionA,
@@ -276,6 +286,7 @@ function createGrassMaterial(THREE, {
           uInteractorStrengthB,
           bladeHeight
         );
+        ` : ''}
 
         float groundCoverVisibility = getGroundCoverVisibility(instanceOffset.xz);
         localPosition.y *= groundCoverVisibility;
@@ -365,6 +376,7 @@ export function createProceduralGrassField(THREE, {
   seed = 20260809,
   outerDensityMultiplier = 1,
   boundaryDensityMultiplier = 1,
+  enableInteractions = true,
   sunDirection,
   sunColor,
   ambientColor,
@@ -413,6 +425,7 @@ export function createProceduralGrassField(THREE, {
     sunDirection,
     sunColor,
     ambientColor,
+    enableInteractions,
   });
   const groundMaterial = createNaturalGroundMaterial(THREE, { walkableSize, fieldSize });
   const outerGround = new THREE.Mesh(
@@ -440,7 +453,7 @@ export function createProceduralGrassField(THREE, {
   ground.add(outerGround, walkableGround);
 
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = 'procedural-interactive-grass';
+  mesh.name = enableInteractions ? 'procedural-interactive-grass' : 'procedural-static-grass';
   // Keep the grass lit by its custom shader without adding blade shadows to
   // the scene's shadow pass. The walkable ground still receives main-scene
   // shadows, so trees and characters retain their depth cues there.
@@ -448,18 +461,20 @@ export function createProceduralGrassField(THREE, {
   mesh.receiveShadow = false;
   mesh.frustumCulled = false;
 
-  const interactorUniforms = [
-    {
-      position: uniforms.uInteractorPositionA.value,
-      direction: uniforms.uInteractorDirectionA.value,
-      strength: uniforms.uInteractorStrengthA,
-    },
-    {
-      position: uniforms.uInteractorPositionB.value,
-      direction: uniforms.uInteractorDirectionB.value,
-      strength: uniforms.uInteractorStrengthB,
-    },
-  ];
+  const interactorUniforms = enableInteractions
+    ? [
+        {
+          position: uniforms.uInteractorPositionA.value,
+          direction: uniforms.uInteractorDirectionA.value,
+          strength: uniforms.uInteractorStrengthA,
+        },
+        {
+          position: uniforms.uInteractorPositionB.value,
+          direction: uniforms.uInteractorDirectionB.value,
+          strength: uniforms.uInteractorStrengthB,
+        },
+      ]
+    : [];
 
   function updateGroundCoverMasks(masks = []) {
     const safeMasks = masks.slice(0, MAX_GROUND_COVER_MASKS);
@@ -484,8 +499,9 @@ export function createProceduralGrassField(THREE, {
   updateGroundCoverMasks(groundCoverMasks);
 
   function update({ time, interactors = [], groundCoverMasks: nextGroundCoverMasks = undefined }) {
-    uniforms.uTime.value = time;
     if (nextGroundCoverMasks) updateGroundCoverMasks(nextGroundCoverMasks);
+    if (!enableInteractions) return;
+    uniforms.uTime.value = time;
 
     for (let index = 0; index < MAX_GRASS_INTERACTORS; index += 1) {
       const target = interactorUniforms[index];

@@ -1,0 +1,24 @@
+[   22990ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   22990ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[   84941ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   84941ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[  145404ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  145405ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[  205309ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  205309ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[  306059ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  306060ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[  721937ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  721937ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[ 1631130ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1631131ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[ 1804444ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1804444ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[ 2047132ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2047132ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[ 2277271ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2277272ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[ 2384917ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2384917ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[ 2553010ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2553010ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101

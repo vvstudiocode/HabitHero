@@ -23,6 +23,7 @@ interface AdventureTaskDetailProps {
   onComplete: (task: AdventureTask, input: AdventureCompletionInput) => Promise<void>;
   onAbandon?: (task: AdventureTask) => Promise<void>;
   onRequestClose: () => void;
+  embedded?: boolean;
 }
 
 function formatSeconds(seconds: number): string {
@@ -40,6 +41,7 @@ export function AdventureTaskDetail({
   onComplete,
   onAbandon,
   onRequestClose,
+  embedded = false,
 }: AdventureTaskDetailProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -56,7 +58,13 @@ export function AdventureTaskDetail({
   const completionAlarmActive = task.timerIsRunning && timerComplete;
   const dueTime = task.dueTime?.slice(0, 5);
   const endTime = task.endTime?.slice(0, 5);
-  const requestClose = () => setClosing(true);
+  const requestClose = () => {
+    if (embedded) {
+      onRequestClose();
+      return;
+    }
+    setClosing(true);
+  };
   const confirmAbandon = async () => {
     if (!onAbandon || !canAbandon || abandonLoading) return;
     setAbandonLoading(true);
@@ -69,6 +77,7 @@ export function AdventureTaskDetail({
   };
 
   useEffect(() => {
+    if (embedded) return undefined;
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeButtonRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
@@ -98,23 +107,23 @@ export function AdventureTaskDetail({
       document.removeEventListener('keydown', onKeyDown);
       previouslyFocused?.focus();
     };
-  }, []);
+  }, [embedded]);
 
   return (
     <div
-      className={`hh-adventure-detail-overlay${closing ? ' is-leaving' : ''}`}
+      className={embedded ? 'hh-adventure-detail-embedded-shell' : `hh-adventure-detail-overlay${closing ? ' is-leaving' : ''}`}
       onTransitionEnd={(event) => {
-        if (event.target === event.currentTarget && event.propertyName === 'opacity' && closing) {
+        if (!embedded && event.target === event.currentTarget && event.propertyName === 'opacity' && closing) {
           onRequestClose();
         }
       }}
     >
-      <button type="button" className="hh-adventure-button hh-adventure-detail-backdrop" aria-label="關閉冒險詳情" onClick={requestClose} />
+      {!embedded && <button type="button" className="hh-adventure-button hh-adventure-detail-backdrop" aria-label="關閉冒險詳情" onClick={requestClose} />}
       <section
         ref={dialogRef}
-        className="hh-adventure-detail"
+        className={`hh-adventure-detail${embedded ? ' hh-adventure-detail--embedded' : ''}`}
         role="dialog"
-        aria-modal="true"
+        aria-modal={embedded ? undefined : 'true'}
         aria-labelledby="hh-adventure-detail-title"
       >
         <header className="hh-adventure-detail-header">

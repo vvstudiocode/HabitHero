@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
   createFireflyLayout,
   getFireflyCount,
@@ -8,6 +9,12 @@ import {
 } from '../src/features/world/world-weather-effects';
 
 describe('world weather effect budgets', () => {
+  it('keeps night stars aligned with the sky direction instead of copying camera rotation', () => {
+    const source = readFileSync(new URL('../src/features/world/world-weather-effects.ts', import.meta.url), 'utf8');
+    assert.match(source, /stars\.position\.copy\(camera\.position\)/);
+    assert.doesNotMatch(source, /stars\.quaternion\.copy\(camera\.quaternion\)/);
+  });
+
   it('uses the same restrained rain amount across every time phase', () => {
     assert.equal(getRainVisualIntensity('dawn', 'rain'), 0.3);
     assert.equal(getRainVisualIntensity('day', 'storm'), 0.3);

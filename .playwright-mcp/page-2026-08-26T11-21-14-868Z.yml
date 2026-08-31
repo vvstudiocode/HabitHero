@@ -1,0 +1,23 @@
+- banner [ref=e5]:
+  - generic [ref=e6]:
+    - generic:
+      - generic "家長功能主選單":
+        - button [ref=e9]:
+          - strong [ref=e14]: 審核
+        - button [ref=e15]:
+          - strong [ref=e19]: 任務
+        - button [ref=e20]:
+          - strong [ref=e24]: 成長
+        - button [ref=e25]:
+          - strong [ref=e31]: 獎勵
+        - button [ref=e32]:
+          - strong [ref=e37]: 商店
+    - generic "儀表板統計":
+      - generic "家庭總點數：0":
+        - strong:
+          - generic: "0"
+      - generic "待審核項目：0待審核":
+        - strong:
+          - generic: "0"
+          - emphasis: 待審核
+    - button "設定" [ref=e39]

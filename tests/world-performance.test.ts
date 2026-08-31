@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { getWorldPixelRatio, shouldRenderWorldFrame } from '../src/features/world/world-performance';
+import {
+  createWorldFrameRateState,
+  getWorldPixelRatio,
+  shouldRenderWorldFrame,
+  updateWorldFrameRateState,
+} from '../src/features/world/world-performance';
 
 const joystickSource = readFileSync(
   new URL('../src/features/world/components/DynamicJoystick.tsx', import.meta.url),
@@ -32,5 +37,36 @@ describe('world touch controls and rendering budget', () => {
     assert.equal(shouldRenderWorldFrame({ now: 8, lastRenderedAt: 0, maxFps: 60 }), false);
     assert.equal(shouldRenderWorldFrame({ now: 16.67, lastRenderedAt: 0, maxFps: 60 }), true);
     assert.equal(shouldRenderWorldFrame({ now: 16, lastRenderedAt: 0, maxFps: 60 }), false);
+  });
+
+  it('keeps active scenes at 60fps and enters 30fps only after the idle grace period', () => {
+    const idleActivity = {
+      playerMoving: false,
+      petMoving: false,
+      cameraMoving: false,
+      roamingCharacterMoving: false,
+      interactionActive: false,
+    };
+    let state = createWorldFrameRateState(100);
+
+    state = updateWorldFrameRateState({ now: 500, state, activity: idleActivity });
+    assert.equal(state.maxFps, 60);
+    state = updateWorldFrameRateState({ now: 849, state, activity: idleActivity });
+    assert.equal(state.maxFps, 60);
+    state = updateWorldFrameRateState({ now: 850, state, activity: idleActivity });
+    assert.equal(state.maxFps, 30);
+
+    state = updateWorldFrameRateState({
+      now: 851,
+      state,
+      activity: { ...idleActivity, petMoving: true },
+    });
+    assert.equal(state.maxFps, 60);
+    assert.equal(state.lastActiveAt, 851);
+
+    state = updateWorldFrameRateState({ now: 1500, state, activity: idleActivity });
+    assert.equal(state.maxFps, 60);
+    state = updateWorldFrameRateState({ now: 1601, state, activity: idleActivity });
+    assert.equal(state.maxFps, 30);
   });
 });

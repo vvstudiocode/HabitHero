@@ -26,7 +26,7 @@
 
 .hh-world-joystick--dynamic {
   top: clamp(56px, var(--hh-joystick-y), calc(100% - 56px));
-  left: clamp(56px, var(--hh-joystick-x), calc(100% - 56px));
+  left: clamp(max(56px, calc(env(safe-area-inset-left, 0px) + 56px)), var(--hh-joystick-x), calc(100% - max(56px, calc(env(safe-area-inset-right, 0px) + 56px))));
 }
 
 .hh-world-joystick--fixed::before {
@@ -202,6 +202,103 @@
 .hh-world-action-control.is-hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+.hh-adventure-table-dialogue {
+  position: fixed;
+  z-index: 5;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transform: translate(-50%, calc(-100% - 8px)) scale(var(--hh-adventure-table-prompt-scale, 1));
+  animation: hh-adventure-table-dialogue-in var(--hh-adventure-enter-duration) cubic-bezier(.16, 1, .3, 1) both;
+  transition: box-shadow 160ms ease, background 160ms ease;
+}
+
+.hh-adventure-table-dialogue:active {
+  transform: translate(-50%, calc(-100% - 8px)) scale(calc(var(--hh-adventure-table-prompt-scale, 1) * .96));
+}
+
+.hh-adventure-table-dialogue-trigger {
+  --hh-adventure-entry-size: 52px;
+  position: fixed;
+  z-index: 5;
+  right: max(16px, calc(env(safe-area-inset-right, 0px) + 16px));
+  bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px));
+  display: grid;
+  width: var(--hh-adventure-entry-size);
+  min-width: var(--hh-adventure-entry-size);
+  height: var(--hh-adventure-entry-size);
+  min-height: var(--hh-adventure-entry-size);
+  place-items: center;
+  padding: 0;
+  border-radius: 18px;
+  touch-action: manipulation;
+  animation: hh-adventure-table-dialogue-trigger-in var(--hh-adventure-enter-duration) cubic-bezier(.16, 1, .3, 1) both;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.hh-adventure-table-dialogue-trigger:active {
+  transform: scale(.95);
+}
+
+.hh-adventure-table-notification {
+  --hh-adventure-entry-size: 52px;
+  --hh-adventure-entry-stack-gap: 8px;
+  position: fixed;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  right: auto;
+  bottom: auto;
+  display: grid;
+  width: var(--hh-adventure-entry-size);
+  min-width: var(--hh-adventure-entry-size);
+  height: var(--hh-adventure-entry-size);
+  min-height: var(--hh-adventure-entry-size);
+  place-items: center;
+  padding: 0;
+  border-radius: 18px;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - var(--hh-adventure-entry-size) - var(--hh-adventure-entry-stack-gap)));
+  animation: hh-adventure-table-notification-in var(--hh-adventure-enter-duration) cubic-bezier(.16, 1, .3, 1) both;
+  transition: opacity 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.hh-adventure-table-notification-icon {
+  display: block;
+  flex: none;
+}
+
+@keyframes hh-adventure-table-dialogue-trigger-in {
+  from { opacity: 0; transform: translateY(6px) scale(.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes hh-adventure-table-notification-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - var(--hh-adventure-entry-size) - var(--hh-adventure-entry-stack-gap))) scale(.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - var(--hh-adventure-entry-size) - var(--hh-adventure-entry-stack-gap))) scale(1);
+  }
+}
+
+@keyframes hh-adventure-table-dialogue-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .hh-world-clean-mode-hint {
@@ -568,21 +665,32 @@
 }
 
 @media (orientation: landscape) {
+  /* Align the fixed joystick with the adventure cards and keep it inside the left safe area. */
   .hh-world-joystick--fixed {
     display: block;
     opacity: 0.46;
     top: calc(100% - max(18px, calc(env(safe-area-inset-bottom, 0px) + 18px)) - 56px);
-    left: max(72px, calc(env(safe-area-inset-left, 0px) + 72px));
+    left: calc(var(--hh-character-content-left, 12px) + (var(--hh-adventure-board-width) / 2));
+  }
+
+  .hh-dashboard-screen--child[data-landscape-cutout-side="left"] .hh-world-joystick--fixed {
+    left: calc(env(safe-area-inset-left, 0px) + var(--hh-character-content-left, 12px) + (var(--hh-adventure-board-width) / 2));
   }
 
   .hh-world-action-control {
     bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
-    left: calc(max(16px, env(safe-area-inset-left, 0px) + 16px) + 128px);
+    left: calc(50% + var(--hh-world-chat-landscape-half-width) + var(--hh-world-control-gap));
   }
 
   .hh-world-clean-mode-control {
     bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
-    left: calc(max(16px, env(safe-area-inset-left, 0px) + 16px) + 184px);
+    left: calc(50% + var(--hh-world-chat-landscape-half-width) + var(--hh-world-control-gap) + var(--hh-world-control-size) + var(--hh-world-control-gap));
+  }
+}
+
+@media (orientation: portrait) {
+  .hh-adventure-table-dialogue-trigger {
+    display: none;
   }
 }
 
@@ -598,6 +706,17 @@
   .hh-world-action-control,
   .hh-world-action-toggle,
   .hh-world-action-item {
+    transition: none;
+  }
+
+  .hh-adventure-table-dialogue {
+    animation: none;
+    transition: none;
+  }
+
+  .hh-adventure-table-dialogue-trigger,
+  .hh-adventure-table-notification {
+    animation: none;
     transition: none;
   }
 

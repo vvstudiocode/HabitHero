@@ -11,7 +11,6 @@ import {
 } from '../src/features/adventures/components/ParentAdventureScheduleForm';
 import {
   validateGeneralAdventure,
-  validateGeneralAdventureTitle,
   type ParentGeneralAdventureInput,
 } from '../src/features/adventures/components/ParentGeneralAdventureForm';
 
@@ -67,7 +66,7 @@ test('daily schedule requires a child, weekday, valid time range and timer durat
   assert.match(validateAdventureSchedule({ ...valid, durationMinutes: 0 }) ?? '', /計時分鐘/);
 });
 
-test('general adventure can never use none reporting and validates its group title', () => {
+test('general adventure can never use none reporting', () => {
   const valid: ParentGeneralAdventureInput = {
     name: '完成英文作業',
     description: '',
@@ -84,7 +83,4 @@ test('general adventure can never use none reporting and validates its group tit
 
   assert.equal(validateGeneralAdventure(valid), null);
   assert.match(validateGeneralAdventure({ ...valid, reportMode: 'none' as never }) ?? '', /回報/);
-  assert.equal(validateGeneralAdventureTitle(' 星球挑戰 '), null);
-  assert.match(validateGeneralAdventureTitle('每日冒險') ?? '', /每日冒險/);
-  assert.match(validateGeneralAdventureTitle('★★★') ?? '', /文字或數字/);
 });

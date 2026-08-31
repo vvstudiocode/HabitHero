@@ -1640,11 +1640,10 @@
   display: inline-flex;
   min-height: 44px;
   align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  width: 58px;
-  height: 36px;
-  padding: 4px;
+  justify-content: center;
+  width: 52px;
+  height: 44px;
+  padding: 0;
   color: #334155;
   border: 0;
   border-radius: 14px;
@@ -1660,19 +1659,19 @@
 .hh-notification-toggle-track {
   position: relative;
   display: inline-flex;
-  width: 42px;
-  height: 26px;
+  width: 52px;
+  height: 30px;
   flex: 0 0 auto;
   align-items: center;
-  padding: 3px;
+  padding: 4px;
   border-radius: 999px;
   background: #d7e4d6;
 }
 
 .hh-notification-toggle-thumb {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgba(15, 23, 42, .28);
@@ -1681,7 +1680,7 @@
 }
 
 .hh-notification-toggle.is-on .hh-notification-toggle-thumb {
-  transform: translateX(16px);
+  transform: translateX(22px);
 }
 
 .hh-notification-toggle.is-on .hh-notification-toggle-track {

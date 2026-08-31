@@ -12,6 +12,7 @@
   --hh-neutral-line: var(--hh-border);
   --hh-neutral-focus: var(--hh-primary);
   --hh-neutral-shadow: var(--hh-shadow);
+  --hh-world-overlay-surface: color-mix(in srgb, var(--hh-neutral-surface) var(--hh-world-overlay-surface-opacity), transparent);
   --hh-character-theme-color: var(--hh-reward);
 }
 
@@ -60,8 +61,8 @@ body,
   filter: none !important;
 }
 
-.hh-sprite-theme header:not(.hh-adventure-detail-header):not(.hh-document-header),
-.hh-sprite-theme .hh-dashboard-screen header:not(.hh-adventure-detail-header):not(.hh-document-header),
+.hh-sprite-theme header:not(.hh-adventure-detail-header):not(.hh-document-header):not(.hh-friend-list-header):not(.hh-adventure-board-header),
+.hh-sprite-theme .hh-dashboard-screen header:not(.hh-adventure-detail-header):not(.hh-document-header):not(.hh-friend-list-header):not(.hh-adventure-board-header),
 .hh-character-dashboard-header,
 .hh-sprite-theme .hh-dashboard-screen > .hh-character-dashboard-header {
   background: var(--hh-neutral-surface) !important;
@@ -193,10 +194,10 @@ body,
   opacity: 0.55;
 }
 
-.hh-sprite-theme input:not([type="checkbox"]):not([type="radio"]),
+.hh-sprite-theme input:not([type="checkbox"]):not([type="radio"]):not(.hh-world-chat-input),
 .hh-sprite-theme textarea,
 .hh-sprite-theme select,
-.hh-parent-content-modal input,
+.hh-parent-content-modal input:not(.hh-world-chat-input),
 .hh-parent-content-modal textarea,
 .hh-parent-content-modal select {
   background: var(--hh-neutral-surface) !important;
@@ -205,10 +206,10 @@ body,
   box-shadow: inset 0 1px 2px rgb(18 57 59 / 4%) !important;
 }
 
-.hh-sprite-theme input:focus,
+.hh-sprite-theme input:not(.hh-world-chat-input):focus,
 .hh-sprite-theme textarea:focus,
 .hh-sprite-theme select:focus,
-.hh-parent-content-modal input:focus,
+.hh-parent-content-modal input:not(.hh-world-chat-input):focus,
 .hh-parent-content-modal textarea:focus,
 .hh-parent-content-modal select:focus {
   border-color: var(--hh-neutral-focus) !important;
@@ -230,6 +231,46 @@ body,
 .hh-character-icon-button,
 .hh-character-menu-action {
   border: 0;
+}
+
+.hh-child-feature-nav-button {
+  border: 0;
+  color: var(--hh-neutral-ink);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent) !important;
+  box-shadow: none;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.hh-child-feature-nav-button:hover,
+.hh-child-feature-nav-button:focus-visible {
+  color: var(--hh-neutral-ink) !important;
+  background: var(--hh-neutral-soft) !important;
+  box-shadow: none;
+}
+
+.hh-child-feature-nav-button.is-active,
+.hh-child-feature-nav-button.is-active:hover,
+.hh-child-feature-nav-button.is-active:focus-visible {
+  color: var(--hh-on-primary) !important;
+  background: var(--hh-primary) !important;
+  box-shadow: none;
+}
+
+.hh-child-feature-nav-button:focus-visible {
+  outline: 3px solid var(--hh-character-focus-ring);
+  outline-offset: 2px;
+}
+
+.hh-child-feature-nav-button svg {
+  color: inherit;
+}
+
+.hh-child-feature-settings-button.is-active,
+.hh-child-feature-settings-button.is-active:hover,
+.hh-child-feature-settings-button.is-active:focus-visible {
+  color: var(--hh-on-primary) !important;
+  background: var(--hh-primary) !important;
+  box-shadow: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -259,6 +300,39 @@ body,
   box-shadow: none;
 }
 
+.hh-modal-close-button,
+.hh-modal-close-button:hover,
+.hh-modal-close-button:focus-visible {
+  background: transparent;
+  color: var(--hh-neutral-ink);
+  box-shadow: none;
+}
+
+.hh-sprite-theme .hh-friend-list-header {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.hh-sprite-theme .hh-friend-list-sheet {
+  background: var(--hh-neutral-surface);
+  box-shadow: none;
+}
+
+.hh-sprite-theme .hh-friend-list-form {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.hh-sprite-theme .hh-friend-list-close,
+.hh-sprite-theme .hh-friend-list-close:hover,
+.hh-sprite-theme .hh-friend-list-close:focus-visible {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
 .hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button,
 .hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:hover,
 .hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:active,
@@ -269,6 +343,24 @@ body,
 .hh-character-menu.is-open .hh-character-menu-action:hover,
 .hh-character-menu.is-open .hh-character-menu-action:active,
 .hh-character-menu.is-open .hh-character-menu-action.is-selected {
+  box-shadow: none;
+}
+
+.hh-sprite-theme .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-root > .hh-character-menu-action,
+.hh-sprite-theme .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-root > .hh-character-menu-action:hover,
+.hh-sprite-theme .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-root > .hh-character-menu-action:focus-visible,
+.hh-sprite-theme .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-root > .hh-character-menu-action:active,
+.hh-sprite-theme .hh-character-menu[data-menu-variant="parent"] .hh-character-menu-root > .hh-character-menu-action.is-selected {
+  background: var(--hh-world-overlay-surface);
+}
+
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button,
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:hover,
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:focus-visible,
+.hh-character-hero-panel > .hh-character-dashboard-actions .hh-character-icon-button:active {
+  background: var(--hh-neutral-surface);
+  background: var(--hh-world-overlay-surface);
+  border: 0;
   box-shadow: none;
 }
 
@@ -287,9 +379,8 @@ body,
 .hh-character-stats>div {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);
-  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
-  border: 1px solid var(--hh-neutral-line);
-  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  background: var(--hh-world-overlay-surface);
+  border: 0;
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
@@ -307,9 +398,8 @@ body,
 .hh-adventure-card {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);
-  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
-  border: 1px solid var(--hh-neutral-line);
-  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  background: var(--hh-world-overlay-surface);
+  border: 0;
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
@@ -318,9 +408,8 @@ body,
 .hh-world-action-item {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);
-  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
-  border: 1px solid var(--hh-neutral-line);
-  border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
+  background: var(--hh-world-overlay-surface);
+  border: 0;
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
@@ -328,14 +417,20 @@ body,
 .hh-friend-dock {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);
-  background: color-mix(in srgb, var(--hh-neutral-surface) 68%, transparent);
+  background: var(--hh-world-overlay-surface);
   border: 1px solid var(--hh-neutral-line);
   border: 1px solid color-mix(in srgb, var(--hh-character-theme-color) 28%, var(--hh-neutral-line));
   box-shadow: 0 8px 22px var(--hh-neutral-shadow);
 }
 
-.hh-world-chat-dock {
-  background: color-mix(in srgb, var(--hh-neutral-surface) 44%, transparent);
+.hh-world-chat-dock,
+.hh-friend-dock {
+  background: var(--hh-neutral-surface);
+  background: var(--hh-world-overlay-surface);
+}
+
+.hh-friend-dock {
+  border: 0;
 }
 
 .hh-world-clean-mode-hint {
@@ -436,6 +531,69 @@ body,
 
 .hh-adventure-detail-backdrop {
   background: rgba(15, 23, 42, .52);
+}
+
+.hh-adventure-board-dialog {
+  color: var(--hh-neutral-ink);
+  background: var(--hh-neutral-surface);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, .2);
+}
+
+/* The shared theme paints generic headers; this world overlay stays unpainted. */
+.hh-adventure-board-header {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.hh-adventure-board-close {
+  color: var(--hh-neutral-ink);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.hh-adventure-table-dialogue {
+  color: var(--hh-neutral-ink);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 58%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hh-neutral-surface) 66%, var(--hh-primary));
+  box-shadow: 0 10px 24px rgb(18 57 59 / 18%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.hh-adventure-table-dialogue:hover,
+.hh-adventure-table-dialogue:focus-visible,
+.hh-adventure-table-dialogue-trigger:hover,
+.hh-adventure-table-dialogue-trigger:focus-visible {
+  background: color-mix(in srgb, var(--hh-neutral-surface) 70%, transparent);
+}
+
+.hh-adventure-table-notification {
+  color: var(--hh-reward-card-gold);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.hh-adventure-table-dialogue-trigger {
+  color: var(--hh-neutral-ink);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 58%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hh-neutral-surface) 66%, var(--hh-primary));
+  box-shadow: 0 10px 24px rgb(18 57 59 / 18%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.hh-adventure-table-dialogue:focus-visible,
+.hh-adventure-table-dialogue-trigger:focus-visible,
+.hh-adventure-board-close:focus-visible {
+  outline: 3px solid var(--hh-character-focus-ring);
+  outline-offset: 3px;
+}
+
+.hh-adventure-board-detail {
+  border-color: var(--hh-neutral-line);
 }
 
 .hh-adventure-detail {

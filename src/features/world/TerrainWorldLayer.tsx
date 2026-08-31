@@ -22,6 +22,8 @@ import { getWorldCharacterByAssetKey } from '../characters/world-character-catal
 import { getTerrainWorldSceneKey } from './world-scene-key';
 import { getEquippedCharacterCatalogItem } from './world-character-loadout';
 import { useWorldSocialSession } from '../world-social/world-social-session';
+import { AvatarChatBubble } from '../world-chat/components/AvatarChatBubble';
+import { getVisibleChatBubbles } from '../world-chat/chat-bubble-queue';
 import { createTerrainWorldSceneInput } from './world-scene-input';
 import {
   getPlacementRotationDelta,
@@ -30,6 +32,7 @@ import {
   type DecorationPlacementGestureDelta,
 } from './world-placement';
 import { getSharedDecorationActionState } from '../shared-decorations/permissions';
+import type { AdventureTableScreenPosition } from './adventure-table';
 
 // The shared loadout owner keeps `character.arthur` as the safe fallback
 // (`assetKey: 'character.arthur'`) for incomplete or legacy child data.
@@ -62,6 +65,8 @@ interface TerrainWorldLayerProps {
   onStartDecorationPlacement?: (entityId: string) => void;
   onCollectDecoration?: (entityId: string) => void;
   onPetAction?: (selection: PetSelection, action: PetAction) => boolean | Promise<boolean>;
+  onAdventureTableScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
+  onAdventureTableIndicatorScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
   cleanMode?: boolean;
   cleanModeHintVisible?: boolean;
   onCleanModeToggle?: () => void;
@@ -215,6 +220,8 @@ export function TerrainWorldLayer({
   onStartDecorationPlacement,
   onCollectDecoration,
   onPetAction,
+  onAdventureTableScreenPositionChange,
+  onAdventureTableIndicatorScreenPositionChange,
   cleanMode = false,
   cleanModeHintVisible = false,
   onCleanModeToggle,
@@ -229,6 +236,8 @@ export function TerrainWorldLayer({
   const [loadingDetail, setLoadingDetail] = useState('讀取草地與大樹模型…');
   const [showStaticFallback, setShowStaticFallback] = useState(false);
   const [runtimeAttempt, setRuntimeAttempt] = useState(0);
+  const [avatarScreenPositions, setAvatarScreenPositions] = useState<ReadonlyMap<string, { x: number; y: number }>>(() => new Map());
+  const [bubbleClock, setBubbleClock] = useState(() => Date.now());
   const [selectedDecoration, setSelectedDecoration] = useState<{ entityId: string; x: number; y: number } | null>(null);
   const [selectedPet, setSelectedPet] = useState<PetSelection | null>(null);
   const [worldActionMenuOpen, setWorldActionMenuOpen] = useState(false);
@@ -239,7 +248,19 @@ export function TerrainWorldLayer({
   const session = useWorldSocialSession();
   const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames);
   const sceneInput = useMemo(() => createTerrainWorldSceneInput({ gameData, socialGameData: session?.gameData, session, placement, placementValid, showPetNames, dayNightEnabled, getEquippedCatalogItem: getEquippedCharacterCatalogItem, getCharacterRenderMode, getWorldCharacterModelUrl }), [dayNightEnabled, gameData, placement, placementValid, session, showPetNames]);
+  const visibleChatBubbles = session?.chatBubbles ? getVisibleChatBubbles(session.chatBubbles, bubbleClock) : [];
+  const hasVisibleChatBubbles = visibleChatBubbles.length > 0;
   pausedRef.current = paused;
+
+  useEffect(() => {
+    if (!hasVisibleChatBubbles) return undefined;
+    const timer = window.setInterval(() => setBubbleClock(Date.now()), 100);
+    return () => window.clearInterval(timer);
+  }, [hasVisibleChatBubbles]);
+
+  useEffect(() => {
+    setAvatarScreenPositions(new Map());
+  }, [childId]);
 
   useEffect(() => {
     const controller = new PointerInputController();
@@ -370,6 +391,7 @@ export function TerrainWorldLayer({
       placement: sceneInput.placement,
       onPlacementPositionChange,
       onPlacementGestureChange,
+      onAvatarScreenPositionsChange: setAvatarScreenPositions,
       onDecorationSelect: (selection) => {
         clearPetMenuPause();
         setSelectedDecoration(selection);
@@ -385,6 +407,8 @@ export function TerrainWorldLayer({
         setSelectedPet(selection);
         setSelectedDecoration(null);
       },
+      onAdventureTableScreenPositionChange,
+      onAdventureTableIndicatorScreenPositionChange,
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,
@@ -403,6 +427,9 @@ export function TerrainWorldLayer({
     return () => {
       if (runtimeRef.current === runtime) runtimeRef.current = null;
       runtime.dispose();
+      setAvatarScreenPositions(new Map());
+      onAdventureTableScreenPositionChange?.(null);
+      onAdventureTableIndicatorScreenPositionChange?.(null);
     };
   }, [childId, runtimeAttempt, sceneKey]);
 
@@ -506,6 +533,17 @@ export function TerrainWorldLayer({
     { action: 'dance' as const, label: '跳舞', icon: <Music2 size={17} aria-hidden="true" /> },
   ];
 
+  const chatBubblePortal = hasVisibleChatBubbles && createPortal(
+    <div className="hh-world-chat-bubbles" aria-live="polite">
+      {visibleChatBubbles.map((entry) => {
+        const position = avatarScreenPositions.get(entry.message.senderChildProfileId);
+        if (!position) return null;
+        return <div key={entry.message.id}><AvatarChatBubble entry={entry} style={{ left: position.x, top: position.y }} /></div>;
+      })}
+    </div>,
+    document.body,
+  );
+
   return (
     <div className={`hh-terrain-world${placement ? ' is-placement-mode' : ''}`} data-world-status={status} data-child-id={childId} data-world-input-layout="responsive-control-bands">
       <canvas
@@ -516,6 +554,7 @@ export function TerrainWorldLayer({
         hidden={showStaticFallback}
         aria-hidden={showStaticFallback}
       />
+      {chatBubblePortal}
       {selectedDecoration && selectedEntity && selectedItem && !placement && onStartDecorationPlacement && selectedDecorationCanvasRect && (selectedDecorationActions.canTransform || selectedDecorationActions.canRemove) && createPortal(
         <div
           className="hh-world-decoration-selection"

@@ -1,5 +1,5 @@
-import { Check, Copy } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { Check, Copy, X } from 'lucide-react';
+import { useState, type AnimationEvent, type FormEvent, type MouseEvent } from 'react';
 import type { FriendRequest, FriendSummary } from '../contracts';
 
 interface FriendListSheetProps {
@@ -26,6 +26,19 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [collaborationPendingId, setCollaborationPendingId] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
+
+  const requestClose = () => {
+    if (!closing) setClosing(true);
+  };
+
+  const closeFromBackdrop = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) requestClose();
+  };
+
+  const finishClose = (event: AnimationEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget && event.animationName === 'hh-modal-overlay-out' && closing) onClose();
+  };
 
   const submitRequest = async (event: FormEvent) => {
     event.preventDefault();
@@ -65,13 +78,13 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/35 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="好友列表">
-      <section className="max-h-[min(44rem,92vh)] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl">
-        <header className="flex items-center justify-between gap-3">
+    <div className={`hh-modal-overlay hh-friend-list-overlay fixed inset-0 z-40 flex items-end justify-center bg-slate-950/35 p-0 sm:items-center sm:p-4${closing ? ' is-leaving' : ''}`} role="dialog" aria-modal="true" aria-label="好友列表" onClick={closeFromBackdrop} onAnimationEnd={finishClose}>
+      <section className="hh-friend-list-sheet max-h-[min(44rem,92vh)] w-full max-w-lg overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl">
+        <header className="hh-friend-list-header flex items-center justify-between gap-3">
           <h2 className="text-xl font-black text-slate-900">我的好友</h2>
-          <button type="button" className="min-h-11 min-w-11 rounded-xl font-black text-slate-600 hover:bg-slate-100" aria-label="關閉好友列表" onClick={onClose}>關閉</button>
+          <button type="button" className="hh-friend-list-close min-h-11 min-w-11 rounded-xl font-black text-slate-600 hover:bg-slate-100" aria-label="關閉好友列表" title="關閉" onClick={requestClose}><X size={22} aria-hidden="true" /></button>
         </header>
-        <form className="mt-4 rounded-2xl bg-emerald-50 p-4" onSubmit={(event) => void submitRequest(event)}>
+        <form className="hh-friend-list-form mt-4 rounded-2xl p-4" onSubmit={(event) => void submitRequest(event)}>
           <label className="block text-sm font-black text-emerald-950" htmlFor="friend-code">輸入好友帳號或代碼</label>
           <div className="mt-2 flex gap-2">
             <input id="friend-code" value={friendCode} onChange={(event) => setFriendCode(event.target.value)} className="min-h-12 min-w-0 flex-1 rounded-xl border border-emerald-200 px-3 outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-emerald-500" autoComplete="off" aria-label="好友帳號或代碼" placeholder="例如 xingya_01" />
@@ -104,15 +117,34 @@ export function FriendListSheet({ code, friends, requests, loading = false, erro
             const isCheckingPresence = !checkedFriendIds.has(friend.childProfileId);
             const statusLabel = isCheckingPresence ? '檢查中…' : isOnline ? '在線' : '離線';
             const friendName = onChat
-              ? <button type="button" className="min-w-0 max-w-full text-left" aria-label={`和${friend.displayName}聊天`} onClick={() => onChat(friend)}><strong className="block truncate text-indigo-800 underline-offset-2 hover:underline">{friend.displayName}</strong></button>
-              : <strong className="block truncate">{friend.displayName}</strong>;
+              ? <button type="button" className="min-w-0 max-w-full text-left" aria-label={`和${friend.displayName}聊天`} onClick={() => onChat(friend)}><strong className="truncate text-indigo-800 underline-offset-2 hover:underline">{friend.displayName}</strong></button>
+              : <strong className="truncate">{friend.displayName}</strong>;
             const collaborationPending = collaborationPendingId === friend.childProfileId;
             const toggleCollaboration = async () => {
               if (!onToggleCollaboration || collaborationPending) return;
               setCollaborationPendingId(friend.childProfileId);
               try { await onToggleCollaboration(friend); } finally { setCollaborationPendingId(null); }
             };
-            return <li key={friend.childProfileId} className="rounded-xl border border-slate-100 p-3"><div className="flex items-center justify-between gap-3"><span className="min-w-0">{friendName}<small className={isOnline ? 'text-emerald-600' : 'text-slate-500'}>{statusLabel}</small></span><span className="flex shrink-0 gap-2">{isRemoving && <button type="button" className="min-h-11 rounded-lg px-3 text-sm font-black text-slate-600 hover:bg-slate-100" onClick={() => setRemovingFriendId(null)}>取消</button>}<button type="button" className={`min-h-11 rounded-lg px-3 text-sm font-black ${isRemoving ? 'bg-rose-600 text-white' : 'border border-rose-200 text-rose-700'}`} aria-label={`${isRemoving ? '確認刪除' : '刪除'}好友${friend.displayName}`} onClick={() => void removeFriend(friend.childProfileId)}>{isRemoving ? '確認刪除' : '刪除'}</button>{!isRemoving && <button type="button" className="min-h-11 rounded-lg bg-indigo-600 px-3 text-sm font-black text-white" onClick={() => void onVisit(friend)}>參觀</button>}</span></div>{onToggleCollaboration && !isRemoving && <button type="button" className="mt-2 min-h-10 rounded-lg border border-emerald-200 px-3 text-xs font-black text-emerald-700 hover:bg-emerald-50 disabled:opacity-50" disabled={collaborationPending} onClick={() => void toggleCollaboration()}>{collaborationPending ? '同步中…' : friend.canCollaborateInMyWorld ? '已允許調整我的共享裝飾' : '允許調整我的共享裝飾'}</button>}</li>;
+            return (
+              <li key={friend.childProfileId} className="rounded-xl border border-slate-100 p-3">
+                <div className="hh-friend-list-row">
+                  <span className="hh-friend-list-identity">
+                    {friendName}
+                    <small className={isOnline ? 'text-emerald-600' : 'text-slate-500'}>{statusLabel}</small>
+                  </span>
+                  {onToggleCollaboration && !isRemoving && (
+                    <button type="button" className="hh-friend-collaboration rounded-lg border border-emerald-200 font-black text-emerald-700 hover:bg-emerald-50 disabled:opacity-50" disabled={collaborationPending} onClick={() => void toggleCollaboration()}>
+                      {collaborationPending ? '同步中…' : friend.canCollaborateInMyWorld ? '已允許調整我的共享裝飾' : '允許調整我的共享裝飾'}
+                    </button>
+                  )}
+                  <span className="hh-friend-list-actions">
+                    {isRemoving && <button type="button" className="min-h-11 rounded-lg px-3 text-sm font-black text-slate-600 hover:bg-slate-100" onClick={() => setRemovingFriendId(null)}>取消</button>}
+                    <button type="button" className={`min-h-11 rounded-lg px-3 text-sm font-black ${isRemoving ? 'bg-rose-600 text-white' : 'border border-rose-200 text-rose-700'}`} aria-label={`${isRemoving ? '確認刪除' : '刪除'}好友${friend.displayName}`} onClick={() => void removeFriend(friend.childProfileId)}>{isRemoving ? '確認刪除' : '刪除'}</button>
+                    {!isRemoving && <button type="button" className="min-h-11 rounded-lg bg-indigo-600 px-3 text-sm font-black text-white" onClick={() => void onVisit(friend)}>參觀</button>}
+                  </span>
+                </div>
+              </li>
+            );
           })}</ul>}
         </section>
       </section>

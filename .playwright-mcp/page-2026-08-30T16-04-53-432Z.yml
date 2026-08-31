@@ -1,0 +1,9 @@
+- main [ref=f3e3]:
+  - generic "HabitHero 吉爾特大型世界" [ref=f3e4]
+  - generic: 拖曳移動
+  - generic:
+    - generic: 吉爾特的遠境
+    - generic: WASD／方向鍵移動 ・ 拖曳旋轉視角
+  - status [ref=f3e5]:
+    - strong [ref=f3e6]: 正在載入大型世界
+    - generic [ref=f3e7]: 生成森林邊界…

@@ -1,0 +1,1714 @@
+[ -197244ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ -190905ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ -184315ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ -177335ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ -169594ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ -103419ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  -97082ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  -90489ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  -83515ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  -75770ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ -169591ms] [ERROR] AuthRetryableFetchError: {}
+    at handleError2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12199:11)
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12264:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ -169591ms] [ERROR] AuthRetryableFetchError: {}
+    at handleError2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12199:11)
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12264:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ -169591ms] [ERROR] AuthRetryableFetchError: {}
+    at handleError2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12199:11)
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12264:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ -169591ms] [ERROR] AuthRetryableFetchError: {}
+    at handleError2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12199:11)
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12264:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ -169590ms] [ERROR] AuthRetryableFetchError: {}
+    at handleError2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12199:11)
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12264:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[    6024ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[   12424ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[   19015ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[   25991ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[   33734ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  126025ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  132382ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  138953ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  145927ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  153672ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  243721ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  253275ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  253275ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  253679ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  253680ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  254483ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  254484ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  256089ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  256090ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  259294ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  259294ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  265700ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  265700ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  329869ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  329869ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  330075ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  330075ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  330481ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  330481ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  331285ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  331285ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  332890ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  332890ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  336097ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  336097ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  342502ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  342502ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  355307ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  355307ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  419870ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  419870ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  420075ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  420075ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  420480ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  420480ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  421283ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  421283ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  422889ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  422889ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  426094ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  426094ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  432499ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  432499ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  445303ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  445304ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  509871ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  509871ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  510075ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  510075ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  510483ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  510483ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  511289ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  511289ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  512896ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  512896ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  516101ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  516101ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  522505ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  522505ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  535311ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  535311ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  599872ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  599872ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  600076ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  600076ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  600483ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  600483ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  601290ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  601290ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  602896ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  602897ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  606102ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  606102ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  612516ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  612516ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  625322ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  625322ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  632301ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  632301ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  632504ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  632504ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  632907ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  632907ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  633711ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  633711ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  635314ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  635314ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  636488ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  636488ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  636691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  636691ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  637095ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  637095ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  637897ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  637897ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  639501ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  639501ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  640108ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  640108ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  640312ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  640312ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  640715ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  640715ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  641518ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  641519ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  643125ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  643125ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  646330ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  646330ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  652735ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  652735ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  665542ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  665542ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  665544ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  665544ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  665544ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  665544ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  665545ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  693475ms] Error: useAppStore must be used within an AppProvider
+    at useAppStore (http://localhost:3000/src/store.tsx:786:23)
+    at MainApp (http://localhost:3000/src/App.tsx:27:150)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:8525:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:12424:43)
+    at renderRootSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:12408:13)
+[  693373ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainApp> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:6965
+[  694460ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  694461ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  694664ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  694664ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  695066ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  695067ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  695870ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  695871ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  697475ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  697475ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  700680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  700680ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  707085ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  707086ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  719898ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  719898ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  719902ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  719903ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  719903ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  719903ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  719904ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  744648ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  744648ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  744851ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  744851ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  745255ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  745255ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  746060ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  746060ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  747667ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  747667ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  750874ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  750874ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  757279ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  757279ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  770084ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  770084ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  770086ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  770086ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  770086ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  770087ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  770087ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  778603ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  778603ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  778805ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  778805ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  779209ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  779209ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  780014ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  780014ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  781618ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  781618ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  782889ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  782889ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  783093ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  783093ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  783499ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  783500ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  784306ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  784306ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  785909ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  785909ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  787024ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  787025ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  787227ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  787228ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  787631ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  787631ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  788434ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  788434ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  790037ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  790037ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  793242ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  793242ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  799649ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  799649ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  804475ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  804476ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  804680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  804680ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  805083ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  805083ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  805887ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  805887ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  807492ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  807492ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  810699ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  810699ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  814018ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  814018ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  814221ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  814221ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  814626ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  814626ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  815431ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  815431ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  817035ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  817035ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  820240ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  820240ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  826645ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  826645ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  839450ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  839451ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  839454ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  839454ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  839455ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  839455ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  839455ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[  873927ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/components/ChildDashboard.tsx?t=1788021054684:0
+[  873927ms] [ERROR] [vite] Failed to reload /src/components/ChildDashboard.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[  899460ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  899460ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  899665ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  899665ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  900069ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  900069ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  900875ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  900875ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  902479ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  902480ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  905684ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  905685ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  912092ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  912093ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  924899ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  924899ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  989459ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  989460ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  989664ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  989664ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  990067ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  990067ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  990871ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  990871ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  992476ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  992476ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[  995681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  995682ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1002086ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1002087ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1014892ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1014892ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1079460ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1079461ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1079665ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1079665ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1080069ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1080069ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1080874ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1080874ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1082479ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1082479ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1085683ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1085683ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1092089ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1092089ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1104894ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1104894ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1169461ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1169461ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1169665ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1169665ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1170069ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1170069ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1170872ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1170872ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1172478ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1172478ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1175682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1175682ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1182086ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1182087ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1194897ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1194897ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1256311ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1256311ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1256515ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1256515ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1256919ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1256919ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1257722ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1257722ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1259366ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1259366ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1259570ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1259570ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1259974ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1259974ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1260778ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1260778ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1262383ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1262384ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1265589ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1265589ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1271996ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1271996ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1284802ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1284802ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1284806ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1284806ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1284807ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1284807ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1284807ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1344809ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1344809ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1345016ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1345016ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1345420ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1345420ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1346225ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1346225ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1347830ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1347831ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1351036ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1351036ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1357441ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1357441ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1370246ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1370246ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1389991ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1389991ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1390194ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1390194ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1390601ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1390602ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1391407ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1391407ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1393013ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1393013ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1396218ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1396218ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1402625ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1402625ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1415430ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1415430ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1415433ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1415433ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1415433ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1415433ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1415434ms] [ERROR] AuthRetryableFetchError: Failed to fetch
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12261:11)
+    at async _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:16)
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:16
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:17708
+[ 1475440ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1475440ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1475645ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1475645ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1476050ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1476050ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1476855ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1476855ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1478460ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1478460ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1481666ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1481666ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1488071ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1488071ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1500876ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1500876ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1565452ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1565452ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1565657ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1565657ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1566062ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1566062ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1566869ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1566869ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1568473ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1568473ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1571679ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1571679ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1578084ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1578085ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1590890ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1590890ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1655439ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1655439ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1655644ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1655644ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1656047ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1656048ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1656851ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1656851ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1658457ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1658457ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1661662ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1661662ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1668070ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1668070ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1680876ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1680876ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1745438ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1745438ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:32
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12011:7
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11994:19)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18032:20)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18165:42) @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1745643ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1745643ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1746048ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1746048ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1746852ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1746852ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1748456ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1748456ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1751662ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1751662ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1758067ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1758067ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259
+[ 1770872ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 1770872ms] [ERROR] TypeError: Failed to fetch
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11933:23
+    at _handleRequest2 (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12258:20)
+    at _request (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12248:22)
+    at http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:18037:22
+    at async http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:11999:26 @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:12259

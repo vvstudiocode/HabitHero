@@ -17,6 +17,17 @@ describe('friendship database contract', () => {
     assert.match(sheet, /確認刪除/);
   });
 
+  it('keeps each friend, collaboration permission, and actions in one responsive row', () => {
+    const sheet = readFileSync(new URL('../src/features/friends/components/FriendListSheet.tsx', import.meta.url), 'utf8');
+    const styles = readFileSync(new URL('../src/styles/overlays.css', import.meta.url), 'utf8');
+
+    assert.match(sheet, /hh-friend-list-row/);
+    assert.match(sheet, /hh-friend-list-identity[\s\S]*?hh-friend-collaboration[\s\S]*?hh-friend-list-actions/);
+    assert.match(styles, /\.hh-friend-list-row\s*\{[\s\S]*?flex-wrap:\s*nowrap/);
+    assert.match(styles, /\.hh-friend-collaboration\s*\{[\s\S]*?white-space:\s*nowrap/);
+    assert.match(styles, /@media \(max-width:\s*390px\)[\s\S]*?\.hh-friend-collaboration\s*\{[\s\S]*?font-size:\s*10px/);
+  });
+
   it('defines the four friendship tables with server-owned identity fields', () => {
     for (const table of [
       'child_friend_codes',

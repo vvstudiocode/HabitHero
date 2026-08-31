@@ -1,0 +1,49 @@
+[     197ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 1032931ms] [ERROR] You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it. @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:17253
+[ 1033713ms] [ERROR] Unable to mount the prototype terrain world. ReferenceError: mountLargeTerrain is not defined
+    at setup (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788107993866:837:35) @ http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788107993866:2427
+[ 1037404ms] [ERROR] You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it. @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:17253
+[ 1038055ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 1038711ms] [ERROR] Unable to mount the prototype terrain world. ReferenceError: mountLargeTerrain is not defined
+    at setup (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788107998297:837:35) @ http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788107998297:2427
+[ 1052027ms] [ERROR] You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it. @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:17253
+[ 1052746ms] [ERROR] Unable to mount the prototype terrain world. ReferenceError: mountedLargeTerrain is not defined
+    at groundPlayerOnTerrain (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108013077:1122:9)
+    at groundCharacterOnGrass (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108013077:1131:9)
+    at setup (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108013077:1139:7) @ http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108013077:2403
+[ 1064225ms] [ERROR] You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it. @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:17253
+[ 1064754ms] [ERROR] Unable to mount the prototype terrain world. ReferenceError: mountedLargeTerrain is not defined
+    at groundPlayerOnTerrain (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108025172:1114:9)
+    at groundCharacterOnGrass (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108025172:1123:9)
+    at setup (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108025172:1131:7) @ http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108025172:2395
+[ 1072736ms] [ERROR] You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it. @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:17253
+[ 1077841ms] [ERROR] You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it. @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:17253
+[ 1081372ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1081372ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://127.0.0.1:3000/src/features/world/world-weather-runtime.ts?t=1788106270554:102
+[ 1081373ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1081373ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://127.0.0.1:3000/src/features/world/world-weather-runtime.ts?t=1788108038848:101
+[ 1108981ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 1111505ms] [ERROR] Failed to load resource: net::ERR_SOCKET_NOT_CONNECTED @ http://127.0.0.1:3000/src/styles/index.css?t=1788108070678:0
+[ 1111506ms] [ERROR] [vite] Failed to reload /src/styles/index.css. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:3000/@vite/client:881
+[ 1111506ms] [ERROR] [vite] Failed to reload /src/styles/index.css. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:3000/@vite/client:881
+[ 1111506ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:3000/@vite/client:963
+[ 1111517ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3000/' failed:  @ http://127.0.0.1:3000/@vite/client:1034
+[ 1111531ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/assets/decorations/adventure-table.glb:0
+[ 1111531ms] [WARNING] Unable to load decoration model /assets/decorations/adventure-table.glb; using a compact fallback. TypeError: Failed to fetch
+    at FileLoader.load (http://127.0.0.1:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=00d94308:23517:5)
+    at GLTFLoader.load (http://127.0.0.1:3000/node_modules/.vite/deps/chunk-2Y64LCOR.js?v=00d94308:226:12)
+    at http://127.0.0.1:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=00d94308:23377:13
+    at new Promise (<anonymous>)
+    at GLTFLoader.loadAsync (http://127.0.0.1:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=00d94308:23376:12)
+    at http://127.0.0.1:3000/src/features/world/world-runtime-resources.ts:70:17
+    at new Promise (<anonymous>)
+    at loadGltfSafely (http://127.0.0.1:3000/src/features/world/world-runtime-resources.ts:57:10)
+    at loadDecorationModelSource (http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108038848:801:22)
+    at http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108038848:815:62 @ http://127.0.0.1:3000/src/features/world/prototype-world-runtime.ts?t=1788108038848:805
+[ 1115288ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 1120282ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1120282ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://127.0.0.1:3000/src/features/world/world-weather-runtime.ts:101
+[ 1128563ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3000/src/features/world/gilt-world-entry.tsx?t=1788108089804:0
+[ 1128564ms] [ERROR] [vite] Failed to reload /src/features/world/gilt-world-entry.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:3000/@vite/client:881
+[ 1129441ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 1149171ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102

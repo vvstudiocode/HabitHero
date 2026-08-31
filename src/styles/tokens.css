@@ -37,6 +37,7 @@
   --hh-border: #ddd8c6;
   --hh-focus: #2f7f78;
   --hh-shadow: rgb(18 57 59 / 12%);
+  --hh-world-overlay-surface-opacity: 44%;
   --hh-primary: #2f7f78;
   --hh-primary-dark: #12393b;
   --hh-primary-soft: #e1f0ed;
@@ -64,6 +65,7 @@
   --hh-adventure-enter-duration: 220ms;
   --hh-adventure-exit-duration: 180ms;
   --hh-adventure-board-width: 160px;
+  --hh-adventure-board-max-width: 920px;
   --hh-adventure-reward-enter-duration: 360ms;
   --hh-adventure-reward-exit-duration: 180ms;
   --hh-reward-card-surface: #fff8e6;
@@ -78,6 +80,9 @@
   --hh-world-control-size: 44px;
   --hh-world-control-gap: 8px;
   --hh-world-control-anchor-offset: 58px;
+  --hh-world-chat-landscape-width: 14rem;
+  --hh-world-landscape-controls-reserved-width: calc((var(--hh-world-control-size) * 3) + (var(--hh-world-control-gap) * 3) + 32px);
+  --hh-world-chat-landscape-half-width: min(calc(var(--hh-world-chat-landscape-width) / 2), calc((100vw - var(--hh-world-landscape-controls-reserved-width)) / 2));
   --hh-world-pet-action-mobile-size: 44px;
   --hh-world-pet-action-mobile-visual-size: 32px;
   --hh-world-pet-action-mobile-gap: 2px;

@@ -1,5 +1,6 @@
 import type { GameCatalogItem, GameItemType } from './contracts';
 import { WORLD_CHARACTER_CATALOG } from '../characters/world-character-catalog';
+import { ADVENTURE_TABLE_ASSET_KEY } from './adventure-table';
 
 export interface LocalGameAsset {
   modelUrl: string | null;
@@ -122,6 +123,12 @@ export function isLocalGameItem3DPreviewEnabled(item: Pick<GameCatalogItem, 'ite
 
 export function isLocalGameItemShopSupported(item: Pick<GameCatalogItem, 'itemType' | 'assetKey'>): boolean {
   return getLocalGameThumbnailUrl(item) !== null;
+}
+
+export function isLocalGameItemShopVisible(
+  item: Pick<GameCatalogItem, 'itemType' | 'assetKey'>,
+): boolean {
+  return item.assetKey !== ADVENTURE_TABLE_ASSET_KEY && isLocalGameItemShopSupported(item);
 }
 
 /**

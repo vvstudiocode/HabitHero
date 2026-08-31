@@ -1,5 +1,6 @@
 import type { ChildGameData, GameCatalogItem } from './contracts';
 import { getFollowingPetInventoryIds } from './following-pet-state';
+import { getAdventureTableCatalogItem } from './adventure-table';
 
 function uniqueCatalogItems(items: readonly (GameCatalogItem | undefined)[]): GameCatalogItem[] {
   const seen = new Set<string>();
@@ -39,7 +40,11 @@ export function getRequiredWorldDecorationCatalogItems(
       .map((entity) => entity.catalogItemId),
   );
   const activeItems = gameData.catalog.filter((item) => item.itemType === 'decoration' && activeDecorationIds.has(item.id));
-  return uniqueCatalogItems([...activeItems, placementItem?.itemType === 'decoration' ? placementItem : undefined]);
+  return uniqueCatalogItems([
+    ...activeItems,
+    placementItem?.itemType === 'decoration' ? placementItem : undefined,
+    getAdventureTableCatalogItem(gameData),
+  ]);
 }
 
 export function createWorldSceneGameDataSnapshot(gameData: ChildGameData): ChildGameData {

@@ -2,9 +2,28 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type { TaskSchedule } from '../src/types';
+import { getTimeSelectionParts } from '../src/components/TaipeiTimeInput';
 import { formatScheduleCardDetails, formatScheduleDetails, formatScheduleWeekdays, getSharedScheduleDetails, groupActiveAdventureSchedules } from '../src/features/adventures/adventure-schedule-display';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
+
+test('shared time input defaults an empty minute to 00 without replacing a chosen minute', () => {
+  assert.deepEqual(getTimeSelectionParts('09', ''), { hour: '09', minute: '00' });
+  assert.deepEqual(getTimeSelectionParts('09', '30'), { hour: '09', minute: '30' });
+  assert.deepEqual(getTimeSelectionParts('', '15'), { hour: '', minute: '15' });
+});
+
+test('child general adventure proposal uses one padded surface', () => {
+  const proposal = read('../src/features/growth/components/GoalProposalForm.tsx');
+  const overlayStyles = read('../src/styles/overlays.css');
+
+  assert.match(proposal, /className="hh-goal-proposal-form"/);
+  assert.doesNotMatch(proposal, /rounded-3xl border border-yellow-100 bg-white p-4 shadow-sm/);
+  assert.match(overlayStyles, /.hh-goal-proposal-sheet\s*\{[\s\S]*?background:\s*var\(--hh-neutral-surface\)/);
+  assert.match(overlayStyles, /.hh-goal-proposal-sheet\s*\{[\s\S]*?padding:\s*64px 24px/);
+  assert.match(overlayStyles, /.hh-goal-proposal-form\s*\{[\s\S]*?padding-inline:\s*0/);
+  assert.doesNotMatch(overlayStyles, /\.hh-goal-proposal-sheet \.rounded-3xl/);
+});
 
 test('parent adventure forms keep daily and general completion rules separate', () => {
   const daily = read('../src/features/adventures/components/ParentAdventureScheduleForm.tsx');
@@ -31,6 +50,16 @@ test('new daily and general adventures allow the parent to choose a category', (
   assert.match(general, /TASK_CATEGORIES\.map/);
   assert.match(workspace, /category: input\.category/);
   assert.doesNotMatch(workspace, /category: 'life_habit'/);
+});
+
+test('general adventure creation no longer includes the card rename panel', () => {
+  const general = read('../src/features/adventures/components/ParentGeneralAdventureForm.tsx');
+  const workspace = read('../src/features/adventures/components/ParentAdventureWorkspace.tsx');
+  const dashboard = read('../src/components/ParentDashboard.tsx');
+
+  assert.doesNotMatch(general, /孩子看到的卡片名稱|儲存名稱|onUpdateTitle|generalTitle/);
+  assert.doesNotMatch(workspace, /onUpdateGeneralTitle|generalTitle|updateTitle/);
+  assert.doesNotMatch(dashboard, /generalTitle=\{generalAdventureTitle\}|onUpdateGeneralTitle/);
 });
 
 test('daily weekday selection uses a dedicated visible selected state', () => {
@@ -112,26 +141,73 @@ test('daily schedule management copy uses Chinese task states', () => {
   assert.doesNotMatch(workspace, /pending or completed/);
 });
 
-test('child adventure board collapses an expanded section when the blank background is pressed', () => {
+test('child adventure board closes from its modal backdrop', () => {
   const board = read('../src/features/adventures/components/ChildAdventureBoard.tsx');
 
   assert.match(board, /const boardRef = useRef<HTMLElement>\(null\)/);
-  assert.match(board, /document\.addEventListener\('pointerdown', handleOutsidePointerDown\)/);
-  assert.match(board, /boardRef\.current\?\.contains\(target\)/);
-  assert.match(board, /target\.closest\([^)]*\[role="dialog"\][^)]*\)/);
+  assert.match(board, /hh-adventure-board-backdrop/);
+  assert.match(board, /onClick=\{\(\) => requestCloseRef\.current\?\.\(\)\}/);
   assert.match(board, /setOpenCard\(null\)/);
-  assert.match(board, /<aside ref=\{boardRef\}/);
+  assert.match(board, /role="dialog"/);
 });
 
-test('child adventure board keeps the controls without the redundant board heading', () => {
+test('child adventure board keeps category controls and a dedicated detail panel', () => {
   const board = read('../src/features/adventures/components/ChildAdventureBoard.tsx');
   const characterStyles = read('../src/styles/character.css');
   const neutralStyles = read('../src/styles/neutral-theme.css');
 
   assert.doesNotMatch(board, /<h2>我的冒險<\/h2>/);
-  assert.match(board, /aria-label="我的冒險"/);
+  assert.doesNotMatch(board, /冒險桌任務看板/);
+  assert.doesNotMatch(board, /選擇冒險類型/);
+  assert.match(board, /aria-labelledby="hh-adventure-board-title"/);
+  assert.match(board, /hh-adventure-board-categories/);
+  assert.match(board, /hh-adventure-board-detail/);
   assert.doesNotMatch(characterStyles, /\.hh-child-adventure-board\s*>\s*h2/);
+  assert.doesNotMatch(characterStyles, /\.hh-adventure-board-header p/);
+  assert.doesNotMatch(characterStyles, /\.hh-adventure-board-section-label/);
+  assert.doesNotMatch(neutralStyles, /\.hh-adventure-board-header p/);
+  assert.doesNotMatch(neutralStyles, /\.hh-adventure-board-section-label/);
   assert.doesNotMatch(neutralStyles, /\.hh-child-adventure-board\s*>\s*h2/);
+});
+
+test('child adventure board keeps the world visible without a scrim or blur', () => {
+  const overlayStyles = read('../src/styles/overlays.css');
+  const boardOverlay = overlayStyles.match(/\.hh-adventure-board-overlay\s*\{[^}]*\}/)?.[0] ?? '';
+
+  assert.doesNotMatch(boardOverlay, /background:/);
+  assert.doesNotMatch(boardOverlay, /backdrop-filter/);
+  assert.match(overlayStyles, /\.hh-adventure-board-backdrop\s*\{[^}]*background:\s*transparent/);
+});
+
+test('child adventure notification stays at the table without replacing the proximity entry', () => {
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+  const terrainWorldLayer = read('../src/features/world/TerrainWorldLayer.tsx');
+  const worldRuntime = read('../src/features/world/prototype-world-runtime.ts');
+  const worldControls = read('../src/styles/world-controls.css');
+  const neutralStyles = read('../src/styles/neutral-theme.css');
+  const notificationBlock = dashboard.match(/<span\s+className="hh-adventure-table-notification"[\s\S]*?<\/span>/)?.[0] ?? '';
+
+  assert.doesNotMatch(dashboard, /CircleAlert/);
+  assert.match(notificationBlock, /hh-adventure-table-notification-icon/);
+  assert.match(dashboard, /childMenuNotifications\.goals[\s\S]*?hh-adventure-table-notification/);
+  assert.match(dashboard, /const \[adventureTableScreenPosition, setAdventureTableScreenPosition\]/);
+  assert.match(dashboard, /role="status"[\s\S]*aria-label="有新的冒險"/);
+  assert.match(notificationBlock, /role="status"/);
+  assert.doesNotMatch(notificationBlock, /onClick/);
+  assert.match(dashboard, /style={{[\s\S]*?left: `\$\{adventureTableScreenPosition\.x\}px`[\s\S]*?top: `\$\{adventureTableScreenPosition\.y\}px`/);
+  assert.match(dashboard, /onAdventureTableIndicatorScreenPositionChange={setAdventureTableScreenPosition}/);
+  assert.match(dashboard, /adventureTablePromptPosition[\s\S]*?hh-adventure-table-dialogue-trigger/);
+  assert.match(terrainWorldLayer, /onAdventureTableIndicatorScreenPositionChange\?:/);
+  assert.match(terrainWorldLayer, /onAdventureTableIndicatorScreenPositionChange,\n/);
+  assert.match(terrainWorldLayer, /onAdventureTableIndicatorScreenPositionChange\?\.\(null\)/);
+  assert.match(worldRuntime, /onAdventureTableIndicatorScreenPositionChange\?:/);
+  assert.match(worldRuntime, /options\.onAdventureTableIndicatorScreenPositionChange\?\.\(tableScreenPosition\)/);
+  assert.match(worldControls, /\.hh-adventure-table-dialogue-trigger\s*\{[\s\S]*?bottom:/);
+  assert.match(worldControls, /\.hh-adventure-table-notification\s*\{[\s\S]*?left:[\s\S]*?top:[\s\S]*?pointer-events:\s*none/);
+  assert.doesNotMatch(worldControls, /\.hh-adventure-table-notification\.is-stacked/);
+  assert.match(worldControls, /@keyframes hh-adventure-table-notification-in[\s\S]*?translate\(-50%/);
+  assert.match(neutralStyles, /\.hh-adventure-table-notification\s*\{[\s\S]*?color:\s*var\(--hh-reward-card-gold\)[\s\S]*?background:\s*transparent[\s\S]*?box-shadow:\s*none/);
+  assert.doesNotMatch(neutralStyles, /\.hh-adventure-table-notification:hover/);
 });
 
 test('general adventure form uses an icon-only sheet header and hides scrollbar chrome', () => {

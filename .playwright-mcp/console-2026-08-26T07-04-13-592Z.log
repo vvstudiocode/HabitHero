@@ -1,0 +1,22 @@
+[   17989ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=password:0
+[   27348ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   27348ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts:101
+[  309350ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  309350ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts:101
+[ 1210517ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1210517ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts:101
+[ 2598876ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2598876ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts:101
+[ 2655795ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2655795ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts:101
+[ 2657713ms] [ERROR] React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element. defaultOpen defaultopen @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f4ec500f:2402
+[ 2688155ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2688155ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts:101
+[ 2838940ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2838941ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts:101
+[ 3208308ms] [WARNING] GoTrueClient@sb-127-auth-token:1 (2.110.7) 2026-08-26T07:57:41.900Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:14459
+[ 3251984ms] [WARNING] GoTrueClient@sb-127-auth-token:1 (2.110.7) 2026-08-26T07:58:25.576Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:14459
+[ 3528594ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 3603707ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 3648710ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.9671661a-abbe-4e59-baff-3db6b4002e64:0
+[ 3678592ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0

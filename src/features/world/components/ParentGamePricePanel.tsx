@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import type { GameCatalogItem, GameItemType } from '../contracts';
-import { isLocalGameItem3DPreviewEnabled, isLocalGameItemShopSupported } from '../game-content-assets';
+import { isLocalGameItem3DPreviewEnabled, isLocalGameItemShopVisible } from '../game-content-assets';
 import { GameItemLightbox, GameItemPreview } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 
@@ -31,7 +31,7 @@ function isValidPrice(value: string) {
 
 export function ParentGamePricePanel({ catalog, prices, loading, onRetry, onSave, onReset }: ParentGamePricePanelProps) {
   const items = useMemo(
-    () => catalog.filter((item) => item.isActive && !item.isStarter && isLocalGameItemShopSupported(item)).sort((a, b) => a.sortOrder - b.sortOrder),
+    () => catalog.filter((item) => item.isActive && !item.isStarter && isLocalGameItemShopVisible(item)).sort((a, b) => a.sortOrder - b.sortOrder),
     [catalog],
   );
   const [drafts, setDrafts] = useState<Record<string, string>>({});

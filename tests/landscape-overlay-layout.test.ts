@@ -28,9 +28,9 @@ test('landscape item lightboxes keep the preview left and detail actions right i
   assert.match(modalStyles, /\.hh-game-item-lightbox-close[\s\S]*?top:\s*12px[\s\S]*?right:\s*12px/);
 });
 
-test('landscape child controls stay outside either side safe area', () => {
-  assert.match(characterStyles, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-child-adventure-board[\s\S]*?left:\s*max\(var\(--hh-character-content-left\),\s*calc\(env\(safe-area-inset-left,\s*0px\) \+ 12px\)\)/);
-  assert.match(characterStyles, /\.hh-child-adventure-board[\s\S]*?width:\s*min\(var\(--hh-adventure-board-width\),\s*calc\(100vw - env\(safe-area-inset-left,\s*0px\) - env\(safe-area-inset-right,\s*0px\) - 24px\)\)/);
+test('landscape adventure board stays inside the safe-area overlay', () => {
+  assert.match(characterStyles, /\.hh-child-adventure-board\s*\{[\s\S]*?width:\s*min\(100%,\s*var\(--hh-adventure-board-max-width\)\)/);
+  assert.match(characterStyles, /\.hh-adventure-board-detail\s*\{[\s\S]*?border-left:\s*1px solid/);
   assert.match(characterStyles, /\.hh-character-menu\[data-menu-variant="child"\]\[data-active-menu="backpack"\] \.hh-character-menu-submenu[\s\S]*?right:\s*max\(16px,\s*calc\(env\(safe-area-inset-right,\s*0px\) \+ 16px\)\)/);
   assert.match(characterStyles, /\.hh-character-menu\[data-menu-variant="child"\]\[data-active-menu="backpack"\] \.hh-character-menu-submenu[\s\S]*?max-width:\s*calc\(100vw - env\(safe-area-inset-left,\s*0px\) - env\(safe-area-inset-right,\s*0px\) - 32px\)/);
 });

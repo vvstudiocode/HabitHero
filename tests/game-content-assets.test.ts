@@ -4,6 +4,7 @@ import {
   getLocalGameAsset,
   getLocalGameThumbnailUrl,
   isLocalGameItemInventorySupported,
+  isLocalGameItemShopVisible,
   isLocalGameItemShopSupported,
 } from '../src/features/world/game-content-assets';
 import { createChildGameDataMap } from '../src/features/world/game-data';
@@ -55,6 +56,17 @@ describe('local game content assets', () => {
       assetKey: 'pet.oum',
       isStarter: false,
     }), true);
+  });
+
+  it('keeps the adventure table packaged but excludes it from the shop', () => {
+    const table = {
+      itemType: 'decoration' as const,
+      assetKey: 'decoration.adventure-table',
+      isStarter: false,
+    };
+
+    assert.equal(isLocalGameItemShopSupported(table), true);
+    assert.equal(isLocalGameItemShopVisible(table), false);
   });
 
   it('strips unknown SQL thumbnail paths while keeping the catalog row', () => {

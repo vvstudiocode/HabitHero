@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import { useWorldChat } from '../world-chat/hooks/use-world-chat';
 import { WorldChatDock } from '../world-chat/components/WorldChatDock';
 import { WorldChatSheet } from '../world-chat/components/WorldChatSheet';
+import { enqueueChatBubble, type ChatBubbleEntry } from '../world-chat/chat-bubble-queue';
 import { useWorldMultiplayer } from '../world-multiplayer/hooks/use-world-multiplayer';
 import { useFriendPresence } from '../friends/hooks/use-friend-presence';
 import { useAppStore } from '../../store';
@@ -55,6 +56,8 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
   const chat = useWorldChat(chatRepository, activeChatOwnerChildProfileId, enabled && (Boolean(snapshot) || chatOpen), childProfileId);
   const isOwnWorldChat = !snapshot && activeChatOwnerChildProfileId === childProfileId;
   const displayedChat = isOwnWorldChat ? ownWorldChat : chat;
+  const [chatBubbles, setChatBubbles] = useState<ChatBubbleEntry[]>([]);
+  const bubbledMessageIdRef = useRef<string | null>(null);
   const reloadVisitorWorld = useCallback(async () => {
     if (!friendWorldRepository || worldOwnerChildProfileId === childProfileId) return;
     try {
@@ -74,6 +77,18 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
   const showWorldChatDock = !socialControlsHidden && (Boolean(snapshot) || friends.friends.length > 0 || multiplayer.remoteAvatars.length > 0 || ownWorldChat.messages.length > 0);
 
   useEffect(() => {
+    setChatBubbles([]);
+    bubbledMessageIdRef.current = null;
+  }, [worldOwnerChildProfileId]);
+
+  useEffect(() => {
+    const message = displayedChat.latestMessage;
+    if (!message || message.worldOwnerChildProfileId !== worldOwnerChildProfileId || message.id === bubbledMessageIdRef.current) return;
+    bubbledMessageIdRef.current = message.id;
+    setChatBubbles((current) => enqueueChatBubble(current, message, Date.now()));
+  }, [displayedChat.latestMessage, worldOwnerChildProfileId]);
+
+  useEffect(() => {
     if (!enabled) {
       setWorldSocialSession(null);
       return;
@@ -89,11 +104,12 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
       fixedSpawn: spawn.position,
       multiplayer,
       friends: friends.friends,
+      chatBubbles,
       friendWorldRepository: friendWorldRepository ?? undefined,
       sharedDecorationRepository: sharedDecorationRepository ?? undefined,
       reloadSnapshot: worldOwnerChildProfileId !== childProfileId ? reloadVisitorWorld : reloadOwnWorld,
     });
-  }, [childProfileId, enabled, friendWorldRepository, friends.friends, multiplayer.broadcastState, multiplayer.remoteAvatars, reloadOwnWorld, reloadVisitorWorld, retry, sharedDecorationRepository, snapshot, worldOwnerChildProfileId]);
+  }, [chatBubbles, childProfileId, enabled, friendWorldRepository, friends.friends, multiplayer.broadcastState, multiplayer.remoteAvatars, reloadOwnWorld, reloadVisitorWorld, retry, sharedDecorationRepository, snapshot, worldOwnerChildProfileId]);
 
   useEffect(() => () => setWorldSocialSession(null), []);
 

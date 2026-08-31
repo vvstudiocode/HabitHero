@@ -5,6 +5,7 @@ import type { WorldRuntimeSession } from '../world/world-runtime-multiplayer';
 import type { FriendSummary } from '../friends/contracts';
 import type { FriendWorldRepository } from '../../lib/social-data/friend-world-repository';
 import type { SharedDecorationRepository } from '../../lib/social-data/shared-decoration-repository';
+import type { ChatBubbleEntry } from '../world-chat/chat-bubble-queue';
 
 export interface WorldSocialSession extends WorldRuntimeSession {
   worldOwnerChildProfileId: string;
@@ -13,6 +14,7 @@ export interface WorldSocialSession extends WorldRuntimeSession {
   fixedSpawn: { x: number; z: number };
   multiplayer: NonNullable<WorldRuntimeSession['multiplayer']>;
   friends: FriendSummary[];
+  chatBubbles?: readonly ChatBubbleEntry[];
   friendWorldRepository?: FriendWorldRepository;
   sharedDecorationRepository?: SharedDecorationRepository;
   reloadSnapshot?: () => Promise<void>;

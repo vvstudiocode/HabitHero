@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuthSession } from '../auth';
-import { Backpack, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flower2, Gift, LogOut, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
+import { Backpack, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flower2, Gift, LogOut, MessageCircle, Plus, ScrollText, ShoppingBag as ShoppingBagIcon, Star, X, History, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dismissWithAnimation } from '../lib/utils';
 import { formatTaskTime, formatTaskWindow, haveSameIds } from '../lib/child-dashboard-display';
@@ -21,7 +21,7 @@ import {
   TIMER_COMPLETION_MUSIC_SRC,
 } from '../lib/task-completion-audio';
 import { getChildMenuNotifications } from '../lib/menu-notifications';
-import { DashboardCharacterHero, type CharacterMenuAction } from './DashboardCharacterHero';
+import { DashboardCharacterHero } from './DashboardCharacterHero';
 import { ChildDashboardBackgroundMusic } from './ChildDashboardBackgroundMusic';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { WorldPreparingScreen } from './WorldPreparingScreen';
@@ -51,8 +51,11 @@ import {
   type SharedDecorationItem,
 } from '../features/shared-decorations/child-decoration-actions';
 import { getBackgroundMusicPreference, setBackgroundMusicPreference } from '../lib/background-music-preference';
+import { useSafeAreaCutoutSide } from '../hooks/useSafeAreaCutoutSide';
 import { useDayNightPreference } from '../features/world/use-day-night-preference';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
+import { AdventureTableDialogue } from '../features/adventures/components/AdventureTableDialogue';
+import type { AdventureTableScreenPosition } from '../features/world/adventure-table';
 import { AdventureRewardCelebration } from '../features/adventures/components/AdventureRewardCelebration';
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
 import {
@@ -92,13 +95,13 @@ type ChildMenuGroup = ChildFeature | 'backpack';
 type ChildAdventureRewardNotice =
   | { mode: 'submitted'; taskName: string; pendingStars: number }
   | { mode: 'approved'; bundle: AdventureRewardBundle };
-const HERO_MENU_EXIT_MS = 1200;
 const REWARDS_PER_PAGE = 18;
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
 const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
 
 export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps) {
   const appStore = useAppStore() as ReturnType<typeof useAppStore> & GrowthChildActions;
+  const landscapeCutoutSide = useSafeAreaCutoutSide();
   const {
     state,
     familyId,
@@ -140,14 +143,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [decorationPlacementPending, setDecorationPlacementPending] = useState(false);
   const placementSubmissionInFlightRef = useRef(false);
   const [shareDecorationItem, setShareDecorationItem] = useState<SharedDecorationItem | null>(null);
-  const [heroMenuGroup, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
-  const [heroMenuVisible, setHeroMenuVisible] = useState(false);
+  const [, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
+  const [, setHeroMenuVisible] = useState(false);
   const [isVisitingFriendWorld, setIsVisitingFriendWorld] = useState(false);
   const [leaveFriendWorldRequest, setLeaveFriendWorldRequest] = useState(0);
   const [cleanMode, setCleanMode] = useState(false);
   const [cleanModeHintVisible, setCleanModeHintVisible] = useState(false);
-  const heroMenuOpenFrame = useRef<number | null>(null);
-  const heroMenuCloseTimer = useRef<number | null>(null);
   const featureContentRef = useRef<HTMLElement>(null);
   const hasShownCleanModeHint = useRef(false);
   const cleanModeGestureRef = useRef<{
@@ -377,6 +378,9 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [wishlistToCancel, setWishlistToCancel] = useState<import('../types').WishlistItem | null>(null);
   const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
   const [adventureRewardNotice, setAdventureRewardNotice] = useState<ChildAdventureRewardNotice | null>(null);
+  const [adventureTablePromptPosition, setAdventureTablePromptPosition] = useState<AdventureTableScreenPosition | null>(null);
+  const [adventureTableScreenPosition, setAdventureTableScreenPosition] = useState<AdventureTableScreenPosition | null>(null);
+  const [adventureBoardOpen, setAdventureBoardOpen] = useState(false);
 
   useEffect(() => {
     if (!heroFeature && !decorationPlacement && !adventureRewardNotice) return;
@@ -437,6 +441,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   useEffect(() => {
     setAdventureRewardNotice(null);
+  }, [activeChildId]);
+
+  useEffect(() => {
+    setAdventureTablePromptPosition(null);
+    setAdventureTableScreenPosition(null);
+    setAdventureBoardOpen(false);
   }, [activeChildId]);
 
   useEffect(() => {
@@ -716,20 +726,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setHeroMenuVisible(false);
   };
 
-  const closeHeroMenu = () => {
-    if (heroMenuOpenFrame.current !== null) {
-      window.cancelAnimationFrame(heroMenuOpenFrame.current);
-      heroMenuOpenFrame.current = null;
-    }
-    if (heroMenuCloseTimer.current !== null) {
-      window.clearTimeout(heroMenuCloseTimer.current);
-      heroMenuCloseTimer.current = null;
-    }
-    setHeroMenuVisible(false);
-    heroMenuCloseTimer.current = window.setTimeout(() => {
-      setHeroMenuGroup(null);
-      heroMenuCloseTimer.current = null;
-    }, HERO_MENU_EXIT_MS);
+  const leaveFriendWorld = () => {
+    setLeaveFriendWorldRequest((request) => request + 1);
   };
 
   const closeChildForm = (closeForm: () => void, selector?: string) => {
@@ -886,58 +884,32 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     }
   };
 
-  const toggleHeroMenuGroup = (tab: ChildMenuGroup) => {
-    if (heroMenuGroup === tab) {
-      if (heroMenuVisible) closeHeroMenu();
-      else {
-        if (heroMenuCloseTimer.current !== null) {
-          window.clearTimeout(heroMenuCloseTimer.current);
-          heroMenuCloseTimer.current = null;
-        }
-        heroMenuOpenFrame.current = window.requestAnimationFrame(() => {
-          setHeroMenuVisible(true);
-          heroMenuOpenFrame.current = null;
-        });
-      }
-      return;
-    }
-    if (heroMenuCloseTimer.current !== null) {
-      window.clearTimeout(heroMenuCloseTimer.current);
-      heroMenuCloseTimer.current = null;
-    }
-    setHeroMenuGroup(tab);
-    setHeroMenuVisible(false);
-    heroMenuOpenFrame.current = window.requestAnimationFrame(() => {
-      setHeroMenuVisible(true);
-      heroMenuOpenFrame.current = null;
-    });
-  };
-
-  const heroRootMenuActions: CharacterMenuAction[] = [];
-
-  const heroSubMenuActions: Record<ChildMenuGroup, CharacterMenuAction[]> = {
-    backpack: [
-      { id: 'goals', title: '冒險', tone: 'attention', icon: <CheckCircle2 size={17} />, hasNotification: childMenuNotifications.goals, onSelect: () => openChildFeature('goals') },
-      { id: 'inventory', title: '背包', tone: 'action', icon: <Backpack size={17} />, onSelect: () => openChildFeature('inventory') },
-      { id: 'shop', title: '商店', tone: 'explore', icon: <ShoppingBagIcon size={17} />, onSelect: () => openChildFeature('shop') },
-      { id: 'wishlist', title: '獎勵', tone: 'reward', icon: <Gift size={17} />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards, onSelect: () => openChildFeature('wishlist') },
-      { id: 'growth', title: '成長', tone: 'growth', icon: <Star size={17} />, onSelect: () => openChildFeature('growth') },
-      { id: 'settings', title: '設定', tone: 'neutral', icon: <Settings size={17} />, onSelect: () => openChildFeature('settings') },
-      ...(isVisitingFriendWorld ? [{ id: 'leave-friend-world', title: '離開', tone: 'neutral' as const, icon: <LogOut size={17} color="#050505" strokeWidth={2.6} />, onSelect: () => { setLeaveFriendWorldRequest((request) => request + 1); closeHeroMenu(); } }] : []),
-    ],
-    goals: [],
-    growth: [],
-    wishlist: [],
-    inventory: [],
-    shop: [],
-    settings: [],
-  };
-
-  const heroMenuActions = heroMenuGroup ? heroSubMenuActions[heroMenuGroup] : heroRootMenuActions;
+  const childFeatureNavigation: Array<{
+    id: ChildFeature;
+    title: string;
+    icon: React.ReactNode;
+    hasNotification?: boolean;
+  }> = [
+    { id: 'inventory', title: '背包', icon: <Backpack size={17} aria-hidden="true" /> },
+    { id: 'goals', title: '冒險', icon: <CheckCircle2 size={17} aria-hidden="true" />, hasNotification: childMenuNotifications.goals },
+    { id: 'shop', title: '商店', icon: <ShoppingBagIcon size={17} aria-hidden="true" /> },
+    { id: 'wishlist', title: '獎勵', icon: <Gift size={17} aria-hidden="true" />, hasNotification: childMenuNotifications.wishlist || childMenuNotifications.rewards },
+    { id: 'growth', title: '成長', icon: <Star size={17} aria-hidden="true" /> },
+    { id: 'settings', title: '設定', icon: <Settings size={17} aria-hidden="true" /> },
+  ];
   const isGameFeature = heroFeature === 'inventory' || heroFeature === 'shop' || heroFeature === 'settings';
 
   const handleOpenAdventureTask = (task: AdventureTask) => {
     setAdventureOpenRequest({ id: task.id, requestId: Date.now() });
+    setAdventureBoardOpen(true);
+  };
+
+  const openAdventureBoard = () => {
+    setAdventureBoardOpen(true);
+  };
+
+  const closeAdventureBoard = () => {
+    setAdventureBoardOpen(false);
   };
 
   if (sessionLoading || loading) {
@@ -971,6 +943,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   return (
     <div
       className={`hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50${decorationPlacement ? ' is-decoration-placement' : ''}${cleanMode ? ' is-clean-mode' : ''}`}
+      data-landscape-cutout-side={landscapeCutoutSide}
       style={{ '--hh-character-theme-color': '#2f7f78' } as React.CSSProperties}
       onContextMenu={preventNativeAppContextMenu}
       onDragStart={preventNativeAppDragStart}
@@ -993,7 +966,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               gameData={gameData}
               showPetNames={showPetNames}
               dayNightEnabled={dayNightEnabled}
-              paused={Boolean((heroFeature && !decorationPlacement) || adventureRewardNotice)}
+              paused={Boolean((heroFeature && !decorationPlacement) || adventureRewardNotice || adventureBoardOpen)}
               placement={decorationPlacement ?? undefined}
               placementValid={placementValid}
               placementPending={decorationPlacementPending}
@@ -1005,6 +978,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onStartDecorationPlacement={startExistingDecorationPlacement}
               onCollectDecoration={collectSelectedDecoration}
               onPetAction={handlePetAction}
+              onAdventureTableScreenPositionChange={setAdventureTablePromptPosition}
+              onAdventureTableIndicatorScreenPositionChange={setAdventureTableScreenPosition}
               cleanMode={cleanMode}
               cleanModeHintVisible={cleanModeHintVisible}
               onCleanModeToggle={toggleCleanMode}
@@ -1012,23 +987,28 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             />
           </Suspense>
         )}
-        menuActions={heroMenuActions}
-        rootMenuActions={heroRootMenuActions}
-        activeMenuId={heroMenuGroup}
         menuVariant="child"
-        onMenuClose={closeHeroMenu}
-        menuOpen={heroMenuVisible}
-        onMenuOpenChange={setHeroMenuVisible}
         actions={(
           <>
+            {isVisitingFriendWorld && (
+              <button
+                type="button"
+                className="hh-character-icon-button hh-character-leave-button"
+                aria-label="離開好友世界"
+                title="離開好友世界"
+                onClick={leaveFriendWorld}
+              >
+                <LogOut size={18} strokeWidth={2.4} aria-hidden="true" />
+              </button>
+            )}
             <button
-              onClick={() => toggleHeroMenuGroup('backpack')}
-              aria-label={heroMenuGroup === 'backpack' && heroMenuVisible ? '收合功能選單' : '開啟功能選單'}
-              title="功能選單"
-              className={`hh-character-icon-button${heroMenuGroup === 'backpack' && heroMenuVisible ? ' is-expanded' : ''}`}
-              aria-expanded={heroMenuGroup === 'backpack' && heroMenuVisible}
+              type="button"
+              onClick={() => openChildFeature('inventory')}
+              aria-label="開啟背包"
+              title="背包"
+              className="hh-character-icon-button"
             >
-              <Backpack size={18} />
+              <Backpack size={18} aria-hidden="true" />
             </button>
           </>
         )}
@@ -1041,7 +1021,55 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         leaveFriendWorldRequest={leaveFriendWorldRequest}
         onVisitingChange={setIsVisitingFriendWorld}
       />
+      {childMenuNotifications.goals
+        && !adventureBoardOpen
+        && !heroFeature
+        && !decorationPlacement
+        && !cleanMode
+        && !adventureRewardNotice
+        && adventureTableScreenPosition
+        && (
+          <span
+            className="hh-adventure-table-notification"
+            style={{
+              left: `${adventureTableScreenPosition.x}px`,
+              top: `${adventureTableScreenPosition.y}px`,
+            }}
+            role="status"
+            aria-label="有新的冒險"
+          >
+            <svg className="hh-adventure-table-notification-icon" width="28" height="32" viewBox="0 0 28 32" fill="none" aria-hidden="true">
+              <path d="M14 5V18" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="14" cy="25" r="2" fill="currentColor" />
+            </svg>
+          </span>
+      )}
+      {adventureTablePromptPosition
+        && !adventureBoardOpen
+        && !heroFeature
+        && !decorationPlacement
+        && !cleanMode
+        && !adventureRewardNotice
+        && (
+          <>
+            <AdventureTableDialogue
+              position={adventureTablePromptPosition}
+              onOpenBoard={openAdventureBoard}
+            />
+            <button
+              type="button"
+              className="hh-adventure-table-dialogue-trigger"
+              aria-label="開始冒險"
+              title="開始冒險"
+              onClick={openAdventureBoard}
+            >
+              <MessageCircle size={23} strokeWidth={2.4} aria-hidden="true" />
+            </button>
+          </>
+      )}
       <ChildAdventureBoard
+        open={adventureBoardOpen}
+        onRequestClose={closeAdventureBoard}
         tasks={adventureTasks}
         generalGroupId={activeGeneralAdventureGroup?.id}
         generalTitle={activeGeneralAdventureGroup?.title}
@@ -1080,32 +1108,65 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       >
         {heroFeature && (
           <div className="hh-parent-content-modal-bar hh-parent-content-modal-bar--child">
-            <div className="hh-child-feature-balance-pill">
-              <span className="sr-only">我的點數</span>
-              <PointValue value={childPoints} iconSize={15} />
-            </div>
-            {(heroFeature === 'inventory' || heroFeature === 'shop') && (
-              <div className="hh-child-feature-balance-pill" aria-label={`目前有 ${displayedScrolls} 張卷軸`}>
-                <ScrollText size={15} strokeWidth={2.5} aria-hidden="true" />
-                <span className="sr-only">我的卷軸</span>
-                <strong>{displayedScrolls}</strong>
+            <nav className="hh-child-feature-nav" aria-label="小孩功能導覽">
+              {childFeatureNavigation.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={cn(
+                    'hh-child-feature-nav-button',
+                    item.id === 'settings' && 'is-settings',
+                    heroFeature === item.id && 'is-active',
+                  )}
+                  aria-current={heroFeature === item.id ? 'page' : undefined}
+                  aria-label={item.title}
+                  title={item.title}
+                  onClick={() => openChildFeature(item.id)}
+                >
+                  <span className="hh-child-feature-nav-icon" aria-hidden="true">{item.icon}</span>
+                  <span className="hh-child-feature-nav-label">{item.title}</span>
+                  {item.hasNotification && <span className="hh-child-feature-nav-notification" aria-label="有新項目" />}
+                </button>
+              ))}
+            </nav>
+            <div className="hh-child-feature-header-actions">
+              <div className="hh-child-feature-balance-pill">
+                <span className="sr-only">我的點數</span>
+                <PointValue value={childPoints} iconSize={15} className="hh-child-feature-points" />
               </div>
-            )}
-            {heroFeature === 'wishlist' && (
+              {(heroFeature === 'inventory' || heroFeature === 'shop') && (
+                <div className="hh-child-feature-balance-pill" aria-label={`目前有 ${displayedScrolls} 張卷軸`}>
+                  <ScrollText size={15} strokeWidth={2.5} aria-hidden="true" />
+                  <span className="sr-only">我的卷軸</span>
+                  <strong>{displayedScrolls}</strong>
+                </div>
+              )}
+              {heroFeature === 'wishlist' && (
+                <button
+                  type="button"
+                  onClick={() => setShowWishlistForm(true)}
+                  aria-label="告訴爸媽我想要什麼"
+                  title="告訴爸媽我想要什麼"
+                  className="flex min-h-11 items-center gap-1 rounded-full border-2 border-dashed border-yellow-300 bg-white px-3 text-sm font-black text-yellow-600 transition-colors hover:bg-yellow-50"
+                >
+                  <Plus size={18} aria-hidden="true" />
+                  <span>告訴爸媽</span>
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setShowWishlistForm(true)}
-                aria-label="告訴爸媽我想要什麼"
-                title="告訴爸媽我想要什麼"
-                className="flex min-h-11 items-center gap-1 rounded-full border-2 border-dashed border-yellow-300 bg-white px-3 text-sm font-black text-yellow-600 transition-colors hover:bg-yellow-50"
+                onClick={() => openChildFeature('settings')}
+                aria-label="設定"
+                title="設定"
+                aria-current={heroFeature === 'settings' ? 'page' : undefined}
+                className={cn('hh-character-icon-button', 'hh-child-feature-settings-button', heroFeature === 'settings' && 'is-active')}
               >
-                <Plus size={18} aria-hidden="true" />
-                <span>告訴爸媽</span>
+                <Settings size={18} aria-hidden="true" />
               </button>
-            )}
-            <button type="button" onClick={() => closeChildFeature()} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
-              <X size={20} />
-            </button>
+              <button type="button" onClick={() => closeChildFeature()} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button">
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
           </div>
         )}
         {isOffline && (

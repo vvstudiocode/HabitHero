@@ -8,6 +8,7 @@ import {
   getAdventureTimerState,
   getAdventureTaskState,
   formatAdventureTaskWindow,
+  getInitialAdventureTask,
   hasStartedAdventureTimer,
   isLegacyGrowthTask,
   sortAdventureTasksByStartTime,
@@ -143,6 +144,18 @@ test('sorts adventure tasks from the earliest start time and keeps ties stable',
   assert.deepEqual(splitAdventureTasks(tasks, '2026-08-03').daily.map(({ id }) => id), ['early', 'tie-a', 'tie-b', 'late', 'untimed']);
 });
 
+test('opens the child adventure board on the first daily task, then the first unfinished task', () => {
+  const daily = task('daily-first', 'completed', {
+    adventureType: 'daily',
+    occurrenceDate: '2026-08-03',
+  });
+  const general = task('general-first', 'todo');
+
+  assert.equal(getInitialAdventureTask({ daily: [daily], general: [general] })?.id, 'daily-first');
+  assert.equal(getInitialAdventureTask({ daily: [], general: [general] })?.id, 'general-first');
+  assert.equal(getInitialAdventureTask({ daily: [], general: [] }), null);
+});
+
 test('an offline completion stays checked but clearly reports that points are not awarded yet', () => {
   const offlineTask = task('offline', 'todo', { pendingSync: true });
 
@@ -153,6 +166,20 @@ test('an offline completion stays checked but clearly reports that points are no
   const progress = read('../src/features/adventures/adventure-progress.ts');
   assert.match(board, /完成紀錄等待同步，點數尚未發放/);
   assert.match(progress, /等待同步，點數尚未發放/);
+});
+
+test('keeps the empty adventure detail area quiet when there is no task to show', () => {
+  const board = read('../src/features/adventures/components/ChildAdventureBoard.tsx');
+  const worldControls = read('../src/styles/world-controls.css');
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(board, /getInitialAdventureTask\(groups\)/);
+  assert.match(board, /\{selectedTask \? \(/);
+  assert.doesNotMatch(board, /<h3>先選一個任務<\/h3>/);
+  assert.match(worldControls, /font-size: 14px;/);
+  assert.match(worldControls, /translate\(-50%, calc\(-100% - 8px\)\)/);
+  assert.match(neutralTheme, /\.hh-adventure-board-header \{[\s\S]*background: transparent;[\s\S]*box-shadow: none;/);
+  assert.match(neutralTheme, /\.hh-adventure-board-close \{[\s\S]*background: transparent;[\s\S]*box-shadow: none;/);
 });
 
 test('daily and general adventures are split without carrying a dated daily occurrence forward', () => {

@@ -73,7 +73,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     }) => Promise<void>;
     createAdventureSchedule: (input: CreateAdventureScheduleInput) => Promise<void>;
     createGeneralAdventure: (input: CreateGeneralAdventureInput) => Promise<void>;
-    updateGeneralAdventureTitle: (childId: string, title: string) => Promise<void>;
     batchReviewDailyAdventures: (taskIds: string[]) => Promise<{ failedTaskIds: string[] }>;
     disableAdventureSchedule: (scheduleId: string) => Promise<void>;
     revokeTaskApproval?: (taskId: string) => Promise<void>;
@@ -139,9 +138,6 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
     isDaily: task.isDaily,
     requiresReviewBeforeNextTask: task.requiresReviewBeforeNextTask,
   }));
-  const activeGeneralGroups = state.adventureGroups?.filter(group => group.status === 'active') ?? [];
-  const generalAdventureTitle = activeGeneralGroups[0]?.title ?? '一般冒險';
-
   const groupedTodoTasks = groupParentTodoTasks(todoTasks, DEFAULT_TASK_CATEGORY);
 
   const groupedRewards = groupParentRewards(state.children);
@@ -915,13 +911,11 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             children={state.children.map(child => ({ id: child.id, name: child.name }))}
             tasks={calendarTasks}
             schedules={state.taskSchedules ?? []}
-            generalTitle={generalAdventureTitle}
             activeFrom={todayDateKey}
             loading={loading || mutationPending}
             onOpenReview={() => openHeroFeature('review')}
             onCreateSchedule={appStore.createAdventureSchedule}
             onCreateGeneral={appStore.createGeneralAdventure}
-            onUpdateGeneralTitle={appStore.updateGeneralAdventureTitle}
             onBatchReviewDaily={appStore.batchReviewDailyAdventures}
             onUpdateSchedule={appStore.updateAdventureSchedule}
             onDisableSchedule={appStore.disableAdventureSchedule}

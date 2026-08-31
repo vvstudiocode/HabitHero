@@ -1,0 +1,6 @@
+[    9179ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[    9179ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1787731105334:101
+[10622435ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[10622435ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1787731105334:101
+[11245872ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[11245873ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1787731105334:101

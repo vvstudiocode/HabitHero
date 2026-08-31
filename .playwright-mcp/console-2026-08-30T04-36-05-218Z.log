@@ -1,0 +1,7 @@
+[   16042ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   16042ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[  407651ms] [ERROR] React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element. defaultOpen defaultopen @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:2402
+[  925615ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  925615ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[ 1834753ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1834753ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101

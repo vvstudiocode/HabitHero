@@ -1,0 +1,8 @@
+[    2072ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[    2072ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[  840362ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  900466ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[  911165ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  911166ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788024973921:101
+[  945464ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  975665ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0

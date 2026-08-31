@@ -98,7 +98,6 @@ export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, onOpenA
           </div>
 
           {notice && <p className="hh-login-note" role="status">{notice}</p>}
-          {mode === 'parent' && onOpenApp && <button type="button" onClick={onOpenApp} className="hh-secondary-button">已安裝 App？開啟 App 登入</button>}
 
           {revealed && (
             <div className="hh-login-fields">
@@ -122,6 +121,7 @@ export function AccountLogin({ onGoSignup, onForgotPassword, onComplete, onOpenA
               <button type="submit" disabled={!account || !password || submitting} className="hh-primary-button">
                 {submitting ? '登入中…' : '登入任務森林'}
               </button>
+              {onOpenApp && <button type="button" onClick={onOpenApp} className="hh-secondary-button">已安裝 App？開啟 App 登入</button>}
               {mode === 'parent' && (
                 <div className="hh-login-secondary-actions flex flex-col gap-1">
                   <button type="button" onClick={onGoSignup} className="hh-secondary-button">沒有家長帳號？註冊</button>

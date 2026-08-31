@@ -1,0 +1,4 @@
+[ 2071893ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 2161895ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0
+[ 2207135ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.9671661a-abbe-4e59-baff-3db6b4002e64:0
+[ 2251888ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token:0

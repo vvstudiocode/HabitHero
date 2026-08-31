@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { getKeyboardCameraInput, getKeyboardMovement } from '../src/features/world/input/keyboard-input';
 import { worldInputReducer } from '../src/features/world/input/world-input-reducer';
-import { createInitialWorldInputState, getWorldInputZone } from '../src/features/world/input/world-input-types';
+import {
+  createInitialWorldInputState,
+  getWorldInputZone,
+  JOYSTICK_TOUCH_RADIUS,
+} from '../src/features/world/input/world-input-types';
 
 const touchDown = (pointerId: number, point: { x: number; y: number }, zone: 'movement' | 'camera') => ({
   type: 'pointer-down' as const,
@@ -23,6 +27,16 @@ describe('world input state machine', () => {
     assert.equal(getWorldInputZone({ x: 120, y: 390 }, 480, 800), 'movement');
     assert.equal(getWorldInputZone({ x: 520, y: 390 }, 480, 800), 'camera');
     assert.equal(getWorldInputZone({ x: 120, y: 180 }, 480, 800), 'camera');
+  });
+
+  it('keeps the upper edge of the landscape joystick in the movement band', () => {
+    assert.equal(getWorldInputZone({ x: 120, y: 330 }, 480, 800), 'movement');
+  });
+
+  it('uses the padded landscape joystick circle instead of a broad movement rectangle', () => {
+    const movementCircle = { center: { x: 108, y: 340 }, radius: JOYSTICK_TOUCH_RADIUS };
+    assert.equal(getWorldInputZone({ x: 108, y: 265 }, 414, 896, movementCircle), 'movement');
+    assert.equal(getWorldInputZone({ x: 190, y: 340 }, 414, 896, movementCircle), 'camera');
   });
 
   it('starts a dynamic joystick in the lower control quarter and stops on release', () => {

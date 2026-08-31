@@ -45,7 +45,7 @@ export function ParentDashboardContent({
               <ArrowLeft size={20} />
             </button>
           ) : (
-            <button type="button" onClick={onCloseFeature} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button ml-auto">
+          <button type="button" onClick={onCloseFeature} aria-label="關閉功能頁面" title="關閉" className="hh-character-icon-button hh-modal-close-button ml-auto">
               <X size={20} />
             </button>
           )}

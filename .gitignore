@@ -18,3 +18,6 @@ supabase/.branches/
 skills-lock.json
 .specify/
 .specify-memory/
+
+# Generated previews for strategy diagrams
+docs/strategy/rendered/*.html
