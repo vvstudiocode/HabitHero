@@ -1,0 +1,26 @@
+- generic [ref=f12e4]:
+  - banner [ref=f12e5]:
+    - generic [ref=f12e6]:
+      - status [ref=f12e8]:
+        - generic [ref=f12e9]:
+          - strong [ref=f12e11]: 正在準備冒險地圖
+          - paragraph [ref=f12e12]: 正在載入 3D 世界…
+      - generic "儀表板統計":
+        - generic "加入天數：7":
+          - strong:
+            - generic: "7"
+        - generic "我的點數：0":
+          - strong:
+            - generic: "0"
+        - generic "我的卷軸：0":
+          - strong:
+            - generic: "0"
+      - button "開啟背包" [ref=f12e16]
+  - generic [ref=f12e21]:
+    - button "進入我的世界" [ref=f12e22]
+    - button "開啟好友列表，目前 1 位好友" [ref=f12e26]
+  - generic [ref=f12e32]:
+    - button "開啟我的世界 的世界聊天" [ref=f12e33]:
+      - generic [ref=f12e34]: 我的世界 的世界聊天
+      - generic [ref=f12e35]: 和好友說說話吧！
+    - button "收合聊天摘要" [expanded] [ref=f12e37]

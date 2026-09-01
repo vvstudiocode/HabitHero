@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
@@ -33,6 +33,10 @@ import {
 } from './world-placement';
 import { getSharedDecorationActionState } from '../shared-decorations/permissions';
 import type { AdventureTableScreenPosition } from './adventure-table';
+import type { WorldLocation } from './world-location';
+import type { WorldNavigationPoint } from './world-navigation';
+import type { ForestValleyGateScreenPosition } from './forest-valley';
+import type { CloudWorkshopGateScreenPosition } from './cloud-workshop';
 
 // The shared loadout owner keeps `character.arthur` as the safe fallback
 // (`assetKey: 'character.arthur'`) for incomplete or legacy child data.
@@ -47,6 +51,7 @@ export { getTerrainWorldSceneKey } from './world-scene-key';
 interface TerrainWorldLayerProps {
   childId: string;
   gameData: ChildGameData;
+  worldLocation: WorldLocation;
   showPetNames?: boolean; dayNightEnabled?: boolean;
   paused?: boolean;
   placement?: {
@@ -65,8 +70,15 @@ interface TerrainWorldLayerProps {
   onStartDecorationPlacement?: (entityId: string) => void;
   onCollectDecoration?: (entityId: string) => void;
   onPetAction?: (selection: PetSelection, action: PetAction) => boolean | Promise<boolean>;
+  entryPosition?: WorldNavigationPoint;
+  entryFacingY?: number;
+  entryCameraYaw?: number;
+  onWorldPlayerPositionChange?: (position: WorldNavigationPoint) => void;
   onAdventureTableScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
   onAdventureTableIndicatorScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
+  onForestValleyGateScreenPositionChange?: (position: ForestValleyGateScreenPosition | null) => void;
+  onCloudWorkshopGateScreenPositionChange?: (position: CloudWorkshopGateScreenPosition | null) => void;
+  onWorldTransitionEnd?: () => void;
   cleanMode?: boolean;
   cleanModeHintVisible?: boolean;
   onCleanModeToggle?: () => void;
@@ -207,6 +219,7 @@ function useWorldQuality() {
 export function TerrainWorldLayer({
   childId,
   gameData,
+  worldLocation,
   showPetNames = true, dayNightEnabled = true,
   paused = false,
   placement,
@@ -220,8 +233,15 @@ export function TerrainWorldLayer({
   onStartDecorationPlacement,
   onCollectDecoration,
   onPetAction,
+  entryPosition,
+  entryFacingY,
+  entryCameraYaw,
+  onWorldPlayerPositionChange,
   onAdventureTableScreenPositionChange,
   onAdventureTableIndicatorScreenPositionChange,
+  onForestValleyGateScreenPositionChange,
+  onCloudWorkshopGateScreenPositionChange,
+  onWorldTransitionEnd,
   cleanMode = false,
   cleanModeHintVisible = false,
   onCleanModeToggle,
@@ -246,8 +266,9 @@ export function TerrainWorldLayer({
   const runtimeRef = useRef<PrototypeWorldRuntime | null>(null);
   const worldQuality = useWorldQuality();
   const session = useWorldSocialSession();
-  const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames);
-  const sceneInput = useMemo(() => createTerrainWorldSceneInput({ gameData, socialGameData: session?.gameData, session, placement, placementValid, showPetNames, dayNightEnabled, getEquippedCatalogItem: getEquippedCharacterCatalogItem, getCharacterRenderMode, getWorldCharacterModelUrl }), [dayNightEnabled, gameData, placement, placementValid, session, showPetNames]);
+  const runtimeWorldLocation: WorldLocation = session?.gameData ? 'my-world' : worldLocation;
+  const sceneKey = getTerrainWorldSceneKey(gameData, worldQuality, showPetNames, runtimeWorldLocation);
+  const sceneInput = useMemo(() => createTerrainWorldSceneInput({ gameData, worldLocation: runtimeWorldLocation, entryPosition, entryFacingY, entryCameraYaw, socialGameData: session?.gameData, session, placement, placementValid, showPetNames, dayNightEnabled, getEquippedCatalogItem: getEquippedCharacterCatalogItem, getCharacterRenderMode, getWorldCharacterModelUrl }), [dayNightEnabled, entryCameraYaw, entryFacingY, entryPosition, gameData, placement, placementValid, runtimeWorldLocation, session, showPetNames]);
   const visibleChatBubbles = session?.chatBubbles ? getVisibleChatBubbles(session.chatBubbles, bubbleClock) : [];
   const hasVisibleChatBubbles = visibleChatBubbles.length > 0;
   pausedRef.current = paused;
@@ -373,9 +394,13 @@ export function TerrainWorldLayer({
     setShowStaticFallback(false);
   }, [childId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setStatus('loading');
-  }, [childId]);
+    setLoadingProgress(12);
+    setLoadingDetail('正在切換冒險世界…');
+    setShowStaticFallback(false);
+    controllerRef.current?.reset();
+  }, [childId, runtimeAttempt, sceneKey]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -383,14 +408,19 @@ export function TerrainWorldLayer({
     const runtime = mountPrototypeWorld({
       canvas,
       gameData: sceneInput.gameData,
+      worldLocation: runtimeWorldLocation,
       equippedCatalogItem: sceneInput.equippedCatalogItem,
       characterRenderMode: sceneInput.characterRenderMode,
       characterModelUrl: sceneInput.characterModelUrl,
+      entryPosition: sceneInput.entryPosition,
+      entryFacingY: sceneInput.entryFacingY,
+      entryCameraYaw: sceneInput.entryCameraYaw,
       showPetNames: sceneInput.showPetNames, dayNightEnabled: sceneInput.dayNightEnabled,
       session: sceneInput.session,
       placement: sceneInput.placement,
       onPlacementPositionChange,
       onPlacementGestureChange,
+      onWorldPlayerPositionChange,
       onAvatarScreenPositionsChange: setAvatarScreenPositions,
       onDecorationSelect: (selection) => {
         clearPetMenuPause();
@@ -409,6 +439,8 @@ export function TerrainWorldLayer({
       },
       onAdventureTableScreenPositionChange,
       onAdventureTableIndicatorScreenPositionChange,
+      onForestValleyGateScreenPositionChange,
+      onCloudWorkshopGateScreenPositionChange,
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,
@@ -418,18 +450,26 @@ export function TerrainWorldLayer({
         setLoadingDetail(detail);
       },
       onReady: () => {
+        canvas.focus({ preventScroll: true });
         setShowStaticFallback(false);
         setStatus('ready');
+        onWorldTransitionEnd?.();
       },
-      onError: () => setStatus('failed'),
+      onError: () => {
+        setStatus('failed');
+        onWorldTransitionEnd?.();
+      },
     });
     runtimeRef.current = runtime;
     return () => {
       if (runtimeRef.current === runtime) runtimeRef.current = null;
       runtime.dispose();
+      controllerRef.current?.reset();
       setAvatarScreenPositions(new Map());
       onAdventureTableScreenPositionChange?.(null);
       onAdventureTableIndicatorScreenPositionChange?.(null);
+      onForestValleyGateScreenPositionChange?.(null);
+      onCloudWorkshopGateScreenPositionChange?.(null);
     };
   }, [childId, runtimeAttempt, sceneKey]);
 
@@ -858,11 +898,13 @@ export function TerrainWorldLayer({
         </section>
       )}
       {status === 'loading' && (
-        <div className="hh-terrain-world-loading-panel" role="status">
-          <strong>正在準備冒險地圖</strong>
-          <p>{loadingDetail}</p>
-          <div className="hh-terrain-world-progress-track" aria-hidden="true">
-            <span style={{ width: `${loadingProgress}%` }} />
+        <div className="hh-terrain-world-loading-scrim" role="status" aria-live="polite">
+          <div className="hh-terrain-world-loading-panel">
+            <strong>正在準備冒險地圖</strong>
+            <p>{loadingDetail}</p>
+            <div className="hh-terrain-world-progress-track" aria-hidden="true">
+              <span style={{ width: `${loadingProgress}%` }} />
+            </div>
           </div>
         </div>
       )}

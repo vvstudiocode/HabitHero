@@ -24,17 +24,23 @@ import { emptyChildGameData } from '../world/contracts';
 import { getWorldCapacityMessage } from '../world-multiplayer/world-presence';
 import { createSharedDecorationRepository } from '../../lib/social-data/shared-decoration-repository';
 import { updateFriendWorldCollaboration } from './world-social-actions';
+import { MyWorldDock } from './components/MyWorldDock';
+import { DEFAULT_WORLD_LOCATION, type WorldLocation } from '../world/world-location';
 
 interface WorldSocialLayerProps {
   childProfileId: string;
   enabled?: boolean;
   cleanMode?: boolean;
   placementMode?: boolean;
+  worldLocation: WorldLocation;
+  myWorldReturnLocation?: Exclude<WorldLocation, 'my-world'>;
   leaveFriendWorldRequest?: number;
   onVisitingChange?: (visiting: boolean) => void;
+  onWorldLocationChange: (location: WorldLocation) => void;
+  worldTransitioning?: boolean;
 }
 
-export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = false, placementMode = false, leaveFriendWorldRequest = 0, onVisitingChange }: WorldSocialLayerProps) {
+export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = false, placementMode = false, worldLocation = DEFAULT_WORLD_LOCATION, myWorldReturnLocation = 'sunrise-village', leaveFriendWorldRequest = 0, onVisitingChange, onWorldLocationChange, worldTransitioning = false }: WorldSocialLayerProps) {
   const { role, state, retry } = useAppStore();
   const previewMode = role === 'parent' && !enabled;
   const [friendsOpen, setFriendsOpen] = useState(false);
@@ -71,7 +77,7 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
   const reloadOwnWorld = useCallback(() => retry({ recoverWorldMutations: true }), [retry]);
   const localGameData = state.gameDataByChildId[childProfileId];
   const characterAssetKey = getEquippedCharacterCatalogItem(localGameData ?? emptyChildGameData()).assetKey;
-  const multiplayer = useWorldMultiplayer({ client: supabase, worldOwnerChildProfileId, childProfileId, characterAssetKey, enabled, onWorldRevision: reloadVisitorWorld });
+  const multiplayer = useWorldMultiplayer({ client: supabase, worldOwnerChildProfileId, childProfileId, characterAssetKey, enabled: enabled && (worldLocation === 'my-world' || Boolean(snapshot)), onWorldRevision: reloadVisitorWorld });
   const worldCapacityNotice = multiplayer.crowded ? getWorldCapacityMessage() : null;
   const socialControlsHidden = cleanMode || placementMode;
   const showWorldChatDock = !socialControlsHidden && (Boolean(snapshot) || friends.friends.length > 0 || multiplayer.remoteAvatars.length > 0 || ownWorldChat.messages.length > 0);
@@ -93,6 +99,10 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
       setWorldSocialSession(null);
       return;
     }
+    if (!snapshot && worldLocation !== 'my-world') {
+      setWorldSocialSession(null);
+      return;
+    }
     const spawn = getFriendWorldReloadSpawnDecision({
       reason: snapshot ? 'enter_friend_world' : 'enter_own_world',
       fixedSpawn: FRIEND_WORLD_FIXED_SPAWN,
@@ -109,7 +119,7 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
       sharedDecorationRepository: sharedDecorationRepository ?? undefined,
       reloadSnapshot: worldOwnerChildProfileId !== childProfileId ? reloadVisitorWorld : reloadOwnWorld,
     });
-  }, [chatBubbles, childProfileId, enabled, friendWorldRepository, friends.friends, multiplayer.broadcastState, multiplayer.remoteAvatars, reloadOwnWorld, reloadVisitorWorld, retry, sharedDecorationRepository, snapshot, worldOwnerChildProfileId]);
+  }, [chatBubbles, childProfileId, enabled, friendWorldRepository, friends.friends, multiplayer.broadcastState, multiplayer.remoteAvatars, reloadOwnWorld, reloadVisitorWorld, retry, sharedDecorationRepository, snapshot, worldLocation, worldOwnerChildProfileId]);
 
   useEffect(() => () => setWorldSocialSession(null), []);
 
@@ -209,7 +219,10 @@ export function WorldSocialLayer({ childProfileId, enabled = true, cleanMode = f
           <p className="text-center text-lg font-black leading-7 text-indigo-950">{previewNotice}</p>
         </section>
       </div>}
-      {!socialControlsHidden && <FriendDock friendCount={friends.friends.length} pendingCount={friends.requests.filter((request) => request.direction === 'incoming').length} unreadChatCount={ownWorldChat.unreadCount} onOpen={previewMode ? showPreviewNotice : () => setFriendsOpen(true)} />}
+      {!socialControlsHidden && <div className="hh-world-social-dock-group">
+        {!snapshot && <MyWorldDock worldLocation={worldLocation} returnLocation={myWorldReturnLocation} transitioning={worldTransitioning} onEnterMyWorld={previewMode ? () => showPreviewNotice() : onWorldLocationChange} />}
+        {!socialControlsHidden && <FriendDock friendCount={friends.friends.length} pendingCount={friends.requests.filter((request) => request.direction === 'incoming').length} unreadChatCount={ownWorldChat.unreadCount} onOpen={previewMode ? showPreviewNotice : () => setFriendsOpen(true)} />}
+      </div>}
       {!socialControlsHidden && showWorldChatDock && <WorldChatDock messages={snapshot ? chat.messages : ownWorldChat.messages} worldOwnerDisplayName={snapshot?.displayName ?? '我的世界'} onOpen={previewMode ? showPreviewNotice : () => setChatOpen(true)} />}
       {!socialControlsHidden && friendsOpen && enabled && <FriendListSheet code={friends.code} friends={friends.friends} requests={friends.requests} onlineFriendIds={friendPresence.onlineFriendIds} checkedFriendIds={friendPresence.checkedFriendIds} loading={friends.loading} error={friends.error ?? visitError} onClose={() => setFriendsOpen(false)} onSendRequest={async (code) => { await friends.sendRequest(code); }} onAccept={async (id) => { await friends.acceptRequest(id); }} onDecline={async (id) => { await friends.declineRequest(id); }} onVisit={visitFriend} onChat={!snapshot ? openFriendChat : undefined} onRemove={async (id) => { await friends.removeFriend(id); }} onToggleCollaboration={toggleFriendWorldCollaboration} />}
       {!socialControlsHidden && chatOpen && enabled && <WorldChatSheet title={`與${snapshot?.displayName ?? (isOwnWorldChat ? '好友' : friends.friends.find((friend) => friend.childProfileId === activeChatOwnerChildProfileId)?.displayName ?? '好友')}聊天`} messages={displayedChat.messages} loading={displayedChat.loading} sending={displayedChat.sending} error={displayedChat.error} onClose={closeChat} onSend={displayedChat.send} onReport={displayedChat.report} />}

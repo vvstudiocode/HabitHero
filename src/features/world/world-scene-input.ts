@@ -1,8 +1,10 @@
-import type { ChildGameData, GameCatalogItem } from './contracts';
+import { emptyChildGameData, type ChildGameData, type GameCatalogItem } from './contracts';
 import { createWorldSceneGameDataSnapshot } from './world-scene-data';
 import { toDecorationPlacementTransform, type DecorationPlacementDraft } from './world-placement';
 import type { WorldRuntimeSession } from './world-runtime-multiplayer';
 import { getFriendWorldSpawnPosition, getFriendWorldVisitMode } from '../friends/friend-world-visit';
+import type { WorldLocation } from './world-location';
+import type { WorldNavigationPoint } from './world-navigation';
 
 type WorldSocialRuntimeSession = WorldRuntimeSession & {
   worldOwnerChildProfileId?: string;
@@ -14,6 +16,10 @@ type WorldSocialRuntimeSession = WorldRuntimeSession & {
 
 interface TerrainWorldSceneInputArgs {
   gameData: ChildGameData;
+  worldLocation?: WorldLocation;
+  entryPosition?: WorldNavigationPoint;
+  entryFacingY?: number;
+  entryCameraYaw?: number;
   socialGameData?: ChildGameData;
   session?: WorldSocialRuntimeSession | null;
   placement?: { catalogItemId: string; entityId?: string; draft: DecorationPlacementDraft };
@@ -27,6 +33,10 @@ interface TerrainWorldSceneInputArgs {
 
 export function createTerrainWorldSceneInput({
   gameData,
+  worldLocation = 'my-world',
+  entryPosition,
+  entryFacingY,
+  entryCameraYaw,
   session,
   socialGameData,
   placement,
@@ -37,7 +47,7 @@ export function createTerrainWorldSceneInput({
   getCharacterRenderMode,
   getWorldCharacterModelUrl,
 }: TerrainWorldSceneInputArgs) {
-  const sourceGameData = socialGameData ?? gameData;
+  const sourceGameData = socialGameData ?? (worldLocation === 'my-world' ? gameData : emptyChildGameData());
   const sessionIdentity = session?.multiplayer;
   const worldOwnerChildProfileId = sessionIdentity?.worldOwnerChildProfileId ?? session?.worldOwnerChildProfileId;
   const childProfileId = sessionIdentity?.childProfileId;
@@ -61,6 +71,9 @@ export function createTerrainWorldSceneInput({
     characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),
     showPetNames,
     dayNightEnabled,
+    entryPosition,
+    entryFacingY,
+    entryCameraYaw,
     session: runtimeSession,
     placement: placement && placementItem ? {
       item: placementItem,

@@ -1,0 +1,75 @@
+[   -7499ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   -7499ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  -17842ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[   -7499ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788164221136:101
+[   18605ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   18605ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788164221136:101
+[   47650ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   47650ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788164221136:101
+[   63648ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[   63648ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788164221136:101
+[  358370ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/game_catalog_items?select=*&order=sort_order.asc:0
+[  360781ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/game_catalog_items?select=*&order=sort_order.asc:0
+[  370641ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/game_catalog_items?select=*&order=sort_order.asc:0
+[  375722ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/game_catalog_items?select=*&order=sort_order.asc:0
+[  380080ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friends:0
+[  380080ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/get_my_friend_code:0
+[  380081ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[  380082ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friend_requests:0
+[  380082ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friends:0
+[  380200ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/get_my_friend_code:0
+[  380299ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  380412ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friend_requests:0
+[  381332ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  382108ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[  386300ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  388151ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[  390519ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  393756ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  398191ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[  404987ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  405130ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/get_my_friend_code:0
+[  405130ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friends:0
+[  405130ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friends:0
+[  405131ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/get_my_friend_code:0
+[  405131ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friend_requests:0
+[  405131ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/rpc/list_my_friend_requests:0
+[  406030ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  409680ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:54321/rest/v1/profiles?select=*&id=eq.99218c46-d929-4c7a-92cf-f5561ee99ddd:0
+[  409703ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[  417149ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  417150ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788164221136:101
+[ 1314807ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 2113491ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 2356450ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 2602452ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 2853451ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 3104446ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 3355471ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 3606472ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 3857475ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 8153163ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:54321/realtime/v1/websocket?apikey=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH&vsn=2.0.0' failed:  @ http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=00d94308:6054
+[ 8623518ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 8728054ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 9114180ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 9554223ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[ 9720801ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[10199923ms] Error: useAppStore must be used within an AppProvider
+    at useAppStore (http://localhost:3000/src/store.tsx?t=1788174917471:786:23)
+    at MainApp (http://localhost:3000/src/App.tsx?t=1788174917464:27:150)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:8525:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:12424:43)
+    at renderRootSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:12408:13)
+[10199659ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainApp> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:6965
+[10200638ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=00d94308:20102
+[10235016ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:963
+[10235024ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed:  @ http://localhost:3000/@vite/client:1034

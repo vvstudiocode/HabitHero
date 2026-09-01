@@ -204,7 +204,8 @@
   pointer-events: none;
 }
 
-.hh-adventure-table-dialogue {
+.hh-adventure-table-dialogue,
+.hh-world-gate-dialogue {
   position: fixed;
   z-index: 5;
   display: inline-flex;
@@ -225,7 +226,8 @@
   transition: box-shadow 160ms ease, background 160ms ease;
 }
 
-.hh-adventure-table-dialogue:active {
+.hh-adventure-table-dialogue:active,
+.hh-world-gate-dialogue:active {
   transform: translate(-50%, calc(-100% - 8px)) scale(calc(var(--hh-adventure-table-prompt-scale, 1) * .96));
 }
 
@@ -709,7 +711,8 @@
     transition: none;
   }
 
-  .hh-adventure-table-dialogue {
+  .hh-adventure-table-dialogue,
+  .hh-world-gate-dialogue {
     animation: none;
     transition: none;
   }

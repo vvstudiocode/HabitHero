@@ -33,6 +33,7 @@ export function getRequiredWorldPetCatalogItems(gameData: ChildGameData): GameCa
 export function getRequiredWorldDecorationCatalogItems(
   gameData: ChildGameData,
   placementItem?: GameCatalogItem,
+  options: { includeAdventureTable?: boolean } = {},
 ): GameCatalogItem[] {
   const activeDecorationIds = new Set(
     gameData.worldEntities
@@ -43,7 +44,7 @@ export function getRequiredWorldDecorationCatalogItems(
   return uniqueCatalogItems([
     ...activeItems,
     placementItem?.itemType === 'decoration' ? placementItem : undefined,
-    getAdventureTableCatalogItem(gameData),
+    options.includeAdventureTable === false ? undefined : getAdventureTableCatalogItem(gameData),
   ]);
 }
 

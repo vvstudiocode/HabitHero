@@ -186,6 +186,7 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /isWorldCameraKey/);
     assert.match(runtimeSource, /getKeyboardMovement/);
     assert.match(runtimeSource, /cameraYaw/);
+    assert.match(runtimeSource, /cameraYaw = options\.entryCameraYaw \?\? PROTOTYPE_WORLD_CONFIG\.initialCameraYaw/);
     assert.match(runtimeSource, /cameraPitch/);
     assert.match(runtimeSource, /cameraDistance/);
   });

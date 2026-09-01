@@ -20,7 +20,7 @@ test('mobile world layout has separate portrait and landscape interaction contra
   assert.match(runtime, /ResizeObserver/);
   assert.match(runtime, /orientationchange/);
   assert.match(input, /viewportWidth/);
-  assert.match(overlays, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-friend-dock[\s\S]*?left:\s*calc\(50% \+ var\(--hh-world-chat-landscape-half-width\)/);
+  assert.match(overlays, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-world-social-dock-group[\s\S]*?left:\s*calc\(50% \+ var\(--hh-world-chat-landscape-half-width\)/);
   assert.match(character, /@media \(orientation:\s*landscape\)[\s\S]*?data-active-menu="backpack"[\s\S]*?gap:\s*0/);
 });
 

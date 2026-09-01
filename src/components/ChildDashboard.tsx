@@ -56,6 +56,21 @@ import { useDayNightPreference } from '../features/world/use-day-night-preferenc
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
 import { AdventureTableDialogue } from '../features/adventures/components/AdventureTableDialogue';
 import type { AdventureTableScreenPosition } from '../features/world/adventure-table';
+import { ForestValleyGateDialogue } from '../features/world/components/ForestValleyGateDialogue';
+import { SUNRISE_VILLAGE_FOREST_VALLEY_ENTRY_POSITION } from '../features/world/sunrise-village-manifest';
+import type { ForestValleyGateScreenPosition } from '../features/world/forest-valley';
+import { CloudWorkshopGateDialogue } from '../features/world/components/CloudWorkshopGateDialogue';
+import {
+  CLOUD_WORKSHOP_ENTRY_POSITION,
+  SUNRISE_VILLAGE_CLOUD_WORKSHOP_ENTRY_POSITION,
+} from '../features/world/cloud-workshop';
+import type { CloudWorkshopGateScreenPosition } from '../features/world/cloud-workshop';
+import {
+  createInitialWorldNavigationState,
+  resolveWorldNavigationTransition,
+  type PublicWorldLocation,
+  type WorldNavigationPoint,
+} from '../features/world/world-navigation';
 import { AdventureRewardCelebration } from '../features/adventures/components/AdventureRewardCelebration';
 import { TodayAdventureSummary } from '../features/adventures/components/TodayAdventureSummary';
 import {
@@ -77,6 +92,7 @@ import type { AdventureCompletionInput, AdventureTask } from '../features/advent
 import { selectChildAdventureState } from '../lib/child-dashboard-adventure-state';
 import { PointValue } from './shared/PointValue';
 import { PointLedgerHistory } from './PointLedgerHistory';
+import { DEFAULT_WORLD_LOCATION, getStoredWorldLocation, saveWorldLocation, type WorldLocation } from '../features/world/world-location';
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -96,6 +112,21 @@ type ChildAdventureRewardNotice =
   | { mode: 'submitted'; taskName: string; pendingStars: number }
   | { mode: 'approved'; bundle: AdventureRewardBundle };
 const REWARDS_PER_PAGE = 18;
+const PUBLIC_WORLD_ENTRY_POSITIONS: Partial<Record<PublicWorldLocation, WorldNavigationPoint>> = {
+  'sunrise-village': SUNRISE_VILLAGE_FOREST_VALLEY_ENTRY_POSITION,
+  'cloud-workshop': CLOUD_WORKSHOP_ENTRY_POSITION,
+};
+const PUBLIC_WORLD_ENTRY_FACINGS: Partial<Record<PublicWorldLocation, number>> = {
+  'sunrise-village': Math.PI,
+  'forest-valley': Math.PI,
+  'cloud-workshop': Math.PI,
+};
+const PUBLIC_WORLD_ENTRY_CAMERA_YAWS: Partial<Record<PublicWorldLocation, number>> = {
+  // Enter Forest Valley with the camera centered behind the character,
+  // matching the reference view through the root gate.
+  'forest-valley': 0,
+  'cloud-workshop': 0,
+};
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
 const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
 
@@ -146,10 +177,18 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [, setHeroMenuGroup] = useState<ChildMenuGroup | null>(null);
   const [, setHeroMenuVisible] = useState(false);
   const [isVisitingFriendWorld, setIsVisitingFriendWorld] = useState(false);
+  const [worldLocation, setWorldLocation] = useState<WorldLocation>(DEFAULT_WORLD_LOCATION);
+  const [myWorldReturnLocation, setMyWorldReturnLocation] = useState<PublicWorldLocation>('sunrise-village');
+  const [worldEntryPosition, setWorldEntryPosition] = useState<WorldNavigationPoint | undefined>(undefined);
+  const [worldEntryFacingY, setWorldEntryFacingY] = useState<number | undefined>(undefined);
+  const [worldEntryCameraYaw, setWorldEntryCameraYaw] = useState<number | undefined>(undefined);
+  const [worldTransitioning, setWorldTransitioning] = useState(false);
   const [leaveFriendWorldRequest, setLeaveFriendWorldRequest] = useState(0);
   const [cleanMode, setCleanMode] = useState(false);
   const [cleanModeHintVisible, setCleanModeHintVisible] = useState(false);
   const featureContentRef = useRef<HTMLElement>(null);
+  const worldNavigationStateRef = useRef(createInitialWorldNavigationState());
+  const currentWorldPositionRef = useRef<WorldNavigationPoint | null>(null);
   const hasShownCleanModeHint = useRef(false);
   const cleanModeGestureRef = useRef<{
     active: {
@@ -206,10 +245,56 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setDecorationPurchasePrompt(null);
     setDecorationPlacement(null);
     setShareDecorationItem(null);
+    setWorldLocation(activeChildId ? getStoredWorldLocation(activeChildId) : DEFAULT_WORLD_LOCATION);
+    worldNavigationStateRef.current = createInitialWorldNavigationState();
+    currentWorldPositionRef.current = null;
+    setMyWorldReturnLocation('sunrise-village');
+    setWorldEntryPosition(undefined);
+    setWorldEntryFacingY(undefined);
+    setWorldEntryCameraYaw(undefined);
+    setWorldTransitioning(false);
+    setForestValleyGatePromptPosition(null);
+    setCloudWorkshopGatePromptPosition(null);
     setCleanMode(false);
     setCleanModeHintVisible(false);
     hasShownCleanModeHint.current = false;
   }, [activeChildId]);
+
+  const handleWorldLocationChange = (nextLocation: WorldLocation) => {
+    if (!activeChildId || nextLocation === worldLocation) return;
+    const transition = resolveWorldNavigationTransition({
+      currentLocation: worldLocation,
+      requestedLocation: nextLocation,
+      currentPosition: currentWorldPositionRef.current,
+      returnTarget: worldNavigationStateRef.current.returnTarget,
+      entryPositions: PUBLIC_WORLD_ENTRY_POSITIONS,
+      entryPositionsBySource: {
+        'cloud-workshop': {
+          'sunrise-village': SUNRISE_VILLAGE_CLOUD_WORKSHOP_ENTRY_POSITION,
+        },
+      },
+      entryFacings: PUBLIC_WORLD_ENTRY_FACINGS,
+      entryCameraYaws: PUBLIC_WORLD_ENTRY_CAMERA_YAWS,
+    });
+    worldNavigationStateRef.current = { returnTarget: transition.returnTarget };
+    if (transition.nextLocation === 'my-world') {
+      setMyWorldReturnLocation(transition.returnTarget?.location ?? 'sunrise-village');
+    } else if (worldLocation === 'my-world') {
+      setMyWorldReturnLocation('sunrise-village');
+    }
+    setWorldEntryPosition(transition.entryPosition);
+    setWorldEntryFacingY(transition.entryFacingY);
+    setWorldEntryCameraYaw(transition.entryCameraYaw);
+    saveWorldLocation(activeChildId, transition.nextLocation);
+    setWorldTransitioning(true);
+    setWorldLocation(transition.nextLocation);
+    setForestValleyGatePromptPosition(null);
+    setCloudWorkshopGatePromptPosition(null);
+    setDecorationPlacement(null);
+    setDecorationPurchasePrompt(null);
+    setShareDecorationItem(null);
+    setHeroFeature(null);
+  };
 
   useEffect(() => {
     cleanModeGestureRef.current = {
@@ -380,6 +465,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [adventureRewardNotice, setAdventureRewardNotice] = useState<ChildAdventureRewardNotice | null>(null);
   const [adventureTablePromptPosition, setAdventureTablePromptPosition] = useState<AdventureTableScreenPosition | null>(null);
   const [adventureTableScreenPosition, setAdventureTableScreenPosition] = useState<AdventureTableScreenPosition | null>(null);
+  const [forestValleyGatePromptPosition, setForestValleyGatePromptPosition] = useState<ForestValleyGateScreenPosition | null>(null);
+  const [cloudWorkshopGatePromptPosition, setCloudWorkshopGatePromptPosition] = useState<CloudWorkshopGateScreenPosition | null>(null);
   const [adventureBoardOpen, setAdventureBoardOpen] = useState(false);
 
   useEffect(() => {
@@ -964,6 +1051,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               key={activeChild.id}
               childId={activeChild.id}
               gameData={gameData}
+              worldLocation={worldLocation}
+              entryPosition={worldEntryPosition}
+              entryFacingY={worldEntryFacingY}
+              entryCameraYaw={worldEntryCameraYaw}
               showPetNames={showPetNames}
               dayNightEnabled={dayNightEnabled}
               paused={Boolean((heroFeature && !decorationPlacement) || adventureRewardNotice || adventureBoardOpen)}
@@ -978,8 +1069,14 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onStartDecorationPlacement={startExistingDecorationPlacement}
               onCollectDecoration={collectSelectedDecoration}
               onPetAction={handlePetAction}
+              onWorldPlayerPositionChange={(position) => {
+                currentWorldPositionRef.current = position;
+              }}
               onAdventureTableScreenPositionChange={setAdventureTablePromptPosition}
               onAdventureTableIndicatorScreenPositionChange={setAdventureTableScreenPosition}
+              onForestValleyGateScreenPositionChange={setForestValleyGatePromptPosition}
+              onCloudWorkshopGateScreenPositionChange={setCloudWorkshopGatePromptPosition}
+              onWorldTransitionEnd={() => setWorldTransitioning(false)}
               cleanMode={cleanMode}
               cleanModeHintVisible={cleanModeHintVisible}
               onCleanModeToggle={toggleCleanMode}
@@ -1018,8 +1115,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         enabled={role === 'child'}
         cleanMode={cleanMode}
         placementMode={Boolean(decorationPlacement)}
+        worldLocation={worldLocation}
+        myWorldReturnLocation={myWorldReturnLocation}
         leaveFriendWorldRequest={leaveFriendWorldRequest}
         onVisitingChange={setIsVisitingFriendWorld}
+        onWorldLocationChange={handleWorldLocationChange}
+        worldTransitioning={worldTransitioning}
       />
       {childMenuNotifications.goals
         && !adventureBoardOpen
@@ -1066,6 +1167,36 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               <MessageCircle size={23} strokeWidth={2.4} aria-hidden="true" />
             </button>
           </>
+      )}
+      {(worldLocation === 'sunrise-village' || worldLocation === 'forest-valley')
+        && forestValleyGatePromptPosition
+        && !worldTransitioning
+        && !adventureBoardOpen
+        && !heroFeature
+        && !decorationPlacement
+        && !cleanMode
+        && !adventureRewardNotice
+        && (
+          <ForestValleyGateDialogue
+            position={forestValleyGatePromptPosition}
+            label={worldLocation === 'forest-valley' ? '進入晨光村' : '進入森語谷'}
+            onEnter={() => handleWorldLocationChange(worldLocation === 'forest-valley' ? 'sunrise-village' : 'forest-valley')}
+          />
+      )}
+      {(worldLocation === 'sunrise-village' || worldLocation === 'cloud-workshop')
+        && cloudWorkshopGatePromptPosition
+        && !worldTransitioning
+        && !adventureBoardOpen
+        && !heroFeature
+        && !decorationPlacement
+        && !cleanMode
+        && !adventureRewardNotice
+        && (
+          <CloudWorkshopGateDialogue
+            position={cloudWorkshopGatePromptPosition}
+            label={worldLocation === 'cloud-workshop' ? '進入晨光村' : '進入雲工房'}
+            onEnter={() => handleWorldLocationChange(worldLocation === 'cloud-workshop' ? 'sunrise-village' : 'cloud-workshop')}
+          />
       )}
       <ChildAdventureBoard
         open={adventureBoardOpen}

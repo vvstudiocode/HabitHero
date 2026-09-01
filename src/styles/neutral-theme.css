@@ -414,7 +414,8 @@ body,
 }
 
 .hh-world-chat-dock,
-.hh-friend-dock {
+.hh-friend-dock,
+.hh-my-world-dock {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);
   background: var(--hh-world-overlay-surface);
@@ -424,7 +425,8 @@ body,
 }
 
 .hh-world-chat-dock,
-.hh-friend-dock {
+.hh-friend-dock,
+.hh-my-world-dock {
   background: var(--hh-neutral-surface);
   background: var(--hh-world-overlay-surface);
 }
@@ -553,7 +555,8 @@ body,
   box-shadow: none;
 }
 
-.hh-adventure-table-dialogue {
+.hh-adventure-table-dialogue,
+.hh-world-gate-dialogue {
   color: var(--hh-neutral-ink);
   background: color-mix(in srgb, var(--hh-neutral-surface) 58%, transparent);
   border: 1px solid color-mix(in srgb, var(--hh-neutral-surface) 66%, var(--hh-primary));
@@ -563,7 +566,9 @@ body,
 }
 
 .hh-adventure-table-dialogue:hover,
+.hh-world-gate-dialogue:hover,
 .hh-adventure-table-dialogue:focus-visible,
+.hh-world-gate-dialogue:focus-visible,
 .hh-adventure-table-dialogue-trigger:hover,
 .hh-adventure-table-dialogue-trigger:focus-visible {
   background: color-mix(in srgb, var(--hh-neutral-surface) 70%, transparent);
@@ -586,6 +591,7 @@ body,
 }
 
 .hh-adventure-table-dialogue:focus-visible,
+.hh-world-gate-dialogue:focus-visible,
 .hh-adventure-table-dialogue-trigger:focus-visible,
 .hh-adventure-board-close:focus-visible {
   outline: 3px solid var(--hh-character-focus-ring);

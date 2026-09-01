@@ -3,9 +3,11 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
   ADVENTURE_TABLE_ASSET_KEY,
+  ADVENTURE_NOTICE_BOARD_PROMPT_LIFT,
   ADVENTURE_TABLE_POSITION,
   ADVENTURE_TABLE_SCALE,
   getAdventureTableCatalogItem,
+  getAdventureLandmarkPromptHeight,
   getAdventureTablePromptHeight,
   getAdventureTableWorldTransform,
   getAdventureTablePromptScale,
@@ -79,14 +81,21 @@ describe('adventure table landmark', () => {
 
   it('anchors the prompt halfway toward the table and scales it for a distant camera', () => {
     assert.equal(getAdventureTablePromptHeight(2, 0), 1);
+    assert.equal(getAdventureLandmarkPromptHeight(2, 0, ADVENTURE_NOTICE_BOARD_PROMPT_LIFT), 1.22);
+    assert.equal(ADVENTURE_NOTICE_BOARD_PROMPT_LIFT, 0.22);
     assert.equal(getAdventureTablePromptScale(4.1, 4.1, 6.5), 1);
     assert.equal(getAdventureTablePromptScale(6.5, 4.1, 6.5), 0.72);
     assert.ok(getAdventureTablePromptScale(5.2, 4.1, 6.5) < 1);
-    assert.match(runtimeSource, /getAdventureTablePromptHeight/);
+    assert.match(runtimeSource, /getAdventureLandmarkPromptHeight/);
     assert.match(runtimeSource, /getAdventureTablePromptScale/);
     assert.match(runtimeSource, /const tableScreenPosition = getAdventureTableScreenPosition\(viewport\) \?\? null/);
     assert.match(runtimeSource, /adventureTableScreenPosition = adventureTableNearby\s*\?\s*tableScreenPosition\s*:\s*null/);
     assert.match(runtimeSource, /onAdventureTableIndicatorScreenPositionChange\?\.\(tableScreenPosition\)/);
+    assert.match(runtimeSource, /getAuthoredSceneModule\(sunriseVillageSource \?\? forestValleySource!, 'notice-board'\)/);
+    assert.match(runtimeSource, /adventureLandmarkObject = authoredNoticeBoard/);
+    assert.match(runtimeSource, /getAdventureLandmarkPromptHeight/);
+    assert.match(runtimeSource, /if \(!sunriseVillageSource && !forestValleySource\) terrain\.add\(adventureTableObject\)/);
+    assert.match(runtimeSource, /sunriseVillageSource \|\| forestValleySource \? undefined : buildCollisionCircles/);
     assert.doesNotMatch(runtimeSource, /if \(!adventureTableScreenPosition\)/);
     assert.doesNotMatch(runtimeSource, /getStableAdventureTableScreenPosition/);
   });

@@ -674,10 +674,18 @@
   }
 }
 
-.hh-friend-dock {
+.hh-world-social-dock-group {
   position: fixed;
   bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px));
   left: 16px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hh-world-control-gap, 8px);
+}
+
+.hh-world-social-dock-group > .hh-friend-dock {
+  position: static;
 }
 
 .hh-friend-list-sheet {
@@ -770,10 +778,11 @@
     transform: translateX(-50%);
   }
 
-  .hh-friend-dock {
+  .hh-world-social-dock-group {
     right: auto;
     bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
-    left: calc(50% + var(--hh-world-chat-landscape-half-width) + (var(--hh-world-control-size) + var(--hh-world-control-gap)) * 2 + var(--hh-world-control-gap));
+    left: calc(50% + var(--hh-world-chat-landscape-half-width) + var(--hh-world-control-size) * 2 + var(--hh-world-control-gap) * 3);
+    flex-direction: row-reverse;
   }
 
   .hh-child-feature-backdrop {
@@ -874,10 +883,10 @@
 }
 
 @media (max-width: 760px) and (orientation: portrait) {
-  .hh-friend-dock {
-    right: calc(50% + 64px);
+  .hh-world-social-dock-group {
+    right: auto;
     bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
-    left: auto;
+    left: 16px;
   }
 }
 

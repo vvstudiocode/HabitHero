@@ -111,12 +111,62 @@ import {
 } from './world-runtime-geometry';
 import {
   PROTOTYPE_WORLD_ASSETS,
+  SUNRISE_VILLAGE_MODULE_ASSETS,
+  SUNRISE_VILLAGE_SCENE_TRANSFORM,
+  SUNRISE_VILLAGE_TREE_SPAWN_ANCHOR,
   getDecorationCatalogItem,
   getDecorationCollisionInput,
   getDecorationGroundCoverMasks,
   getDecorationGroundOffset,
   getDecorationModelUrl,
 } from './world-runtime-assets';
+import {
+  SUNRISE_VILLAGE_FOREST_VALLEY_GATE_PLACEMENT,
+  SUNRISE_VILLAGE_GROUND_Y,
+  SUNRISE_VILLAGE_MODULE_PLACEMENTS,
+} from './sunrise-village-manifest';
+import {
+  FOREST_VALLEY_GROUND_Y,
+  FOREST_VALLEY_MODULE_ASSETS,
+  FOREST_VALLEY_MODULE_PLACEMENTS,
+  FOREST_VALLEY_GATE_PROMPT_BOTTOM_MARGIN,
+  FOREST_VALLEY_GATE_PROMPT_SIDE_MARGIN,
+  FOREST_VALLEY_GATE_PROMPT_TOP_MARGIN,
+  FOREST_VALLEY_SCENE_TRANSFORM,
+  FOREST_VALLEY_SPAWN_ANCHOR,
+  getForestValleyGatePromptHeight,
+  isForestValleyGateNearby,
+  type ForestValleyGateScreenPosition,
+} from './forest-valley';
+import {
+  CLOUD_WORKSHOP_GATE_MODULE_ID,
+  CLOUD_WORKSHOP_GATE_PROMPT_BOTTOM_MARGIN,
+  CLOUD_WORKSHOP_GATE_PROMPT_SIDE_MARGIN,
+  CLOUD_WORKSHOP_GATE_PROMPT_TOP_MARGIN,
+  CLOUD_WORKSHOP_GROUND_MODULE_KEY,
+  CLOUD_WORKSHOP_GROUND_Y,
+  CLOUD_WORKSHOP_MODULE_ASSETS,
+  CLOUD_WORKSHOP_MODULE_PLACEMENTS,
+  CLOUD_WORKSHOP_SCENE_TRANSFORM,
+  CLOUD_WORKSHOP_SPAWN_ANCHOR,
+  getCloudWorkshopGatePromptHeight,
+  isCloudWorkshopGateNearby,
+  SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT,
+  type CloudWorkshopGateScreenPosition,
+} from './cloud-workshop';
+import {
+  getWorldMovementBoundary,
+  type WorldLocation,
+} from './world-location';
+import {
+  alignAuthoredSceneToGround,
+  getAuthoredSceneModule,
+  getAuthoredSceneCollisionProxies,
+  getAuthoredSceneRadialBoundary,
+  getAuthoredSceneSurfaceY,
+  getAuthoredSceneSpawnPosition,
+  hasAuthoredSceneSurface,
+} from './world-authored-scene';
 import { updateDecorationGroundCoverMasks } from './world-decoration-ground-cover';
 import { addDecorationPointLight, setDecorationObjectScale } from './world-decoration-effects';
 import {
@@ -143,10 +193,11 @@ import { createRemoteCharacterLoader } from './world-runtime-remote-character';
 import { createCharacterFallbackCatalogItem } from './world-character-loadout';
 import { groundWorldCharacter, getWorldCharacterFootNodes, mountWorldCharacterModel } from './world-character-runtime';
 import {
+  ADVENTURE_NOTICE_BOARD_PROMPT_LIFT,
   type AdventureTableScreenPosition,
+  getAdventureLandmarkPromptHeight,
   getAdventureTableCatalogItem,
   getAdventureTableCollisionInput,
-  getAdventureTablePromptHeight,
   getAdventureTablePromptScale,
   getAdventureTableWorldTransform,
   isAdventureTableNearby as isAdventureTableWithinInteractionRadius,
@@ -253,6 +304,25 @@ export function getPetGroundOffset(_assetKey?: string, metadata?: Record<string,
     : 0;
 }
 
+export function getPetWorldBaseY(
+  worldLocation: WorldLocation,
+  entityY: number,
+  worldGroundY: number,
+  playerRootY: number,
+  groundOffset = 0,
+): number {
+  const baseY = worldLocation === 'cloud-workshop' ? playerRootY + worldGroundY : entityY;
+  return baseY + groundOffset;
+}
+
+export function getRoamingWorldBaseY(
+  worldLocation: WorldLocation,
+  worldGroundY: number,
+  playerRootY: number,
+): number {
+  return worldLocation === 'cloud-workshop' ? playerRootY + worldGroundY : worldGroundY;
+}
+
 /** Optional extra grounding used only while a supplied walk clip is active. */
 export function getPetWalkingGroundOffset(_assetKey?: string, metadata?: Record<string, unknown>): number {
   const configuredOffset = metadata?.walkingGroundOffset;
@@ -357,9 +427,13 @@ export interface PetSelection {
 export interface PrototypeWorldRuntimeOptions {
   canvas: HTMLCanvasElement;
   gameData: ChildGameData;
+  worldLocation: WorldLocation;
   equippedCatalogItem?: GameCatalogItem;
   characterRenderMode: 'anime-maiden' | 'world-glb' | 'procedural';
   characterModelUrl?: string;
+  entryPosition?: WorldPoint2D;
+  entryFacingY?: number;
+  entryCameraYaw?: number;
   createProceduralCharacter: (THREE: ThreeNamespace, item?: GameCatalogItem) => Object3D;
   showPetNames: boolean;
   dayNightEnabled: boolean;
@@ -367,11 +441,14 @@ export interface PrototypeWorldRuntimeOptions {
   session?: WorldRuntimeSession;
   onPlacementPositionChange?: (position: { x: number; z: number }) => void;
   onPlacementGestureChange?: (gesture: { scaleFactor: number; rotationDelta: number }) => void;
+  onWorldPlayerPositionChange?: (position: WorldPoint2D) => void;
   onAvatarScreenPositionsChange?: (positions: ReadonlyMap<string, AvatarScreenPosition>) => void;
   onDecorationSelect?: (selection: DecorationSelection | null) => void;
   onPetSelect?: (selection: PetSelection | null) => void;
   onAdventureTableScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
   onAdventureTableIndicatorScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
+  onForestValleyGateScreenPositionChange?: (position: ForestValleyGateScreenPosition | null) => void;
+  onCloudWorkshopGateScreenPositionChange?: (position: CloudWorkshopGateScreenPosition | null) => void;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
   onStatus: (status: RuntimeStatus) => void;
@@ -382,6 +459,7 @@ export interface PrototypeWorldRuntimeOptions {
 
 export interface PrototypeWorldRuntimeUpdate {
   gameData: ChildGameData;
+  worldLocation?: WorldLocation;
   equippedCatalogItem?: GameCatalogItem;
   characterRenderMode: 'anime-maiden' | 'world-glb' | 'procedural';
   characterModelUrl?: string;
@@ -844,11 +922,16 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let playInteractionAction: (action: PetAnimationAction) => boolean = () => false;
   let lastAvatarScreenPositionsAt = Number.NEGATIVE_INFINITY;
   let lastAdventureTableScreenPositionAt = Number.NEGATIVE_INFINITY;
+  let lastForestValleyGateScreenPositionAt = Number.NEGATIVE_INFINITY;
+  let lastCloudWorkshopGateScreenPositionAt = Number.NEGATIVE_INFINITY;
   let adventureTableScreenPosition: AdventureTableScreenPosition | null = null;
+  let forestValleyGateScreenPosition: ForestValleyGateScreenPosition | null = null;
+  let cloudWorkshopGateScreenPosition: CloudWorkshopGateScreenPosition | null = null;
   let optimisticPetActorsDirty = false;
   const optimisticPetIdles = new Map<string, PetSelection>();
   let latestRuntimeUpdate: PrototypeWorldRuntimeUpdate = {
     gameData: options.gameData,
+    worldLocation: options.worldLocation,
     equippedCatalogItem: options.equippedCatalogItem,
     characterRenderMode: options.characterRenderMode,
     characterModelUrl: options.characterModelUrl,
@@ -872,6 +955,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    options.onForestValleyGateScreenPositionChange?.(null);
+    options.onCloudWorkshopGateScreenPositionChange?.(null);
+    options.controller?.reset();
     loadingAbortController?.abort();
     characterSwapAbortController?.abort();
     characterSwapSequence += 1;
@@ -914,6 +1000,14 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         hardwareConcurrency: deviceNavigator.hardwareConcurrency,
       });
       const qualitySettings = WORLD_QUALITY_SETTINGS[quality];
+      const movementBoundary = getWorldMovementBoundary(options.worldLocation);
+      const worldGroundY = options.worldLocation === 'sunrise-village'
+        ? SUNRISE_VILLAGE_GROUND_Y
+        : options.worldLocation === 'forest-valley'
+          ? FOREST_VALLEY_GROUND_Y
+          : options.worldLocation === 'cloud-workshop'
+            ? CLOUD_WORKSHOP_GROUND_Y
+          : CHARACTER_GROUND_CONTACT_Y;
       const visualSettings = getNaturalWorldVisualSettings(quality);
       const viewportWidth = Math.max(options.canvas.getBoundingClientRect().width, window.innerWidth, 1);
       const pixelRatio = getWorldPixelRatio({
@@ -988,6 +1082,134 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       dracoDecoderLoader = new DRACOLoader();
       dracoDecoderLoader.setDecoderPath('/draco/');
       loader.setDRACOLoader(dracoDecoderLoader);
+      let sunriseVillageSource: Object3D | undefined;
+      if (options.worldLocation === 'sunrise-village') {
+        options.onProgress(22, '載入晨光村場景…');
+        const moduleResults = await Promise.all(SUNRISE_VILLAGE_MODULE_PLACEMENTS.map(async (placement) => ({
+          placement,
+          scene: (await loadGltfSafely<{ scene: Object3D }>(loader, SUNRISE_VILLAGE_MODULE_ASSETS[placement.asset], signal)).scene,
+        })));
+        const authoredModules = new THREE.Group();
+        authoredModules.name = 'sunrise-village-authored-modules';
+        for (const { placement, scene: moduleSource } of moduleResults) {
+          if (!trackResourceRoot(moduleSource)) return;
+          moduleSource.position.set(0, 0, 0);
+          moduleSource.rotation.set(0, 0, 0);
+          moduleSource.scale.setScalar(1);
+          // The supplied Blender exports keep a 90° axis-conversion rotation
+          // on their single child node. The manifest already contains the
+          // authored scene transform, so remove that import-only transform
+          // before applying the layout placement below.
+          moduleSource.children.forEach((child) => {
+            child.position.set(0, 0, 0);
+            child.rotation.set(0, 0, 0);
+            child.scale.setScalar(1);
+          });
+          const moduleRoot = new THREE.Group();
+          moduleRoot.name = `sunrise-village-${placement.id}`;
+          moduleRoot.userData.sunriseVillageModule = placement.asset === 'island' ? 'island' : placement.id;
+          moduleRoot.userData.sunriseVillageCollision = placement.collision;
+          moduleRoot.userData.sunriseVillageCollisionFootprintScale = placement.collisionFootprintScale;
+          moduleRoot.position.fromArray(placement.position);
+          moduleRoot.quaternion.fromArray(placement.rotation);
+          moduleRoot.scale.fromArray(placement.scale);
+          moduleRoot.add(moduleSource);
+          authoredModules.add(moduleRoot);
+        }
+        sunriseVillageSource = authoredModules;
+      }
+      let forestValleySource: Object3D | undefined;
+      if (options.worldLocation === 'forest-valley') {
+        options.onProgress(22, '載入森語谷場景…');
+        const moduleResults = await Promise.all(FOREST_VALLEY_MODULE_PLACEMENTS.map(async (placement) => ({
+          placement,
+          scene: (await loadGltfSafely<{ scene: Object3D }>(loader, FOREST_VALLEY_MODULE_ASSETS[placement.asset], signal)).scene,
+        })));
+        const authoredModules = new THREE.Group();
+        authoredModules.name = 'forest-valley-authored-modules';
+        for (const { placement, scene: moduleSource } of moduleResults) {
+          if (!trackResourceRoot(moduleSource)) return;
+          moduleSource.position.set(0, 0, 0);
+          moduleSource.rotation.set(0, 0, 0);
+          moduleSource.scale.setScalar(1);
+          moduleSource.children.forEach((child) => {
+            child.position.set(0, 0, 0);
+            child.rotation.set(0, 0, 0);
+            child.scale.setScalar(1);
+          });
+          const moduleRoot = new THREE.Group();
+          moduleRoot.name = `forest-valley-${placement.id}`;
+          const moduleKey = placement.asset === 'island' ? 'island' : placement.id;
+          moduleRoot.userData.sunriseVillageModule = moduleKey;
+          moduleRoot.userData.authoredWorldModule = moduleKey;
+          moduleRoot.userData.sunriseVillageCollision = placement.collision;
+          moduleRoot.userData.sunriseVillageCollisionFootprintScale = placement.collisionFootprintScale;
+          moduleRoot.position.fromArray(placement.position);
+          moduleRoot.quaternion.fromArray(placement.rotation);
+          moduleRoot.scale.fromArray(placement.scale);
+          moduleRoot.add(moduleSource);
+          authoredModules.add(moduleRoot);
+        }
+        forestValleySource = authoredModules;
+      }
+      let cloudWorkshopSource: Object3D | undefined;
+      if (options.worldLocation === 'cloud-workshop') {
+        options.onProgress(22, '載入雲工房場景…');
+        const moduleResults = await Promise.all(CLOUD_WORKSHOP_MODULE_PLACEMENTS.map(async (placement) => ({
+          placement,
+          scene: (await loadGltfSafely<{ scene: Object3D }>(loader, CLOUD_WORKSHOP_MODULE_ASSETS[placement.asset], signal)).scene,
+        })));
+        const authoredModules = new THREE.Group();
+        authoredModules.name = 'cloud-workshop-authored-modules';
+        for (const { placement, scene: moduleSource } of moduleResults) {
+          if (!trackResourceRoot(moduleSource)) return;
+          moduleSource.position.set(0, 0, 0);
+          moduleSource.rotation.set(0, 0, 0);
+          moduleSource.scale.setScalar(1);
+          moduleSource.children.forEach((child) => {
+            child.position.set(0, 0, 0);
+            child.rotation.set(0, 0, 0);
+            child.scale.setScalar(1);
+          });
+          const moduleRoot = new THREE.Group();
+          moduleRoot.name = `cloud-workshop-${placement.id}`;
+          moduleRoot.userData.authoredWorldModule = placement.id;
+          moduleRoot.userData.sunriseVillageCollision = placement.collision;
+          moduleRoot.userData.sunriseVillageCollisionFootprintScale = placement.collisionFootprintScale;
+          moduleRoot.position.fromArray(placement.position);
+          moduleRoot.quaternion.fromArray(placement.rotation);
+          moduleRoot.scale.fromArray(placement.scale);
+          moduleRoot.add(moduleSource);
+          authoredModules.add(moduleRoot);
+        }
+        cloudWorkshopSource = authoredModules;
+      }
+      let sunriseForestValleyGateSource: Object3D | undefined;
+      let sunriseCloudWorkshopGateSource: Object3D | undefined;
+      if (options.worldLocation === 'sunrise-village') {
+        const gateResult = await loadGltfSafely<{ scene: Object3D }>(loader, FOREST_VALLEY_MODULE_ASSETS.rootGate, signal);
+        if (!trackResourceRoot(gateResult.scene)) return;
+        sunriseForestValleyGateSource = gateResult.scene;
+        sunriseForestValleyGateSource.position.set(0, 0, 0);
+        sunriseForestValleyGateSource.rotation.set(0, 0, 0);
+        sunriseForestValleyGateSource.scale.setScalar(1);
+        sunriseForestValleyGateSource.children.forEach((child) => {
+          child.position.set(0, 0, 0);
+          child.rotation.set(0, 0, 0);
+          child.scale.setScalar(1);
+        });
+        const cloudGateResult = await loadGltfSafely<{ scene: Object3D }>(loader, CLOUD_WORKSHOP_MODULE_ASSETS.airshipDock1, signal);
+        if (!trackResourceRoot(cloudGateResult.scene)) return;
+        sunriseCloudWorkshopGateSource = cloudGateResult.scene;
+        sunriseCloudWorkshopGateSource.position.set(0, 0, 0);
+        sunriseCloudWorkshopGateSource.rotation.set(0, 0, 0);
+        sunriseCloudWorkshopGateSource.scale.setScalar(1);
+        sunriseCloudWorkshopGateSource.children.forEach((child) => {
+          child.position.set(0, 0, 0);
+          child.rotation.set(0, 0, 0);
+          child.scale.setScalar(1);
+        });
+      }
       const treeResult = await loadGltfSafely<{ scene: Object3D }>(loader, PROTOTYPE_WORLD_ASSETS.tree, signal);
       const treeSource = treeResult.scene;
       if (!trackResourceRoot(treeSource)) return;
@@ -1086,7 +1308,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         decorationModelLoads.set(item.id, load);
         return load;
       };
-      const decorationModelItems = getRequiredWorldDecorationCatalogItems(options.gameData, options.placement?.item)
+      const decorationModelItems = getRequiredWorldDecorationCatalogItems(options.gameData, options.placement?.item, {
+        includeAdventureTable: !sunriseVillageSource && !forestValleySource && !cloudWorkshopSource,
+      })
         .filter((item) => Boolean(getDecorationModelUrl(item)));
       if (decorationModelItems.length > 0) {
         options.onProgress(68, '讀取世界家具模型…');
@@ -1181,25 +1405,111 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       adventureTableObject.rotation.y = adventureTableTransform.rotationY;
       setDecorationObjectScale(adventureTableObject, adventureTableTransform.scale);
       (adventureTableObject as Object3D & { castShadow?: boolean }).castShadow = true;
-      terrain.add(adventureTableObject);
+      if (!sunriseVillageSource && !forestValleySource) terrain.add(adventureTableObject);
+      if (cloudWorkshopSource) terrain.remove(adventureTableObject);
+      let adventureLandmarkObject = adventureTableObject;
+      let adventureLandmarkPosition = {
+        x: adventureTableTransform.x,
+        z: adventureTableTransform.z,
+      };
+      let adventureLandmarkPromptLift = 0;
+      let forestValleyGateObject: Object3D | undefined;
+      let cloudWorkshopGateObject: Object3D | undefined;
       const adventureTablePromptPoint = new THREE.Vector3();
       const adventureTableBounds = new THREE.Box3();
       const getAdventureTableScreenPosition = (viewport: DOMRect): AdventureTableScreenPosition | undefined => {
-        adventureTableObject.updateMatrixWorld(true);
-        adventureTableBounds.setFromObject(adventureTableObject);
+        adventureLandmarkObject.updateMatrixWorld(true);
+        adventureTableBounds.setFromObject(adventureLandmarkObject);
         adventureTablePromptPoint.set(
-          adventureTableTransform.x,
-          getAdventureTablePromptHeight(
+          adventureLandmarkPosition.x,
+          getAdventureLandmarkPromptHeight(
             Math.max(adventureTableBounds.max.y + 0.2, 0.9),
             adventureTableBounds.min.y,
+            adventureLandmarkPromptLift,
           ),
-          adventureTableTransform.z,
+          adventureLandmarkPosition.z,
         );
         adventureTablePromptPoint.project(camera);
         if (adventureTablePromptPoint.z < -1 || adventureTablePromptPoint.z > 1 || adventureTablePromptPoint.x < -1 || adventureTablePromptPoint.x > 1 || adventureTablePromptPoint.y < -1 || adventureTablePromptPoint.y > 1) return undefined;
         return {
           x: viewport.left + ((adventureTablePromptPoint.x + 1) / 2) * viewport.width,
           y: viewport.top + ((1 - adventureTablePromptPoint.y) / 2) * viewport.height,
+          scale: getAdventureTablePromptScale(
+            cameraDistance,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceMax,
+          ),
+        };
+      };
+      const forestValleyGatePromptPoint = new THREE.Vector3();
+      const forestValleyGateWorldPosition = new THREE.Vector3();
+      const forestValleyGateBounds = new THREE.Box3();
+      const getForestValleyGateScreenPosition = (viewport: DOMRect): ForestValleyGateScreenPosition | undefined => {
+        if (!forestValleyGateObject) return undefined;
+        forestValleyGateObject.updateMatrixWorld(true);
+        forestValleyGateBounds.setFromObject(forestValleyGateObject);
+        forestValleyGateObject.getWorldPosition(forestValleyGateWorldPosition);
+        forestValleyGatePromptPoint.set(
+          forestValleyGateWorldPosition.x,
+          getForestValleyGatePromptHeight(
+            Math.max(forestValleyGateBounds.max.y + 0.25, 0.9),
+            forestValleyGateBounds.min.y,
+          ),
+          forestValleyGateWorldPosition.z,
+        );
+        forestValleyGatePromptPoint.project(camera);
+        if (forestValleyGatePromptPoint.z < -1 || forestValleyGatePromptPoint.z > 1) return undefined;
+        const projectedX = viewport.left + ((forestValleyGatePromptPoint.x + 1) / 2) * viewport.width;
+        const projectedY = viewport.top + ((1 - forestValleyGatePromptPoint.y) / 2) * viewport.height;
+        return {
+          x: THREE.MathUtils.clamp(
+            projectedX,
+            viewport.left + FOREST_VALLEY_GATE_PROMPT_SIDE_MARGIN,
+            viewport.right - FOREST_VALLEY_GATE_PROMPT_SIDE_MARGIN,
+          ),
+          y: THREE.MathUtils.clamp(
+            projectedY,
+            viewport.top + FOREST_VALLEY_GATE_PROMPT_TOP_MARGIN,
+            viewport.bottom - FOREST_VALLEY_GATE_PROMPT_BOTTOM_MARGIN,
+          ),
+          scale: getAdventureTablePromptScale(
+            cameraDistance,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceMax,
+          ),
+        };
+      };
+      const cloudWorkshopGatePromptPoint = new THREE.Vector3();
+      const cloudWorkshopGateWorldPosition = new THREE.Vector3();
+      const cloudWorkshopGateBounds = new THREE.Box3();
+      const getCloudWorkshopGateScreenPosition = (viewport: DOMRect): CloudWorkshopGateScreenPosition | undefined => {
+        if (!cloudWorkshopGateObject) return undefined;
+        cloudWorkshopGateObject.updateMatrixWorld(true);
+        cloudWorkshopGateBounds.setFromObject(cloudWorkshopGateObject);
+        cloudWorkshopGateObject.getWorldPosition(cloudWorkshopGateWorldPosition);
+        cloudWorkshopGatePromptPoint.set(
+          cloudWorkshopGateWorldPosition.x,
+          getCloudWorkshopGatePromptHeight(
+            Math.max(cloudWorkshopGateBounds.max.y + 0.25, 0.9),
+            cloudWorkshopGateBounds.min.y,
+          ),
+          cloudWorkshopGateWorldPosition.z,
+        );
+        cloudWorkshopGatePromptPoint.project(camera);
+        if (cloudWorkshopGatePromptPoint.z < -1 || cloudWorkshopGatePromptPoint.z > 1) return undefined;
+        const projectedX = viewport.left + ((cloudWorkshopGatePromptPoint.x + 1) / 2) * viewport.width;
+        const projectedY = viewport.top + ((1 - cloudWorkshopGatePromptPoint.y) / 2) * viewport.height;
+        return {
+          x: THREE.MathUtils.clamp(
+            projectedX,
+            viewport.left + CLOUD_WORKSHOP_GATE_PROMPT_SIDE_MARGIN,
+            viewport.right - CLOUD_WORKSHOP_GATE_PROMPT_SIDE_MARGIN,
+          ),
+          y: THREE.MathUtils.clamp(
+            projectedY,
+            viewport.top + CLOUD_WORKSHOP_GATE_PROMPT_TOP_MARGIN,
+            viewport.bottom - CLOUD_WORKSHOP_GATE_PROMPT_BOTTOM_MARGIN,
+          ),
           scale: getAdventureTablePromptScale(
             cameraDistance,
             PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault,
@@ -1238,11 +1548,117 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         butterflies: butterflies.group, signal, prefersReducedMotion,
       });
       worldScene.add(terrain);
+      if (sunriseVillageSource || forestValleySource || cloudWorkshopSource) {
+        terrain.visible = false;
+        const authoredWorldRoot = new THREE.Group();
+        authoredWorldRoot.name = sunriseVillageSource
+          ? 'sunrise-village-scene'
+          : forestValleySource
+            ? 'forest-valley-scene'
+            : 'cloud-workshop-scene';
+        const authoredWorldSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource;
+        const sceneTransform = sunriseVillageSource
+          ? SUNRISE_VILLAGE_SCENE_TRANSFORM
+          : forestValleySource
+            ? FOREST_VALLEY_SCENE_TRANSFORM
+            : CLOUD_WORKSHOP_SCENE_TRANSFORM;
+        const groundModuleKey = forestValleySource
+          ? 'island'
+          : cloudWorkshopSource
+            ? CLOUD_WORKSHOP_GROUND_MODULE_KEY
+            : undefined;
+        authoredWorldRoot.position.set(sceneTransform.position.x, sceneTransform.position.y, sceneTransform.position.z);
+        authoredWorldRoot.scale.setScalar(sceneTransform.scale);
+        authoredWorldRoot.add(authoredWorldSource);
+        worldScene.add(authoredWorldRoot);
+        alignAuthoredSceneToGround(
+          THREE,
+          authoredWorldRoot,
+          authoredWorldSource,
+          sceneTransform.position.y,
+          groundModuleKey,
+        );
+        const authoredNoticeBoard = sunriseVillageSource || forestValleySource
+          ? getAuthoredSceneModule(sunriseVillageSource ?? forestValleySource!, 'notice-board')
+          : undefined;
+        if (authoredNoticeBoard) {
+          adventureLandmarkObject = authoredNoticeBoard;
+          authoredNoticeBoard.updateMatrixWorld(true);
+          adventureTableBounds.setFromObject(authoredNoticeBoard);
+          const authoredNoticeBoardPosition = adventureTableBounds.getCenter(new THREE.Vector3());
+          adventureLandmarkPosition = {
+            x: authoredNoticeBoardPosition.x,
+            z: authoredNoticeBoardPosition.z,
+          };
+          adventureLandmarkPromptLift = ADVENTURE_NOTICE_BOARD_PROMPT_LIFT;
+        }
+        if (forestValleySource) {
+          forestValleyGateObject = getAuthoredSceneModule(forestValleySource, 'root-gate');
+          if (forestValleyGateObject) {
+            forestValleyGateObject.updateMatrixWorld(true);
+            forestValleyGateBounds.setFromObject(forestValleyGateObject);
+            forestValleyGateObject.position.y += (
+              FOREST_VALLEY_GROUND_Y - forestValleyGateBounds.min.y
+            ) / FOREST_VALLEY_SCENE_TRANSFORM.scale;
+          }
+        }
+        if (cloudWorkshopSource) {
+          cloudWorkshopGateObject = getAuthoredSceneModule(cloudWorkshopSource, CLOUD_WORKSHOP_GATE_MODULE_ID);
+          // Keep the authored dock height from the Blender layout. The main
+          // scene is grounded by cloud-ground-1; re-grounding this module here
+          // would cancel manual edits to airship-dock-1's authored Z height.
+        }
+      }
+      if (sunriseForestValleyGateSource) {
+        forestValleyGateObject = new THREE.Group();
+        forestValleyGateObject.name = 'forest-valley-entry-gate';
+        forestValleyGateObject.position.fromArray(SUNRISE_VILLAGE_FOREST_VALLEY_GATE_PLACEMENT.position);
+        // Apply the road-facing turn around the world-up axis first. With
+        // Three.js's default XYZ Euler order, combining this yaw with the
+        // 90-degree upright conversion makes the gate lean instead of turn.
+        forestValleyGateObject.rotation.order = 'YXZ';
+        forestValleyGateObject.rotation.set(
+          SUNRISE_VILLAGE_FOREST_VALLEY_GATE_PLACEMENT.rotation.x,
+          SUNRISE_VILLAGE_FOREST_VALLEY_GATE_PLACEMENT.rotation.y,
+          SUNRISE_VILLAGE_FOREST_VALLEY_GATE_PLACEMENT.rotation.z,
+        );
+        forestValleyGateObject.scale.setScalar(SUNRISE_VILLAGE_FOREST_VALLEY_GATE_PLACEMENT.scale);
+        forestValleyGateObject.add(sunriseForestValleyGateSource);
+        worldScene.add(forestValleyGateObject);
+        forestValleyGateObject.updateMatrixWorld(true);
+        forestValleyGateBounds.setFromObject(forestValleyGateObject);
+        forestValleyGateObject.position.y += SUNRISE_VILLAGE_FOREST_VALLEY_GATE_PLACEMENT.groundY - forestValleyGateBounds.min.y;
+      }
+      if (sunriseCloudWorkshopGateSource) {
+        cloudWorkshopGateObject = new THREE.Group();
+        cloudWorkshopGateObject.name = 'cloud-workshop-entry-gate';
+        cloudWorkshopGateObject.position.fromArray(SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.position);
+        cloudWorkshopGateObject.rotation.order = 'YXZ';
+        cloudWorkshopGateObject.rotation.set(
+          SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.rotation.x,
+          SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.rotation.y,
+          SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.rotation.z,
+        );
+        cloudWorkshopGateObject.scale.setScalar(SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.scale);
+        cloudWorkshopGateObject.add(sunriseCloudWorkshopGateSource);
+        worldScene.add(cloudWorkshopGateObject);
+        cloudWorkshopGateObject.updateMatrixWorld(true);
+        const cloudWorkshopGateBounds = new THREE.Box3().setFromObject(cloudWorkshopGateObject);
+        // Keep the entrance grounded by default, while allowing position[1]
+        // to be used as a manual world-height offset.
+        cloudWorkshopGateObject.position.y += (
+          SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.groundY
+          - cloudWorkshopGateBounds.min.y
+          + SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.position[1]
+        );
+      }
 
       const playerRoot = new THREE.Group();
       playerRoot.name = 'player-root';
-      playerRoot.position.set(options.session?.fixedSpawn?.x ?? 0, 0, options.session?.fixedSpawn?.z ?? terrainStep * 2.08);
-      let appliedFixedSpawn = options.session?.fixedSpawn ? { ...options.session.fixedSpawn } : null;
+      const initialFixedSpawn = options.entryPosition
+        ?? (options.worldLocation === 'sunrise-village' ? undefined : options.session?.fixedSpawn);
+      playerRoot.position.set(initialFixedSpawn?.x ?? 0, 0, initialFixedSpawn?.z ?? terrainStep * 2.08);
+      let appliedFixedSpawn = initialFixedSpawn ? { ...initialFixedSpawn } : null;
       const activeRemoteAvatarRuntime = remoteAvatarRuntime = createRemoteAvatarRuntimeManager({
         THREE,
         scene: worldScene,
@@ -1253,12 +1669,14 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const playerFollowHistory: WorldPoint2D[] = [];
       const characterRoot = new THREE.Group();
       characterRoot.name = 'player-character';
+      characterRoot.rotation.y = options.entryFacingY ?? 0;
       characterRoot.position.y = PLAYER_CHARACTER_GROUND_OFFSET;
       const characterMount = mountWorldCharacterModel(THREE, {
         root: characterRoot,
         model: characterSource,
         targetHeight: PROTOTYPE_WORLD_CONFIG.characterTargetHeight,
         parentY: playerRoot.position.y,
+        groundY: worldGroundY,
       });
       let characterDefinition = characterMount.definition;
       let characterScale = characterMount.scale;
@@ -1326,11 +1744,43 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
       const groundRoamingCharacterOnGrass = () => {
         if (!roamingActor) return;
+        const currentPosition = {
+          x: roamingActor.object.position.x,
+          z: roamingActor.object.position.z,
+        };
+        if (cloudWorkshopSource && !hasAuthoredSceneSurface(
+          THREE,
+          cloudWorkshopSource,
+          CLOUD_WORKSHOP_GROUND_MODULE_KEY,
+          currentPosition.x,
+          currentPosition.z,
+        )) {
+          // The generic roaming boundary can reach empty sky in the authored
+          // workshop. Recover to the player's visible ground instead of
+          // leaving the Star Sprout suspended over the scene.
+          roamingActor.object.position.x = playerRoot.position.x;
+          roamingActor.object.position.z = playerRoot.position.z;
+        }
         roamingActor.model.updateMatrixWorld(true);
         const roamingBounds = new THREE.Box3().setFromObject(roamingActor.model);
         const footYs = roamingActor.footNodes.map((node) => node.getWorldPosition(new THREE.Vector3()).y);
         const referenceY = getCharacterGroundingReferenceY(roamingBounds.min.y, footYs);
-        roamingActor.object.position.y = getGroundedRootY(roamingActor.object.position.y, referenceY);
+        const groundY = cloudWorkshopSource
+          ? getAuthoredSceneSurfaceY(
+            THREE,
+            cloudWorkshopSource,
+            CLOUD_WORKSHOP_GROUND_MODULE_KEY,
+            roamingActor.object.position.x,
+            roamingActor.object.position.z,
+            getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y),
+          )
+          : getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y);
+        roamingActor.object.position.y = getGroundedRootY(
+          roamingActor.object.position.y,
+          referenceY,
+          0,
+          groundY,
+        );
         roamingActor.object.updateMatrixWorld(true);
       };
       groundRoamingCharacterOnGrass();
@@ -1399,21 +1849,98 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           model: characterSource,
           footNodes: characterFootNodes,
           parentY: playerRoot.position.y,
+          groundY: worldGroundY,
         });
       };
       groundCharacterOnGrass();
 
-      const adventureTableCollision = buildCollisionCircles([
+      const adventureTableCollision = sunriseVillageSource || forestValleySource ? undefined : buildCollisionCircles([
         getAdventureTableCollisionInput(adventureTableTransform, adventureTableItem),
       ])[0];
+      const authoredVillageSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource;
+      const authoredVillageCollisions = authoredVillageSource
+        ? getAuthoredSceneCollisionProxies(THREE, authoredVillageSource)
+        : [];
+      const authoredVillageRadialBoundary = authoredVillageSource
+        ? getAuthoredSceneRadialBoundary(
+          THREE,
+          authoredVillageSource,
+          cloudWorkshopSource ? CLOUD_WORKSHOP_GROUND_MODULE_KEY : undefined,
+        )
+        : undefined;
+      const staticWorldCollisions = [
+        ...authoredVillageCollisions,
+        ...(adventureTableCollision && !cloudWorkshopSource ? [adventureTableCollision] : []),
+      ];
+      const proceduralWorldObstacles = authoredVillageSource ? [] : [CENTRAL_TREE_KEEP_OUT];
+      if (options.worldLocation === 'sunrise-village' && sunriseVillageSource) {
+        const authoredSpawn = getAuthoredSceneSpawnPosition(
+          staticWorldCollisions,
+          movementBoundary,
+          CHARACTER_COLLISION_RADIUS,
+          options.entryPosition ?? SUNRISE_VILLAGE_TREE_SPAWN_ANCHOR,
+        );
+        if (authoredSpawn) playerRoot.position.set(authoredSpawn.x, 0, authoredSpawn.z);
+      }
+      if (options.worldLocation === 'forest-valley' && forestValleySource) {
+        const authoredSpawn = getAuthoredSceneSpawnPosition(
+          staticWorldCollisions,
+          movementBoundary,
+          CHARACTER_COLLISION_RADIUS,
+          options.entryPosition ?? FOREST_VALLEY_SPAWN_ANCHOR,
+        );
+        if (authoredSpawn) playerRoot.position.set(authoredSpawn.x, 0, authoredSpawn.z);
+      }
+      if (options.worldLocation === 'cloud-workshop' && cloudWorkshopSource) {
+        const authoredSpawn = getAuthoredSceneSpawnPosition(
+          staticWorldCollisions,
+          movementBoundary,
+          CHARACTER_COLLISION_RADIUS,
+          options.entryPosition ?? CLOUD_WORKSHOP_SPAWN_ANCHOR,
+        );
+        if (authoredSpawn) playerRoot.position.set(authoredSpawn.x, 0, authoredSpawn.z);
+        playerRoot.position.y = getAuthoredSceneSurfaceY(
+          THREE,
+          cloudWorkshopSource,
+          CLOUD_WORKSHOP_GROUND_MODULE_KEY,
+          playerRoot.position.x,
+          playerRoot.position.z,
+          worldGroundY,
+        ) - worldGroundY;
+        groundCharacterOnGrass();
+      }
+      let lastReportedPlayerPosition: WorldPoint2D | null = null;
+      const reportPlayerWorldPosition = () => {
+        const nextPosition = { x: playerRoot.position.x, z: playerRoot.position.z };
+        if (
+          lastReportedPlayerPosition
+          && lastReportedPlayerPosition.x === nextPosition.x
+          && lastReportedPlayerPosition.z === nextPosition.z
+        ) return;
+        lastReportedPlayerPosition = nextPosition;
+        options.onWorldPlayerPositionChange?.(nextPosition);
+      };
+      // Report the resolved authored entry immediately. This makes a quick
+      // "enter my world" tap remember the real position instead of a stale
+      // spawn anchor.
+      reportPlayerWorldPosition();
       const decorationCollisions = buildCollisionCircles(options.gameData.worldEntities
         .filter((entity) => entity.entityKind === 'decoration')
         .map((entity) => getDecorationCollisionInput(options.gameData, entity)));
-      if (adventureTableCollision) decorationCollisions.push(adventureTableCollision);
-      const wanderObstacles = [CENTRAL_TREE_KEEP_OUT, ...decorationCollisions];
-      const petSpawnObstacles = [CHARACTER_SPAWN, ...wanderObstacles];
+      decorationCollisions.unshift(...staticWorldCollisions);
+      const wanderObstacles = [...proceduralWorldObstacles, ...decorationCollisions];
+      const petSpawnObstacles = authoredVillageSource
+        ? [...wanderObstacles]
+        : [CHARACTER_SPAWN, ...wanderObstacles];
       let petSpawnIndex = 0;
       const characterWorldHeight = characterDefinition.size.y * characterScale;
+      const getRuntimePetBaseY = (entityY: number, groundOffset: number) => getPetWorldBaseY(
+        options.worldLocation,
+        entityY,
+        worldGroundY,
+        playerRoot.position.y,
+        groundOffset,
+      );
       const decorationObjects: Array<{ entityId: string; object: Object3D }> = [];
       const petActors: Array<{
         entityId: string;
@@ -1525,7 +2052,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const spawn = getDistributedPetSpawnPosition(petSpawnIndex, petRadius, petSpawnObstacles);
           petSpawnIndex += 1;
           petSpawnObstacles.push({ ...spawn, radius: petRadius });
-          object.position.set(spawn.x, entity.y + petGroundOffset, spawn.z);
+          object.position.set(spawn.x, getRuntimePetBaseY(entity.y, petGroundOffset), spawn.z);
           object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
         }
         if (!isPet) (object as Object3D & { castShadow?: boolean }).castShadow = true;
@@ -1535,7 +2062,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const followIndex = followingPetInventoryIds.indexOf(entity.inventoryItemId);
           const follow = followIndex >= 0;
           const initialFacing = { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) };
-          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, walkAction: petModel!.walkAction, idleAction: petModel!.idleAction, activeAction: petModel!.activeAction, petActionActions: petModel!.petActionActions, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: entity.y + petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
+          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, idleAction: petModel!.idleAction, walkAction: petModel!.walkAction, activeAction: petModel!.activeAction, petActionActions: petModel!.petActionActions, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: getRuntimePetBaseY(entity.y, petGroundOffset), animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
         }
       });
       followingPetInventoryIds.forEach((inventoryId, followIndex) => {
@@ -1581,11 +2108,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           );
           object.position.set(
             leaderPosition.x - initialFacing.x * initialFollowDistance,
-            petGroundOffset,
+            getRuntimePetBaseY(0, petGroundOffset),
             leaderPosition.z - initialFacing.z * initialFollowDistance,
           );
           worldScene.add(object);
-          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, walkAction: petModel.walkAction, idleAction: petModel.idleAction, activeAction: petModel.activeAction, petActionActions: petModel.petActionActions, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
+          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, idleAction: petModel.idleAction, walkAction: petModel.walkAction, activeAction: petModel.activeAction, petActionActions: petModel.petActionActions, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: getRuntimePetBaseY(0, petGroundOffset), animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
         }
       });
 
@@ -1704,7 +2231,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         actor.movementSpeedMultiplier = getPetMovementSpeedMultiplier(catalogItem.assetKey, catalogItem.metadata);
         actor.walkingGroundOffset = walkingGroundOffset;
         actor.radius = getPetNavigationRadius(entity.collisionRadius ?? catalogItem.collisionRadius, following ? (catalogItem.maxScale ?? 1) : entity.scale);
-        actor.baseY = entity.y + groundOffset;
+        actor.baseY = getRuntimePetBaseY(entity.y, groundOffset);
         actor.state = getPetActorState(actor.behaviorMode, following);
         actor.target = null;
         actor.followHistory.length = 0;
@@ -1727,7 +2254,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             leaderPosition.z - facing.z * followDistance,
           );
         } else {
-          actor.object.position.set(entity.x, entity.y + groundOffset, entity.z);
+          actor.object.position.set(entity.x, actor.baseY, entity.z);
           actor.object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
         }
       };
@@ -1767,7 +2294,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           behaviorMode: entity.behaviorMode,
           follow: following,
           radius: getPetNavigationRadius(entity.collisionRadius ?? catalogItem.collisionRadius, following ? (catalogItem.maxScale ?? 1) : entity.scale),
-          baseY: entity.y + getPetGroundOffset(catalogItem.assetKey, catalogItem.metadata),
+          baseY: getRuntimePetBaseY(entity.y, getPetGroundOffset(catalogItem.assetKey, catalogItem.metadata)),
           animationTime: 0,
           idleCycleElapsed: 0,
           movePending: false,
@@ -1989,9 +2516,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
         const nextCollisions = buildCollisionCircles([...activeDecorations.values()]
           .map((entity) => getDecorationCollisionInput(nextGameData, entity)));
-        if (adventureTableCollision) nextCollisions.push(adventureTableCollision);
-        decorationCollisions.splice(0, decorationCollisions.length, ...nextCollisions);
-        wanderObstacles.splice(1, wanderObstacles.length - 1, ...nextCollisions);
+        decorationCollisions.splice(0, decorationCollisions.length, ...staticWorldCollisions, ...nextCollisions);
+        wanderObstacles.splice(proceduralWorldObstacles.length, wanderObstacles.length - proceduralWorldObstacles.length, ...staticWorldCollisions, ...nextCollisions);
         updateDecorationGroundCoverMasks(proceduralGrass, proceduralFlowers, nextGameData, latestRuntimeUpdate.placement);
       };
 
@@ -2123,26 +2649,77 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       };
 
       const controller = options.controller;
-      let cameraYaw = PROTOTYPE_WORLD_CONFIG.initialCameraYaw;
+      let cameraYaw = options.entryCameraYaw ?? PROTOTYPE_WORLD_CONFIG.initialCameraYaw;
       let cameraPitch: number = PROTOTYPE_WORLD_CONFIG.initialCameraPitch;
       let cameraDistance: number = PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault;
       let placementActive = false;
       const placementPointers = new Map<number, { point: { x: number; y: number }; startedOnDecoration: boolean }>();
       let placementGesture: { previousDistance: number; previousAngle: number } | null = null;
       let adventureTableNearby = false;
+      let forestValleyGateNearby = false;
+      let cloudWorkshopGateNearby = false;
       const updateAdventureTableProximity = () => {
         if (placementActive) return;
         const distance = Math.hypot(
-          playerRoot.position.x - adventureTableTransform.x,
-          playerRoot.position.z - adventureTableTransform.z,
+          playerRoot.position.x - adventureLandmarkPosition.x,
+          playerRoot.position.z - adventureLandmarkPosition.z,
         );
         const nextNearby = isAdventureTableWithinInteractionRadius(distance, adventureTableNearby);
         if (nextNearby === adventureTableNearby) return;
         adventureTableNearby = nextNearby;
         adventureTableScreenPosition = null;
       };
+      const updateForestValleyGateProximity = () => {
+        if (
+          (options.worldLocation !== 'sunrise-village' && options.worldLocation !== 'forest-valley')
+          || placementActive
+          || !forestValleyGateObject
+        ) {
+          if (forestValleyGateNearby) {
+            forestValleyGateNearby = false;
+            forestValleyGateScreenPosition = null;
+          }
+          return;
+        }
+        forestValleyGateObject.updateMatrixWorld(true);
+        forestValleyGateObject.getWorldPosition(forestValleyGateWorldPosition);
+        const distance = Math.hypot(
+          playerRoot.position.x - forestValleyGateWorldPosition.x,
+          playerRoot.position.z - forestValleyGateWorldPosition.z,
+        );
+        const nextNearby = isForestValleyGateNearby(distance, forestValleyGateNearby);
+        if (nextNearby === forestValleyGateNearby) return;
+        forestValleyGateNearby = nextNearby;
+        forestValleyGateScreenPosition = null;
+      };
+      const updateCloudWorkshopGateProximity = () => {
+        if (
+          (options.worldLocation !== 'sunrise-village' && options.worldLocation !== 'cloud-workshop')
+          || placementActive
+          || !cloudWorkshopGateObject
+        ) {
+          if (cloudWorkshopGateNearby || cloudWorkshopGateScreenPosition) {
+            cloudWorkshopGateNearby = false;
+            cloudWorkshopGateScreenPosition = null;
+          }
+          return;
+        }
+        cloudWorkshopGateObject.updateMatrixWorld(true);
+        cloudWorkshopGateObject.getWorldPosition(cloudWorkshopGateWorldPosition);
+        const distance = Math.hypot(
+          playerRoot.position.x - cloudWorkshopGateWorldPosition.x,
+          playerRoot.position.z - cloudWorkshopGateWorldPosition.z,
+        );
+        const nextNearby = isCloudWorkshopGateNearby(distance, cloudWorkshopGateNearby);
+        if (nextNearby === cloudWorkshopGateNearby) return;
+        cloudWorkshopGateNearby = nextNearby;
+        cloudWorkshopGateScreenPosition = null;
+      };
       updateScene = (next) => {
-        appliedFixedSpawn = applyFixedSpawnIfChanged(playerRoot, next.session?.fixedSpawn, appliedFixedSpawn, () => { playerFollowHistory.length = 0; controller?.reset(); });
+        const fixedSpawn = (next.worldLocation ?? options.worldLocation) === 'sunrise-village'
+          ? undefined
+          : next.session?.fixedSpawn;
+        appliedFixedSpawn = applyFixedSpawnIfChanged(playerRoot, fixedSpawn, appliedFixedSpawn, () => { playerFollowHistory.length = 0; controller?.reset(); });
         const wasPlacementActive = placementActive;
         placementActive = Boolean(next.placement);
         weatherRuntime.setDayNightEnabled(next.dayNightEnabled);
@@ -2331,6 +2908,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let pendingPetSelection: { pointerId: number; selection: PetSelection | null } | null = null;
       const onPointerDown = (event: PointerEvent) => {
         if (options.pausedRef.current || isInteractiveTarget(event.target)) return;
+        options.canvas.focus({ preventScroll: true });
         wakeWorldFrames();
         if (placementActive) {
           const point = pointFromEvent(event);
@@ -2542,6 +3120,9 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               { x: playerRoot.position.x + direction.x, z: playerRoot.position.z + direction.z },
               CHARACTER_COLLISION_RADIUS,
               decorationCollisions,
+              movementBoundary,
+              authoredVillageRadialBoundary,
+              !authoredVillageSource,
             );
             isPlayerMoving = Math.hypot(nextPosition.x - playerRoot.position.x, nextPosition.z - playerRoot.position.z) > 0.0001;
             playerRoot.position.x = nextPosition.x;
@@ -2557,7 +3138,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             characterRoot.rotation.y += yawDelta * Math.min(1, delta * 12);
           }
         }
+        reportPlayerWorldPosition();
         updateAdventureTableProximity();
+        updateForestValleyGateProximity();
+        updateCloudWorkshopGateProximity();
         if (interactionActionState) {
           if (isPlayerMoving) {
             finishInteractionAction('walk');
@@ -2582,11 +3166,25 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             roamingActor.wanderState,
             now,
           );
-          const isWalking = step.walking && !step.blocked;
+          const nextPosition = cloudWorkshopSource && !hasAuthoredSceneSurface(
+            THREE,
+            cloudWorkshopSource,
+            CLOUD_WORKSHOP_GROUND_MODULE_KEY,
+            step.next.x,
+            step.next.z,
+          )
+            ? current
+            : step.next;
+          const isWalking = step.walking && !step.blocked
+            && (nextPosition.x !== current.x || nextPosition.z !== current.z);
+          if (!isWalking && nextPosition.x === current.x && nextPosition.z === current.z) {
+            roamingActor.wanderState.explorationTarget = null;
+            roamingActor.wanderState.nextExploreAt = now;
+          }
           isRoamingCharacterMoving = isWalking;
           roamingActor.facing = step.facing;
-          roamingActor.object.position.x = step.next.x;
-          roamingActor.object.position.z = step.next.z;
+          roamingActor.object.position.x = nextPosition.x;
+          roamingActor.object.position.z = nextPosition.z;
           if (isWalking) {
             const targetYaw = Math.atan2(step.facing.x, step.facing.z);
             const yawDelta = Math.atan2(
@@ -2754,6 +3352,24 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           options.onAdventureTableScreenPositionChange?.(adventureTableScreenPosition);
           options.onAdventureTableIndicatorScreenPositionChange?.(tableScreenPosition);
           lastAdventureTableScreenPositionAt = frameTime;
+        }
+        if (options.onForestValleyGateScreenPositionChange && frameTime - lastForestValleyGateScreenPositionAt >= 50) {
+          camera.updateMatrixWorld();
+          const viewport = options.canvas.getBoundingClientRect();
+          forestValleyGateScreenPosition = forestValleyGateNearby
+            ? getForestValleyGateScreenPosition(viewport) ?? null
+            : null;
+          options.onForestValleyGateScreenPositionChange(forestValleyGateScreenPosition);
+          lastForestValleyGateScreenPositionAt = frameTime;
+        }
+        if (options.onCloudWorkshopGateScreenPositionChange && frameTime - lastCloudWorkshopGateScreenPositionAt >= 50) {
+          camera.updateMatrixWorld();
+          const viewport = options.canvas.getBoundingClientRect();
+          cloudWorkshopGateScreenPosition = cloudWorkshopGateNearby
+            ? getCloudWorkshopGateScreenPosition(viewport) ?? null
+            : null;
+          options.onCloudWorkshopGateScreenPositionChange(cloudWorkshopGateScreenPosition);
+          lastCloudWorkshopGateScreenPositionAt = frameTime;
         }
         if (options.onAvatarScreenPositionsChange && frameTime - lastAvatarScreenPositionsAt >= 50) {
           camera.updateMatrixWorld();

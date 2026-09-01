@@ -101,6 +101,16 @@ describe('world scene game data snapshot', () => {
     );
   });
 
+  it('can omit the legacy adventure table when the authored village has a notice board', () => {
+    const data = gameData([pet('pet-silf', 'pet.silf-owl')], []);
+
+    assert.deepEqual(
+      getRequiredWorldDecorationCatalogItems(data, undefined, { includeAdventureTable: false })
+        .map((item) => item.assetKey),
+      [],
+    );
+  });
+
   it('keeps every active roaming pet catalog item alongside the following pet', () => {
     const snapshot = createWorldSceneGameDataSnapshot(
       gameData(

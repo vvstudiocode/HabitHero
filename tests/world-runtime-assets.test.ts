@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   PROTOTYPE_WORLD_ASSETS,
+  SUNRISE_VILLAGE_MODULE_ASSETS,
+  SUNRISE_VILLAGE_TREE_SPAWN_ANCHOR,
   getDecorationCatalogItem,
   getDecorationCollisionInput,
   getDecorationGroundCoverMask,
@@ -75,6 +77,19 @@ describe('world runtime asset metadata helpers', () => {
     assert.match(PROTOTYPE_WORLD_ASSETS.skyboxes.day, /sky-equirectangular-day\.png$/);
     assert.match(PROTOTYPE_WORLD_ASSETS.skyboxes.dusk, /sky-equirectangular-dusk\.png$/);
     assert.match(PROTOTYPE_WORLD_ASSETS.skyboxes.night, /sky-equirectangular-night\.png$/);
+    assert.deepEqual(Object.keys(SUNRISE_VILLAGE_MODULE_ASSETS), [
+      'island',
+      'marketStall',
+      'noticeBoard',
+      'goldenTreeHouse',
+      'roosterHouse',
+      'forestHouse',
+      'straightStoneRoad',
+      'goldenTree',
+      'roundStoneRoad',
+    ]);
+    assert.ok(Object.values(SUNRISE_VILLAGE_MODULE_ASSETS).every((url) => url.startsWith('/assets/world/sunrise-village/')));
+    assert.deepEqual(SUNRISE_VILLAGE_TREE_SPAWN_ANCHOR, { x: -0.18, z: -0.95 });
   });
 
   it('resolves decoration catalog items from the entity id before inventory fallback', () => {

@@ -7,6 +7,8 @@ import {
   getCharacterGroundingReferenceY,
   getGroundedRootY,
   getPetGroundOffset,
+  getPetWorldBaseY,
+  getRoamingWorldBaseY,
 } from '../src/features/world/prototype-world-runtime';
 
 const root = new URL('../', import.meta.url);
@@ -22,6 +24,16 @@ describe('supplied pet grounding and motion', () => {
 
   it('uses the grass-level offset for Star Diver', () => {
     assert.equal(getPetGroundOffset('pet.star-diver', { groundOffset: -0.22 }), -0.22);
+  });
+
+  it('uses the Cloud Workshop player ground for pet roots', () => {
+    assert.equal(getPetWorldBaseY('cloud-workshop', 0, 0.06, 0.48), 0.54);
+    assert.equal(getPetWorldBaseY('sunrise-village', -0.2, 0.107, 0.48), -0.2);
+  });
+
+  it('uses the Cloud Workshop player ground for the roaming Star Sprout', () => {
+    assert.equal(getRoamingWorldBaseY('cloud-workshop', 0.06, 0.48), 0.54);
+    assert.equal(getRoamingWorldBaseY('sunrise-village', 0.107, 0.48), 0.107);
   });
 
   it('persists the same grass-level offset in Supabase metadata', () => {

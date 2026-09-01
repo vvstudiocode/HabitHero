@@ -1,0 +1,33 @@
+- generic [ref=f42e4]:
+  - banner [ref=f42e5]:
+    - generic [ref=f42e6]:
+      - generic [ref=f42e8]:
+        - generic "習慣冒險島立體冒險世界。直向下方四分之一拖曳移動；橫向左下控制區拖曳移動，其餘區域單指調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [active] [ref=f42e9]
+        - text: 拖曳移動
+        - generic [ref=f42e10]:
+          - group:
+            - button
+            - button
+            - button
+          - button "開啟動作選單" [ref=f42e11]
+        - button "開啟清爽模式" [ref=f42e16]
+      - generic "儀表板統計":
+        - generic "加入天數：8":
+          - strong:
+            - generic: "8"
+        - generic "我的點數：0":
+          - strong:
+            - generic: "0"
+        - generic "我的卷軸：0":
+          - strong:
+            - generic: "0"
+      - button "開啟背包" [ref=f42e27]
+  - generic [ref=f42e32]:
+    - button "進入我的世界" [ref=f42e51]
+    - button "開啟好友列表，目前 1 位好友" [ref=f42e37]
+  - generic [ref=f42e43]:
+    - button "開啟我的世界 的世界聊天" [ref=f42e44]:
+      - generic [ref=f42e45]: 我的世界 的世界聊天
+      - generic [ref=f42e46]: 和好友說說話吧！
+    - button "收合聊天摘要" [expanded] [ref=f42e48]
+  - button "進入晨光村" [ref=f42e63]

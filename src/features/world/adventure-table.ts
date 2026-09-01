@@ -10,6 +10,7 @@ export const ADVENTURE_TABLE_INTERACTION_ENTER_RADIUS = 1.55;
 export const ADVENTURE_TABLE_INTERACTION_EXIT_RADIUS = 2;
 export const ADVENTURE_TABLE_PROMPT_LOWERING_RATIO = 0.5;
 export const ADVENTURE_TABLE_PROMPT_SCALE_MIN = 0.72;
+export const ADVENTURE_NOTICE_BOARD_PROMPT_LIFT = 0.22;
 
 export interface AdventureTableScreenPosition {
   x: number;
@@ -19,6 +20,14 @@ export interface AdventureTableScreenPosition {
 
 export function getAdventureTablePromptHeight(topY: number, baseY: number): number {
   return topY + (baseY - topY) * ADVENTURE_TABLE_PROMPT_LOWERING_RATIO;
+}
+
+export function getAdventureLandmarkPromptHeight(
+  topY: number,
+  baseY: number,
+  promptLift = 0,
+): number {
+  return getAdventureTablePromptHeight(topY, baseY) + Math.max(promptLift, 0);
 }
 
 export function getAdventureTablePromptScale(

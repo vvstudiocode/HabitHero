@@ -16,6 +16,27 @@ export const PROTOTYPE_WORLD_ASSETS = {
   }),
 } as const;
 
+export const SUNRISE_VILLAGE_MODULE_ASSETS = Object.freeze({
+  island: '/assets/world/sunrise-village/island.glb',
+  marketStall: '/assets/world/sunrise-village/market-stall.glb',
+  noticeBoard: '/assets/world/sunrise-village/notice-board.glb',
+  goldenTreeHouse: '/assets/world/sunrise-village/golden-tree-house.glb',
+  roosterHouse: '/assets/world/sunrise-village/rooster-house.glb',
+  forestHouse: '/assets/world/sunrise-village/forest-house.glb',
+  straightStoneRoad: '/assets/world/sunrise-village/straight-stone-road.glb',
+  goldenTree: '/assets/world/sunrise-village/golden-tree.glb',
+  roundStoneRoad: '/assets/world/sunrise-village/round-stone-road.glb',
+});
+
+export const SUNRISE_VILLAGE_SCENE_TRANSFORM = Object.freeze({
+  scale: 0.05,
+  position: Object.freeze({ x: 0.82, y: 1.12, z: 0.28 }),
+});
+
+// Current Blender layout anchor for the large tree in the village plaza,
+// expressed after the authored scene transform above has been applied.
+export const SUNRISE_VILLAGE_TREE_SPAWN_ANCHOR = Object.freeze({ x: -0.18, z: -0.95 });
+
 export interface DecorationGroundCoverMask {
   x: number;
   z: number;

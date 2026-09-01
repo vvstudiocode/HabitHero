@@ -49,8 +49,9 @@ describe('pet spawn distribution and stable steering', () => {
     assert.ok(new Set(spawns.map((spawn) => Math.sign(spawn.x) * 2 + Math.sign(spawn.z))).size >= 3);
   });
 
-  it('keeps the initial mid-field spread clear of the player start', () => {
-    assert.match(runtimeSource, /petSpawnObstacles = \[CHARACTER_SPAWN/);
+  it('keeps the default initial spread clear while isolating authored villages', () => {
+    assert.match(runtimeSource, /const petSpawnObstacles = authoredVillageSource/);
+    assert.match(runtimeSource, /: \[CHARACTER_SPAWN, \.\.\.wanderObstacles\]/);
   });
 
   it('keeps navigation radius independent from visual enlargement', () => {

@@ -1,5 +1,6 @@
 import type { ChildGameData } from './contracts';
 import type { WorldQuality } from './world-quality';
+import type { WorldLocation } from './world-location';
 
 function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
   return [...gameData.worldEntities]
@@ -23,10 +24,16 @@ function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
     .join('|');
 }
 
-export function getTerrainWorldSceneKey(gameData: ChildGameData, quality: WorldQuality, showPetNames = true): string {
+export function getTerrainWorldSceneKey(
+  gameData: ChildGameData,
+  quality: WorldQuality,
+  showPetNames = true,
+  worldLocation: WorldLocation = 'my-world',
+): string {
   return [
     getWorldEntitiesSceneSignature(gameData),
     quality,
     showPetNames ? 'pet-names-on' : 'pet-names-off',
+    worldLocation,
   ].join('||');
 }

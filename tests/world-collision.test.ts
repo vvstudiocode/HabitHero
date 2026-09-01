@@ -112,4 +112,24 @@ describe('world collision contract', () => {
     const upperEdge = moveWorldCharacter({ x: 0, z: -4 }, { x: 0, z: -6 }, 0.35);
     assert.equal(upperEdge.z, -WORLD_BOUNDARY + 0.35);
   });
+
+  it('can disable the procedural tree obstacle for authored village worlds', () => {
+    const next = moveWorldCharacter({ x: 1.1, z: -11 }, { x: 1.1, z: -8.9 }, 0.35, [], 12.4, undefined, false);
+    assert.equal(next.z, -8.9);
+  });
+
+  it('supports the larger authored-scene movement boundary without changing the default world', () => {
+    const expanded = moveWorldCharacter({ x: 11.8, z: 0 }, { x: 12.8, z: 0 }, 0.35, [], 12.4);
+    assert.equal(expanded.x, 12.4 - 0.35);
+  });
+
+  it('keeps movement inside an authored radial island footprint', () => {
+    const radialBoundary = {
+      center: { x: 0, z: 0 },
+      radii: Array.from({ length: 72 }, () => 2),
+    } as const;
+    const next = moveWorldCharacter({ x: 0, z: 0 }, { x: 3, z: 3 }, 0.35, [], 12.4, radialBoundary);
+
+    assert.ok(Math.hypot(next.x, next.z) <= 2 - 0.35 + 0.0001);
+  });
 });

@@ -54,6 +54,11 @@ export interface WorldPoint2D {
   z: number;
 }
 
+export interface RadialWorldBoundary {
+  center: WorldPoint2D;
+  radii: readonly number[];
+}
+
 export const WORLD_LAYOUT_VERSION = 1;
 export const WORLD_BOUNDARY = 4.8;
 // The outer meadow plane is 26.95 units wide (9 walkable tiles plus the
@@ -119,6 +124,37 @@ export function getDecorationCollisionSpec(
 
 export function clampWorldPosition(value: number, radius: number, boundary = WORLD_BOUNDARY): number {
   return Math.min(boundary - radius, Math.max(-boundary + radius, value));
+}
+
+function getRadialBoundaryRadius(boundary: RadialWorldBoundary, angle: number): number {
+  const count = boundary.radii.length;
+  if (count === 0) return 0;
+  const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const sample = normalizedAngle / (Math.PI * 2) * count;
+  const lowerIndex = Math.floor(sample) % count;
+  const upperIndex = (lowerIndex + 1) % count;
+  const fraction = sample - Math.floor(sample);
+  const lower = Number.isFinite(boundary.radii[lowerIndex]) ? boundary.radii[lowerIndex] : 0;
+  const upper = Number.isFinite(boundary.radii[upperIndex]) ? boundary.radii[upperIndex] : lower;
+  return lower + (upper - lower) * fraction;
+}
+
+export function clampWorldPointToRadialBoundary(
+  point: WorldPoint2D,
+  radius: number,
+  boundary: RadialWorldBoundary,
+  squareBoundary = WORLD_BOUNDARY,
+): WorldPoint2D {
+  const delta = { x: point.x - boundary.center.x, z: point.z - boundary.center.z };
+  const distance = Math.hypot(delta.x, delta.z);
+  if (!Number.isFinite(distance) || distance <= 0.0001) return point;
+  const maximumDistance = Math.min(getRadialBoundaryRadius(boundary, Math.atan2(delta.z, delta.x)), squareBoundary) - radius;
+  if (distance <= maximumDistance) return point;
+  const safeDistance = Math.max(0, maximumDistance);
+  return {
+    x: boundary.center.x + (delta.x / distance) * safeDistance,
+    z: boundary.center.z + (delta.z / distance) * safeDistance,
+  };
 }
 
 function getShape(obstacle: CollisionCircle): CollisionShape {
@@ -317,15 +353,25 @@ export function moveWorldCharacter(
   desired: WorldPoint2D,
   radius = CHARACTER_COLLISION_RADIUS,
   decorations: CollisionCircle[] = [],
+  boundary = WORLD_BOUNDARY,
+  radialBoundary?: RadialWorldBoundary,
+  includeCentralTreeKeepOut = true,
 ): WorldPoint2D {
   const obstacles = [
-    { x: CENTRAL_TREE_KEEP_OUT.x, z: CENTRAL_TREE_KEEP_OUT.z, radius: CENTRAL_TREE_KEEP_OUT.radius },
+    ...(includeCentralTreeKeepOut ? [{ x: CENTRAL_TREE_KEEP_OUT.x, z: CENTRAL_TREE_KEEP_OUT.z, radius: CENTRAL_TREE_KEEP_OUT.radius }] : []),
     ...decorations.filter((decoration) => decoration.radius > 0),
   ];
-  let next = { x: clampWorldPosition(current.x, radius), z: clampWorldPosition(current.z, radius) };
-  const xCandidate = { x: clampWorldPosition(desired.x, radius), z: next.z };
-  if (!obstacles.some((obstacle) => positionOverlapsObstacle(xCandidate, obstacle, radius))) next.x = xCandidate.x;
-  const zCandidate = { x: next.x, z: clampWorldPosition(desired.z, radius) };
-  if (!obstacles.some((obstacle) => positionOverlapsObstacle(zCandidate, obstacle, radius))) next.z = zCandidate.z;
-  return next;
+  let next = { x: clampWorldPosition(current.x, radius, boundary), z: clampWorldPosition(current.z, radius, boundary) };
+  if (radialBoundary) next = clampWorldPointToRadialBoundary(next, radius, radialBoundary, boundary);
+  const xCandidate = { x: clampWorldPosition(desired.x, radius, boundary), z: next.z };
+  const boundedXCandidate = radialBoundary
+    ? clampWorldPointToRadialBoundary(xCandidate, radius, radialBoundary, boundary)
+    : xCandidate;
+  if (!obstacles.some((obstacle) => positionOverlapsObstacle(boundedXCandidate, obstacle, radius))) next.x = boundedXCandidate.x;
+  const zCandidate = { x: next.x, z: clampWorldPosition(desired.z, radius, boundary) };
+  const boundedZCandidate = radialBoundary
+    ? clampWorldPointToRadialBoundary(zCandidate, radius, radialBoundary, boundary)
+    : zCandidate;
+  if (!obstacles.some((obstacle) => positionOverlapsObstacle(boundedZCandidate, obstacle, radius))) next.z = boundedZCandidate.z;
+  return radialBoundary ? clampWorldPointToRadialBoundary(next, radius, radialBoundary, boundary) : next;
 }
