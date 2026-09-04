@@ -884,9 +884,9 @@
 
 @media (max-width: 760px) and (orientation: portrait) {
   .hh-world-social-dock-group {
-    right: auto;
+    right: calc(50% + var(--hh-world-control-anchor-offset));
     bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px));
-    left: 16px;
+    left: auto;
   }
 }
 

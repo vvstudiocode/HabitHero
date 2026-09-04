@@ -14,6 +14,7 @@ test('landscape world controls place the action cluster to the right of chat', (
   assert.match(controls, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-world-clean-mode-control\s*\{[\s\S]*?left:\s*calc\(50% \+ var\(--hh-world-chat-landscape-half-width\) \+ var\(--hh-world-control-gap\) \+ var\(--hh-world-control-size\) \+ var\(--hh-world-control-gap\)\);/);
   assert.match(overlays, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-world-social-dock-group\s*\{[\s\S]*?left:\s*calc\(50% \+ var\(--hh-world-chat-landscape-half-width\) \+ var\(--hh-world-control-size\) \* 2 \+ var\(--hh-world-control-gap\) \* 3\);/);
   assert.match(overlays, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-world-social-dock-group\s*\{[\s\S]*?flex-direction:\s*row-reverse/);
+  assert.match(overlays, /@media \(max-width:\s*760px\)\s+and\s+\(orientation:\s*portrait\)[\s\S]*?\.hh-world-social-dock-group\s*\{[\s\S]*?right:\s*calc\(50% \+ var\(--hh-world-control-anchor-offset\)\);[\s\S]*?left:\s*auto;/);
   assert.match(overlays, /@media \(orientation:\s*landscape\)[\s\S]*?\.hh-world-chat-dock\s*\{[\s\S]*?width:\s*min\(var\(--hh-world-chat-landscape-width\),\s*calc\(100vw - var\(--hh-world-landscape-controls-reserved-width\)\)\);/);
   assert.match(overlays, /@media \(max-width:\s*760px\)\s+and\s+\(orientation:\s*portrait\)/);
   assert.match(controls, /\.hh-world-joystick--fixed\s*\{[\s\S]*?top:\s*calc\(100%\s*-\s*max\(18px,\s*calc\(env\(safe-area-inset-bottom/);
