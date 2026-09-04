@@ -920,6 +920,51 @@
   white-space: nowrap;
 }
 
+.hh-world-npc-dialogue-conversation {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.hh-world-npc-dialogue-speaker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #ffe6a8;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.hh-world-npc-dialogue-line {
+  margin: 0;
+  padding: 13px 14px;
+  color: #ffffff;
+  background: rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.65;
+}
+
+.hh-world-npc-dialogue-choices {
+  display: grid;
+  gap: 8px;
+}
+
+.hh-world-npc-dialogue-choice {
+  width: 100%;
+  min-height: 44px;
+  justify-content: flex-start;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.hh-world-npc-dialogue-conversation--repeat {
+  margin-bottom: 12px;
+}
+
 .hh-world-npc-offering-list {
   display: grid;
   max-height: 220px;

@@ -594,6 +594,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   // The adventure board is the only place that starts or completes an
   // adventure. Today's Goals is a read-only progress and history summary.
   const { adventureTasks, adventureDate, todayAdventureSummary } = selectChildAdventureState(tasks, now);
+  const hasCompletedAdventureToday = todayAdventureSummary.daily.some((task) => task.status === 'completed')
+    || todayAdventureSummary.generalHistoryByDate.some(
+      (group) => group.dateKey === adventureDate && group.tasks.some((task) => task.status === 'completed'),
+    );
 
   useEffect(() => {
     setAdventureRewardNotice(null);
@@ -1233,6 +1237,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
           npc={selectedWorldNpc}
           gameData={gameData}
           busy={mutationPending}
+          hasCompletedAdventureToday={hasCompletedAdventureToday}
           onTalk={handleWorldNpcTalk}
           onPurchase={handleWorldNpcPurchase}
           onClose={() => setWorldNpcDialogueNpcId(null)}

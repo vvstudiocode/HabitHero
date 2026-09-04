@@ -1,17 +1,20 @@
 import { MessageCircle, ScrollText, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ChildGameData, GameCatalogItem, WorldNpcOffering, WorldNpcSummary } from '../contracts';
 import { isLocalGameItem3DPreviewEnabled, isLocalGameItemShopVisible } from '../game-content-assets';
 import { isNpcDialogueOfferingVisible } from '../world-npc-dialogue';
+import { getWorldNpcDialogueContent } from '../world-npc-dialogue-content';
 import { GameItem3DPreview } from './GameItem3DPreview';
 import { GameItemLightbox } from './GameItemImagePreview';
+import { WorldNpcDialogueConversation } from './WorldNpcDialogueConversation';
 import { WorldNpcOfferingCard } from './WorldNpcOfferingCard';
 
 interface WorldNpcDialoguePanelProps {
   npc: WorldNpcSummary;
   gameData: ChildGameData;
   busy: boolean;
+  hasCompletedAdventureToday: boolean;
   onTalk: () => Promise<void>;
   onPurchase: (catalogItemId: string, sourceNpcId: string) => Promise<void>;
   onClose: () => void;
@@ -27,14 +30,21 @@ export function WorldNpcDialoguePanel({
   npc,
   gameData,
   busy,
+  hasCompletedAdventureToday,
   onTalk,
   onPurchase,
   onClose,
 }: WorldNpcDialoguePanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<GameCatalogItem | null>(null);
+  const [dialogueCompleted, setDialogueCompleted] = useState(false);
   const progress = gameData.npcDialogueProgress?.find((item) => item.npcId === npc.id);
   const talked = Boolean(progress);
+  const npcDialogueContent = getWorldNpcDialogueContent(npc.id);
+
+  useEffect(() => {
+    setDialogueCompleted(false);
+  }, [npc.id]);
   const itemById = new Map(gameData.catalog.map((item) => [item.id, item]));
   const offerings = talked
     ? getNpcOfferings(gameData, npc).flatMap((offering) => {
@@ -115,6 +125,7 @@ export function WorldNpcDialoguePanel({
   const sceneName = gameData.worldScenes?.find((scene) => scene.id === npc.sceneId)?.name ?? '目前場景';
   const previewUses3D = previewItem !== null && isLocalGameItem3DPreviewEnabled(previewItem);
   const hasPetPreview = isPetNpc && talked && petPreviewItem !== null;
+  const showNpcShop = npcDialogueContent ? talked && dialogueCompleted : talked;
   const dialogueDescription = isPetNpc
     ? talked ? '謝謝你的拜訪，現在可以解鎖我的冒險夥伴。' : '和我聊聊，就能解鎖我的冒險夥伴。'
     : talked ? '謝謝你的拜訪，這些裝飾與人物已經準備好了。' : '來和我聊聊，解鎖這裡的裝飾與人物商品。';
@@ -131,12 +142,29 @@ export function WorldNpcDialoguePanel({
             <strong>{npc.name}</strong>
             <p className="hh-world-npc-dialogue-wallet"><ScrollText size={15} aria-hidden="true" /> 目前卷軸：{gameData.walletBalance}</p>
           </div>
-          <p>{dialogueDescription}</p>
-          {!talked ? (
-            <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={busy} onClick={() => void handleTalk()}>
-              <MessageCircle size={17} aria-hidden="true" /> {busy ? '同步中…' : '開始對話'}
-            </button>
+          {npcDialogueContent ? (
+            <WorldNpcDialogueConversation
+              npcId={npc.id}
+              npcName={npc.name}
+              content={npcDialogueContent}
+              talked={talked}
+              busy={busy}
+              hasCompletedAdventureToday={hasCompletedAdventureToday}
+              ownedCatalogItemIds={gameData.inventory.map((inventory) => inventory.catalogItemId)}
+              onTalk={onTalk}
+              onComplete={() => setDialogueCompleted(true)}
+            />
           ) : (
+            <>
+              <p>{dialogueDescription}</p>
+              {!talked && (
+                <button type="button" className="hh-game-action-button hh-game-action-button--primary" disabled={busy} onClick={() => void handleTalk()}>
+                  <MessageCircle size={17} aria-hidden="true" /> {busy ? '同步中…' : '開始對話'}
+                </button>
+              )}
+            </>
+          )}
+          {showNpcShop && (
             isPetNpc ? (
               <div className="hh-world-npc-pet-purchase">
                 {petOffering ? (

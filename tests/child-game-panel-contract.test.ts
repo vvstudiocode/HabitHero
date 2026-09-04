@@ -30,6 +30,10 @@ const npcDialogueSource = readFileSync(
   new URL('../src/features/world/components/WorldNpcDialoguePanel.tsx', import.meta.url),
   'utf8',
 );
+const npcDialogueConversationSource = readFileSync(
+  new URL('../src/features/world/components/WorldNpcDialogueConversation.tsx', import.meta.url),
+  'utf8',
+);
 const dataAccessSource = readFileSync(
   new URL('../src/lib/data-access.ts', import.meta.url),
   'utf8',
@@ -327,6 +331,23 @@ describe('child game panel decoration editing', () => {
     assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(210px, \.9fr\)/);
     assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet \.hh-game-item-lightbox-3d[\s\S]*?grid-column:\s*1/);
     assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet \.hh-game-item-lightbox-copy[\s\S]*?grid-column:\s*2/);
+  });
+
+  it('uses lightweight content conversations before showing the existing NPC shop', () => {
+    assert.match(npcDialogueSource, /getWorldNpcDialogueContent/);
+    assert.match(npcDialogueSource, /WorldNpcDialogueConversation/);
+    assert.match(npcDialogueConversationSource, /getWorldNpcRepeatDialogueLines/);
+    assert.match(npcDialogueSource, /npcDialogueContent \?/);
+    assert.match(npcDialogueSource, /talked &&/);
+    assert.match(npcDialogueSource, /onTalk={onTalk}/);
+  });
+
+  it('keeps repeat dialogue and shop as separate sequential states', () => {
+    assert.match(npcDialogueSource, /dialogueCompleted/);
+    assert.match(npcDialogueSource, /onComplete=\{\(\) => setDialogueCompleted\(true\)\}/);
+    assert.match(npcDialogueSource, /talked && dialogueCompleted/);
+    assert.match(npcDialogueConversationSource, /下一步/);
+    assert.doesNotMatch(npcDialogueConversationSource, /再聊一句/);
   });
 
   it('keeps the child world pinned to the viewport after placement controls close', () => {
