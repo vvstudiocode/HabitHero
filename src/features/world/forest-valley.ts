@@ -14,6 +14,8 @@ export const FOREST_VALLEY_MODULE_ASSETS = Object.freeze({
   noticeBoard: '/assets/world/sunrise-village/notice-board.glb',
 });
 
+export const FOREST_VALLEY_SKYBOX_URL = '/assets/world/forest-valley/forest-valley-sky.png';
+
 export type ForestValleyModuleKey = keyof typeof FOREST_VALLEY_MODULE_ASSETS;
 
 export interface ForestValleyModulePlacement {
@@ -34,6 +36,13 @@ const ENTRY_HOUSE_ROTATION = [0.606673324, -0.363245755, 0.363245755, 0.60667332
 // Keep the authored scene scale in one place so custom landmarks can express
 // their offsets in the same coordinate system as the module placements.
 const FOREST_VALLEY_AUTHORED_SCENE_SCALE = 0.6;
+const FOREST_VALLEY_ISLAND_BASE_SCALE = [36.12309265136719, 41.04838180541992, 0.9106636047363281] as const;
+export const FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR = 1.45;
+const FOREST_VALLEY_ISLAND_SCALE = [
+  FOREST_VALLEY_ISLAND_BASE_SCALE[0] * FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR,
+  FOREST_VALLEY_ISLAND_BASE_SCALE[1] * FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR,
+  FOREST_VALLEY_ISLAND_BASE_SCALE[2],
+] as const;
 // Place the gate at the authored player standing position shown in the
 // reference image, with a small downward offset so its base settles into the
 // ground. Module positions are authored before the scene root's 0.6 scale.
@@ -77,7 +86,9 @@ export const FOREST_VALLEY_MODULE_PLACEMENTS: readonly ForestValleyModulePlaceme
     asset: 'island',
     position: [6.314953804016113, 0.07081437110900879, -6.358921051025391],
     rotation: UPRIGHT_ROTATION,
-    scale: [36.12309265136719, 41.04838180541992, 0.9106636047363281],
+    // Expand only the island's two horizontal axes. Keep its vertical scale
+    // unchanged so the authored ground height stays at the same elevation.
+    scale: FOREST_VALLEY_ISLAND_SCALE,
     collision: false,
   },
   {
@@ -197,9 +208,8 @@ export const FOREST_VALLEY_SCENE_TRANSFORM = Object.freeze({
 // scale is applied. It must not inherit Sunrise Village's road elevation.
 export const FOREST_VALLEY_GROUND_Y = 0.06;
 
-// The Blender island is larger and offset from the origin; keep its full
-// authored footprint walkable without changing Sunrise Village's boundary.
-// These runtime values follow the same root scale as the authored scene.
+// Keep the pre-expansion movement boundary. The enlarged island is visual
+// padding for the panorama; its newly added outer ground is not walkable.
 export const FOREST_VALLEY_MOVEMENT_BOUNDARY = 31.5 * FOREST_VALLEY_SCENE_TRANSFORM.scale;
 export const FOREST_VALLEY_SPAWN_ANCHOR = Object.freeze({
   x: -0.2046 * FOREST_VALLEY_SCENE_TRANSFORM.scale,

@@ -52,6 +52,37 @@ describe('child game data mapping', () => {
     assert.equal(data['child-b'].inventory.length, 0);
   });
 
+  it('preserves scene acquisition flags and source snapshots when the new columns exist', () => {
+    const data = createChildGameDataMap(
+      ['child-a'],
+      [{
+        id: 'item-1', item_type: 'pet', name: '尼布斯', description: '', scroll_price: 3,
+        asset_key: 'pet.nibus', thumbnail_url: null, is_active: true, is_starter: false,
+        is_child_creation_selectable: false, is_newly_obtainable: true, is_stackable: false,
+        collision_radius: 0.2, min_scale: 0.9, max_scale: 1.1, sort_order: 1, metadata: {},
+      }],
+      [], [],
+      [{
+        id: 'inventory-a', child_profile_id: 'child-a', catalog_item_id: 'item-1', quantity: 1,
+        acquired_via: 'purchase', acquired_at: '2026-09-03T00:00:00Z',
+        source_scene_id: 'cloud-workshop', source_npc_id: 'npc.nibus', source_dialogue_version: 1,
+      }],
+      [], [], [],
+    );
+    assert.equal(data['child-a'].catalog[0]?.isNewlyObtainable, true);
+    assert.deepEqual(data['child-a'].inventory[0], {
+      id: 'inventory-a',
+      catalogItemId: 'item-1',
+      quantity: 1,
+      acquiredVia: 'purchase',
+      acquiredAt: '2026-09-03T00:00:00Z',
+      displayName: null,
+      sourceSceneId: 'cloud-workshop',
+      sourceNpcId: 'npc.nibus',
+      sourceDialogueVersion: 1,
+    });
+  });
+
   it('does not expose an owned item that has no packaged app asset', () => {
     const data = createChildGameDataMap(
       ['child-a'],
@@ -134,6 +165,8 @@ describe('child game data mapping', () => {
       'child_game_loadouts',
       'child_world_states',
       'child_world_entities',
+      'child_world_scene_unlocks',
+      'child_world_npc_dialogue_progress',
     ] }) as never, 'family-1', ['child-a', 'child-b']);
 
     assert.deepEqual(data['child-a'], {

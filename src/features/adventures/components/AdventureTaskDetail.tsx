@@ -131,9 +131,11 @@ export function AdventureTaskDetail({
             <p>{getAdventureType(task) === 'daily' ? '每日冒險' : '一般冒險'}</p>
             <h2 id="hh-adventure-detail-title">{task.name}</h2>
           </div>
-          <button ref={closeButtonRef} type="button" className="hh-adventure-button hh-adventure-detail-close" aria-label="關閉冒險詳情" onClick={requestClose}>
-            <X size={20} aria-hidden="true" />
-          </button>
+          {!embedded && (
+            <button ref={closeButtonRef} type="button" className="hh-adventure-button hh-adventure-detail-close" aria-label="關閉冒險詳情" onClick={requestClose}>
+              <X size={20} aria-hidden="true" />
+            </button>
+          )}
         </header>
 
         {task.description && <p className="hh-adventure-detail-description">{task.description}</p>}

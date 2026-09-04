@@ -39,6 +39,8 @@ interface GameItemLightboxProps {
   onClose: () => void;
   use3DPreview?: boolean;
   price?: number;
+  sourceLabel?: string;
+  sourceLabelTitle?: string;
   purchaseDisabled?: boolean;
   purchaseLabel?: string;
   onPurchase?: () => void;
@@ -50,6 +52,8 @@ export function GameItemLightbox({
   onClose,
   use3DPreview = false,
   price,
+  sourceLabel,
+  sourceLabelTitle = '取得來源',
   purchaseDisabled = false,
   purchaseLabel = '兌換',
   onPurchase,
@@ -90,6 +94,7 @@ export function GameItemLightbox({
         <div className="hh-game-item-lightbox-copy">
           <strong>{item.name}</strong>
           <p>{item.description}</p>
+          {sourceLabel && <p>{sourceLabelTitle}：{sourceLabel}</p>}
           {price !== undefined && <span className="hh-game-item-lightbox-price"><ScrollText size={17} strokeWidth={2.5} aria-hidden="true" />價格 {price} 張</span>}
           {(actionContent || onPurchase) && (
             <div className="hh-game-item-lightbox-actions">

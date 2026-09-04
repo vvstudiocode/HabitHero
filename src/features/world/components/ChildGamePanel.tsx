@@ -8,6 +8,7 @@ import { isDecorationPlacementValid } from '../world-placement';
 import { getNextRoamingPets, getRoamablePetInventoryIds, getRoamingPetSnapshot } from './roaming-pet-state';
 import { getFollowingPetInventoryIds, selectFollowingPet } from '../following-pet-state';
 import { isLocalGameItem3DPreviewEnabled, isLocalGameItemInventorySupported, isLocalGameItemShopVisible } from '../game-content-assets';
+import { getCatalogShopGateContext, getCatalogShopPurchaseSource, getCatalogShopSourceLabel, getCatalogShopState, getInventorySourceLabel } from '../world-npc-shop';
 import { GameItemLightbox } from './GameItemImagePreview';
 import { GameCatalogLayoutControls, GameItemCard, type GameCatalogLayoutColumns } from './GameItemCard';
 import { GameCategoryTabs, type GameCatalogSection } from './GameCategoryTabs';
@@ -28,7 +29,7 @@ interface ChildGamePanelProps extends SharedDecorationPanelProps {
   gameData: ChildGameData;
   mutationPending: boolean;
   notificationSettings: ReturnType<typeof useNotificationSettings>;
-  onPurchase: (catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<GamePurchaseResult>;
+  onPurchase: (catalogItemId: string, quantity: number, idempotencyKey: string, sourceNpcId?: string) => Promise<GamePurchaseResult>;
   onEquipCharacter: (inventoryItemId: string) => Promise<void>;
   onRenamePet: (inventoryItemId: string, displayName: string | null) => Promise<void>;
   onSetFollowingPets: (inventoryItemIds: string[]) => Promise<WorldMutationResult>;
@@ -116,6 +117,8 @@ export function ChildGamePanel({
   const title = kind === 'inventory' ? '我的背包' : kind === 'shop' ? '冒險商店' : '世界設定';
   const previewPrice = kind === 'shop' && previewItem ? gameData.prices[previewItem.id] ?? previewItem.scrollPrice : undefined;
   const use3DPreview = kind === 'shop' && previewItem !== null && isLocalGameItem3DPreviewEnabled(previewItem);
+  const shopGateContext = getCatalogShopGateContext(gameData);
+  const previewShopState = previewItem ? getCatalogShopState(previewItem, shopGateContext) : null;
   const previewOwned = previewItem !== null
     && ownedCatalogIds.has(previewItem.id)
     && previewItem.itemType !== 'pet'
@@ -123,9 +126,14 @@ export function ChildGamePanel({
   const previewPurchaseDisabled = previewItem === null
     || mutationPending
     || previewOwned
+    || (previewShopState !== null && !previewShopState.purchasable)
     || (previewPrice !== undefined && gameData.walletBalance < previewPrice);
   const previewPurchaseLabel = previewOwned
     ? '已擁有'
+    : previewShopState?.reason === 'scene_locked'
+      ? '場景尚未解鎖'
+      : previewShopState?.reason === 'dialogue_required'
+        ? '請先與 NPC 對話'
     : previewPrice !== undefined && gameData.walletBalance < previewPrice
       ? '卷軸不足'
       : '兌換';
@@ -134,7 +142,7 @@ export function ChildGamePanel({
     const catalogItemId = previewItem.id;
     setPreviewInventory(null);
     setPreviewItem(null);
-    void run(() => onPurchase(catalogItemId, 1, createIdempotencyKey()), '已加入背包。');
+    void run(() => onPurchase(catalogItemId, 1, createIdempotencyKey(), getCatalogShopPurchaseSource(previewItem, shopGateContext)), '已加入背包。');
   };
 
   const openInventoryPreview = (inventory: ChildInventoryItem, item: GameCatalogItem) => {
@@ -535,7 +543,7 @@ export function ChildGamePanel({
       {kind === 'shop' && (
         <div className="hh-game-panel-section">
           <div className={`hh-game-catalog-grid hh-game-catalog-grid--${shopColumns}`}>
-            {gameData.catalog.filter((item) => item.isActive && !item.isStarter && item.itemType === shopSection && isLocalGameItemShopVisible(item)).map((item) => {
+            {gameData.catalog.filter((item) => getCatalogShopState(item, shopGateContext).visible && item.itemType === shopSection && isLocalGameItemShopVisible(item)).map((item) => {
               const price = gameData.prices[item.id] ?? item.scrollPrice;
               return (
                 <GameItemCard
@@ -577,6 +585,12 @@ export function ChildGamePanel({
         item={previewItem}
         use3DPreview={use3DPreview}
         price={previewPrice}
+        sourceLabel={previewInventory
+          ? getInventorySourceLabel(previewInventory.sourceSceneId, previewInventory.sourceNpcId, gameData)
+          : kind === 'shop' && previewItem
+            ? getCatalogShopSourceLabel(previewItem, shopGateContext)
+            : undefined}
+        sourceLabelTitle={kind === 'shop' ? '解鎖位置' : undefined}
         purchaseDisabled={previewPurchaseDisabled}
         purchaseLabel={previewPurchaseLabel}
         onPurchase={kind === 'shop' ? handlePreviewPurchase : undefined}

@@ -14,6 +14,7 @@ const groundMigrationName = readdirSync(new URL('supabase/migrations/', root)).f
 const groundMigration = groundMigrationName
   ? readFileSync(new URL(`supabase/migrations/${groundMigrationName}`, root), 'utf8')
   : '';
+const nameLabel = readFileSync(new URL('src/features/world/world-name-label.ts', root), 'utf8');
 const runtime = readFileSync(new URL('src/features/world/prototype-world-runtime.ts', root), 'utf8');
 
 describe('Star Diver and Teddy Sou tuning', () => {
@@ -53,7 +54,7 @@ describe('Star Diver and Teddy Sou tuning', () => {
   });
 
   it('keeps pet names compact and supports per-pet ground-shadow removal', () => {
-    assert.match(runtime, /PET_NAME_LABEL_WORLD_SCALE\s*=\s*0\.11/);
+    assert.match(nameLabel, /WORLD_NAME_LABEL_SCALE\s*=\s*0\.11/);
     assert.match(runtime, /hideGroundShadow/);
     assert.match(runtime, /getPetGroundOffset/);
   });

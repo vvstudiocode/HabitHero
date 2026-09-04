@@ -40,17 +40,14 @@ import {
 import { shouldBlockAppForDataLoad, shouldMarkInitialLoadDone, shouldRefreshAppDataOnResume } from './lib/app-provider-lifecycle';
 import { pauseTaskTimerInState, startTaskTimerInState } from './lib/task-timer-state';
 import type { WorldMutationPayload, WorldMutationResult, WorldTransform, WorldTransformMutationPayload } from './features/world/contracts';
-import { emptyChildGameData, type GamePurchaseResult } from './features/world/contracts';
+import { emptyChildGameData } from './features/world/contracts';
+import type { WorldSceneId } from './features/world/world-scene-content';
 import { isWorldRevisionConflict } from './features/world/world-errors';
 import { createWorldMutationGate } from './features/world/world-mutation-gate';
 import {
   patchEquippedCharacter,
   patchFollowingPets,
-  patchPurchasedGameItem,
   patchRoamingPets,
-  reconcilePurchasedGameItem,
-  rollbackPurchasedGameItem,
-  type OptimisticPurchaseDraft,
 } from './features/world/game-loadout';
 import { patchPetDisplayName } from './features/world/pet-name-optimistic';
 import {
@@ -62,6 +59,7 @@ import {
   reconcileUpdatedWorldEntity,
 } from './features/world/world-optimistic';
 import { patchDeletedChild, rollbackDeletedChild } from './lib/optimistic-app-state';
+import { createWorldStoreActions } from './lib/world-store-actions';
 
 export interface AppContextType {
   state: AppState;
@@ -150,7 +148,9 @@ export interface AppContextType {
   fulfillTicket: (childId: string, ticketId: string) => Promise<void>;
   resetData: () => Promise<void>;
   recordParentConsent: (consentVersion: string) => Promise<void>;
-  purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => Promise<Awaited<ReturnType<DataRepository['purchaseGameItem']>>>;
+  unlockWorldScene: (childId: string, sceneId: WorldSceneId) => Promise<Awaited<ReturnType<DataRepository['unlockWorldScene']>>>;
+  completeWorldNpcDialogue: (childId: string, npcId: string) => Promise<Awaited<ReturnType<DataRepository['completeWorldNpcDialogue']>>>;
+  purchaseGameItem: (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string, sourceNpcId?: string) => Promise<Awaited<ReturnType<DataRepository['purchaseGameItem']>>>;
   equipGameCharacter: (childId: string, inventoryItemId: string) => Promise<void>;
   setPetDisplayName: (childId: string, inventoryItemId: string, displayName: string | null) => Promise<void>;
   setFollowingPets: (childId: string, inventoryItemIds: string[]) => Promise<WorldMutationResult>;
@@ -526,71 +526,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const actions = {
     recordParentConsent: (consentVersion: string) => mutate((repo, id) => repo.recordParentConsent(id, consentVersion), (previous) => ({ ...previous, parentConsentVersion: consentVersion })),
-    purchaseGameItem: async (childId: string, catalogItemId: string, quantity: number, idempotencyKey: string) => {
-      const currentGameData = stateRef.current.gameDataByChildId[childId] ?? emptyChildGameData();
-      const catalogItem = currentGameData.catalog.find((item) => item.id === catalogItemId);
-      const existingInventoryItemId = catalogItem?.isStackable
-        ? currentGameData.inventory.find((item) => item.catalogItemId === catalogItemId)?.id ?? null
-        : null;
-      const existingQuantityBefore = existingInventoryItemId
-        ? currentGameData.inventory.find((item) => item.id === existingInventoryItemId)?.quantity
-        : undefined;
-      const localInventoryItemId = existingInventoryItemId ?? `local-purchase-${idempotencyKey}`;
-      const purchaseDraft: OptimisticPurchaseDraft = {
-        catalogItemId,
-        quantity,
-        localInventoryItemId,
-        acquiredAt: new Date().toISOString(),
-        existingInventoryItemId,
-        existingQuantityBefore,
-        totalPrice: catalogItem
-          ? (currentGameData.prices[catalogItemId] ?? catalogItem.scrollPrice) * quantity
-          : undefined,
-      };
-      const optimisticUpdate = catalogItem
-        ? (previous: AppState) => {
-          const gameData = previous.gameDataByChildId[childId] ?? emptyChildGameData();
-          return {
-            ...previous,
-            gameDataByChildId: {
-              ...previous.gameDataByChildId,
-              [childId]: patchPurchasedGameItem(gameData, purchaseDraft),
-            },
-          };
-        }
-        : undefined;
-      const optimisticRollback = optimisticUpdate
-        ? (current: AppState) => {
-          const gameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
-          return {
-            ...current,
-            gameDataByChildId: {
-              ...current.gameDataByChildId,
-              [childId]: rollbackPurchasedGameItem(gameData, purchaseDraft),
-            },
-          };
-        }
-        : undefined;
-      const result = await mutate(
-        (repo) => repo.purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey),
-        optimisticUpdate,
-        optimisticRollback,
-      );
-      const reconciledResult = result as GamePurchaseResult;
-      setState((current) => {
-        const gameData = current.gameDataByChildId[childId] ?? emptyChildGameData();
-        const next = {
-          ...current,
-          gameDataByChildId: {
-            ...current.gameDataByChildId,
-            [childId]: reconcilePurchasedGameItem(gameData, localInventoryItemId, reconciledResult, purchaseDraft),
-          },
-        };
+    ...createWorldStoreActions({
+      mutate,
+      familyId,
+      getState: () => stateRef.current,
+      setState: (updater) => setState((current) => {
+        const next = updater(current);
         stateRef.current = next;
         return next;
-      });
-      return result;
-    },
+      }),
+    }),
     equipGameCharacter: (childId: string, inventoryItemId: string) => mutate(
       (repo) => repo.equipGameCharacter(childId, inventoryItemId),
       (previous) => {

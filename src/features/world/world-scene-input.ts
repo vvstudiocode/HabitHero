@@ -1,5 +1,5 @@
-import { emptyChildGameData, type ChildGameData, type GameCatalogItem } from './contracts';
-import { createWorldSceneGameDataSnapshot } from './world-scene-data';
+import type { ChildGameData, GameCatalogItem } from './contracts';
+import { createPublicWorldGameDataSnapshot, createWorldSceneGameDataSnapshot } from './world-scene-data';
 import { toDecorationPlacementTransform, type DecorationPlacementDraft } from './world-placement';
 import type { WorldRuntimeSession } from './world-runtime-multiplayer';
 import { getFriendWorldSpawnPosition, getFriendWorldVisitMode } from '../friends/friend-world-visit';
@@ -47,7 +47,8 @@ export function createTerrainWorldSceneInput({
   getCharacterRenderMode,
   getWorldCharacterModelUrl,
 }: TerrainWorldSceneInputArgs) {
-  const sourceGameData = socialGameData ?? (worldLocation === 'my-world' ? gameData : emptyChildGameData());
+  const sourceGameData = socialGameData
+    ?? (worldLocation === 'my-world' ? gameData : createPublicWorldGameDataSnapshot(gameData));
   const sessionIdentity = session?.multiplayer;
   const worldOwnerChildProfileId = sessionIdentity?.worldOwnerChildProfileId ?? session?.worldOwnerChildProfileId;
   const childProfileId = sessionIdentity?.childProfileId;
@@ -65,7 +66,9 @@ export function createTerrainWorldSceneInput({
     ? sourceGameData.catalog.find((item) => item.id === placement.catalogItemId && item.itemType === 'decoration')
     : undefined;
   return {
-    gameData: createWorldSceneGameDataSnapshot(sourceGameData),
+    gameData: worldLocation === 'my-world' || socialGameData
+      ? createWorldSceneGameDataSnapshot(sourceGameData)
+      : sourceGameData,
     equippedCatalogItem,
     characterRenderMode: getCharacterRenderMode(equippedCatalogItem),
     characterModelUrl: getWorldCharacterModelUrl(equippedCatalogItem),

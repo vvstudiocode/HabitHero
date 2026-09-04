@@ -8,6 +8,7 @@ import {
   scaleWorldBudget,
 } from '../src/features/world/world-quality';
 import { patchEquippedCharacter } from '../src/features/world/game-loadout';
+import { getWorldNpcPetDanceClip, getWorldNpcPetWalkClip, isWorldNpcRoamingPet } from '../src/features/world/world-npc-scene-runtime';
 import { emptyChildGameData } from '../src/features/world/contracts';
 import {
   getPetModelScale,
@@ -23,6 +24,7 @@ import {
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const runtimeSource = read('../src/features/world/prototype-world-runtime.ts');
+const npcRuntimeSource = read('../src/features/world/world-npc-scene-runtime.ts');
 const resourceSource = read('../src/features/world/world-runtime-resources.ts');
 const runtimeAssetsSource = read('../src/features/world/world-runtime-assets.ts');
 const weatherRuntimeSource = read('../src/features/world/world-weather-runtime.ts');
@@ -304,6 +306,63 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /updatePetActors/);
     assert.match(worldLayerSource, /runtimeRef\.current\?\.update\(sceneInput\)/);
     assert.doesNotMatch(worldLayerSource, /\[childId, runtimeAttempt, sceneInput\]\);/);
+  });
+
+  it('keeps NPC dialogue state inside the terrain runtime contract', () => {
+    assert.match(runtimeSource, /setDialogueOpen: \(npcId: string \| null, open: boolean\) => void/);
+    assert.match(runtimeSource, /let dialogueNpcId: string \| null = null/);
+    assert.match(runtimeSource, /let dialogueOpen = false/);
+    assert.match(runtimeSource, /worldNpcSceneRuntime\?\.setDialogueOpen\(npcId, open\)/);
+    assert.match(runtimeSource, /worldNpcSceneRuntime\.setDialogueOpen\(dialogueNpcId, dialogueOpen\)/);
+    assert.match(runtimeSource, /onWorldNpcScreenPositionChange\?:/);
+    assert.match(npcRuntimeSource, /getNearbyScreenPosition:/);
+    assert.match(npcRuntimeSource, /isWorldNpcNearby\(currentDistance, true\)/);
+    assert.doesNotMatch(runtimeSource, /onWorldNpcSelect/);
+    assert.doesNotMatch(worldLayerSource, /onWorldNpcSelect/);
+    assert.doesNotMatch(npcRuntimeSource, /selectFromEvent/);
+  });
+
+  it('keeps every pet NPC roaming and reuses the owned-pet plane presentation', () => {
+    assert.equal(isWorldNpcRoamingPet({ npcType: 'roaming_pet' }), true);
+    assert.equal(isWorldNpcRoamingPet({ npcType: 'character_vendor' }), false);
+    assert.match(npcRuntimeSource, /object\.position\.set\(npc\.position\.x, npc\.position\.y, npc\.position\.z\);[\s\S]*?mountWorldCharacterModel/);
+    assert.match(npcRuntimeSource, /getPetPresentation/);
+    assert.match(npcRuntimeSource, /getNpcGroundY/);
+    assert.match(npcRuntimeSource, /getNpcFacingY/);
+    assert.match(runtimeSource, /getPetModelScale\(\{[\s\S]*?getPetVisualScaleMultiplier\(item\.assetKey, item\.metadata\)/);
+    assert.match(runtimeSource, /getPetGroundOffset\(item\.assetKey, item\.metadata\)/);
+    assert.match(runtimeSource, /movementSpeedMultiplier: getPetMovementSpeedMultiplier\(item\.assetKey, item\.metadata\)/);
+    assert.match(runtimeSource, /hideGroundShadow: true/);
+    assert.match(npcRuntimeSource, /setObjectShadows\(object, !isPet \|\| !petPresentation\?\.hideGroundShadow\)/);
+    assert.match(npcRuntimeSource, /function groundNpcCharacter\([\s\S]*?groundWorldCharacter\(options\.THREE/);
+    assert.match(npcRuntimeSource, /actor\.mixer\?\.update\([\s\S]*?if \(!isWorldNpcRoamingPet\(actor\.npc\)\) \{[\s\S]*?groundNpcCharacter\(options, actor\)/);
+    assert.match(runtimeSource, /walkableBoundary: movementBoundary/);
+    assert.match(runtimeSource, /walkableRadialBoundary: authoredVillageRadialBoundary/);
+    assert.match(runtimeSource, /isPetPositionWalkable: \(position\) =>/);
+    assert.match(npcRuntimeSource, /findWorldNpcPetSpawnPosition\(options, npc, radius\)/);
+    assert.match(npcRuntimeSource, /getWanderStep\([\s\S]*?options\.walkableBoundary,[\s\S]*?options\.walkableRadialBoundary/);
+    assert.match(npcRuntimeSource, /actor\.object\.position\.y = \(options\.getNpcGroundY\?\.\(next\)/);
+    assert.match(npcRuntimeSource, /PET_WANDER_SPEED \* actor\.movementSpeedMultiplier/);
+    assert.doesNotMatch(npcRuntimeSource, /0\.22 \* \(reducedMotion \? 0\.45 : 1\)/);
+    assert.match(npcRuntimeSource, /nextAnimation\.crossFadeFrom\(actor\.activeAction, 0\.16, false\)/);
+    assert.match(npcRuntimeSource, /action\.time >= duration/);
+    assert.match(npcRuntimeSource, /const movement = \{ x: next\.x - current\.x, z: next\.z - current\.z \}/);
+  });
+
+  it('switches roaming pet NPCs between walk and dance without an idle fallback', () => {
+    assert.equal(getWorldNpcPetWalkClip([{ name: 'Idle' } as AnimationClip]), undefined);
+    assert.equal(getWorldNpcPetWalkClip([{ name: 'Idle' } as AnimationClip, { name: 'Walk_InPlace' } as AnimationClip])?.name, 'Walk_InPlace');
+    assert.equal(getWorldNpcPetDanceClip([{ name: 'Idle' } as AnimationClip]), undefined);
+    assert.equal(getWorldNpcPetDanceClip([{ name: 'Walk_InPlace' } as AnimationClip, { name: 'Dance' } as AnimationClip])?.name, 'Dance');
+    assert.match(npcRuntimeSource, /isPet\s*\?\s*createPetAnimation\(THREE, model, source\.animations\)/);
+    assert.match(npcRuntimeSource, /const nextAnimation = isWalking \? actor\.walkAction : actor\.danceAction/);
+    assert.match(npcRuntimeSource, /if \(actor\.paused\) \{[\s\S]*?switchNpcAnimation\(actor, actor\.danceAction\)/);
+    assert.match(npcRuntimeSource, /createLoopingAction\(THREE, mixer, danceClip, THREE\.LoopOnce\)/);
+    assert.match(npcRuntimeSource, /actor\.activeAction === actor\.danceAction && !isNpcAnimationComplete/);
+    assert.match(npcRuntimeSource, /waitingForDanceCompletion/);
+    assert.match(runtimeSource, /getNpcGroundY: getRuntimeNpcGroundY/);
+    assert.match(runtimeSource, /getNpcFacingY: \(npc\) => npc\.id === 'npc\.gilt' \? Math\.PI/);
+    assert.match(npcRuntimeSource, /fallbackToFirst = true/);
   });
 
   it('documents the actual quality strategy without claiming an absent fallback loader', () => {

@@ -29,6 +29,7 @@ import {
   ThemeSettings,
   UnixMilliseconds,
 } from '../types';
+import { isChildCreationCharacterId } from '../features/characters/world-character-catalog';
 
 const toUnixMilliseconds = (timestamp: Timestamp): UnixMilliseconds => Date.parse(timestamp);
 const defaultCategory: TaskCategory = 'life_habit';
@@ -46,7 +47,7 @@ export const validateChildProfileCreation = (
   if (typeof input.characterId !== 'string' || input.characterId.trim().length === 0) {
     return 'character is required';
   }
-  if (input.characterId.trim().length > 80) return 'character is invalid';
+  if (!isChildCreationCharacterId(input.characterId.trim())) return 'character is not selectable';
   return null;
 };
 

@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import test from 'node:test';
 import {
+  CLOUD_WORKSHOP_BACKGROUND_MUSIC_CROSSFADE_SECONDS,
+  CLOUD_WORKSHOP_BACKGROUND_MUSIC_SRC,
+  FOREST_VALLEY_BACKGROUND_MUSIC_SRC,
+  STAR_SAND_WASTELAND_BACKGROUND_MUSIC_SRC,
+  SUNRISE_VILLAGE_BACKGROUND_MUSIC_SRC,
+  TIDEGLOW_ARCHIPELAGO_BACKGROUND_MUSIC_SRC,
   WORLD_BACKGROUND_MUSIC_SRC,
   WORLD_BACKGROUND_MUSIC_VOLUME,
   pauseWorldBackgroundMusic,
@@ -8,6 +15,8 @@ import {
   stopWorldBackgroundMusic,
   bindWorldBackgroundMusicVisibility,
   createWorldBackgroundMusicCrossfadePlayer,
+  getWorldBackgroundMusicConfig,
+  getWorldBackgroundMusicSrc,
 } from '../src/lib/world-background-music';
 
 class FakeAudio {
@@ -93,9 +102,68 @@ class FakeVisibilityDocument {
   }
 }
 
-test('world background music uses the supplied marimba track', () => {
+test('Sunrise Village uses its dedicated background music', () => {
   assert.equal(WORLD_BACKGROUND_MUSIC_SRC, '/audio/faespencer-monday-marimba-194523.mp3');
+  assert.equal(SUNRISE_VILLAGE_BACKGROUND_MUSIC_SRC, '/audio/sunrise-village-music.mp3');
   assert.equal(WORLD_BACKGROUND_MUSIC_VOLUME, 0.24);
+  assert.equal(getWorldBackgroundMusicSrc('sunrise-village'), SUNRISE_VILLAGE_BACKGROUND_MUSIC_SRC);
+  assert.equal(getWorldBackgroundMusicConfig('sunrise-village').fadeDurationSeconds, 2);
+  assert.equal(existsSync(new URL(`../public${SUNRISE_VILLAGE_BACKGROUND_MUSIC_SRC}`, import.meta.url)), true);
+});
+
+test('unconfigured worlds keep the default marimba track', () => {
+  assert.equal(getWorldBackgroundMusicSrc('my-world'), WORLD_BACKGROUND_MUSIC_SRC);
+});
+
+test('Forest Valley uses its dedicated Senyu Valley background music', () => {
+  assert.equal(FOREST_VALLEY_BACKGROUND_MUSIC_SRC, '/audio/forest-valley-senyu-music.mp3');
+  assert.equal(getWorldBackgroundMusicSrc('forest-valley'), FOREST_VALLEY_BACKGROUND_MUSIC_SRC);
+  assert.equal(existsSync(new URL(`../public${FOREST_VALLEY_BACKGROUND_MUSIC_SRC}`, import.meta.url)), true);
+});
+
+test('Cloud Workshop and Star Sand use their dedicated background music', () => {
+  assert.equal(CLOUD_WORKSHOP_BACKGROUND_MUSIC_SRC, '/audio/cloud-workshop-music.mp3');
+  assert.equal(STAR_SAND_WASTELAND_BACKGROUND_MUSIC_SRC, '/audio/star-sand-music.mp3');
+  assert.equal(getWorldBackgroundMusicSrc('cloud-workshop'), CLOUD_WORKSHOP_BACKGROUND_MUSIC_SRC);
+  assert.equal(getWorldBackgroundMusicSrc('star-sand-wasteland'), STAR_SAND_WASTELAND_BACKGROUND_MUSIC_SRC);
+  assert.equal(existsSync(new URL(`../public${CLOUD_WORKSHOP_BACKGROUND_MUSIC_SRC}`, import.meta.url)), true);
+  assert.equal(existsSync(new URL(`../public${STAR_SAND_WASTELAND_BACKGROUND_MUSIC_SRC}`, import.meta.url)), true);
+});
+
+test('Tideglow Archipelago uses its dedicated background music', () => {
+  assert.equal(TIDEGLOW_ARCHIPELAGO_BACKGROUND_MUSIC_SRC, '/audio/tideglow-archipelago-music.mp3');
+  assert.equal(getWorldBackgroundMusicSrc('tideglow-archipelago'), TIDEGLOW_ARCHIPELAGO_BACKGROUND_MUSIC_SRC);
+  assert.equal(existsSync(new URL(`../public${TIDEGLOW_ARCHIPELAGO_BACKGROUND_MUSIC_SRC}`, import.meta.url)), true);
+});
+
+test('the five island tracks coexist with retained parent and private-world audio', () => {
+  const islandTracks = [
+    SUNRISE_VILLAGE_BACKGROUND_MUSIC_SRC,
+    FOREST_VALLEY_BACKGROUND_MUSIC_SRC,
+    CLOUD_WORKSHOP_BACKGROUND_MUSIC_SRC,
+    TIDEGLOW_ARCHIPELAGO_BACKGROUND_MUSIC_SRC,
+    STAR_SAND_WASTELAND_BACKGROUND_MUSIC_SRC,
+  ];
+  const retainedNonIslandTracks = [
+    '/audio/alex-morgan-piano-lounge-sunny-cafe-music-564271.mp3',
+    '/audio/faespencer-monday-marimba-194523.mp3',
+    '/audio/paulyudin-piano-piano-music-508963.mp3',
+    '/audio/timer-complete.mp3',
+  ];
+
+  for (const track of islandTracks) {
+    assert.equal(existsSync(new URL(`../public${track}`, import.meta.url)), true);
+  }
+  for (const track of retainedNonIslandTracks) {
+    assert.equal(existsSync(new URL(`../public${track}`, import.meta.url)), true);
+  }
+});
+
+test('Cloud Workshop starts its crossfade earlier to cover the silent tail', () => {
+  assert.equal(CLOUD_WORKSHOP_BACKGROUND_MUSIC_CROSSFADE_SECONDS, 4);
+  assert.equal(getWorldBackgroundMusicConfig('cloud-workshop').fadeDurationSeconds, 4);
+  assert.equal(getWorldBackgroundMusicConfig('forest-valley').fadeDurationSeconds, 2);
+  assert.equal(getWorldBackgroundMusicConfig('star-sand-wasteland').fadeDurationSeconds, 2);
 });
 
 test('world background music starts quietly and loops', async () => {

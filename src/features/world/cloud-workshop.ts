@@ -23,7 +23,34 @@ export const CLOUD_WORKSHOP_MODULE_ASSETS = Object.freeze({
   cloudGround1: '/assets/world/cloud-workshop/cloud-ground-1.glb',
   cloudGround2: '/assets/world/cloud-workshop/cloud-ground-2.glb',
   cloudGround3: '/assets/world/cloud-workshop/cloud-ground-3.glb',
+  noticeBoard: '/assets/world/sunrise-village/notice-board.glb',
 });
+
+export const CLOUD_WORKSHOP_SKYBOX_URL = '/assets/world/cloud-workshop/cloud-workshop-sky.png';
+// Lift the panorama so a level camera sees the distant cloud islands instead
+// of only the lower cloud sea.
+export const CLOUD_WORKSHOP_SKYBOX_OFFSET = Object.freeze({ x: 0, y: 0.18 });
+// Use a slightly higher, more top-down angle so the broad walkable cloud
+// surface receives even daylight without flattening the authored buildings.
+export const CLOUD_WORKSHOP_SUN_POSITION = Object.freeze([5.5, 11.5, -3.5] as const);
+
+// Keep the shared adventure landmark on the open edge of the central plaza;
+// the scene root scale brings it back to the same world size as the other
+// authored-scene notice boards.
+export const CLOUD_WORKSHOP_NOTICE_BOARD_POSITION = Object.freeze({
+  x: 5.8,
+  y: 0.75,
+  z: 0.8,
+});
+export const CLOUD_WORKSHOP_NOTICE_BOARD_SCALE = Object.freeze([
+  1.390039455,
+  1.715706667,
+  1.928,
+] as const);
+// The Cloud Workshop camera projects the shared board farther above its
+// physical top edge than the other authored scenes. Keep both its button and
+// notification marker close to the board by lowering their shared anchor.
+export const CLOUD_WORKSHOP_NOTICE_BOARD_PROMPT_OFFSET_Y = -1.8;
 
 export type CloudWorkshopModuleKey = keyof typeof CLOUD_WORKSHOP_MODULE_ASSETS;
 type BlenderVector3 = readonly [number, number, number];
@@ -110,6 +137,19 @@ export const CLOUD_WORKSHOP_MODULE_PLACEMENTS: readonly CloudWorkshopModulePlace
   createPlacement({ id: 'cloud-ground-3', asset: 'cloudGround3', location: [-2.51525, -16.559797, 3.712343], rotation: [0.707107, 0.707107, 0, 0], scale: [4.341374, 2.9123, 4.363312], collision: false }),
   createPlacement({ id: 'cloud-ground-2', asset: 'cloudGround2', location: [-0.05743, 22.489912, 2.638747], rotation: [0.707107, 0.707107, 0, 0], scale: [6.816502, 2.9123, 8.622053], collision: false }),
   createPlacement({ id: 'cloud-ground-1', asset: 'cloudGround1', location: [-0.054438, 0.407657, -8.434945], rotation: [0.707107, 0.707107, 0, 0], scale: [25.593407, 18.474667, 27.185076], collision: false }),
+  {
+    id: 'notice-board',
+    asset: 'noticeBoard',
+    position: [
+      CLOUD_WORKSHOP_NOTICE_BOARD_POSITION.x,
+      CLOUD_WORKSHOP_NOTICE_BOARD_POSITION.y,
+      CLOUD_WORKSHOP_NOTICE_BOARD_POSITION.z,
+    ] as const,
+    rotation: [0.7071068, 0, 0, 0.7071068],
+    scale: CLOUD_WORKSHOP_NOTICE_BOARD_SCALE,
+    collision: true,
+    collisionFootprintScale: 0.62,
+  },
 ];
 
 export const CLOUD_WORKSHOP_SCENE_TRANSFORM = Object.freeze({

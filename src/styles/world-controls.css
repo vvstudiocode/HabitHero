@@ -254,6 +254,29 @@
   transform: scale(.95);
 }
 
+.hh-world-npc-dialogue-trigger {
+  position: fixed;
+  z-index: 6;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  place-items: center;
+  padding: 0;
+  border-radius: 18px;
+  touch-action: manipulation;
+  transform: translate(-50%, calc(-100% - 10px)) scale(var(--hh-world-npc-prompt-scale, 1));
+  animation: hh-world-npc-dialogue-trigger-in var(--hh-adventure-enter-duration) cubic-bezier(.16, 1, .3, 1) both;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.hh-world-npc-dialogue-trigger:active {
+  transform: translate(-50%, calc(-100% - 10px)) scale(calc(var(--hh-world-npc-prompt-scale, 1) * .95));
+}
+
 .hh-adventure-table-notification {
   --hh-adventure-entry-size: 52px;
   --hh-adventure-entry-stack-gap: 8px;
@@ -285,6 +308,11 @@
 @keyframes hh-adventure-table-dialogue-trigger-in {
   from { opacity: 0; transform: translateY(6px) scale(.9); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes hh-world-npc-dialogue-trigger-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 10px)) scale(calc(var(--hh-world-npc-prompt-scale, 1) * .86)); }
+  to { opacity: 1; transform: translate(-50%, calc(-100% - 10px)) scale(var(--hh-world-npc-prompt-scale, 1)); }
 }
 
 @keyframes hh-adventure-table-notification-in {
@@ -718,6 +746,7 @@
   }
 
   .hh-adventure-table-dialogue-trigger,
+  .hh-world-npc-dialogue-trigger,
   .hh-adventure-table-notification {
     animation: none;
     transition: none;

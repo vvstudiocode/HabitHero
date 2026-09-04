@@ -33,6 +33,8 @@ describe('world location', () => {
     assert.equal(isWorldLocation('sunrise-village'), true);
     assert.equal(isWorldLocation('forest-valley'), true);
     assert.equal(isWorldLocation('cloud-workshop'), true);
+    assert.equal(isWorldLocation('tideglow-archipelago'), true);
+    assert.equal(isWorldLocation('star-sand-wasteland'), true);
     assert.equal(isWorldLocation('my-world'), true);
     assert.equal(isWorldLocation('not-a-world'), false);
   });

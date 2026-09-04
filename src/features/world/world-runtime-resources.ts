@@ -69,6 +69,29 @@ export function disposeScene(scene: DisposableScene, renderer: { dispose: () => 
   renderer.dispose();
 }
 
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const workerCount = Math.min(items.length, Math.max(1, Math.floor(concurrency)));
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= items.length) return;
+      results[index] = await mapper(items[index], index);
+    }
+  };
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 export function loadGltfSafely<T extends { scene: DisposableScene }>(
   loader: { loadAsync: (url: string) => Promise<T> },
   url: string,
@@ -102,4 +125,32 @@ export function loadGltfSafely<T extends { scene: DisposableScene }>(
       reject(error);
     });
   });
+}
+
+export interface GltfUrlCache<T extends { scene: DisposableScene }> {
+  load: (url: string) => Promise<T>;
+}
+
+/**
+ * Keep one in-flight/resolved GLTF promise per URL for a mounted world. The
+ * caller owns cloning the returned scene before placing it in more than one
+ * parent; the cache owns only the loader result and its abort lifecycle.
+ */
+export function createGltfUrlCache<T extends { scene: DisposableScene }>(
+  loader: { loadAsync: (url: string) => Promise<T> },
+  signal: AbortSignal,
+): GltfUrlCache<T> {
+  const loads = new Map<string, Promise<T>>();
+  return {
+    load: (url) => {
+      const cached = loads.get(url);
+      if (cached) return cached;
+      const pending = loadGltfSafely(loader, url, signal);
+      loads.set(url, pending);
+      void pending.catch(() => {
+        if (loads.get(url) === pending) loads.delete(url);
+      });
+      return pending;
+    },
+  };
 }

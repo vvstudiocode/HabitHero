@@ -70,6 +70,14 @@ test('child adventure cards let the character scene show through', () => {
   assert.doesNotMatch(neutralTheme, /\.hh-character-icon-button,[^{]*\{[^}]*backdrop-filter:/);
 });
 
+test('child adventure board keeps one warm surface and removes card shadows', () => {
+  const neutralTheme = read('../src/styles/neutral-theme.css');
+
+  assert.match(neutralTheme, /\.hh-adventure-board-dialog\s*\{[\s\S]*?background:\s*var\(--hh-neutral-surface\)/);
+  assert.match(neutralTheme, /\.hh-adventure-detail--embedded\s*\{[\s\S]*?background:\s*var\(--hh-neutral-surface\)[\s\S]*?box-shadow:\s*none;/);
+  assert.match(neutralTheme, /\.hh-adventure-card\s*\{[\s\S]*?box-shadow:\s*none;/);
+});
+
 test('parent hero menu actions use the same translucent surface as settings', () => {
   const neutralTheme = read('../src/styles/neutral-theme.css');
 

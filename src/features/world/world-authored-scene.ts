@@ -152,6 +152,7 @@ export function getAuthoredSceneRadialBoundary(
   THREE: ThreeNamespace,
   source: Object3D,
   groundModuleKey = 'island',
+  horizontalScaleFactor = 1,
 ): RadialWorldBoundary | undefined {
   source.updateMatrixWorld(true);
   const island = getAuthoredSceneModule(source, groundModuleKey);
@@ -159,6 +160,14 @@ export function getAuthoredSceneRadialBoundary(
   const bounds = new THREE.Box3().setFromObject(island);
   if (bounds.isEmpty()) return undefined;
   const center = bounds.getCenter(new THREE.Vector3());
+  const safeHorizontalScaleFactor = Number.isFinite(horizontalScaleFactor) && horizontalScaleFactor > 0
+    ? horizontalScaleFactor
+    : 1;
+  const islandOrigin = island.getWorldPosition(new THREE.Vector3());
+  const restoredCenter = {
+    x: islandOrigin.x + (center.x - islandOrigin.x) / safeHorizontalScaleFactor,
+    z: islandOrigin.z + (center.z - islandOrigin.z) / safeHorizontalScaleFactor,
+  };
   const radii = Array.from({ length: AUTHORED_BOUNDARY_BUCKETS }, () => 0);
   const worldVertex = new THREE.Vector3();
   island.traverse((object) => {
@@ -180,8 +189,10 @@ export function getAuthoredSceneRadialBoundary(
     for (let index = 0; index < position.count; index += 1) {
       worldVertex.set(position.getX(index), position.getY(index), position.getZ(index));
       mesh.localToWorld(worldVertex);
-      const deltaX = worldVertex.x - center.x;
-      const deltaZ = worldVertex.z - center.z;
+      const restoredX = islandOrigin.x + (worldVertex.x - islandOrigin.x) / safeHorizontalScaleFactor;
+      const restoredZ = islandOrigin.z + (worldVertex.z - islandOrigin.z) / safeHorizontalScaleFactor;
+      const deltaX = restoredX - restoredCenter.x;
+      const deltaZ = restoredZ - restoredCenter.z;
       const radius = Math.hypot(deltaX, deltaZ);
       if (!Number.isFinite(radius)) continue;
       const angle = (Math.atan2(deltaZ, deltaX) + Math.PI * 2) % (Math.PI * 2);
@@ -200,7 +211,7 @@ export function getAuthoredSceneRadialBoundary(
     return Math.max(0.5, fallbackRadius - AUTHORED_BOUNDARY_EDGE_MARGIN);
   });
   return {
-    center: { x: center.x, z: center.z },
+    center: restoredCenter,
     radii: completedRadii,
   };
 }

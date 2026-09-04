@@ -28,6 +28,8 @@ export const SUNRISE_VILLAGE_MODULE_ASSETS = Object.freeze({
   roundStoneRoad: '/assets/world/sunrise-village/round-stone-road.glb',
 });
 
+export const SUNRISE_VILLAGE_SKYBOX_URL = '/assets/world/sunrise-village/sunrise-village-sky.png';
+
 export const SUNRISE_VILLAGE_SCENE_TRANSFORM = Object.freeze({
   scale: 0.05,
   position: Object.freeze({ x: 0.82, y: 1.12, z: 0.28 }),

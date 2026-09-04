@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
   FOREST_VALLEY_GATE_ENTER_RADIUS,
@@ -14,11 +14,13 @@ import {
   FOREST_VALLEY_MODULE_ASSETS,
   FOREST_VALLEY_MODULE_PLACEMENTS,
   FOREST_VALLEY_MULTI_TREE_STONE_GATE_SCALE_FACTOR,
+  FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR,
   FOREST_VALLEY_PURPLE_MUSHROOM_TREE_BACK_OFFSET,
   FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SIDE_OFFSET,
   FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SCALE,
   FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SINK,
   FOREST_VALLEY_SCENE_TRANSFORM,
+  FOREST_VALLEY_SKYBOX_URL,
   FOREST_VALLEY_SPAWN_ANCHOR,
   getForestValleyGatePromptHeight,
   isForestValleyGateNearby,
@@ -44,28 +46,34 @@ describe('Forest Valley world gate', () => {
     assert.equal(FOREST_VALLEY_SCENE_TRANSFORM.scale, 0.6);
     assert.equal(FOREST_VALLEY_GROUND_Y, 0.06);
     assert.deepEqual(FOREST_VALLEY_SPAWN_ANCHOR, { x: -0.12276, z: 3.69 });
-    assert.equal(FOREST_VALLEY_MOVEMENT_BOUNDARY, 18.9);
+    assert.ok(Math.abs(FOREST_VALLEY_MOVEMENT_BOUNDARY - 18.9) < 1e-9);
+    assert.equal(FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR, 1.45);
+    assert.deepEqual(FOREST_VALLEY_MODULE_PLACEMENTS.find((placement) => placement.asset === 'island')?.scale, [
+      36.12309265136719 * FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR,
+      41.04838180541992 * FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR,
+      0.9106636047363281,
+    ]);
     assert.equal(FOREST_VALLEY_MODULE_ASSETS.multiTreeStoneGate, '/assets/world/forest-valley/multi-tree-stone-gate.glb');
     assert.equal(FOREST_VALLEY_MODULE_ASSETS.purpleMushroomTree, '/assets/world/forest-valley/purple-mushroom-tree.glb');
     assert.equal(FOREST_VALLEY_MODULE_PLACEMENTS.find((placement) => placement.asset === 'rootGate')?.collision, true);
     assert.equal(FOREST_VALLEY_MULTI_TREE_STONE_GATE_SCALE_FACTOR, 1.4);
     const multiTreeStoneGate = FOREST_VALLEY_MODULE_PLACEMENTS.find((placement) => placement.asset === 'multiTreeStoneGate');
-    assert.deepEqual(multiTreeStoneGate?.position, [-0.20459985733032227, -0.5246994614601135, 6.15]);
+    assert.deepEqual(multiTreeStoneGate?.position, [8.20459985733032227, -0.8246994614601135, -21.15]);
     assert.deepEqual(multiTreeStoneGate?.scale, [9.58818260192871, 13.264295310974118, 8.736582870483398]);
     assert.equal(multiTreeStoneGate?.collision, true);
     assert.equal(multiTreeStoneGate?.collisionFootprintScale, 0.56);
     const circularBoardwalk = FOREST_VALLEY_MODULE_PLACEMENTS.find((placement) => placement.asset === 'circularBoardwalk');
     const purpleMushroomTree = FOREST_VALLEY_MODULE_PLACEMENTS.find((placement) => placement.asset === 'purpleMushroomTree');
-    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SCALE, 5.2);
-    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SINK, 0.18);
-    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_BACK_OFFSET, 4.6);
-    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SIDE_OFFSET, 2.2);
+    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SCALE, 13);
+    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SINK, 5.2);
+    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_BACK_OFFSET, 3.8);
+    assert.equal(FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SIDE_OFFSET, -8.2);
     assert.deepEqual(purpleMushroomTree?.position, [
       (circularBoardwalk?.position[0] ?? 0) - FOREST_VALLEY_PURPLE_MUSHROOM_TREE_BACK_OFFSET,
       -FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SINK,
       (circularBoardwalk?.position[2] ?? 0) + FOREST_VALLEY_PURPLE_MUSHROOM_TREE_SIDE_OFFSET,
     ]);
-    assert.deepEqual(purpleMushroomTree?.scale, [5.2, 5.2, 5.2]);
+    assert.deepEqual(purpleMushroomTree?.scale, [13, 13, 13]);
     assert.equal(purpleMushroomTree?.collision, false);
     assert.deepEqual(FOREST_VALLEY_GATE_POSITION, { x: -0.20459985733032227, z: 8.511223793029785 });
     assert.deepEqual(FOREST_VALLEY_MODULE_PLACEMENTS.find((placement) => placement.asset === 'rootGate')?.position, [-0.20459985733032227, 0.03695183992385864, 8.511223793029785]);
@@ -83,6 +91,23 @@ describe('Forest Valley world gate', () => {
     assert.ok(FOREST_VALLEY_GATE_EXIT_RADIUS > FOREST_VALLEY_GATE_ENTER_RADIUS);
     assert.equal(FOREST_VALLEY_GATE_ENTER_RADIUS, 2.4);
     assert.equal(FOREST_VALLEY_GATE_EXIT_RADIUS, 3.2);
+  });
+
+  it('ships the Forest Valley 360-degree skybox alongside its authored modules', () => {
+    const skyboxPath = new URL(`../public${FOREST_VALLEY_SKYBOX_URL}`, import.meta.url);
+    assert.equal(existsSync(skyboxPath), true);
+    assert.ok(statSync(skyboxPath).size > 0);
+    assert.match(FOREST_VALLEY_SKYBOX_URL, /^\/assets\/world\/forest-valley\/forest-valley-sky\.png$/);
+  });
+
+  it('locks Forest Valley to night lighting even when the global day-night setting changes', () => {
+    const runtime = readFileSync(new URL('../src/features/world/prototype-world-runtime.ts', import.meta.url), 'utf8');
+    const weatherRuntime = readFileSync(new URL('../src/features/world/world-weather-runtime.ts', import.meta.url), 'utf8');
+    assert.match(runtime, /dayNightEnabled:\s*\(sunriseVillageSource\s*\|\|\s*cloudWorkshopSource\s*\|\|\s*forestValleySource\)\s*\?\s*false\s*:\s*options\.dayNightEnabled/);
+    assert.match(runtime, /fixedTimePhase:\s*forestValleySource\s*\?\s*['"]night['"]\s*:\s*undefined/);
+    assert.match(runtime, /weatherRuntime\.setDayNightEnabled\(\s*\(options\.worldLocation\s*===\s*['"]sunrise-village['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]cloud-workshop['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]forest-valley['"]\)\s*\?\s*false\s*:\s*next\.dayNightEnabled\s*\)/);
+    assert.match(weatherRuntime, /fixedTimePhase/);
+    assert.match(weatherRuntime, /fixedTimePhase\s*\?\s*\{\s*phase:\s*fixedTimePhase/);
   });
 
   it('anchors the entrance prompt like the notice board instead of above the gate', () => {

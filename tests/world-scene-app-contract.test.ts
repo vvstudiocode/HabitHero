@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  createChildGameDataMap,
-  type SharedWorldDecorationRow,
-} from '../src/features/world/game-data';
+import { createChildGameDataMap } from '../src/features/world/game-data';
 import {
   getCatalogShopGateContext,
   getCatalogShopPurchaseSource,
@@ -34,15 +31,17 @@ const sceneState = {
     required_completed_count: 12, required_general_count: 2, unlock_rule_version: 1, is_active: true,
   }],
   npcs: [{
-    id: 'npc.noah', scene_id: 'cloud-workshop' as const, npc_type: 'character_vendor' as const,
-    name: '諾亞', asset_key: 'character.noah', catalog_item_id: null,
-    position_x: 0, position_y: 0, position_z: -2, behavior_mode: 'dance_anchor' as const,
-    animation_name: 'Dance', roam_bounds: null, is_active: true,
+    id: 'npc.nibus', scene_id: 'cloud-workshop' as const, npc_type: 'roaming_pet' as const,
+    name: '尼布斯', asset_key: 'pet.nibus', catalog_item_id: 'pet-nibus',
+    position_x: -3, position_y: 0, position_z: 1, behavior_mode: 'roaming' as const,
+    animation_name: 'Walk', roam_bounds: { minX: -6, maxX: 6, minZ: -4, maxZ: 4 }, is_active: true,
   }],
   offerings: [{
-    npc_id: 'npc.noah', catalog_item_id: 'pet-nibus', sort_order: 1,
-    dialogue_version: 2, is_primary_source: true, is_active: true,
+    npc_id: 'npc.nibus', catalog_item_id: 'pet-nibus', sort_order: 1,
+    dialogue_version: 2, is_primary_source: false, is_active: true,
   }],
+  unlocks: [],
+  dialogue: [],
 };
 
 test('server scene access fails closed when hydration is unavailable', () => {
@@ -66,7 +65,7 @@ test('server scene access fails closed when hydration is unavailable', () => {
 test('shop state uses hydrated DB offerings and never authorizes from static content', () => {
   const gameData = createChildGameDataMap(
     ['child-a'], [catalogRow], [{ catalog_item_id: 'pet-nibus', scroll_price: 9 }], [], [], [], [],
-    [] as SharedWorldDecorationRow[], 'child-a', [], [], sceneState,
+    [], [], 'child-a', [], [], sceneState,
   )['child-a'];
   const context = getCatalogShopGateContext(gameData);
   assert.ok(context);
@@ -75,11 +74,11 @@ test('shop state uses hydrated DB offerings and never authorizes from static con
   const unlockedGameData = {
     ...gameData,
     sceneUnlocks: [{ familyId: 'family-a', childProfileId: 'child-a', sceneId: 'cloud-workshop', unlockRuleVersion: 1, unlockedAt: '2026-09-03T00:00:00Z' }],
-    npcDialogueProgress: [{ familyId: 'family-a', childProfileId: 'child-a', npcId: 'npc.noah', dialogueVersion: 2, firstTalkedAt: '2026-09-03T00:00:00Z', lastTalkedAt: '2026-09-03T00:00:00Z' }],
+    npcDialogueProgress: [{ familyId: 'family-a', childProfileId: 'child-a', npcId: 'npc.nibus', dialogueVersion: 2, firstTalkedAt: '2026-09-03T00:00:00Z', lastTalkedAt: '2026-09-03T00:00:00Z' }],
   };
   const unlockedContext = getCatalogShopGateContext(unlockedGameData);
   assert.equal(getCatalogShopState(unlockedGameData.catalog[0], unlockedContext).purchasable, true);
-  assert.equal(getCatalogShopPurchaseSource(unlockedGameData.catalog[0], unlockedContext), 'npc.noah');
+  assert.equal(getCatalogShopPurchaseSource(unlockedGameData.catalog[0], unlockedContext), 'npc.nibus');
   assert.equal(getCatalogShopState(unlockedGameData.catalog[0], undefined).purchasable, false);
 });
 
@@ -96,10 +95,10 @@ test('legacy inventory remains mappable while the server catalog controls new ac
 
 test('NPC controller exposes selection and a disposable lifecycle boundary', () => {
   const controller = createWorldNpcInteractionController('cloud-workshop', sceneState.npcs);
-  assert.deepEqual(controller.select('npc.noah'), { sceneId: 'cloud-workshop', npcId: 'npc.noah' });
+  assert.deepEqual(controller.select('npc.nibus'), { sceneId: 'cloud-workshop', npcId: 'npc.nibus' });
   assert.equal(controller.select('npc.missing'), null);
   controller.dispose();
-  assert.equal(controller.select('npc.noah'), null);
+  assert.equal(controller.select('npc.nibus'), null);
 });
 
 test('world scene repository preserves child scope, source NPC, and idempotency', async () => {

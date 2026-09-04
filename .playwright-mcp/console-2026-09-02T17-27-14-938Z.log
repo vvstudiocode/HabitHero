@@ -1,0 +1,53 @@
+[     160ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[    6780ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[    6780ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[  302874ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[  430558ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[  565136ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[  569130ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[  593369ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  593370ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[  690799ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[  706667ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  706668ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[  771337ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[  783678ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[  783678ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[ 1010925ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[ 1022523ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1022524ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[ 1931718ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 1931718ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[ 2841036ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 2841037ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[ 3250016ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3250063ms] [LOG] THREE.WebGLRenderer: Context Lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:256
+[ 3254852ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3258537ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3262744ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3278480ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3288405ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3293532ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3301002ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3321134ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3331898ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3368669ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3385586ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3397815ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3405921ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3412116ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3435916ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3444324ms] [ERROR] React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element. defaultOpen defaultopen @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:2402
+[ 3448502ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3468866ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3492597ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3502652ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 3542652ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:3000/node_modules/.vite/deps/chunk-MTSAZ63D.js?v=6124a16a:42316
+[ 4434210ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6124a16a:20102
+[ 4443657ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 4443658ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 4443659ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[ 5352831ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 5352832ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137
+[ 6262034ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/functions/v1/get-weather:0
+[ 6262035ms] [WARNING] Unable to load CWA weather; using Open-Meteo fallback. @ http://localhost:3000/src/features/world/world-weather-runtime.ts?t=1788358418142:137

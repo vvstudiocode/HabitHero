@@ -26,6 +26,10 @@ const childDecorationActionsSource = readFileSync(
   new URL('../src/features/shared-decorations/child-decoration-actions.ts', import.meta.url),
   'utf8',
 );
+const npcDialogueSource = readFileSync(
+  new URL('../src/features/world/components/WorldNpcDialoguePanel.tsx', import.meta.url),
+  'utf8',
+);
 const dataAccessSource = readFileSync(
   new URL('../src/lib/data-access.ts', import.meta.url),
   'utf8',
@@ -307,6 +311,22 @@ describe('child game panel decoration editing', () => {
 
   it('keeps the furniture lightbox free of a visible page scrollbar', () => {
     assert.match(modalSourceForOverflow, /\.hh-game-item-lightbox-content[\s\S]*?scrollbar-width:\s*none/);
+  });
+
+  it('uses an eight-column image grid for NPC offerings in landscape', () => {
+    assert.match(modalSourceForOverflow, /@media \(orientation: landscape\)[\s\S]*?\.hh-world-npc-dialogue-panel \.hh-world-npc-offering-list[\s\S]*?grid-template-columns:\s*repeat\(8, minmax\(0, 1fr\)\)/);
+    assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel \.hh-world-npc-offering-card[\s\S]*?aspect-ratio:\s*1 \/ 1[\s\S]*?background:\s*transparent/);
+    assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel \.hh-world-npc-offering-details,[\s\S]*?\.hh-world-npc-dialogue-panel \.hh-world-npc-offering-action[\s\S]*?display:\s*none/);
+  });
+
+  it('keeps pet NPC dialogue as a horizontal 3D preview with purchase copy', () => {
+    assert.match(npcDialogueSource, /GameItem3DPreview/);
+    assert.match(npcDialogueSource, /hh-world-npc-dialogue-panel--pet/);
+    assert.match(npcDialogueSource, /hh-world-npc-pet-purchase/);
+    assert.match(npcDialogueSource, /handlePetPurchase/);
+    assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(210px, \.9fr\)/);
+    assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet \.hh-game-item-lightbox-3d[\s\S]*?grid-column:\s*1/);
+    assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet \.hh-game-item-lightbox-copy[\s\S]*?grid-column:\s*2/);
   });
 
   it('keeps the child world pinned to the viewport after placement controls close', () => {

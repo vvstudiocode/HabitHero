@@ -13,7 +13,7 @@ const worldLayerSource = await readFile(
 
 test('child dashboard owns background music across all child feature pages', () => {
   assert.match(childDashboardSource, /ChildDashboardBackgroundMusic/);
-  assert.match(childDashboardSource, /<ChildDashboardBackgroundMusic\s+enabled=\{backgroundMusicEnabled\}\s*\/>/);
+  assert.match(childDashboardSource, /<ChildDashboardBackgroundMusic\s+enabled=\{backgroundMusicEnabled\}\s+worldLocation=\{worldLocation\}\s*\/>/);
   assert.doesNotMatch(worldLayerSource, /world-background-music/);
   assert.doesNotMatch(worldLayerSource, /WORLD_BACKGROUND_MUSIC_SRC/);
 });
@@ -29,6 +29,9 @@ test('background music retries from app interactions after autoplay is blocked',
   assert.match(backgroundMusicSource, /bindWorldBackgroundMusicVisibility/);
   assert.match(backgroundMusicSource, /visibilityState/);
   assert.match(backgroundMusicSource, /createWorldBackgroundMusicCrossfadePlayer/);
+  assert.match(backgroundMusicSource, /getWorldBackgroundMusicConfig/);
+  assert.match(backgroundMusicSource, /createWorldBackgroundMusicCrossfadePlayer\(musicConfig\)/);
+  assert.match(backgroundMusicSource, /worldLocation/);
   assert.match(backgroundMusicSource, /player\.start\(\)/);
   assert.match(backgroundMusicSource, /player\.stop\(\)/);
 });

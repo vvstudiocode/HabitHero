@@ -1,0 +1,32 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e40]:
+        - generic "習慣冒險島立體冒險世界。直向下方四分之一拖曳移動；橫向左下控制區拖曳移動，其餘區域單指調整視角，雙指捏合縮放。聚焦後使用 WASD／方向鍵移動，I/K 調整上下視角，J/L 調整左右視角，加號／減號縮放。" [active] [ref=e41]
+        - generic [aria-hidden]: 拖曳移動
+        - generic [ref=e42]:
+          - group "角色與寵物動作" [ref=e52]:
+            - button "角色揮手，面前寵物會同步" [ref=e53]
+            - button "角色坐下，面前寵物會同步" [ref=e59]
+            - button "角色跳舞，面前寵物會同步" [ref=e63]
+          - button "收合動作選單" [expanded] [ref=e67]
+        - button "開啟清爽模式" [ref=e48]
+      - generic "儀表板統計":
+        - generic "加入天數：10":
+          - strong:
+            - generic: "10"
+        - generic "我的點數：0":
+          - strong:
+            - generic: "0"
+        - generic "我的卷軸：0":
+          - strong:
+            - generic: "0"
+      - button "開啟背包" [ref=e16]
+  - generic [ref=e21]:
+    - button "進入我的世界" [ref=e22]
+    - button "開啟好友列表，目前 1 位好友" [ref=e26]
+  - generic [ref=e32]:
+    - button "開啟我的世界 的世界聊天" [ref=e33]:
+      - generic [ref=e34]: 我的世界 的世界聊天
+      - generic [ref=e35]: 和好友說說話吧！
+    - button "收合聊天摘要" [expanded] [ref=e37]

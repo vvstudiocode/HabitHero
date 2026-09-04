@@ -10,6 +10,9 @@ export interface OptimisticPurchaseDraft {
   existingInventoryItemId?: string | null;
   existingQuantityBefore?: number;
   totalPrice?: number;
+  sourceSceneId?: string;
+  sourceNpcId?: string;
+  sourceDialogueVersion?: number;
 }
 
 function getCatalogItem(gameData: ChildGameData, catalogItemId: string) {
@@ -31,10 +34,15 @@ export function patchPurchasedGameItem(gameData: ChildGameData, draft: Optimisti
   const existingInventoryItem = existingInventoryItemId
     ? gameData.inventory.find((item) => item.id === existingInventoryItemId)
     : undefined;
+  const sourceSnapshot = {
+    ...(draft.sourceSceneId ? { sourceSceneId: draft.sourceSceneId } : {}),
+    ...(draft.sourceNpcId ? { sourceNpcId: draft.sourceNpcId } : {}),
+    ...(draft.sourceDialogueVersion !== undefined ? { sourceDialogueVersion: draft.sourceDialogueVersion } : {}),
+  };
 
   const inventory = existingInventoryItem
     ? gameData.inventory.map((item) => item.id === existingInventoryItem.id
-      ? { ...item, quantity: item.quantity + draft.quantity }
+      ? { ...item, quantity: item.quantity + draft.quantity, ...sourceSnapshot }
       : item)
     : [...gameData.inventory, {
       id: draft.localInventoryItemId,
@@ -43,6 +51,7 @@ export function patchPurchasedGameItem(gameData: ChildGameData, draft: Optimisti
       acquiredVia: 'purchase' as const,
       acquiredAt: draft.acquiredAt,
       displayName: null,
+      ...sourceSnapshot,
     }];
 
   return {
@@ -57,9 +66,17 @@ export function reconcilePurchasedGameItem(
   gameData: ChildGameData,
   localInventoryItemId: string,
   result: GamePurchaseResult,
-  draft?: Pick<OptimisticPurchaseDraft, 'catalogItemId' | 'acquiredAt'>,
+  draft?: Pick<OptimisticPurchaseDraft, 'catalogItemId' | 'acquiredAt' | 'sourceSceneId' | 'sourceNpcId' | 'sourceDialogueVersion'>,
 ): ChildGameData {
   const inventoryIndex = gameData.inventory.findIndex((item) => item.id === localInventoryItemId);
+  const sourceSnapshot = {
+    ...((result.sourceSceneId ?? draft?.sourceSceneId) ? { sourceSceneId: result.sourceSceneId ?? draft?.sourceSceneId } : {}),
+    ...((result.sourceNpcId ?? draft?.sourceNpcId) ? { sourceNpcId: result.sourceNpcId ?? draft?.sourceNpcId } : {}),
+    ...((result.sourceDialogueVersion ?? draft?.sourceDialogueVersion) !== undefined
+      && (result.sourceDialogueVersion ?? draft?.sourceDialogueVersion) !== null
+      ? { sourceDialogueVersion: result.sourceDialogueVersion ?? draft?.sourceDialogueVersion }
+      : {}),
+  };
   if (inventoryIndex < 0) {
     if (draft && !gameData.inventory.some((item) => item.id === result.inventoryItemId)) {
       return {
@@ -72,6 +89,7 @@ export function reconcilePurchasedGameItem(
           acquiredVia: 'purchase',
           acquiredAt: draft.acquiredAt,
           displayName: null,
+          ...sourceSnapshot,
         }],
       };
     }
@@ -85,6 +103,7 @@ export function reconcilePurchasedGameItem(
     ...inventory[inventoryIndex],
     id: result.inventoryItemId,
     quantity: result.quantity,
+    ...sourceSnapshot,
   };
   return { ...gameData, walletBalance: result.walletBalance, inventory };
 }

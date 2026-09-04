@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff, KeyRound, Plus, Trash2, Users, X } from 'lucide-react';
-import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } from '../../features/characters/world-character-catalog';
+import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG, isChildCreationCharacterId } from '../../features/characters/world-character-catalog';
 import { GameItemLightbox } from '../../features/world/components/GameItemImagePreview';
 import type { ChildGender } from '../../types';
 import { dismissWithAnimation } from '../../lib/utils';
@@ -136,7 +136,7 @@ export function ParentSettingsChildrenSection({ children, childNameDrafts, onChi
         <fieldset className="mb-3" aria-required="true">
           <legend className="mb-2 text-sm font-bold text-blue-900">選擇冒險人物</legend>
           <div role="radiogroup" aria-label="冒險人物" className="hh-world-character-options">
-            {WORLD_CHARACTER_CATALOG.map((character) => (
+            {WORLD_CHARACTER_CATALOG.filter((character) => isChildCreationCharacterId(character.id)).map((character) => (
               <button
                 key={character.id}
                 type="button"

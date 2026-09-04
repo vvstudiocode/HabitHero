@@ -26,11 +26,14 @@ import { ChildDashboardBackgroundMusic } from './ChildDashboardBackgroundMusic';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
 import { WorldPreparingScreen } from './WorldPreparingScreen';
 import type { ChildGamePanelKind } from '../features/world/components/ChildGamePanel';
+import { WorldNpcDialoguePanel } from '../features/world/components/WorldNpcDialoguePanel';
+import { WorldNpcDialoguePrompt } from '../features/world/components/WorldNpcDialoguePrompt';
 import { emptyChildGameData, type GamePurchaseResult, type WorldMutationResult } from '../features/world/contracts';
 import { getFollowingPetInventoryIds } from '../features/world/following-pet-state';
 import { getPetActionPlan, type PetAction } from '../features/world/pet-action-state';
 import { getRoamingPetSnapshot } from '../features/world/components/roaming-pet-state';
 import type { PetSelection } from '../features/world/prototype-world-runtime';
+import type { WorldNpcScreenPosition, WorldNpcSelection } from '../features/world/world-npc-runtime';
 import { getPetNameDisplayPreference, setPetNameDisplayPreference } from '../features/world/pet-name-display-preference';
 import {
   CLEAN_MODE_DOUBLE_TAP_MAX_INTERVAL_MS,
@@ -65,6 +68,18 @@ import {
   SUNRISE_VILLAGE_CLOUD_WORKSHOP_ENTRY_POSITION,
 } from '../features/world/cloud-workshop';
 import type { CloudWorkshopGateScreenPosition } from '../features/world/cloud-workshop';
+import { TideglowGateDialogue } from '../features/world/components/TideglowGateDialogue';
+import {
+  SUNRISE_VILLAGE_TIDEGLOW_ENTRY_POSITION,
+  TIDEGLOW_ARCHIPELAGO_ENTRY_POSITION,
+} from '../features/world/tideglow-archipelago';
+import type { TideglowGateScreenPosition } from '../features/world/tideglow-archipelago';
+import { StarSandWastelandGateDialogue } from '../features/world/components/StarSandWastelandGateDialogue';
+import {
+  STAR_SAND_WASTELAND_ENTRY_POSITION,
+  SUNRISE_VILLAGE_STAR_SAND_WASTELAND_ENTRY_POSITION,
+} from '../features/world/star-sand-wasteland';
+import type { StarSandWastelandGateScreenPosition } from '../features/world/star-sand-wasteland';
 import {
   createInitialWorldNavigationState,
   resolveWorldNavigationTransition,
@@ -93,6 +108,12 @@ import { selectChildAdventureState } from '../lib/child-dashboard-adventure-stat
 import { PointValue } from './shared/PointValue';
 import { PointLedgerHistory } from './PointLedgerHistory';
 import { DEFAULT_WORLD_LOCATION, getStoredWorldLocation, saveWorldLocation, type WorldLocation } from '../features/world/world-location';
+import { getServerWorldSceneAccess, getWorldSceneProgress } from '../features/world/world-scene-unlocks';
+
+function createWorldPurchaseIdempotencyKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
+  return `world-npc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 interface GrowthChildActions {
   proposeGoal?: (childId: string, input: GoalProposalInput) => Promise<void>;
@@ -115,17 +136,23 @@ const REWARDS_PER_PAGE = 18;
 const PUBLIC_WORLD_ENTRY_POSITIONS: Partial<Record<PublicWorldLocation, WorldNavigationPoint>> = {
   'sunrise-village': SUNRISE_VILLAGE_FOREST_VALLEY_ENTRY_POSITION,
   'cloud-workshop': CLOUD_WORKSHOP_ENTRY_POSITION,
+  'tideglow-archipelago': TIDEGLOW_ARCHIPELAGO_ENTRY_POSITION,
+  'star-sand-wasteland': STAR_SAND_WASTELAND_ENTRY_POSITION,
 };
 const PUBLIC_WORLD_ENTRY_FACINGS: Partial<Record<PublicWorldLocation, number>> = {
   'sunrise-village': Math.PI,
   'forest-valley': Math.PI,
   'cloud-workshop': Math.PI,
+  'tideglow-archipelago': Math.PI,
+  'star-sand-wasteland': Math.PI,
 };
 const PUBLIC_WORLD_ENTRY_CAMERA_YAWS: Partial<Record<PublicWorldLocation, number>> = {
   // Enter Forest Valley with the camera centered behind the character,
   // matching the reference view through the root gate.
   'forest-valley': 0,
   'cloud-workshop': 0,
+  'tideglow-archipelago': 0,
+  'star-sand-wasteland': 0,
 };
 const TerrainWorldLayer = lazy(() => import('../features/world/TerrainWorldLayer').then((module) => ({ default: module.TerrainWorldLayer })));
 const ChildGamePanel = lazy(() => import('../features/world/components/ChildGamePanel').then((module) => ({ default: module.ChildGamePanel })));
@@ -164,6 +191,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     updateWorldEntityTransform,
     removeWorldEntity,
     collectAllWorldDecorations,
+    unlockWorldScene,
+    completeWorldNpcDialogue,
   } = appStore;
   const { session, loading: sessionLoading } = useAuthSession();
   const [activeTab, setActiveTab] = useState<ChildTab>('goals');
@@ -183,6 +212,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [worldEntryFacingY, setWorldEntryFacingY] = useState<number | undefined>(undefined);
   const [worldEntryCameraYaw, setWorldEntryCameraYaw] = useState<number | undefined>(undefined);
   const [worldTransitioning, setWorldTransitioning] = useState(false);
+  const [worldNpcDialogueNpcId, setWorldNpcDialogueNpcId] = useState<string | null>(null);
+  const [worldNpcPromptPosition, setWorldNpcPromptPosition] = useState<WorldNpcScreenPosition | null>(null);
   const [leaveFriendWorldRequest, setLeaveFriendWorldRequest] = useState(0);
   const [cleanMode, setCleanMode] = useState(false);
   const [cleanModeHintVisible, setCleanModeHintVisible] = useState(false);
@@ -253,15 +284,43 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setWorldEntryFacingY(undefined);
     setWorldEntryCameraYaw(undefined);
     setWorldTransitioning(false);
+    setWorldNpcDialogueNpcId(null);
+    setWorldNpcPromptPosition(null);
     setForestValleyGatePromptPosition(null);
     setCloudWorkshopGatePromptPosition(null);
+    setTideglowGatePromptPosition(null);
+    setStarSandWastelandGatePromptPosition(null);
     setCleanMode(false);
     setCleanModeHintVisible(false);
     hasShownCleanModeHint.current = false;
   }, [activeChildId]);
 
-  const handleWorldLocationChange = (nextLocation: WorldLocation) => {
+  const handleWorldLocationChange = async (nextLocation: WorldLocation) => {
     if (!activeChildId || nextLocation === worldLocation) return;
+    if (nextLocation !== 'my-world') {
+      const access = getServerWorldSceneAccess(nextLocation, gameData.worldScenes, gameData.sceneUnlocks);
+      if (!access.available) {
+        showToast('場景資料尚未同步完成，請稍後再試。');
+        return;
+      }
+      if (!access.unlocked) {
+        try {
+          const result = await unlockWorldScene(activeChildId, nextLocation);
+          if (!result.unlocked) {
+            const scene = gameData.worldScenes?.find((candidate) => candidate.id === nextLocation);
+            const completedCount = Number(result.completed_count ?? getWorldSceneProgress(activeChild?.tasks ?? []).completedCount);
+            const remainingCompletedCount = Math.max(0, (scene?.requiredCompletedCount ?? 0) - completedCount);
+            showToast(`還需要完成 ${remainingCompletedCount} 個冒險才能解鎖這座場景。`);
+            return;
+          }
+        } catch {
+          showToast('場景解鎖檢查失敗，請稍後再試。');
+          return;
+        }
+      }
+    }
+    setWorldNpcDialogueNpcId(null);
+    setWorldNpcPromptPosition(null);
     const transition = resolveWorldNavigationTransition({
       currentLocation: worldLocation,
       requestedLocation: nextLocation,
@@ -271,6 +330,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       entryPositionsBySource: {
         'cloud-workshop': {
           'sunrise-village': SUNRISE_VILLAGE_CLOUD_WORKSHOP_ENTRY_POSITION,
+        },
+        'tideglow-archipelago': {
+          'sunrise-village': SUNRISE_VILLAGE_TIDEGLOW_ENTRY_POSITION,
+        },
+        'star-sand-wasteland': {
+          'sunrise-village': SUNRISE_VILLAGE_STAR_SAND_WASTELAND_ENTRY_POSITION,
         },
       },
       entryFacings: PUBLIC_WORLD_ENTRY_FACINGS,
@@ -290,6 +355,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setWorldLocation(transition.nextLocation);
     setForestValleyGatePromptPosition(null);
     setCloudWorkshopGatePromptPosition(null);
+    setTideglowGatePromptPosition(null);
+    setStarSandWastelandGatePromptPosition(null);
     setDecorationPlacement(null);
     setDecorationPurchasePrompt(null);
     setShareDecorationItem(null);
@@ -467,6 +534,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const [adventureTableScreenPosition, setAdventureTableScreenPosition] = useState<AdventureTableScreenPosition | null>(null);
   const [forestValleyGatePromptPosition, setForestValleyGatePromptPosition] = useState<ForestValleyGateScreenPosition | null>(null);
   const [cloudWorkshopGatePromptPosition, setCloudWorkshopGatePromptPosition] = useState<CloudWorkshopGateScreenPosition | null>(null);
+  const [tideglowGatePromptPosition, setTideglowGatePromptPosition] = useState<TideglowGateScreenPosition | null>(null);
+  const [starSandWastelandGatePromptPosition, setStarSandWastelandGatePromptPosition] = useState<StarSandWastelandGateScreenPosition | null>(null);
   const [adventureBoardOpen, setAdventureBoardOpen] = useState(false);
 
   useEffect(() => {
@@ -796,9 +865,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     catalogItemId: string,
     quantity: number,
     idempotencyKey: string,
+    sourceNpcId?: string,
   ): Promise<GamePurchaseResult> => {
     if (!activeChild) throw new Error('找不到目前的孩子資料。');
-    const result = await purchaseGameItem(activeChild.id, catalogItemId, quantity, idempotencyKey);
+    const result = await purchaseGameItem(activeChild.id, catalogItemId, quantity, idempotencyKey, sourceNpcId);
     const item = gameData.catalog.find((candidate) => candidate.id === catalogItemId);
     if (item?.itemType === 'decoration') {
       setDecorationPurchasePrompt({ inventoryItemId: result.inventoryItemId, item });
@@ -806,7 +876,22 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     return result;
   };
 
+  const handleWorldNpcSelect = (selection: WorldNpcSelection) => {
+    if (selection.sceneId !== worldLocation || !gameData.worldNpcs?.some((npc) => npc.id === selection.npcId && npc.isActive)) return;
+    setWorldNpcDialogueNpcId(selection.npcId);
+  };
+
+  const handleWorldNpcTalk = async () => {
+    if (!activeChildId || !worldNpcDialogueNpcId) throw new Error('找不到目前的 NPC。');
+    await completeWorldNpcDialogue(activeChildId, worldNpcDialogueNpcId);
+  };
+
+  const handleWorldNpcPurchase = async (catalogItemId: string, sourceNpcId: string) => {
+    await handleGamePurchase(catalogItemId, 1, createWorldPurchaseIdempotencyKey(), sourceNpcId);
+  };
+
   const openChildFeature = (feature: ChildFeature) => {
+    setWorldNpcDialogueNpcId(null);
     if (feature === 'goals' || feature === 'growth' || feature === 'wishlist') setActiveTab(feature);
     setHeroFeature(feature);
     setHeroMenuGroup(null);
@@ -1027,6 +1112,10 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     );
   }
 
+  const selectedWorldNpc = worldNpcDialogueNpcId
+    ? gameData.worldNpcs?.find((npc) => npc.id === worldNpcDialogueNpcId && npc.isActive)
+    : undefined;
+
   return (
     <div
       className={`hh-dashboard-screen hh-dashboard-screen--child hh-app-interaction-surface flex flex-col min-h-[100dvh] bg-blue-50${decorationPlacement ? ' is-decoration-placement' : ''}${cleanMode ? ' is-clean-mode' : ''}`}
@@ -1035,7 +1124,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
       onContextMenu={preventNativeAppContextMenu}
       onDragStart={preventNativeAppDragStart}
     >
-      <ChildDashboardBackgroundMusic enabled={backgroundMusicEnabled} />
+      <ChildDashboardBackgroundMusic enabled={backgroundMusicEnabled} worldLocation={worldLocation} />
       <DashboardCharacterHero
         sceneImage=""
         theme={{ ...activeChild.theme, accentColor: '#2f7f78', mobileBackgroundImageUrl: undefined, desktopBackgroundImageUrl: undefined }}
@@ -1069,6 +1158,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onStartDecorationPlacement={startExistingDecorationPlacement}
               onCollectDecoration={collectSelectedDecoration}
               onPetAction={handlePetAction}
+              onWorldNpcScreenPositionChange={setWorldNpcPromptPosition}
+              worldNpcDialogueNpcId={worldNpcDialogueNpcId}
               onWorldPlayerPositionChange={(position) => {
                 currentWorldPositionRef.current = position;
               }}
@@ -1076,6 +1167,8 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               onAdventureTableIndicatorScreenPositionChange={setAdventureTableScreenPosition}
               onForestValleyGateScreenPositionChange={setForestValleyGatePromptPosition}
               onCloudWorkshopGateScreenPositionChange={setCloudWorkshopGatePromptPosition}
+              onTideglowGateScreenPositionChange={setTideglowGatePromptPosition}
+              onStarSandWastelandGateScreenPositionChange={setStarSandWastelandGatePromptPosition}
               onWorldTransitionEnd={() => setWorldTransitioning(false)}
               cleanMode={cleanMode}
               cleanModeHintVisible={cleanModeHintVisible}
@@ -1122,6 +1215,29 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         onWorldLocationChange={handleWorldLocationChange}
         worldTransitioning={worldTransitioning}
       />
+      {worldNpcPromptPosition
+        && !worldNpcDialogueNpcId
+        && !adventureBoardOpen
+        && !heroFeature
+        && !decorationPlacement
+        && !cleanMode
+        && !adventureRewardNotice
+        && (
+          <WorldNpcDialoguePrompt
+            position={worldNpcPromptPosition}
+            onOpen={handleWorldNpcSelect}
+          />
+      )}
+      {selectedWorldNpc && (
+        <WorldNpcDialoguePanel
+          npc={selectedWorldNpc}
+          gameData={gameData}
+          busy={mutationPending}
+          onTalk={handleWorldNpcTalk}
+          onPurchase={handleWorldNpcPurchase}
+          onClose={() => setWorldNpcDialogueNpcId(null)}
+        />
+      )}
       {childMenuNotifications.goals
         && !adventureBoardOpen
         && !heroFeature
@@ -1196,6 +1312,36 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
             position={cloudWorkshopGatePromptPosition}
             label={worldLocation === 'cloud-workshop' ? '進入晨光村' : '進入雲工房'}
             onEnter={() => handleWorldLocationChange(worldLocation === 'cloud-workshop' ? 'sunrise-village' : 'cloud-workshop')}
+          />
+      )}
+      {(worldLocation === 'sunrise-village' || worldLocation === 'tideglow-archipelago')
+        && tideglowGatePromptPosition
+        && !worldTransitioning
+        && !adventureBoardOpen
+        && !heroFeature
+        && !decorationPlacement
+        && !cleanMode
+        && !adventureRewardNotice
+        && (
+          <TideglowGateDialogue
+            position={tideglowGatePromptPosition}
+            label={worldLocation === 'tideglow-archipelago' ? '進入晨光村' : '前往潮光群島'}
+            onEnter={() => handleWorldLocationChange(worldLocation === 'tideglow-archipelago' ? 'sunrise-village' : 'tideglow-archipelago')}
+          />
+      )}
+      {(worldLocation === 'sunrise-village' || worldLocation === 'star-sand-wasteland')
+        && starSandWastelandGatePromptPosition
+        && !worldTransitioning
+        && !adventureBoardOpen
+        && !heroFeature
+        && !decorationPlacement
+        && !cleanMode
+        && !adventureRewardNotice
+        && (
+          <StarSandWastelandGateDialogue
+            position={starSandWastelandGatePromptPosition}
+            label={worldLocation === 'star-sand-wasteland' ? '進入晨光村' : '前往星砂荒原'}
+            onEnter={() => handleWorldLocationChange(worldLocation === 'star-sand-wasteland' ? 'sunrise-village' : 'star-sand-wasteland')}
           />
       )}
       <ChildAdventureBoard

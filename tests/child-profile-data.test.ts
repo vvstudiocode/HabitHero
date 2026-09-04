@@ -22,9 +22,9 @@ const joinedAt = '2026-07-28T16:00:00.000Z';
 
 describe('child profile creation contract', () => {
   it('requires a supported gender and a non-empty character id', () => {
-    assert.equal(validateChildProfileCreation({ gender: 'boy', characterId: 'boy-001' }), null);
+    assert.equal(validateChildProfileCreation({ gender: 'boy', characterId: 'character.arthur' }), null);
     assert.match(
-      validateChildProfileCreation({ gender: 'other', characterId: 'boy-001' }) ?? '',
+      validateChildProfileCreation({ gender: 'other', characterId: 'character.arthur' }) ?? '',
       /gender/i,
     );
     assert.match(

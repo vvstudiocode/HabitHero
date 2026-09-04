@@ -9,6 +9,21 @@ export interface WorldCharacterOption {
 
 export const CURRENT_WORLD_CHARACTER_ID = 'character.arthur';
 
+/** Characters available to a parent when creating a new child profile. */
+export const CHILD_CREATION_CHARACTER_IDS = [
+  'character.arthur',
+  'character.elina',
+  'character.sia',
+  'character.elio',
+] as const;
+
+export type ChildCreationCharacterId = typeof CHILD_CREATION_CHARACTER_IDS[number];
+
+export function isChildCreationCharacterId(value: string | null | undefined): value is ChildCreationCharacterId {
+  return value !== null && value !== undefined
+    && CHILD_CREATION_CHARACTER_IDS.includes(value as ChildCreationCharacterId);
+}
+
 /**
  * These are the mobile-optimized supplied characters. Each model ships an
  * in-place walk clip; models may also provide an authored idle clip.

@@ -8,6 +8,12 @@ const corsHeaders = {
 const usernamePattern = /^[a-z0-9][a-z0-9_]{2,31}$/;
 const passwordPattern = /^[A-Za-z0-9]{6,}$/;
 const childEmailDomain = 'children.habithero.local';
+const childCreationCharacterIds = new Set([
+  'character.arthur',
+  'character.elina',
+  'character.sia',
+  'character.elio',
+]);
 
 type Action = 'create' | 'reset-password' | 'delete';
 type ChildGender = 'boy' | 'girl';
@@ -79,7 +85,7 @@ Deno.serve(async (request) => {
       const characterId = body.characterId?.trim() ?? '';
       if (!childName || childName.length > 80 || !usernamePattern.test(loginName) || !body.password || !passwordPattern.test(body.password)
         || (!body.childProfileId && (body.gender !== 'boy' && body.gender !== 'girl'))
-        || (!body.childProfileId && (characterId.length < 1 || characterId.length > 80))) {
+        || (!body.childProfileId && (characterId.length < 1 || characterId.length > 80 || !childCreationCharacterIds.has(characterId)))) {
         return json({ error: 'Invalid child account details' }, 400);
       }
 

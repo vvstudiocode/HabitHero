@@ -8,6 +8,7 @@ import {
   SUNRISE_VILLAGE_GROUND_Y,
   SUNRISE_VILLAGE_MODULE_PLACEMENTS,
 } from '../src/features/world/sunrise-village-manifest';
+import { SUNRISE_VILLAGE_SKYBOX_URL } from '../src/features/world/world-runtime-assets';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const moduleAssets = [
@@ -34,6 +35,34 @@ const forestValleyModuleAssets = [
   'circular-boardwalk.glb',
 ] as const;
 
+function readGlbJsonAndBinary(assetPath: URL) {
+  const binary = readFileSync(assetPath);
+  let offset = 12;
+  let json: {
+    images?: Array<{ bufferView?: number; mimeType?: string }>;
+    bufferViews?: Array<{ byteOffset?: number; byteLength: number }>;
+    extensionsRequired?: string[];
+    extensionsUsed?: string[];
+    textures?: Array<{ extensions?: Record<string, { source?: number }> }>;
+  } | undefined;
+  let binaryChunk: Buffer | undefined;
+  while (offset < binary.length) {
+    const chunkLength = binary.readUInt32LE(offset);
+    const chunkType = binary.readUInt32LE(offset + 4);
+    const chunk = binary.subarray(offset + 8, offset + 8 + chunkLength);
+    offset += 8 + chunkLength;
+    if (chunkType === 0x4e4f534a) json = JSON.parse(chunk.toString('utf8').replace(/\0+$/, '')) as typeof json;
+    if (chunkType === 0x004e4942) binaryChunk = chunk;
+  }
+  assert.ok(json && binaryChunk);
+  return { json, binary: binaryChunk };
+}
+
+function readKtx2Dimensions(ktx2: Buffer) {
+  assert.deepEqual(ktx2.subarray(0, 12), Buffer.from([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]));
+  return { width: ktx2.readUInt32LE(20), height: ktx2.readUInt32LE(24) };
+}
+
 describe('Sunrise Village world', () => {
   it('ships compressed independent GLBs and removes the retired composite scene', () => {
     moduleAssets.forEach((asset) => {
@@ -45,6 +74,37 @@ describe('Sunrise Village world', () => {
     assert.equal(existsSync(new URL('../public/assets/world/sunrise-village.glb', import.meta.url)), false);
   });
 
+  it('ships high-quality GPU-compressed Sunrise Village textures within a 1024px mobile budget', () => {
+    assert.equal(existsSync(new URL('../public/basis/basis_transcoder.js', import.meta.url)), true);
+    assert.equal(existsSync(new URL('../public/basis/basis_transcoder.wasm', import.meta.url)), true);
+    moduleAssets.forEach((asset) => {
+      const assetPath = new URL(`../public/assets/world/sunrise-village/${asset}`, import.meta.url);
+      const { json, binary } = readGlbJsonAndBinary(assetPath);
+      assert.ok(json.extensionsRequired?.includes('KHR_draco_mesh_compression'), `${asset} must keep Draco geometry compression`);
+      assert.ok(json.extensionsRequired?.includes('KHR_texture_basisu'), `${asset} must require KTX2 texture support`);
+      assert.ok(!json.extensionsUsed?.includes('EXT_texture_webp'), `${asset} must not keep the uncompressed WebP texture extension`);
+      assert.equal(json.textures?.length, json.images?.length);
+      (json.images ?? []).forEach((image, index) => {
+        const view = json.bufferViews?.[image.bufferView ?? -1];
+        assert.ok(view, `${asset} image ${index} is missing a buffer view`);
+        const start = view.byteOffset ?? 0;
+        assert.equal(image.mimeType, 'image/ktx2', `${asset} image ${index} must be KTX2`);
+        const dimensions = readKtx2Dimensions(binary.subarray(start, start + view.byteLength));
+        assert.ok(dimensions.width <= 1024 && dimensions.height <= 1024, `${asset} image ${index} is ${dimensions.width}x${dimensions.height}`);
+      });
+      (json.textures ?? []).forEach((texture, index) => {
+        assert.ok(texture.extensions?.KHR_texture_basisu?.source !== undefined, `${asset} texture ${index} must point to a KTX2 image`);
+      });
+    });
+  });
+
+  it('ships the Sunrise Village 360-degree skybox alongside its authored modules', () => {
+    const skyboxPath = new URL(`../public${SUNRISE_VILLAGE_SKYBOX_URL}`, import.meta.url);
+    assert.equal(existsSync(skyboxPath), true);
+    assert.ok(statSync(skyboxPath).size > 0);
+    assert.match(SUNRISE_VILLAGE_SKYBOX_URL, /^\/assets\/world\/sunrise-village\/sunrise-village-sky\.png$/);
+  });
+
   it('ships the independent compressed Forest Valley modules', () => {
     forestValleyModuleAssets.forEach((asset) => {
       const assetPath = new URL(`../public/assets/world/forest-valley/${asset}`, import.meta.url);
@@ -54,12 +114,12 @@ describe('Sunrise Village world', () => {
     });
   });
 
-  it('ships the purple mushroom tree as a compact tangent-ready Draco/WebP GLB', () => {
+  it('ships the purple mushroom tree as a compact tangent-ready Draco/KTX2 GLB', () => {
     const modelPath = new URL('../public/assets/world/forest-valley/purple-mushroom-tree.glb', import.meta.url);
     const binary = readFileSync(modelPath).toString('latin1');
     assert.ok(statSync(modelPath).size < 3 * 1024 * 1024, 'purple mushroom tree should stay below 3 MB');
     assert.match(binary, /KHR_draco_mesh_compression/);
-    assert.match(binary, /EXT_texture_webp/);
+    assert.match(binary, /KHR_texture_basisu/);
     assert.match(binary, /TANGENT/);
   });
 
@@ -78,7 +138,15 @@ describe('Sunrise Village world', () => {
     assert.match(runtime, /getAuthoredSceneRadialBoundary/);
     assert.match(runtime, /movementBoundary/);
     assert.match(runtime, /alignAuthoredSceneToGround/);
+    assert.match(runtime, /KTX2Loader/);
+    assert.match(runtime, /setTranscoderPath\(['"]\/basis\/['"]\)/);
     assert.match(runtime, /groundY: worldGroundY/);
+  });
+
+  it('keeps Sunrise Village on its original fixed daytime lighting', () => {
+    const runtime = read('../src/features/world/prototype-world-runtime.ts');
+    assert.match(runtime, /dayNightEnabled:\s*\(sunriseVillageSource\s*\|\|\s*cloudWorkshopSource\s*\|\|\s*forestValleySource\)\s*\?\s*false\s*:\s*options\.dayNightEnabled/);
+    assert.match(runtime, /weatherRuntime\.setDayNightEnabled\(\s*\(options\.worldLocation\s*===\s*['"]sunrise-village['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]cloud-workshop['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]forest-valley['"]\)\s*\?\s*false\s*:\s*next\.dayNightEnabled\s*\)/);
   });
 
   it('places the Forest Valley entrance at the far end of the south road', () => {

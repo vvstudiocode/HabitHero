@@ -96,5 +96,36 @@ export function createWorldSceneGameDataSnapshot(gameData: ChildGameData): Child
     },
     worldEntities: gameData.worldEntities,
     worldRevision: gameData.worldRevision,
+    ...(gameData.sceneUnlocks ? { sceneUnlocks: gameData.sceneUnlocks } : {}),
+    ...(gameData.npcDialogueProgress ? { npcDialogueProgress: gameData.npcDialogueProgress } : {}),
+  };
+}
+
+/**
+ * Public scenes use global NPC/catalog content but never expose the current
+ * child's private inventory or world entities to the public-scene runtime.
+ */
+export function createPublicWorldGameDataSnapshot(gameData: ChildGameData): ChildGameData {
+  const npcCatalogIds = new Set(
+    (gameData.worldNpcs ?? [])
+      .map((npc) => npc.catalogItemId)
+      .filter((catalogItemId): catalogItemId is string => Boolean(catalogItemId)),
+  );
+  const npcAssetKeys = new Set((gameData.worldNpcs ?? []).map((npc) => npc.assetKey));
+  const offeringCatalogIds = new Set((gameData.worldNpcOfferings ?? []).map((offering) => offering.catalogItemId));
+  return {
+    walletBalance: 0,
+    catalog: gameData.catalog.filter((item) => npcCatalogIds.has(item.id) || offeringCatalogIds.has(item.id) || npcAssetKeys.has(item.assetKey)),
+    prices: {},
+    inventory: [],
+    loadout: null,
+    worldEntities: [],
+    worldRevision: 0,
+    ...(gameData.worldSceneDataStatus ? { worldSceneDataStatus: gameData.worldSceneDataStatus } : {}),
+    ...(gameData.worldScenes ? { worldScenes: gameData.worldScenes } : {}),
+    ...(gameData.worldNpcs ? { worldNpcs: gameData.worldNpcs } : {}),
+    ...(gameData.worldNpcOfferings ? { worldNpcOfferings: gameData.worldNpcOfferings } : {}),
+    ...(gameData.sceneUnlocks ? { sceneUnlocks: gameData.sceneUnlocks } : {}),
+    ...(gameData.npcDialogueProgress ? { npcDialogueProgress: gameData.npcDialogueProgress } : {}),
   };
 }

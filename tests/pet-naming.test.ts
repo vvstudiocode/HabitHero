@@ -40,7 +40,7 @@ describe('pet naming contracts', () => {
 
   it('maps names through inventory and world entity snapshots', async () => {
     const contracts = await read('src/features/world/contracts.ts');
-    const gameData = await read('src/features/world/game-data.ts');
+    const gameData = await read('src/features/world/game-data-map.ts');
     assert.match(contracts, /displayName\?: string \| null;/);
     assert.match(contracts, /displayName\?: string;/);
     assert.match(gameData, /displayName: row\.display_name/);
@@ -80,6 +80,7 @@ describe('pet naming contracts', () => {
     const dashboard = await read('src/components/ChildDashboard.tsx');
     const layer = await read('src/features/world/TerrainWorldLayer.tsx');
     const runtime = await read('src/features/world/prototype-world-runtime.ts');
+    const nameLabel = await read('src/features/world/world-name-label.ts');
     const dataAccess = await read('src/lib/data-access.ts');
     const store = await read('src/store.tsx');
     assert.match(panel, /onRenamePet/);
@@ -91,9 +92,9 @@ describe('pet naming contracts', () => {
     assert.match(dashboard, /showPetNames/);
     assert.match(layer, /showPetNames/);
     assert.match(runtime, /showPetNames/);
-    assert.match(runtime, /CanvasTexture/);
-    assert.match(runtime, /fillStyle\s*=\s*['"]#fff/);
-    assert.match(runtime, /transparent:\s*true/);
+    assert.match(nameLabel, /CanvasTexture/);
+    assert.match(nameLabel, /fillStyle\s*=\s*['"]#fff/);
+    assert.match(nameLabel, /transparent:\s*true/);
     assert.match(dataAccess, /set_pet_display_name/);
     assert.match(dataAccess, /target_display_name/);
     assert.match(store, /patchPetDisplayName/);

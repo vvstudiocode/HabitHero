@@ -5,6 +5,7 @@ import {
   fetchWorldWeather,
   getWorldTimeState,
   WORLD_TIME_LIGHTING,
+  WORLD_TIME_PHASES,
   WORLD_WEATHER_REFRESH_MS,
   type WorldTimePhase,
   type WorldWeatherState,
@@ -31,6 +32,9 @@ export interface WorldWeatherRuntimeOptions {
   fieldSize: number;
   walkableSize: number;
   dayNightEnabled: boolean;
+  fixedTimePhase?: WorldTimePhase;
+  skyboxUrl?: string;
+  skyboxOffset?: Readonly<{ x: number; y: number }>;
   visualSettings: VisualSettings;
   ambient: HemisphereLight;
   sun: DirectionalLight;
@@ -55,6 +59,9 @@ export function createWorldWeatherRuntime({
   fieldSize,
   walkableSize,
   dayNightEnabled: initialDayNightEnabled,
+  fixedTimePhase,
+  skyboxUrl,
+  skyboxOffset,
   visualSettings,
   ambient,
   sun,
@@ -72,9 +79,11 @@ export function createWorldWeatherRuntime({
   scene.add(weatherEffects.group);
   const pollenMaterial = pollen.material as import('three').ShaderMaterial;
   let dayNightEnabled = initialDayNightEnabled;
-  const getActiveWorldTimeState = () => dayNightEnabled
-    ? getWorldTimeState()
-    : { phase: 'day' as const, phaseIndex: 1, phaseProgress: 0 };
+  const getActiveWorldTimeState = () => fixedTimePhase
+    ? { phase: fixedTimePhase, phaseIndex: WORLD_TIME_PHASES.indexOf(fixedTimePhase), phaseProgress: 0 }
+    : dayNightEnabled
+      ? getWorldTimeState()
+      : { phase: 'day' as const, phaseIndex: 1, phaseProgress: 0 };
   let currentWorldTime = getActiveWorldTimeState();
   let currentWeather: WorldWeatherState = DEFAULT_WORLD_WEATHER;
   let appliedWorldVisualKey = '';
@@ -83,6 +92,36 @@ export function createWorldWeatherRuntime({
   let skyRequestSequence = 0;
   let weatherRefreshTimer: number | undefined;
   const textureLoader = new THREE.TextureLoader();
+  const skyboxDome = skyboxOffset
+    ? (() => {
+      const geometry = new THREE.SphereGeometry(1, 48, 32);
+      const material = new THREE.MeshBasicMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        depthTest: false,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.scale.setScalar(100);
+      mesh.frustumCulled = false;
+      mesh.renderOrder = -1000;
+      scene.add(mesh);
+      return { geometry, material, mesh };
+    })()
+    : undefined;
+
+  const setSkyboxDomeTexture = (source: import('three').Texture) => {
+    if (!skyboxDome || !skyboxOffset) return;
+    const texture = source.clone();
+    texture.mapping = THREE.UVMapping;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.repeat.set(-1, 1);
+    texture.offset.set(1 - skyboxOffset.x, -skyboxOffset.y);
+    texture.needsUpdate = true;
+    skyboxDome.material.map?.dispose();
+    skyboxDome.material.map = texture;
+    skyboxDome.material.needsUpdate = true;
+  };
 
   const applyWorldVisualState = (phase: WorldTimePhase, weather: WorldWeatherState) => {
     const lighting = WORLD_TIME_LIGHTING[phase];
@@ -104,7 +143,7 @@ export function createWorldWeatherRuntime({
   };
 
   const loadSkyForPhase = (phase: WorldTimePhase) => new Promise<import('three').Texture>((resolve, reject) => {
-    textureLoader.load(PROTOTYPE_WORLD_ASSETS.skyboxes[phase], resolve, undefined, reject);
+    textureLoader.load(skyboxUrl ?? PROTOTYPE_WORLD_ASSETS.skyboxes[phase], resolve, undefined, reject);
   });
 
   const applySkyForPhase = async (phase: WorldTimePhase) => {
@@ -119,7 +158,12 @@ export function createWorldWeatherRuntime({
     loadedTexture.mapping = THREE.EquirectangularReflectionMapping;
     loadedTexture.needsUpdate = true;
     activeSkyPhase = phase;
-    scene.background = loadedTexture;
+    if (skyboxDome) {
+      setSkyboxDomeTexture(loadedTexture);
+      scene.background = new THREE.Color(visualSettings.backgroundColor);
+    } else {
+      scene.background = loadedTexture;
+    }
     scene.environment = loadedTexture;
     scene.environmentIntensity = WORLD_TIME_LIGHTING[phase].environmentIntensity;
     activeSkyTexture?.dispose();
@@ -163,6 +207,12 @@ export function createWorldWeatherRuntime({
     if (weatherRefreshTimer !== undefined) window.clearTimeout(weatherRefreshTimer);
     activeSkyTexture?.dispose();
     activeSkyTexture = undefined;
+    if (skyboxDome) {
+      scene.remove(skyboxDome.mesh);
+      skyboxDome.material.map?.dispose();
+      skyboxDome.material.dispose();
+      skyboxDome.geometry.dispose();
+    }
   }, { once: true });
 
   applyWorldVisualState(currentWorldTime.phase, currentWeather);
@@ -173,6 +223,7 @@ export function createWorldWeatherRuntime({
 
   return {
     update: ({ time, delta, camera }) => {
+      if (skyboxDome) skyboxDome.mesh.position.copy(camera.position);
       const nextWorldTime = getActiveWorldTimeState();
       if (nextWorldTime.phase !== currentWorldTime.phase) {
         currentWorldTime = nextWorldTime;

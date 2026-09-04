@@ -138,6 +138,84 @@ describe('world navigation memory', () => {
     });
   });
 
+  it('enters Tideglow Archipelago through the sailing connection', () => {
+    const transition = resolveWorldNavigationTransition({
+      currentLocation: 'sunrise-village',
+      requestedLocation: 'tideglow-archipelago',
+      currentPosition: { x: 3.2, z: 4.6 },
+      returnTarget: null,
+      entryPositions: { 'tideglow-archipelago': { x: 4.216443, z: 6.297531 } },
+      entryFacings: { 'tideglow-archipelago': Math.PI },
+      entryCameraYaws: { 'tideglow-archipelago': 0 },
+    });
+
+    assert.deepEqual(transition, {
+      nextLocation: 'tideglow-archipelago',
+      entryPosition: { x: 4.216443, z: 6.297531 },
+      entryFacingY: Math.PI,
+      entryCameraYaw: 0,
+      returnTarget: null,
+    });
+  });
+
+  it('returns from Tideglow Archipelago to the Sunrise Village sailing connection', () => {
+    const transition = resolveWorldNavigationTransition({
+      currentLocation: 'tideglow-archipelago',
+      requestedLocation: 'sunrise-village',
+      currentPosition: { x: 4.216443, z: 6.297531 },
+      returnTarget: null,
+      entryPositions: { 'sunrise-village': { x: -8.9, z: 5.5 } },
+      entryPositionsBySource: {
+        'tideglow-archipelago': {
+          'sunrise-village': { x: 4.8, z: -6.2 },
+        },
+      },
+    });
+
+    assert.deepEqual(transition, {
+      nextLocation: 'sunrise-village',
+      entryPosition: { x: 4.8, z: -6.2 },
+      returnTarget: null,
+    });
+  });
+
+  it('enters and returns from Star Sand Wasteland through the ancient-city gate', () => {
+    const wastelandEntry = { x: -0.035904482, z: 2.598799849 };
+    const sunriseEntry = { x: -5.127207794, z: -9.472792206 };
+    const enterTransition = resolveWorldNavigationTransition({
+      currentLocation: 'sunrise-village',
+      requestedLocation: 'star-sand-wasteland',
+      currentPosition: { x: -6.4, z: -8.2 },
+      returnTarget: null,
+      entryPositions: { 'star-sand-wasteland': wastelandEntry },
+      entryFacings: { 'star-sand-wasteland': Math.PI },
+      entryCameraYaws: { 'star-sand-wasteland': 0 },
+    });
+    assert.deepEqual(enterTransition, {
+      nextLocation: 'star-sand-wasteland',
+      entryPosition: wastelandEntry,
+      entryFacingY: Math.PI,
+      entryCameraYaw: 0,
+      returnTarget: null,
+    });
+
+    const returnTransition = resolveWorldNavigationTransition({
+      currentLocation: 'star-sand-wasteland',
+      requestedLocation: 'sunrise-village',
+      currentPosition: wastelandEntry,
+      returnTarget: null,
+      entryPositions: { 'sunrise-village': { x: -8.9, z: 5.5 } },
+      entryPositionsBySource: {
+        'star-sand-wasteland': { 'sunrise-village': sunriseEntry },
+      },
+    });
+    assert.deepEqual(returnTransition, {
+      nextLocation: 'sunrise-village',
+      entryPosition: sunriseEntry,
+      returnTarget: null,
+    });
+  });
+
   it('does not store invalid player coordinates', () => {
     const transition = resolveWorldNavigationTransition({
       currentLocation: 'sunrise-village',

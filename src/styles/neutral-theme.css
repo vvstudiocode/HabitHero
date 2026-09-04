@@ -400,7 +400,7 @@ body,
   background: var(--hh-neutral-surface);
   background: var(--hh-world-overlay-surface);
   border: 0;
-  box-shadow: 0 8px 22px var(--hh-neutral-shadow);
+  box-shadow: none;
 }
 
 .hh-world-clean-mode-control,
@@ -590,22 +590,38 @@ body,
   -webkit-backdrop-filter: blur(4px);
 }
 
+.hh-world-npc-dialogue-trigger {
+  color: var(--hh-neutral-ink);
+  background: color-mix(in srgb, var(--hh-neutral-surface) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hh-neutral-surface) 66%, var(--hh-primary));
+  box-shadow: 0 10px 24px rgb(18 57 59 / 18%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.hh-world-npc-dialogue-trigger:hover,
+.hh-world-npc-dialogue-trigger:focus-visible {
+  background: color-mix(in srgb, var(--hh-neutral-surface) 88%, transparent);
+}
+
 .hh-adventure-table-dialogue:focus-visible,
 .hh-world-gate-dialogue:focus-visible,
 .hh-adventure-table-dialogue-trigger:focus-visible,
+.hh-world-npc-dialogue-trigger:focus-visible,
 .hh-adventure-board-close:focus-visible {
   outline: 3px solid var(--hh-character-focus-ring);
   outline-offset: 3px;
-}
-
-.hh-adventure-board-detail {
-  border-color: var(--hh-neutral-line);
 }
 
 .hh-adventure-detail {
   color: var(--hh-neutral-ink);
   background: var(--hh-neutral-surface);
   box-shadow: 0 24px 64px rgba(15, 23, 42, .2);
+}
+
+.hh-adventure-detail--embedded {
+  background: var(--hh-neutral-surface);
+  box-shadow: none;
 }
 
 .hh-adventure-detail-header p,
@@ -739,7 +755,7 @@ body,
   color: var(--hh-on-success);
   background: var(--hh-success);
   border: 0;
-  box-shadow: 0 8px 20px rgb(47 101 64 / 20%), 0 0 18px var(--hh-character-glow);
+  box-shadow: none;
 }
 
 .hh-adventure-complete-button:disabled,

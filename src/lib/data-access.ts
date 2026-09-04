@@ -7,6 +7,7 @@ import {
   taskTemplateRowToViewModel,
   taskScheduleRowToViewModel,
   taskTimerSessionRowToViewModel,
+  validateChildProfileCreation,
 } from './data-contracts';
 import type {
   AdventureGroupRow,
@@ -80,6 +81,13 @@ import {
   toWorldPlacementRpcArgs,
   toWorldTransformRpcArgs,
 } from '../features/world/world-data-access';
+import {
+  completeWorldNpcDialogue,
+  purchaseGameItem as purchaseSceneGameItem,
+  unlockWorldSceneIfEligible,
+  type WorldNpcDialogueResult,
+  type WorldSceneUnlockResult,
+} from '../features/world/world-scene-data-access';
 import type {
   GamePurchaseResult,
   WorldMutationResult,
@@ -328,7 +336,9 @@ export interface DataRepository {
   redeemReward(rewardId: string): Promise<void>;
   fulfillTicket(ticketId: string): Promise<void>;
   recordParentConsent(familyId: string, consentVersion: string): Promise<void>;
-  purchaseGameItem(childId: string, catalogItemId: string, quantity: number, idempotencyKey: string): Promise<GamePurchaseResult>;
+  unlockWorldScene(childId: string, sceneId: WorldSceneUnlockResult['scene_id']): Promise<WorldSceneUnlockResult>;
+  completeWorldNpcDialogue(childId: string, npcId: string): Promise<WorldNpcDialogueResult>;
+  purchaseGameItem(childId: string, catalogItemId: string, quantity: number, idempotencyKey: string, sourceNpcId?: string): Promise<GamePurchaseResult>;
   equipGameCharacter(childId: string, inventoryItemId: string): Promise<void>;
   setPetDisplayName(childId: string, inventoryItemId: string, displayName: string | null): Promise<void>;
   setFollowingPets(childId: string, inventoryItemIds: string[]): Promise<WorldMutationResult>;
@@ -347,6 +357,12 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
   return {
     load: (userId) => loadAppData(client, userId),
     async insertChild(familyId, name, loginName, password, childProfileId, identity) {
+      const characterId = identity?.characterId ?? 'character.arthur';
+      const validation = validateChildProfileCreation({
+        gender: identity?.gender ?? 'boy',
+        characterId,
+      });
+      if (validation) throw new Error(validation);
       const { data, error } = await client.functions.invoke('manage-child-account', {
         body: {
           action: 'create',
@@ -356,7 +372,7 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
           loginName,
           password,
           gender: identity?.gender,
-          characterId: identity?.characterId,
+          characterId,
         },
       });
       if (error) throw new Error(await functionErrorMessage(error));
@@ -564,24 +580,14 @@ export function createDataRepository(client: SupabaseClient): DataRepository {
     async recordParentConsent(familyId, consentVersion) {
       check(await client.rpc('record_parent_consent', { target_family_id: familyId, consent_version: consentVersion }));
     },
-    async purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey) {
-      const result = check(await client.rpc('purchase_game_item', {
-        target_child_profile_id: childId,
-        target_catalog_item_id: catalogItemId,
-        target_quantity: quantity,
-        purchase_idempotency_key: idempotencyKey,
-      })) as {
-        purchase_id: string;
-        inventory_item_id: string;
-        wallet_balance: number;
-        quantity: number;
-      };
-      return {
-        purchaseId: result.purchase_id,
-        inventoryItemId: result.inventory_item_id,
-        walletBalance: Number(result.wallet_balance),
-        quantity: Number(result.quantity),
-      };
+    async unlockWorldScene(childId, sceneId) {
+      return unlockWorldSceneIfEligible(client, sceneId, childId);
+    },
+    async completeWorldNpcDialogue(childId, npcId) {
+      return completeWorldNpcDialogue(client, npcId, childId);
+    },
+    async purchaseGameItem(childId, catalogItemId, quantity, idempotencyKey, sourceNpcId) {
+      return purchaseSceneGameItem(client, catalogItemId, quantity, idempotencyKey, childId, sourceNpcId);
     },
     async equipGameCharacter(childId, inventoryItemId) {
       check(await client.rpc('equip_game_character', {

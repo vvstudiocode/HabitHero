@@ -130,6 +130,27 @@ describe('authored world spawn', () => {
     assert.ok((boundary?.radii[0] ?? 0) > 3);
   });
 
+  it('can restore the original radial walk boundary after visual horizontal expansion', () => {
+    const source = new THREE.Group();
+    const island = new THREE.Group();
+    island.position.set(3, 0, -4);
+    island.userData.sunriseVillageModule = 'island';
+    island.add(new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 0.2, 32)));
+    source.add(island);
+
+    const originalBoundary = getAuthoredSceneRadialBoundary(THREE, source);
+    island.scale.set(1.45, 1.45, 1.45);
+    const restoredBoundary = getAuthoredSceneRadialBoundary(THREE, source, 'island', 1.45);
+
+    assert.ok(originalBoundary);
+    assert.ok(restoredBoundary);
+    assert.ok(Math.abs((restoredBoundary?.center.x ?? 0) - (originalBoundary?.center.x ?? 0)) < 1e-9);
+    assert.ok(Math.abs((restoredBoundary?.center.z ?? 0) - (originalBoundary?.center.z ?? 0)) < 1e-9);
+    originalBoundary?.radii.forEach((radius, index) => {
+      assert.ok(Math.abs((restoredBoundary?.radii[index] ?? 0) - radius) < 1e-9);
+    });
+  });
+
   it('finds the first clear plaza square when the center is blocked', () => {
     const spawn = getAuthoredSceneSpawnPosition([{ x: 0, z: 0, radius: 1.1 }], 4.8, 0.35);
     assert.deepEqual(spawn, { x: -1.25, z: -1.25 });

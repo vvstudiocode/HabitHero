@@ -15,6 +15,7 @@ import { PointerInputController } from './input/pointer-input-controller';
 import type { WorldInputState } from './input/world-input-types';
 import { DynamicJoystick } from './components/DynamicJoystick';
 import { mountPrototypeWorld, type PetSelection, type PrototypeWorldRuntime } from './prototype-world-runtime';
+import type { WorldNpcScreenPosition } from './world-npc-runtime';
 import { shouldPausePetForMenu, type PetAction } from './pet-action-state';
 import type { PetAnimationAction } from './pet-animation';
 import { getWorldQuality, type WorldQuality } from './world-quality';
@@ -37,6 +38,8 @@ import type { WorldLocation } from './world-location';
 import type { WorldNavigationPoint } from './world-navigation';
 import type { ForestValleyGateScreenPosition } from './forest-valley';
 import type { CloudWorkshopGateScreenPosition } from './cloud-workshop';
+import type { TideglowGateScreenPosition } from './tideglow-archipelago';
+import type { StarSandWastelandGateScreenPosition } from './star-sand-wasteland';
 
 // The shared loadout owner keeps `character.arthur` as the safe fallback
 // (`assetKey: 'character.arthur'`) for incomplete or legacy child data.
@@ -70,6 +73,8 @@ interface TerrainWorldLayerProps {
   onStartDecorationPlacement?: (entityId: string) => void;
   onCollectDecoration?: (entityId: string) => void;
   onPetAction?: (selection: PetSelection, action: PetAction) => boolean | Promise<boolean>;
+  onWorldNpcScreenPositionChange?: (position: WorldNpcScreenPosition | null) => void;
+  worldNpcDialogueNpcId?: string | null;
   entryPosition?: WorldNavigationPoint;
   entryFacingY?: number;
   entryCameraYaw?: number;
@@ -78,6 +83,8 @@ interface TerrainWorldLayerProps {
   onAdventureTableIndicatorScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
   onForestValleyGateScreenPositionChange?: (position: ForestValleyGateScreenPosition | null) => void;
   onCloudWorkshopGateScreenPositionChange?: (position: CloudWorkshopGateScreenPosition | null) => void;
+  onTideglowGateScreenPositionChange?: (position: TideglowGateScreenPosition | null) => void;
+  onStarSandWastelandGateScreenPositionChange?: (position: StarSandWastelandGateScreenPosition | null) => void;
   onWorldTransitionEnd?: () => void;
   cleanMode?: boolean;
   cleanModeHintVisible?: boolean;
@@ -233,6 +240,8 @@ export function TerrainWorldLayer({
   onStartDecorationPlacement,
   onCollectDecoration,
   onPetAction,
+  onWorldNpcScreenPositionChange,
+  worldNpcDialogueNpcId,
   entryPosition,
   entryFacingY,
   entryCameraYaw,
@@ -241,6 +250,8 @@ export function TerrainWorldLayer({
   onAdventureTableIndicatorScreenPositionChange,
   onForestValleyGateScreenPositionChange,
   onCloudWorkshopGateScreenPositionChange,
+  onTideglowGateScreenPositionChange,
+  onStarSandWastelandGateScreenPositionChange,
   onWorldTransitionEnd,
   cleanMode = false,
   cleanModeHintVisible = false,
@@ -421,6 +432,7 @@ export function TerrainWorldLayer({
       onPlacementPositionChange,
       onPlacementGestureChange,
       onWorldPlayerPositionChange,
+      onWorldNpcScreenPositionChange,
       onAvatarScreenPositionsChange: setAvatarScreenPositions,
       onDecorationSelect: (selection) => {
         clearPetMenuPause();
@@ -441,6 +453,8 @@ export function TerrainWorldLayer({
       onAdventureTableIndicatorScreenPositionChange,
       onForestValleyGateScreenPositionChange,
       onCloudWorkshopGateScreenPositionChange,
+      onTideglowGateScreenPositionChange,
+      onStarSandWastelandGateScreenPositionChange,
       createProceduralCharacter,
       controller: controllerRef.current,
       pausedRef,
@@ -468,10 +482,17 @@ export function TerrainWorldLayer({
       setAvatarScreenPositions(new Map());
       onAdventureTableScreenPositionChange?.(null);
       onAdventureTableIndicatorScreenPositionChange?.(null);
+      onWorldNpcScreenPositionChange?.(null);
       onForestValleyGateScreenPositionChange?.(null);
       onCloudWorkshopGateScreenPositionChange?.(null);
+      onTideglowGateScreenPositionChange?.(null);
+      onStarSandWastelandGateScreenPositionChange?.(null);
     };
   }, [childId, runtimeAttempt, sceneKey]);
+
+  useEffect(() => {
+    runtimeRef.current?.setDialogueOpen(worldNpcDialogueNpcId ?? null, Boolean(worldNpcDialogueNpcId));
+  }, [runtimeAttempt, sceneKey, worldNpcDialogueNpcId]);
 
   useEffect(() => {
     runtimeRef.current?.update(sceneInput);

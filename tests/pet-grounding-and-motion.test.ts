@@ -28,6 +28,7 @@ describe('supplied pet grounding and motion', () => {
 
   it('uses the Cloud Workshop player ground for pet roots', () => {
     assert.equal(getPetWorldBaseY('cloud-workshop', 0, 0.06, 0.48), 0.54);
+    assert.equal(getPetWorldBaseY('tideglow-archipelago', 0, 0.06, 0.48), 0.54);
     assert.equal(getPetWorldBaseY('sunrise-village', -0.2, 0.107, 0.48), -0.2);
   });
 

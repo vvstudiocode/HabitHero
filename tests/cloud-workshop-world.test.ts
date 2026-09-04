@@ -9,7 +9,9 @@ import {
   CLOUD_WORKSHOP_MODULE_ASSETS,
   CLOUD_WORKSHOP_MODULE_PLACEMENTS,
   CLOUD_WORKSHOP_MOVEMENT_BOUNDARY,
+  CLOUD_WORKSHOP_NOTICE_BOARD_PROMPT_OFFSET_Y,
   CLOUD_WORKSHOP_SCENE_TRANSFORM,
+  CLOUD_WORKSHOP_SKYBOX_URL,
   CLOUD_WORKSHOP_SPAWN_ANCHOR,
   SUNRISE_VILLAGE_CLOUD_WORKSHOP_ENTRY_FORWARD_OFFSET,
   SUNRISE_VILLAGE_CLOUD_WORKSHOP_ENTRY_POSITION,
@@ -17,6 +19,34 @@ import {
   getCloudWorkshopGatePromptHeight,
   isCloudWorkshopGateNearby,
 } from '../src/features/world/cloud-workshop';
+
+function readGlbJsonAndBinary(assetPath: URL) {
+  const binary = readFileSync(assetPath);
+  let offset = 12;
+  let json: {
+    images?: Array<{ bufferView?: number; mimeType?: string }>;
+    bufferViews?: Array<{ byteOffset?: number; byteLength: number }>;
+    extensionsRequired?: string[];
+    extensionsUsed?: string[];
+    textures?: Array<{ extensions?: Record<string, { source?: number }> }>;
+  } | undefined;
+  let binaryChunk: Buffer | undefined;
+  while (offset < binary.length) {
+    const chunkLength = binary.readUInt32LE(offset);
+    const chunkType = binary.readUInt32LE(offset + 4);
+    const chunk = binary.subarray(offset + 8, offset + 8 + chunkLength);
+    offset += 8 + chunkLength;
+    if (chunkType === 0x4e4f534a) json = JSON.parse(chunk.toString('utf8').replace(/\0+$/, '')) as typeof json;
+    if (chunkType === 0x004e4942) binaryChunk = chunk;
+  }
+  assert.ok(json && binaryChunk);
+  return { json, binary: binaryChunk };
+}
+
+function readKtx2Dimensions(ktx2: Buffer) {
+  assert.deepEqual(ktx2.subarray(0, 12), Buffer.from([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]));
+  return { width: ktx2.readUInt32LE(20), height: ktx2.readUInt32LE(24) };
+}
 
 const expectedAssetKeys = [
   'cloudStairRailing1',
@@ -43,6 +73,7 @@ const expectedAssetKeys = [
   'cloudGround1',
   'cloudGround2',
   'cloudGround3',
+  'noticeBoard',
 ] as const;
 
 describe('Cloud Workshop authored world', () => {
@@ -53,11 +84,49 @@ describe('Cloud Workshop authored world', () => {
       assert.equal(existsSync(assetPath), true, `missing ${url}`);
       assert.equal(readFileSync(assetPath).subarray(0, 4).toString(), 'glTF');
       assert.ok(statSync(assetPath).size < 8 * 1024 * 1024, `${url} is too large`);
-      const jsonLength = readFileSync(assetPath).readUInt32LE(12);
-      const gltf = JSON.parse(readFileSync(assetPath).toString('utf8', 20, 20 + jsonLength).trim());
-      assert.ok(gltf.extensionsUsed?.includes('KHR_draco_mesh_compression'));
-      assert.ok(gltf.extensionsUsed?.includes('EXT_texture_webp'));
+      const { json } = readGlbJsonAndBinary(assetPath);
+      assert.ok(json.extensionsUsed?.includes('KHR_draco_mesh_compression'));
     });
+  });
+
+  it('ships GPU-compressed textures within the 1024px mobile budget', () => {
+    Object.values(CLOUD_WORKSHOP_MODULE_ASSETS).forEach((url) => {
+      const assetPath = new URL(`../public${url}`, import.meta.url);
+      const { json, binary } = readGlbJsonAndBinary(assetPath);
+      assert.ok(json.extensionsRequired?.includes('KHR_draco_mesh_compression'), `${url} must keep Draco geometry compression`);
+      assert.ok(json.extensionsRequired?.includes('KHR_texture_basisu'), `${url} must require KTX2 texture support`);
+      assert.ok(!json.extensionsUsed?.includes('EXT_texture_webp'), `${url} must not keep the WebP texture extension`);
+      assert.equal(json.textures?.length, json.images?.length);
+      (json.images ?? []).forEach((image, index) => {
+        const view = json.bufferViews?.[image.bufferView ?? -1];
+        assert.ok(view, `${url} image ${index} is missing a buffer view`);
+        const start = view.byteOffset ?? 0;
+        assert.equal(image.mimeType, 'image/ktx2', `${url} image ${index} must be KTX2`);
+        const dimensions = readKtx2Dimensions(binary.subarray(start, start + view.byteLength));
+        assert.ok(dimensions.width <= 1024 && dimensions.height <= 1024, `${url} image ${index} is ${dimensions.width}x${dimensions.height}`);
+      });
+      (json.textures ?? []).forEach((texture, index) => {
+        assert.ok(texture.extensions?.KHR_texture_basisu?.source !== undefined, `${url} texture ${index} must point to a KTX2 image`);
+      });
+    });
+  });
+
+  it('ships the Cloud Workshop 360-degree skybox alongside its authored modules', () => {
+    const skyboxPath = new URL(`../public${CLOUD_WORKSHOP_SKYBOX_URL}`, import.meta.url);
+    assert.equal(existsSync(skyboxPath), true);
+    assert.ok(statSync(skyboxPath).size > 0);
+    assert.match(CLOUD_WORKSHOP_SKYBOX_URL, /^\/assets\/world\/cloud-workshop\/cloud-workshop-sky\.png$/);
+  });
+
+  it('keeps Cloud Workshop on fixed daytime lighting and raises its skybox to reveal distant islands', () => {
+    const cloudSource = readFileSync(new URL('../src/features/world/cloud-workshop.ts', import.meta.url), 'utf8');
+    const runtime = readFileSync(new URL('../src/features/world/prototype-world-runtime.ts', import.meta.url), 'utf8');
+    assert.match(cloudSource, /CLOUD_WORKSHOP_SKYBOX_OFFSET\s*=\s*Object\.freeze\(\{\s*x:\s*0,\s*y:\s*0\.18\s*\}\)/);
+    assert.match(cloudSource, /CLOUD_WORKSHOP_SUN_POSITION\s*=\s*Object\.freeze\(\[\s*5\.5,\s*11\.5,\s*-3\.5\s*\]\s*as\s*const\)/);
+    assert.match(runtime, /dayNightEnabled:\s*\(sunriseVillageSource\s*\|\|\s*cloudWorkshopSource\s*\|\|\s*forestValleySource\)\s*\?\s*false\s*:\s*options\.dayNightEnabled/);
+    assert.match(runtime, /weatherRuntime\.setDayNightEnabled\(\s*\(options\.worldLocation\s*===\s*['"]sunrise-village['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]cloud-workshop['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]forest-valley['"]\)\s*\?\s*false\s*:\s*next\.dayNightEnabled\s*\)/);
+    assert.match(runtime, /sun\.position\.fromArray\(options\.worldLocation\s*===\s*['"]cloud-workshop['"]\s*\?\s*CLOUD_WORKSHOP_SUN_POSITION\s*:\s*visualSettings\.sunPosition\)/);
+    assert.match(runtime, /skyboxOffset:\s*cloudWorkshopSource\s*\?\s*CLOUD_WORKSHOP_SKYBOX_OFFSET/);
   });
 
   it('keeps the authored Blender layout in an isolated local coordinate space', () => {
@@ -66,7 +135,7 @@ describe('Cloud Workshop authored world', () => {
     assert.equal(CLOUD_WORKSHOP_MOVEMENT_BOUNDARY, 18.9);
     assert.deepEqual(CLOUD_WORKSHOP_SPAWN_ANCHOR, CLOUD_WORKSHOP_ENTRY_POSITION);
     assert.deepEqual(CLOUD_WORKSHOP_ENTRY_POSITION, { x: 0, z: 0 });
-    assert.equal(CLOUD_WORKSHOP_MODULE_PLACEMENTS.length, 22);
+    assert.equal(CLOUD_WORKSHOP_MODULE_PLACEMENTS.length, 23);
     assert.equal(
       SUNRISE_VILLAGE_CLOUD_WORKSHOP_ENTRY_POSITION.x,
       SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.position[0],
@@ -91,6 +160,12 @@ describe('Cloud Workshop authored world', () => {
     assert.deepEqual(entrance?.rotation, [0.541033, 0.455284, -0.455284, 0.541033]);
     assert.deepEqual(entrance?.scale, [5.295177, 5.264868, 6.265191]);
     assert.equal(entrance?.collision, true);
+
+    const noticeBoard = CLOUD_WORKSHOP_MODULE_PLACEMENTS.find((placement) => placement.asset === 'noticeBoard');
+    assert.ok(noticeBoard);
+    assert.equal(noticeBoard.id, 'notice-board');
+    assert.equal(noticeBoard.collision, true);
+    assert.equal(noticeBoard.collisionFootprintScale, 0.62);
   });
 
   it('matches the Blender-exported reference anchors without a manual vertical offset', () => {
@@ -134,5 +209,15 @@ describe('Cloud Workshop authored world', () => {
     assert.match(layer, /onCloudWorkshopGateScreenPositionChange/);
     assert.match(dashboard, /CloudWorkshopGateDialogue/);
     assert.match(dashboard, /進入雲工房/);
+  });
+
+  it('uses the Cloud Workshop notice board as the adventure landmark', () => {
+    const cloudSource = readFileSync(new URL('../src/features/world/cloud-workshop.ts', import.meta.url), 'utf8');
+    const runtime = readFileSync(new URL('../src/features/world/prototype-world-runtime.ts', import.meta.url), 'utf8');
+
+    assert.equal(CLOUD_WORKSHOP_NOTICE_BOARD_PROMPT_OFFSET_Y, -1.8);
+    assert.match(cloudSource, /CLOUD_WORKSHOP_NOTICE_BOARD_PROMPT_OFFSET_Y\s*=\s*-1\.8/);
+    assert.match(runtime, /cloudWorkshopSource\s*\?\s*getAuthoredSceneModule\(cloudWorkshopSource,\s*['"]notice-board['"]\)/);
+    assert.match(runtime, /CLOUD_WORKSHOP_NOTICE_BOARD_PROMPT_OFFSET_Y\s*\*\s*sceneTransform\.scale/);
   });
 });

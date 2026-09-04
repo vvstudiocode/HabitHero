@@ -22,7 +22,7 @@ describe('child day and night toggle', () => {
   it('passes the preference to the world runtime and keeps weather updates active', () => {
     assert.match(terrainSource, /dayNightEnabled/);
     assert.match(prototypeSource, /dayNightEnabled/);
-    assert.match(prototypeSource, /weatherRuntime\.setDayNightEnabled\(next\.dayNightEnabled\)/);
+    assert.match(prototypeSource, /weatherRuntime\.setDayNightEnabled\(\s*\(options\.worldLocation\s*===\s*['"]sunrise-village['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]cloud-workshop['"]\s*\|\|\s*options\.worldLocation\s*===\s*['"]forest-valley['"]\)\s*\?\s*false\s*:\s*next\.dayNightEnabled\s*\)/);
     assert.match(runtimeSource, /setDayNightEnabled/);
     assert.match(runtimeSource, /fetchCwaWorldWeather/);
   });

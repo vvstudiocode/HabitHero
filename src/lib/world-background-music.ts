@@ -1,6 +1,40 @@
+export const SUNRISE_VILLAGE_BACKGROUND_MUSIC_SRC = '/audio/sunrise-village-music.mp3';
 export const WORLD_BACKGROUND_MUSIC_SRC = '/audio/faespencer-monday-marimba-194523.mp3';
+export const FOREST_VALLEY_BACKGROUND_MUSIC_SRC = '/audio/forest-valley-senyu-music.mp3';
+export const CLOUD_WORKSHOP_BACKGROUND_MUSIC_SRC = '/audio/cloud-workshop-music.mp3';
+export const TIDEGLOW_ARCHIPELAGO_BACKGROUND_MUSIC_SRC = '/audio/tideglow-archipelago-music.mp3';
+export const STAR_SAND_WASTELAND_BACKGROUND_MUSIC_SRC = '/audio/star-sand-music.mp3';
 export const WORLD_BACKGROUND_MUSIC_VOLUME = 0.24;
 export const WORLD_BACKGROUND_MUSIC_CROSSFADE_SECONDS = 2;
+export const CLOUD_WORKSHOP_BACKGROUND_MUSIC_CROSSFADE_SECONDS = 4;
+
+export interface WorldBackgroundMusicConfig {
+  src: string;
+  fadeDurationSeconds: number;
+}
+
+export function getWorldBackgroundMusicConfig(worldLocation: string): WorldBackgroundMusicConfig {
+  if (worldLocation === 'sunrise-village') {
+    return { src: SUNRISE_VILLAGE_BACKGROUND_MUSIC_SRC, fadeDurationSeconds: WORLD_BACKGROUND_MUSIC_CROSSFADE_SECONDS };
+  }
+  if (worldLocation === 'forest-valley') {
+    return { src: FOREST_VALLEY_BACKGROUND_MUSIC_SRC, fadeDurationSeconds: WORLD_BACKGROUND_MUSIC_CROSSFADE_SECONDS };
+  }
+  if (worldLocation === 'cloud-workshop') {
+    return { src: CLOUD_WORKSHOP_BACKGROUND_MUSIC_SRC, fadeDurationSeconds: CLOUD_WORKSHOP_BACKGROUND_MUSIC_CROSSFADE_SECONDS };
+  }
+  if (worldLocation === 'tideglow-archipelago') {
+    return { src: TIDEGLOW_ARCHIPELAGO_BACKGROUND_MUSIC_SRC, fadeDurationSeconds: WORLD_BACKGROUND_MUSIC_CROSSFADE_SECONDS };
+  }
+  if (worldLocation === 'star-sand-wasteland') {
+    return { src: STAR_SAND_WASTELAND_BACKGROUND_MUSIC_SRC, fadeDurationSeconds: WORLD_BACKGROUND_MUSIC_CROSSFADE_SECONDS };
+  }
+  return { src: WORLD_BACKGROUND_MUSIC_SRC, fadeDurationSeconds: WORLD_BACKGROUND_MUSIC_CROSSFADE_SECONDS };
+}
+
+export function getWorldBackgroundMusicSrc(worldLocation: string): string {
+  return getWorldBackgroundMusicConfig(worldLocation).src;
+}
 
 export interface WorldBackgroundAudio {
   loop: boolean;

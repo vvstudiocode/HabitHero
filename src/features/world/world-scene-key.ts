@@ -24,6 +24,14 @@ function getWorldEntitiesSceneSignature(gameData: ChildGameData) {
     .join('|');
 }
 
+function getWorldNpcSceneSignature(gameData: ChildGameData) {
+  return (gameData.worldNpcs ?? [])
+    .filter((npc) => npc.isActive)
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((npc) => [npc.id, npc.sceneId, npc.assetKey, npc.position.x, npc.position.z, npc.animationName].join(':'))
+    .join('|');
+}
+
 export function getTerrainWorldSceneKey(
   gameData: ChildGameData,
   quality: WorldQuality,
@@ -32,6 +40,7 @@ export function getTerrainWorldSceneKey(
 ): string {
   return [
     getWorldEntitiesSceneSignature(gameData),
+    getWorldNpcSceneSignature(gameData),
     quality,
     showPetNames ? 'pet-names-on' : 'pet-names-off',
     worldLocation,

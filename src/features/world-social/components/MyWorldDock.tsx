@@ -14,7 +14,11 @@ export function MyWorldDock({ worldLocation, returnLocation = 'sunrise-village',
     ? '返回森語谷'
     : returnLocation === 'cloud-workshop'
       ? '返回雲工房'
-      : '返回晨光村';
+      : returnLocation === 'tideglow-archipelago'
+        ? '返回潮光群島'
+        : returnLocation === 'star-sand-wasteland'
+          ? '返回星砂荒原'
+          : '返回晨光村';
   const label = isInMyWorld ? returnLabel : '進入我的世界';
   const nextLocation = isInMyWorld ? returnLocation : 'my-world';
 

@@ -60,6 +60,7 @@ import {
   HABITHERO_ROAMING_CHARACTER_VISUAL_SCALE,
   getWanderStep,
   hashWanderSeed,
+  PET_WANDER_SPEED,
   type WanderState,
 } from './world-roaming';
 import { getDistributedPetSpawnPosition, getPetNavigationRadius } from './pet-spawning';
@@ -112,6 +113,7 @@ import {
 import {
   PROTOTYPE_WORLD_ASSETS,
   SUNRISE_VILLAGE_MODULE_ASSETS,
+  SUNRISE_VILLAGE_SKYBOX_URL,
   SUNRISE_VILLAGE_SCENE_TRANSFORM,
   SUNRISE_VILLAGE_TREE_SPAWN_ANCHOR,
   getDecorationCatalogItem,
@@ -127,8 +129,10 @@ import {
 } from './sunrise-village-manifest';
 import {
   FOREST_VALLEY_GROUND_Y,
+  FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR,
   FOREST_VALLEY_MODULE_ASSETS,
   FOREST_VALLEY_MODULE_PLACEMENTS,
+  FOREST_VALLEY_SKYBOX_URL,
   FOREST_VALLEY_GATE_PROMPT_BOTTOM_MARGIN,
   FOREST_VALLEY_GATE_PROMPT_SIDE_MARGIN,
   FOREST_VALLEY_GATE_PROMPT_TOP_MARGIN,
@@ -147,13 +151,58 @@ import {
   CLOUD_WORKSHOP_GROUND_Y,
   CLOUD_WORKSHOP_MODULE_ASSETS,
   CLOUD_WORKSHOP_MODULE_PLACEMENTS,
+  CLOUD_WORKSHOP_NOTICE_BOARD_PROMPT_OFFSET_Y,
   CLOUD_WORKSHOP_SCENE_TRANSFORM,
+  CLOUD_WORKSHOP_SKYBOX_OFFSET,
+  CLOUD_WORKSHOP_SUN_POSITION,
+  CLOUD_WORKSHOP_SKYBOX_URL,
   CLOUD_WORKSHOP_SPAWN_ANCHOR,
   getCloudWorkshopGatePromptHeight,
   isCloudWorkshopGateNearby,
   SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT,
   type CloudWorkshopGateScreenPosition,
 } from './cloud-workshop';
+import {
+  TIDEGLOW_ARCHIPELAGO_GATE_MODULE_ID,
+  TIDEGLOW_ARCHIPELAGO_GATE_PROMPT_BOTTOM_MARGIN,
+  TIDEGLOW_ARCHIPELAGO_GATE_PROMPT_SIDE_MARGIN,
+  TIDEGLOW_ARCHIPELAGO_GATE_PROMPT_TOP_MARGIN,
+  TIDEGLOW_ARCHIPELAGO_GROUND_Y,
+  TIDEGLOW_ARCHIPELAGO_MODULE_ASSETS,
+  TIDEGLOW_ARCHIPELAGO_MODULE_PLACEMENTS,
+  TIDEGLOW_ARCHIPELAGO_SCENE_TRANSFORM,
+  TIDEGLOW_ARCHIPELAGO_SCENE_VERTICAL_OFFSET,
+  TIDEGLOW_ARCHIPELAGO_SKYBOX_OFFSET,
+  TIDEGLOW_ARCHIPELAGO_SKYBOX_URL,
+  TIDEGLOW_ARCHIPELAGO_SPAWN_ANCHOR,
+  SUNRISE_VILLAGE_TIDEGLOW_GATE_PLACEMENT,
+  getTideglowGatePromptHeight,
+  isTideglowGateNearby,
+  type TideglowGateScreenPosition,
+} from './tideglow-archipelago';
+import {
+  STAR_SAND_WASTELAND_GATE_MODULE_ID,
+  STAR_SAND_WASTELAND_GATE_PROMPT_BOTTOM_MARGIN,
+  STAR_SAND_WASTELAND_GATE_PROMPT_SIDE_MARGIN,
+  STAR_SAND_WASTELAND_GATE_PROMPT_TOP_MARGIN,
+  STAR_SAND_WASTELAND_GROUND_Y,
+  STAR_SAND_WASTELAND_MODULE_ASSETS,
+  STAR_SAND_WASTELAND_MODULE_PLACEMENTS,
+  STAR_SAND_WASTELAND_NOTICE_BOARD_PROMPT_OFFSET_Y,
+  STAR_SAND_WASTELAND_SKYBOX_OFFSET,
+  STAR_SAND_WASTELAND_SKYBOX_URL,
+  STAR_SAND_WASTELAND_SCENE_TRANSFORM,
+  STAR_SAND_WASTELAND_SPAWN_ANCHOR,
+  SUNRISE_VILLAGE_STAR_SAND_WASTELAND_GATE_PLACEMENT,
+  getStarSandWastelandGatePromptHeight,
+  isStarSandWastelandGateNearby,
+  type StarSandWastelandGateScreenPosition,
+} from './star-sand-wasteland';
+import {
+  canTraverseTideglowSurface,
+  getTideglowSurfaceAt,
+  smoothTideglowElevation,
+} from './tideglow-archipelago-surfaces';
 import {
   getWorldMovementBoundary,
   type WorldLocation,
@@ -171,9 +220,11 @@ import { updateDecorationGroundCoverMasks } from './world-decoration-ground-cove
 import { addDecorationPointLight, setDecorationObjectScale } from './world-decoration-effects';
 import {
   createDisposalTracker,
+  createGltfUrlCache,
   disposeObject3D,
   disposeScene,
   loadGltfSafely,
+  mapWithConcurrency,
   type DisposableScene,
 } from './world-runtime-resources';
 import {
@@ -192,6 +243,17 @@ import { createPlayerGroundMarker, createPlayerGroundShadowMaterial } from './wo
 import { createRemoteCharacterLoader } from './world-runtime-remote-character';
 import { createCharacterFallbackCatalogItem } from './world-character-loadout';
 import { groundWorldCharacter, getWorldCharacterFootNodes, mountWorldCharacterModel } from './world-character-runtime';
+import { getWorldCharacterByAssetKey } from '../characters/world-character-catalog';
+import { createWorldNpcSceneRuntime, type WorldNpcSceneRuntime } from './world-npc-scene-runtime';
+import type { WorldNpcScreenPosition } from './world-npc-runtime';
+import {
+  createWorldNameLabel,
+  getWorldNameLabelLocalScale,
+  getWorldNameLabelY,
+  WORLD_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER,
+  WORLD_NAME_LABEL_HEAD_GAP,
+  WORLD_NAME_LABEL_SCALE,
+} from './world-name-label';
 import {
   ADVENTURE_NOTICE_BOARD_PROMPT_LIFT,
   type AdventureTableScreenPosition,
@@ -229,6 +291,7 @@ export {
   disposeObject3D,
   disposeScene,
   loadGltfSafely,
+  mapWithConcurrency,
 } from './world-runtime-resources';
 
 export {
@@ -236,9 +299,12 @@ export {
   getCharacterAnimationClip,
   getWalkAnimationClip,
 } from './world-runtime-animation';
+export { PET_WANDER_SPEED } from './world-roaming';
 
 export const PET_MAX_HEIGHT_RATIO = 0.5;
 export const PET_MAX_DIMENSION_RATIO = 0.42;
+const WORLD_NPC_GILT_GROUND_LIFT = 0.033;
+const WORLD_GLTF_LOAD_CONCURRENCY = 2;
 
 export function getPetWorldScale({
   requestedScale,
@@ -269,10 +335,9 @@ export function getPetWorldScale({
 }
 
 export const PET_WORLD_SCALE_MULTIPLIER = 1.3;
-export const PET_NAME_LABEL_WORLD_SCALE = 0.11;
-export const PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER = 0.55;
-export const PET_NAME_LABEL_HEAD_GAP = 0.22;
-const PET_NAME_LABEL_FONT_SIZE = 26;
+export const PET_NAME_LABEL_WORLD_SCALE = WORLD_NAME_LABEL_SCALE;
+export const PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER = WORLD_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER;
+export const PET_NAME_LABEL_HEAD_GAP = WORLD_NAME_LABEL_HEAD_GAP;
 const PET_DEER_VISUAL_SCALE_MULTIPLIER = 8 / 3;
 const PET_DEER_MOVEMENT_SPEED_MULTIPLIER = 0.6;
 const PET_OUM_VISUAL_SCALE_MULTIPLIER = 4;
@@ -311,7 +376,9 @@ export function getPetWorldBaseY(
   playerRootY: number,
   groundOffset = 0,
 ): number {
-  const baseY = worldLocation === 'cloud-workshop' ? playerRootY + worldGroundY : entityY;
+  const baseY = worldLocation === 'cloud-workshop' || worldLocation === 'tideglow-archipelago'
+    ? playerRootY + worldGroundY
+    : entityY;
   return baseY + groundOffset;
 }
 
@@ -362,24 +429,8 @@ export function getPetNameLabelScale(metadata?: Record<string, unknown>): number
     : PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER;
 }
 
-export function getPetNameLabelLocalScale(modelScale: number, labelScaleMultiplier: number): number {
-  const safeModelScale = Number.isFinite(modelScale) && modelScale > 0 ? modelScale : 1;
-  const safeLabelScale = Number.isFinite(labelScaleMultiplier) && labelScaleMultiplier > 0
-    ? labelScaleMultiplier
-    : PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER;
-  return safeLabelScale / safeModelScale;
-}
-
-export function getPetNameLabelY(modelHeight: number, modelScale = 1): number {
-  const safeModelHeight = Number.isFinite(modelHeight) ? Math.max(modelHeight, 0) : 0;
-  const safeModelScale = Number.isFinite(modelScale) && modelScale > 0 ? modelScale : 1;
-  // The label is a child of the normalized model root. Keep the gap in world
-  // units so tiny external-rig source units do not push the label far above
-  // the pet after the root is scaled up.
-  return safeModelHeight + PET_NAME_LABEL_HEAD_GAP / safeModelScale;
-}
-
-export const PET_WANDER_SPEED = 0.5;
+export const getPetNameLabelLocalScale = getWorldNameLabelLocalScale;
+export const getPetNameLabelY = getWorldNameLabelY;
 
 export function getPetModelScale({
   requestedScale,
@@ -445,10 +496,13 @@ export interface PrototypeWorldRuntimeOptions {
   onAvatarScreenPositionsChange?: (positions: ReadonlyMap<string, AvatarScreenPosition>) => void;
   onDecorationSelect?: (selection: DecorationSelection | null) => void;
   onPetSelect?: (selection: PetSelection | null) => void;
+  onWorldNpcScreenPositionChange?: (position: WorldNpcScreenPosition | null) => void;
   onAdventureTableScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
   onAdventureTableIndicatorScreenPositionChange?: (position: AdventureTableScreenPosition | null) => void;
   onForestValleyGateScreenPositionChange?: (position: ForestValleyGateScreenPosition | null) => void;
   onCloudWorkshopGateScreenPositionChange?: (position: CloudWorkshopGateScreenPosition | null) => void;
+  onTideglowGateScreenPositionChange?: (position: TideglowGateScreenPosition | null) => void;
+  onStarSandWastelandGateScreenPositionChange?: (position: StarSandWastelandGateScreenPosition | null) => void;
   controller: PointerInputController | null;
   pausedRef: { current: boolean };
   onStatus: (status: RuntimeStatus) => void;
@@ -479,6 +533,7 @@ export interface PrototypeWorldRuntimePlacement {
 export interface PrototypeWorldRuntime {
   dispose: () => void;
   update: (next: PrototypeWorldRuntimeUpdate) => void;
+  setDialogueOpen: (npcId: string | null, open: boolean) => void;
   optimisticallySetPetIdle: (selection: PetSelection) => void;
   clearOptimisticPetIdle: (inventoryItemId: string) => void;
   playPetAnimation: (inventoryItemId: string, action: PetAnimationAction) => boolean;
@@ -500,6 +555,17 @@ function defineAsset(THREE: ThreeNamespace, source: Object3D) {
     }
   });
   return { source, size, offset };
+}
+
+function resetAuthoredModuleSource(source: Object3D) {
+  source.position.set(0, 0, 0);
+  source.rotation.set(0, 0, 0);
+  source.scale.setScalar(1);
+  source.children.forEach((child) => {
+    child.position.set(0, 0, 0);
+    child.rotation.set(0, 0, 0);
+    child.scale.setScalar(1);
+  });
 }
 
 function applyCentralTreeMaterialFallback(THREE: ThreeNamespace, source: Object3D) {
@@ -648,41 +714,7 @@ function createPetNameLabel(
   scaleMultiplier = PET_NAME_LABEL_DEFAULT_SCALE_MULTIPLIER,
   modelScale = 1,
 ): Object3D | undefined {
-  const name = displayName?.trim();
-  if (!showName || !name || typeof document === 'undefined') return undefined;
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  if (!context) return undefined;
-  const font = `600 ${PET_NAME_LABEL_FONT_SIZE}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  context.font = font;
-  const horizontalPadding = 16;
-  canvas.width = Math.max(64, Math.ceil(context.measureText(name).width + horizontalPadding * 2));
-  canvas.height = 42;
-  context.font = font;
-  context.fillStyle = '#ffffff';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(name, canvas.width / 2, canvas.height / 2);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthWrite: false,
-    depthTest: false,
-  });
-  const label = new THREE.Sprite(material);
-  label.name = 'pet-name-label';
-  label.renderOrder = 20;
-  const localScale = getPetNameLabelLocalScale(modelScale, scaleMultiplier);
-  label.scale.set(
-    (canvas.width / canvas.height) * PET_NAME_LABEL_WORLD_SCALE * localScale,
-    PET_NAME_LABEL_WORLD_SCALE * localScale,
-    1,
-  );
-  return label;
+  return createWorldNameLabel(THREE, displayName, showName, scaleMultiplier, modelScale);
 }
 
 function createPetModel(
@@ -909,24 +941,33 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let pausedTimer: number | undefined;
   let renderer: { dispose: () => void } | undefined;
   let scene: DisposableScene | undefined;
+  let worldNpcSceneRuntime: WorldNpcSceneRuntime | undefined;
   let remoteAvatarRuntime: ReturnType<typeof createRemoteAvatarRuntimeManager> | undefined;
   let loadingAbortController: AbortController | undefined;
   let removeListeners: (() => void) | undefined;
   let removeContextLostListener: (() => void) | undefined;
   let dracoDecoderLoader: { setDecoderPath: (path: string) => unknown; dispose: () => void } | undefined;
+  let ktx2TranscoderLoader: import('three/examples/jsm/loaders/KTX2Loader.js').KTX2Loader | undefined;
   let characterSwapAbortController: AbortController | undefined;
   let characterSwapSequence = 0;
   let updateScene: (next: PrototypeWorldRuntimeUpdate) => void = () => undefined;
   let playPetAnimation: (inventoryItemId: string, action: PetAnimationAction) => boolean = () => false;
   let stopPetAnimation: (inventoryItemId: string) => void = () => undefined;
   let playInteractionAction: (action: PetAnimationAction) => boolean = () => false;
+  let dialogueNpcId: string | null = null;
+  let dialogueOpen = false;
   let lastAvatarScreenPositionsAt = Number.NEGATIVE_INFINITY;
+  let lastWorldNpcScreenPositionAt = Number.NEGATIVE_INFINITY;
   let lastAdventureTableScreenPositionAt = Number.NEGATIVE_INFINITY;
   let lastForestValleyGateScreenPositionAt = Number.NEGATIVE_INFINITY;
   let lastCloudWorkshopGateScreenPositionAt = Number.NEGATIVE_INFINITY;
+  let lastTideglowGateScreenPositionAt = Number.NEGATIVE_INFINITY;
+  let lastStarSandWastelandGateScreenPositionAt = Number.NEGATIVE_INFINITY;
   let adventureTableScreenPosition: AdventureTableScreenPosition | null = null;
   let forestValleyGateScreenPosition: ForestValleyGateScreenPosition | null = null;
   let cloudWorkshopGateScreenPosition: CloudWorkshopGateScreenPosition | null = null;
+  let tideglowGateScreenPosition: TideglowGateScreenPosition | null = null;
+  let starSandWastelandGateScreenPosition: StarSandWastelandGateScreenPosition | null = null;
   let optimisticPetActorsDirty = false;
   const optimisticPetIdles = new Map<string, PetSelection>();
   let latestRuntimeUpdate: PrototypeWorldRuntimeUpdate = {
@@ -957,12 +998,16 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     disposed = true;
     options.onForestValleyGateScreenPositionChange?.(null);
     options.onCloudWorkshopGateScreenPositionChange?.(null);
+    options.onTideglowGateScreenPositionChange?.(null);
+    options.onStarSandWastelandGateScreenPositionChange?.(null);
+    options.onWorldNpcScreenPositionChange?.(null);
     options.controller?.reset();
     loadingAbortController?.abort();
     characterSwapAbortController?.abort();
     characterSwapSequence += 1;
     remoteAvatarRuntime?.dispose();
     remoteAvatarRuntime = undefined;
+    worldNpcSceneRuntime = undefined;
     window.cancelAnimationFrame(animationFrame);
     if (pausedTimer !== undefined) window.clearTimeout(pausedTimer);
     removeListeners?.();
@@ -972,6 +1017,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     else if (scene) disposeObject3D(scene, disposalTracker);
     dracoDecoderLoader?.dispose();
     dracoDecoderLoader = undefined;
+    ktx2TranscoderLoader?.dispose();
+    ktx2TranscoderLoader = undefined;
     renderer = undefined;
     scene = undefined;
   };
@@ -1007,7 +1054,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           ? FOREST_VALLEY_GROUND_Y
           : options.worldLocation === 'cloud-workshop'
             ? CLOUD_WORKSHOP_GROUND_Y
-          : CHARACTER_GROUND_CONTACT_Y;
+            : options.worldLocation === 'tideglow-archipelago'
+              ? TIDEGLOW_ARCHIPELAGO_GROUND_Y
+              : options.worldLocation === 'star-sand-wasteland'
+                ? STAR_SAND_WASTELAND_GROUND_Y
+                : CHARACTER_GROUND_CONTACT_Y;
       const visualSettings = getNaturalWorldVisualSettings(quality);
       const viewportWidth = Math.max(options.canvas.getBoundingClientRect().width, window.innerWidth, 1);
       const pixelRatio = getWorldPixelRatio({
@@ -1054,7 +1105,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       );
       worldScene.add(ambient);
       const sun = new THREE.DirectionalLight(visualSettings.sunColor, visualSettings.sunIntensity);
-      sun.position.set(...visualSettings.sunPosition);
+      sun.position.fromArray(options.worldLocation === 'cloud-workshop' ? CLOUD_WORKSHOP_SUN_POSITION : visualSettings.sunPosition);
       sun.target.position.set(0, 0, 0);
       worldScene.add(sun.target);
       sun.castShadow = qualitySettings.shadows;
@@ -1077,34 +1128,42 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const signal = loadingAbortController.signal;
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
       const { DRACOLoader } = await import('three/examples/jsm/loaders/DRACOLoader.js');
+      const { KTX2Loader } = await import('three/examples/jsm/loaders/KTX2Loader.js');
       const { clone: cloneSkinnedObject } = await import('three/examples/jsm/utils/SkeletonUtils.js');
       const loader = new GLTFLoader();
       dracoDecoderLoader = new DRACOLoader();
       dracoDecoderLoader.setDecoderPath('/draco/');
       loader.setDRACOLoader(dracoDecoderLoader);
+      ktx2TranscoderLoader = new KTX2Loader();
+      ktx2TranscoderLoader.setTranscoderPath('/basis/');
+      ktx2TranscoderLoader.detectSupport(rendererInstance);
+      loader.setKTX2Loader(ktx2TranscoderLoader);
+      const authoredModuleUrlCache = createGltfUrlCache<{ scene: Object3D }>(loader, signal);
+      const loadAuthoredModuleSource = (url: string) => authoredModuleUrlCache.load(url).then(({ scene: source }) => source);
+      const authoredModuleSources = new Set<Object3D>();
+      const getAuthoredModuleInstance = (source: Object3D) => {
+        if (authoredModuleSources.has(source)) return source.clone(true);
+        if (!trackResourceRoot(source)) return undefined;
+        resetAuthoredModuleSource(source);
+        authoredModuleSources.add(source);
+        return source;
+      };
       let sunriseVillageSource: Object3D | undefined;
       if (options.worldLocation === 'sunrise-village') {
         options.onProgress(22, '載入晨光村場景…');
-        const moduleResults = await Promise.all(SUNRISE_VILLAGE_MODULE_PLACEMENTS.map(async (placement) => ({
+        const moduleResults = await mapWithConcurrency(SUNRISE_VILLAGE_MODULE_PLACEMENTS, WORLD_GLTF_LOAD_CONCURRENCY, async (placement) => ({
           placement,
-          scene: (await loadGltfSafely<{ scene: Object3D }>(loader, SUNRISE_VILLAGE_MODULE_ASSETS[placement.asset], signal)).scene,
-        })));
+          scene: await loadAuthoredModuleSource(SUNRISE_VILLAGE_MODULE_ASSETS[placement.asset]),
+        }));
         const authoredModules = new THREE.Group();
         authoredModules.name = 'sunrise-village-authored-modules';
         for (const { placement, scene: moduleSource } of moduleResults) {
-          if (!trackResourceRoot(moduleSource)) return;
-          moduleSource.position.set(0, 0, 0);
-          moduleSource.rotation.set(0, 0, 0);
-          moduleSource.scale.setScalar(1);
+          const moduleInstance = getAuthoredModuleInstance(moduleSource);
+          if (!moduleInstance) return;
           // The supplied Blender exports keep a 90° axis-conversion rotation
           // on their single child node. The manifest already contains the
           // authored scene transform, so remove that import-only transform
           // before applying the layout placement below.
-          moduleSource.children.forEach((child) => {
-            child.position.set(0, 0, 0);
-            child.rotation.set(0, 0, 0);
-            child.scale.setScalar(1);
-          });
           const moduleRoot = new THREE.Group();
           moduleRoot.name = `sunrise-village-${placement.id}`;
           moduleRoot.userData.sunriseVillageModule = placement.asset === 'island' ? 'island' : placement.id;
@@ -1113,7 +1172,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           moduleRoot.position.fromArray(placement.position);
           moduleRoot.quaternion.fromArray(placement.rotation);
           moduleRoot.scale.fromArray(placement.scale);
-          moduleRoot.add(moduleSource);
+          moduleRoot.add(moduleInstance);
           authoredModules.add(moduleRoot);
         }
         sunriseVillageSource = authoredModules;
@@ -1121,22 +1180,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let forestValleySource: Object3D | undefined;
       if (options.worldLocation === 'forest-valley') {
         options.onProgress(22, '載入森語谷場景…');
-        const moduleResults = await Promise.all(FOREST_VALLEY_MODULE_PLACEMENTS.map(async (placement) => ({
+        const moduleResults = await mapWithConcurrency(FOREST_VALLEY_MODULE_PLACEMENTS, WORLD_GLTF_LOAD_CONCURRENCY, async (placement) => ({
           placement,
-          scene: (await loadGltfSafely<{ scene: Object3D }>(loader, FOREST_VALLEY_MODULE_ASSETS[placement.asset], signal)).scene,
-        })));
+          scene: await loadAuthoredModuleSource(FOREST_VALLEY_MODULE_ASSETS[placement.asset]),
+        }));
         const authoredModules = new THREE.Group();
         authoredModules.name = 'forest-valley-authored-modules';
         for (const { placement, scene: moduleSource } of moduleResults) {
-          if (!trackResourceRoot(moduleSource)) return;
-          moduleSource.position.set(0, 0, 0);
-          moduleSource.rotation.set(0, 0, 0);
-          moduleSource.scale.setScalar(1);
-          moduleSource.children.forEach((child) => {
-            child.position.set(0, 0, 0);
-            child.rotation.set(0, 0, 0);
-            child.scale.setScalar(1);
-          });
+          const moduleInstance = getAuthoredModuleInstance(moduleSource);
+          if (!moduleInstance) return;
           const moduleRoot = new THREE.Group();
           moduleRoot.name = `forest-valley-${placement.id}`;
           const moduleKey = placement.asset === 'island' ? 'island' : placement.id;
@@ -1147,7 +1199,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           moduleRoot.position.fromArray(placement.position);
           moduleRoot.quaternion.fromArray(placement.rotation);
           moduleRoot.scale.fromArray(placement.scale);
-          moduleRoot.add(moduleSource);
+          moduleRoot.add(moduleInstance);
           authoredModules.add(moduleRoot);
         }
         forestValleySource = authoredModules;
@@ -1155,22 +1207,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let cloudWorkshopSource: Object3D | undefined;
       if (options.worldLocation === 'cloud-workshop') {
         options.onProgress(22, '載入雲工房場景…');
-        const moduleResults = await Promise.all(CLOUD_WORKSHOP_MODULE_PLACEMENTS.map(async (placement) => ({
+        const moduleResults = await mapWithConcurrency(CLOUD_WORKSHOP_MODULE_PLACEMENTS, WORLD_GLTF_LOAD_CONCURRENCY, async (placement) => ({
           placement,
-          scene: (await loadGltfSafely<{ scene: Object3D }>(loader, CLOUD_WORKSHOP_MODULE_ASSETS[placement.asset], signal)).scene,
-        })));
+          scene: await loadAuthoredModuleSource(CLOUD_WORKSHOP_MODULE_ASSETS[placement.asset]),
+        }));
         const authoredModules = new THREE.Group();
         authoredModules.name = 'cloud-workshop-authored-modules';
         for (const { placement, scene: moduleSource } of moduleResults) {
-          if (!trackResourceRoot(moduleSource)) return;
-          moduleSource.position.set(0, 0, 0);
-          moduleSource.rotation.set(0, 0, 0);
-          moduleSource.scale.setScalar(1);
-          moduleSource.children.forEach((child) => {
-            child.position.set(0, 0, 0);
-            child.rotation.set(0, 0, 0);
-            child.scale.setScalar(1);
-          });
+          const moduleInstance = getAuthoredModuleInstance(moduleSource);
+          if (!moduleInstance) return;
           const moduleRoot = new THREE.Group();
           moduleRoot.name = `cloud-workshop-${placement.id}`;
           moduleRoot.userData.authoredWorldModule = placement.id;
@@ -1179,13 +1224,68 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           moduleRoot.position.fromArray(placement.position);
           moduleRoot.quaternion.fromArray(placement.rotation);
           moduleRoot.scale.fromArray(placement.scale);
-          moduleRoot.add(moduleSource);
+          moduleRoot.add(moduleInstance);
           authoredModules.add(moduleRoot);
         }
         cloudWorkshopSource = authoredModules;
       }
+      let tideglowArchipelagoSource: Object3D | undefined;
+      if (options.worldLocation === 'tideglow-archipelago') {
+        options.onProgress(22, '載入潮光群島場景…');
+        const moduleResults = await mapWithConcurrency(TIDEGLOW_ARCHIPELAGO_MODULE_PLACEMENTS, WORLD_GLTF_LOAD_CONCURRENCY, async (placement) => ({
+          placement,
+          scene: await loadAuthoredModuleSource(TIDEGLOW_ARCHIPELAGO_MODULE_ASSETS[placement.asset]),
+        }));
+        const authoredModules = new THREE.Group();
+        authoredModules.name = 'tideglow-archipelago-authored-modules';
+        for (const { placement, scene: moduleSource } of moduleResults) {
+          const moduleInstance = getAuthoredModuleInstance(moduleSource);
+          if (!moduleInstance) return;
+          const moduleRoot = new THREE.Group();
+          moduleRoot.name = `tideglow-archipelago-${placement.id}`;
+          moduleRoot.userData.authoredWorldModule = placement.asset === 'island' ? 'island' : placement.id;
+          moduleRoot.userData.sunriseVillageModule = placement.asset === 'island' ? 'island' : placement.id;
+          moduleRoot.userData.sunriseVillageCollision = placement.collision;
+          moduleRoot.userData.sunriseVillageCollisionFootprintScale = placement.collisionFootprintScale;
+          moduleRoot.position.fromArray(placement.position);
+          moduleRoot.quaternion.fromArray(placement.rotation);
+          moduleRoot.scale.fromArray(placement.scale);
+          moduleRoot.add(moduleInstance);
+          authoredModules.add(moduleRoot);
+        }
+        tideglowArchipelagoSource = authoredModules;
+      }
+      let starSandWastelandSource: Object3D | undefined;
+      if (options.worldLocation === 'star-sand-wasteland') {
+        options.onProgress(22, '載入星砂荒原場景…');
+        const moduleResults = await mapWithConcurrency(STAR_SAND_WASTELAND_MODULE_PLACEMENTS, WORLD_GLTF_LOAD_CONCURRENCY, async (placement) => ({
+          placement,
+          scene: await loadAuthoredModuleSource(STAR_SAND_WASTELAND_MODULE_ASSETS[placement.asset]),
+        }));
+        const authoredModules = new THREE.Group();
+        authoredModules.name = 'star-sand-wasteland-authored-modules';
+        for (const { placement, scene: moduleSource } of moduleResults) {
+          const moduleInstance = getAuthoredModuleInstance(moduleSource);
+          if (!moduleInstance) return;
+          const moduleRoot = new THREE.Group();
+          moduleRoot.name = `star-sand-wasteland-${placement.id}`;
+          const moduleKey = placement.asset === 'island' ? 'island' : placement.id;
+          moduleRoot.userData.authoredWorldModule = moduleKey;
+          moduleRoot.userData.sunriseVillageModule = moduleKey;
+          moduleRoot.userData.sunriseVillageCollision = placement.collision;
+          moduleRoot.userData.sunriseVillageCollisionFootprintScale = placement.collisionFootprintScale;
+          moduleRoot.position.fromArray(placement.position);
+          moduleRoot.quaternion.fromArray(placement.rotation);
+          moduleRoot.scale.fromArray(placement.scale);
+          moduleRoot.add(moduleInstance);
+          authoredModules.add(moduleRoot);
+        }
+        starSandWastelandSource = authoredModules;
+      }
       let sunriseForestValleyGateSource: Object3D | undefined;
       let sunriseCloudWorkshopGateSource: Object3D | undefined;
+      let sunriseTideglowGateSource: Object3D | undefined;
+      let sunriseStarSandWastelandGateSource: Object3D | undefined;
       if (options.worldLocation === 'sunrise-village') {
         const gateResult = await loadGltfSafely<{ scene: Object3D }>(loader, FOREST_VALLEY_MODULE_ASSETS.rootGate, signal);
         if (!trackResourceRoot(gateResult.scene)) return;
@@ -1209,6 +1309,14 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           child.rotation.set(0, 0, 0);
           child.scale.setScalar(1);
         });
+        const tideglowGateSource = await loadAuthoredModuleSource(TIDEGLOW_ARCHIPELAGO_MODULE_ASSETS.navigationConnection);
+        const tideglowGateInstance = getAuthoredModuleInstance(tideglowGateSource);
+        if (!tideglowGateInstance) return;
+        sunriseTideglowGateSource = tideglowGateInstance;
+        const starSandWastelandGateSource = await loadAuthoredModuleSource(STAR_SAND_WASTELAND_MODULE_ASSETS.ancientCityEntrance);
+        const starSandWastelandGateInstance = getAuthoredModuleInstance(starSandWastelandGateSource);
+        if (!starSandWastelandGateInstance) return;
+        sunriseStarSandWastelandGateSource = starSandWastelandGateInstance;
       }
       const treeResult = await loadGltfSafely<{ scene: Object3D }>(loader, PROTOTYPE_WORLD_ASSETS.tree, signal);
       const treeSource = treeResult.scene;
@@ -1255,6 +1363,12 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         if (resolvedAssetKey && modelUrl) petModelEntries.set(resolvedAssetKey, modelUrl);
       };
       getRequiredWorldPetCatalogItems(options.gameData).forEach((item) => registerPetModel(item));
+      options.gameData.worldNpcs
+        ?.filter((npc) => npc.sceneId === options.worldLocation && npc.npcType === 'roaming_pet' && npc.isActive)
+        .forEach((npc) => registerPetModel(
+          npc.catalogItemId ? petCatalogById.get(npc.catalogItemId) : undefined,
+          npc.assetKey,
+        ));
       const petModelSources = new Map<string, { scene: Object3D; animations: AnimationClip[] }>();
       const petModelLoads = new Map<string, Promise<{ scene: Object3D; animations: AnimationClip[] } | undefined>>();
       const loadPetModelSource = (modelUrl: string, loadSignal: AbortSignal) => {
@@ -1280,7 +1394,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const petModelUrls = [...new Set(petModelEntries.values())];
       if (petModelUrls.length > 0) {
         options.onProgress(64, '讀取星芽獸木偶模型…');
-        await Promise.all(petModelUrls.map((modelUrl) => loadPetModelSource(modelUrl, signal)));
+        await mapWithConcurrency(
+          petModelUrls,
+          WORLD_GLTF_LOAD_CONCURRENCY,
+          (modelUrl) => loadPetModelSource(modelUrl, signal),
+        );
       }
       if (disposed) return;
 
@@ -1314,7 +1432,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         .filter((item) => Boolean(getDecorationModelUrl(item)));
       if (decorationModelItems.length > 0) {
         options.onProgress(68, '讀取世界家具模型…');
-        await Promise.all(decorationModelItems.map((item) => loadDecorationModelSource(item, signal)));
+        await mapWithConcurrency(
+          decorationModelItems,
+          WORLD_GLTF_LOAD_CONCURRENCY,
+          (item) => loadDecorationModelSource(item, signal),
+        );
       }
       if (disposed) return;
 
@@ -1413,8 +1535,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         z: adventureTableTransform.z,
       };
       let adventureLandmarkPromptLift = 0;
+      let adventureLandmarkPromptOffsetY = 0;
       let forestValleyGateObject: Object3D | undefined;
       let cloudWorkshopGateObject: Object3D | undefined;
+      let tideglowGateObject: Object3D | undefined;
+      let starSandWastelandGateObject: Object3D | undefined;
       const adventureTablePromptPoint = new THREE.Vector3();
       const adventureTableBounds = new THREE.Box3();
       const getAdventureTableScreenPosition = (viewport: DOMRect): AdventureTableScreenPosition | undefined => {
@@ -1426,7 +1551,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             Math.max(adventureTableBounds.max.y + 0.2, 0.9),
             adventureTableBounds.min.y,
             adventureLandmarkPromptLift,
-          ),
+          ) + adventureLandmarkPromptOffsetY,
           adventureLandmarkPosition.z,
         );
         adventureTablePromptPoint.project(camera);
@@ -1517,6 +1642,82 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           ),
         };
       };
+      const tideglowGatePromptPoint = new THREE.Vector3();
+      const tideglowGateWorldPosition = new THREE.Vector3();
+      const tideglowGateBounds = new THREE.Box3();
+      const getTideglowGateScreenPosition = (viewport: DOMRect): TideglowGateScreenPosition | undefined => {
+        if (!tideglowGateObject) return undefined;
+        tideglowGateObject.updateMatrixWorld(true);
+        tideglowGateBounds.setFromObject(tideglowGateObject);
+        tideglowGateObject.getWorldPosition(tideglowGateWorldPosition);
+        tideglowGatePromptPoint.set(
+          tideglowGateWorldPosition.x,
+          getTideglowGatePromptHeight(
+            Math.max(tideglowGateBounds.max.y + 0.25, 0.9),
+            tideglowGateBounds.min.y,
+          ),
+          tideglowGateWorldPosition.z,
+        );
+        tideglowGatePromptPoint.project(camera);
+        if (tideglowGatePromptPoint.z < -1 || tideglowGatePromptPoint.z > 1) return undefined;
+        const projectedX = viewport.left + ((tideglowGatePromptPoint.x + 1) / 2) * viewport.width;
+        const projectedY = viewport.top + ((1 - tideglowGatePromptPoint.y) / 2) * viewport.height;
+        return {
+          x: THREE.MathUtils.clamp(
+            projectedX,
+            viewport.left + TIDEGLOW_ARCHIPELAGO_GATE_PROMPT_SIDE_MARGIN,
+            viewport.right - TIDEGLOW_ARCHIPELAGO_GATE_PROMPT_SIDE_MARGIN,
+          ),
+          y: THREE.MathUtils.clamp(
+            projectedY,
+            viewport.top + TIDEGLOW_ARCHIPELAGO_GATE_PROMPT_TOP_MARGIN,
+            viewport.bottom - TIDEGLOW_ARCHIPELAGO_GATE_PROMPT_BOTTOM_MARGIN,
+          ),
+          scale: getAdventureTablePromptScale(
+            cameraDistance,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceMax,
+          ),
+        };
+      };
+      const starSandWastelandGatePromptPoint = new THREE.Vector3();
+      const starSandWastelandGateWorldPosition = new THREE.Vector3();
+      const starSandWastelandGateBounds = new THREE.Box3();
+      const getStarSandWastelandGateScreenPosition = (viewport: DOMRect): StarSandWastelandGateScreenPosition | undefined => {
+        if (!starSandWastelandGateObject) return undefined;
+        starSandWastelandGateObject.updateMatrixWorld(true);
+        starSandWastelandGateBounds.setFromObject(starSandWastelandGateObject);
+        starSandWastelandGateObject.getWorldPosition(starSandWastelandGateWorldPosition);
+        starSandWastelandGatePromptPoint.set(
+          starSandWastelandGateWorldPosition.x,
+          getStarSandWastelandGatePromptHeight(
+            Math.max(starSandWastelandGateBounds.max.y + 0.25, 0.9),
+            starSandWastelandGateBounds.min.y,
+          ),
+          starSandWastelandGateWorldPosition.z,
+        );
+        starSandWastelandGatePromptPoint.project(camera);
+        if (starSandWastelandGatePromptPoint.z < -1 || starSandWastelandGatePromptPoint.z > 1) return undefined;
+        const projectedX = viewport.left + ((starSandWastelandGatePromptPoint.x + 1) / 2) * viewport.width;
+        const projectedY = viewport.top + ((1 - starSandWastelandGatePromptPoint.y) / 2) * viewport.height;
+        return {
+          x: THREE.MathUtils.clamp(
+            projectedX,
+            viewport.left + STAR_SAND_WASTELAND_GATE_PROMPT_SIDE_MARGIN,
+            viewport.right - STAR_SAND_WASTELAND_GATE_PROMPT_SIDE_MARGIN,
+          ),
+          y: THREE.MathUtils.clamp(
+            projectedY,
+            viewport.top + STAR_SAND_WASTELAND_GATE_PROMPT_TOP_MARGIN,
+            viewport.bottom - STAR_SAND_WASTELAND_GATE_PROMPT_BOTTOM_MARGIN,
+          ),
+          scale: getAdventureTablePromptScale(
+            cameraDistance,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceDefault,
+            PROTOTYPE_WORLD_CONFIG.cameraDistanceMax,
+          ),
+        };
+      };
       const centralTreeHeight = treeDefinition.size.y * treePlacement.scale * PROTOTYPE_WORLD_CONFIG.treeHeightScale;
       terrain.add(createProceduralForest(THREE, {
         terrainLimit,
@@ -1543,30 +1744,62 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       });
       terrain.add(butterflies.group);
       const weatherRuntime = createWorldWeatherRuntime({
-        THREE, scene: worldScene, renderer: rendererInstance, quality, fieldSize: terrainWidth, walkableSize: walkableWidth, dayNightEnabled: options.dayNightEnabled, visualSettings,
+        THREE, scene: worldScene, renderer: rendererInstance, quality, fieldSize: terrainWidth, walkableSize: walkableWidth,
+        dayNightEnabled: (sunriseVillageSource || cloudWorkshopSource || forestValleySource) ? false : options.dayNightEnabled,
+        fixedTimePhase: forestValleySource ? 'night' : undefined, visualSettings,
+        skyboxUrl: forestValleySource
+          ? FOREST_VALLEY_SKYBOX_URL
+          : cloudWorkshopSource
+            ? CLOUD_WORKSHOP_SKYBOX_URL
+            : sunriseVillageSource
+              ? SUNRISE_VILLAGE_SKYBOX_URL
+              : tideglowArchipelagoSource
+                ? TIDEGLOW_ARCHIPELAGO_SKYBOX_URL
+                : starSandWastelandSource
+                  ? STAR_SAND_WASTELAND_SKYBOX_URL
+                  : undefined,
+        skyboxOffset: cloudWorkshopSource
+          ? CLOUD_WORKSHOP_SKYBOX_OFFSET
+          : tideglowArchipelagoSource
+            ? TIDEGLOW_ARCHIPELAGO_SKYBOX_OFFSET
+            : starSandWastelandSource
+              ? STAR_SAND_WASTELAND_SKYBOX_OFFSET
+              : undefined,
         ambient, sun, nightFill, moonFill, sunlightPatches: sunlightPatches.group, pollen: ambientPollen.points,
         butterflies: butterflies.group, signal, prefersReducedMotion,
       });
       worldScene.add(terrain);
-      if (sunriseVillageSource || forestValleySource || cloudWorkshopSource) {
+      if (sunriseVillageSource || forestValleySource || cloudWorkshopSource || tideglowArchipelagoSource || starSandWastelandSource) {
         terrain.visible = false;
         const authoredWorldRoot = new THREE.Group();
         authoredWorldRoot.name = sunriseVillageSource
           ? 'sunrise-village-scene'
           : forestValleySource
             ? 'forest-valley-scene'
-            : 'cloud-workshop-scene';
-        const authoredWorldSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource;
+            : cloudWorkshopSource
+              ? 'cloud-workshop-scene'
+              : tideglowArchipelagoSource
+                ? 'tideglow-archipelago-scene'
+                : 'star-sand-wasteland-scene';
+        const authoredWorldSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource ?? tideglowArchipelagoSource ?? starSandWastelandSource;
         const sceneTransform = sunriseVillageSource
           ? SUNRISE_VILLAGE_SCENE_TRANSFORM
           : forestValleySource
             ? FOREST_VALLEY_SCENE_TRANSFORM
-            : CLOUD_WORKSHOP_SCENE_TRANSFORM;
+            : cloudWorkshopSource
+              ? CLOUD_WORKSHOP_SCENE_TRANSFORM
+              : tideglowArchipelagoSource
+                ? TIDEGLOW_ARCHIPELAGO_SCENE_TRANSFORM
+                : STAR_SAND_WASTELAND_SCENE_TRANSFORM;
         const groundModuleKey = forestValleySource
           ? 'island'
           : cloudWorkshopSource
             ? CLOUD_WORKSHOP_GROUND_MODULE_KEY
-            : undefined;
+            : tideglowArchipelagoSource
+              ? 'island'
+              : starSandWastelandSource
+                ? 'island'
+                : undefined;
         authoredWorldRoot.position.set(sceneTransform.position.x, sceneTransform.position.y, sceneTransform.position.z);
         authoredWorldRoot.scale.setScalar(sceneTransform.scale);
         authoredWorldRoot.add(authoredWorldSource);
@@ -1578,9 +1811,19 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           sceneTransform.position.y,
           groundModuleKey,
         );
+        if (tideglowArchipelagoSource) {
+          authoredWorldRoot.position.y += TIDEGLOW_ARCHIPELAGO_SCENE_VERTICAL_OFFSET;
+          authoredWorldRoot.updateMatrixWorld(true);
+        }
         const authoredNoticeBoard = sunriseVillageSource || forestValleySource
           ? getAuthoredSceneModule(sunriseVillageSource ?? forestValleySource!, 'notice-board')
-          : undefined;
+          : cloudWorkshopSource
+            ? getAuthoredSceneModule(cloudWorkshopSource, 'notice-board')
+            : tideglowArchipelagoSource
+              ? getAuthoredSceneModule(tideglowArchipelagoSource, 'notice-board')
+              : starSandWastelandSource
+                ? getAuthoredSceneModule(starSandWastelandSource, 'notice-board')
+                : undefined;
         if (authoredNoticeBoard) {
           adventureLandmarkObject = authoredNoticeBoard;
           authoredNoticeBoard.updateMatrixWorld(true);
@@ -1591,6 +1834,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             z: authoredNoticeBoardPosition.z,
           };
           adventureLandmarkPromptLift = ADVENTURE_NOTICE_BOARD_PROMPT_LIFT;
+          if (cloudWorkshopSource) {
+            adventureLandmarkPromptOffsetY = CLOUD_WORKSHOP_NOTICE_BOARD_PROMPT_OFFSET_Y
+              * sceneTransform.scale;
+          } else if (starSandWastelandSource) {
+            adventureLandmarkPromptOffsetY = STAR_SAND_WASTELAND_NOTICE_BOARD_PROMPT_OFFSET_Y
+              * sceneTransform.scale;
+          }
         }
         if (forestValleySource) {
           forestValleyGateObject = getAuthoredSceneModule(forestValleySource, 'root-gate');
@@ -1607,6 +1857,12 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           // Keep the authored dock height from the Blender layout. The main
           // scene is grounded by cloud-ground-1; re-grounding this module here
           // would cancel manual edits to airship-dock-1's authored Z height.
+        }
+        if (tideglowArchipelagoSource) {
+          tideglowGateObject = getAuthoredSceneModule(tideglowArchipelagoSource, TIDEGLOW_ARCHIPELAGO_GATE_MODULE_ID);
+        }
+        if (starSandWastelandSource) {
+          starSandWastelandGateObject = getAuthoredSceneModule(starSandWastelandSource, STAR_SAND_WASTELAND_GATE_MODULE_ID);
         }
       }
       if (sunriseForestValleyGateSource) {
@@ -1651,6 +1907,40 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           - cloudWorkshopGateBounds.min.y
           + SUNRISE_VILLAGE_CLOUD_WORKSHOP_GATE_PLACEMENT.position[1]
         );
+      }
+      if (sunriseTideglowGateSource) {
+        tideglowGateObject = new THREE.Group();
+        tideglowGateObject.name = 'tideglow-archipelago-entry-gate';
+        tideglowGateObject.position.fromArray(SUNRISE_VILLAGE_TIDEGLOW_GATE_PLACEMENT.position);
+        tideglowGateObject.rotation.order = 'YXZ';
+        tideglowGateObject.rotation.set(
+          SUNRISE_VILLAGE_TIDEGLOW_GATE_PLACEMENT.rotation.x,
+          SUNRISE_VILLAGE_TIDEGLOW_GATE_PLACEMENT.rotation.y,
+          SUNRISE_VILLAGE_TIDEGLOW_GATE_PLACEMENT.rotation.z,
+        );
+        tideglowGateObject.scale.setScalar(SUNRISE_VILLAGE_TIDEGLOW_GATE_PLACEMENT.scale);
+        tideglowGateObject.add(sunriseTideglowGateSource);
+        worldScene.add(tideglowGateObject);
+        tideglowGateObject.updateMatrixWorld(true);
+        const tideglowGateBounds = new THREE.Box3().setFromObject(tideglowGateObject);
+        tideglowGateObject.position.y += SUNRISE_VILLAGE_TIDEGLOW_GATE_PLACEMENT.groundY - tideglowGateBounds.min.y;
+      }
+      if (sunriseStarSandWastelandGateSource) {
+        starSandWastelandGateObject = new THREE.Group();
+        starSandWastelandGateObject.name = 'star-sand-wasteland-entry-gate';
+        starSandWastelandGateObject.position.fromArray(SUNRISE_VILLAGE_STAR_SAND_WASTELAND_GATE_PLACEMENT.position);
+        starSandWastelandGateObject.rotation.order = 'YXZ';
+        starSandWastelandGateObject.rotation.set(
+          SUNRISE_VILLAGE_STAR_SAND_WASTELAND_GATE_PLACEMENT.rotation.x,
+          SUNRISE_VILLAGE_STAR_SAND_WASTELAND_GATE_PLACEMENT.rotation.y,
+          SUNRISE_VILLAGE_STAR_SAND_WASTELAND_GATE_PLACEMENT.rotation.z,
+        );
+        starSandWastelandGateObject.scale.setScalar(SUNRISE_VILLAGE_STAR_SAND_WASTELAND_GATE_PLACEMENT.scale);
+        starSandWastelandGateObject.add(sunriseStarSandWastelandGateSource);
+        worldScene.add(starSandWastelandGateObject);
+        starSandWastelandGateObject.updateMatrixWorld(true);
+        const starSandWastelandGateBounds = new THREE.Box3().setFromObject(starSandWastelandGateObject);
+        starSandWastelandGateObject.position.y += SUNRISE_VILLAGE_STAR_SAND_WASTELAND_GATE_PLACEMENT.groundY - starSandWastelandGateBounds.min.y;
       }
 
       const playerRoot = new THREE.Group();
@@ -1744,7 +2034,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
 
       const groundRoamingCharacterOnGrass = () => {
         if (!roamingActor) return;
-        const currentPosition = {
+        let currentPosition = {
           x: roamingActor.object.position.x,
           z: roamingActor.object.position.z,
         };
@@ -1760,6 +2050,35 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           // leaving the Star Sprout suspended over the scene.
           roamingActor.object.position.x = playerRoot.position.x;
           roamingActor.object.position.z = playerRoot.position.z;
+          currentPosition = {
+            x: roamingActor.object.position.x,
+            z: roamingActor.object.position.z,
+          };
+        }
+        if (starSandWastelandSource && !hasAuthoredSceneSurface(
+          THREE,
+          starSandWastelandSource,
+          'island',
+          currentPosition.x,
+          currentPosition.z,
+        )) {
+          roamingActor.object.position.x = playerRoot.position.x;
+          roamingActor.object.position.z = playerRoot.position.z;
+          currentPosition = {
+            x: roamingActor.object.position.x,
+            z: roamingActor.object.position.z,
+          };
+        }
+        if (options.worldLocation === 'tideglow-archipelago') {
+          const surface = getTideglowSurfaceAt(currentPosition.x, currentPosition.z);
+          if (!surface.walkable) {
+            roamingActor.object.position.x = playerRoot.position.x;
+            roamingActor.object.position.z = playerRoot.position.z;
+            currentPosition = {
+              x: roamingActor.object.position.x,
+              z: roamingActor.object.position.z,
+            };
+          }
         }
         roamingActor.model.updateMatrixWorld(true);
         const roamingBounds = new THREE.Box3().setFromObject(roamingActor.model);
@@ -1774,7 +2093,18 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             roamingActor.object.position.z,
             getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y),
           )
-          : getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y);
+          : starSandWastelandSource
+            ? getAuthoredSceneSurfaceY(
+              THREE,
+              starSandWastelandSource,
+              'island',
+              roamingActor.object.position.x,
+              roamingActor.object.position.z,
+              getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y),
+            )
+            : options.worldLocation === 'tideglow-archipelago'
+              ? worldGroundY + getTideglowSurfaceAt(currentPosition.x, currentPosition.z).elevation
+              : getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y);
         roamingActor.object.position.y = getGroundedRootY(
           roamingActor.object.position.y,
           referenceY,
@@ -1843,13 +2173,25 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         playCharacterAction('idle');
       };
       configureCharacterAnimation();
+      const syncTideglowPlayerSurface = (delta?: number) => {
+        if (options.worldLocation !== 'tideglow-archipelago') return true;
+        const surface = getTideglowSurfaceAt(playerRoot.position.x, playerRoot.position.z);
+        if (!surface.walkable) return false;
+        playerRoot.position.y = delta === undefined
+          ? surface.elevation
+          : smoothTideglowElevation(playerRoot.position.y, surface.elevation, delta);
+        return true;
+      };
+      const getPlayerGroundY = () => options.worldLocation === 'tideglow-archipelago'
+        ? worldGroundY + playerRoot.position.y
+        : worldGroundY;
       const groundCharacterOnGrass = () => {
         groundWorldCharacter(THREE, {
           root: characterRoot,
           model: characterSource,
           footNodes: characterFootNodes,
           parentY: playerRoot.position.y,
-          groundY: worldGroundY,
+          groundY: getPlayerGroundY(),
         });
       };
       groundCharacterOnGrass();
@@ -1857,7 +2199,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const adventureTableCollision = sunriseVillageSource || forestValleySource ? undefined : buildCollisionCircles([
         getAdventureTableCollisionInput(adventureTableTransform, adventureTableItem),
       ])[0];
-      const authoredVillageSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource;
+      const authoredVillageSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource ?? tideglowArchipelagoSource ?? starSandWastelandSource;
       const authoredVillageCollisions = authoredVillageSource
         ? getAuthoredSceneCollisionProxies(THREE, authoredVillageSource)
         : [];
@@ -1865,12 +2207,21 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         ? getAuthoredSceneRadialBoundary(
           THREE,
           authoredVillageSource,
-          cloudWorkshopSource ? CLOUD_WORKSHOP_GROUND_MODULE_KEY : undefined,
+          cloudWorkshopSource
+            ? CLOUD_WORKSHOP_GROUND_MODULE_KEY
+            : tideglowArchipelagoSource
+              ? 'island'
+              : starSandWastelandSource
+                ? 'island'
+                : undefined,
+          options.worldLocation === 'forest-valley'
+            ? FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR
+            : 1,
         )
         : undefined;
       const staticWorldCollisions = [
         ...authoredVillageCollisions,
-        ...(adventureTableCollision && !cloudWorkshopSource ? [adventureTableCollision] : []),
+        ...(adventureTableCollision && !cloudWorkshopSource && !tideglowArchipelagoSource && !starSandWastelandSource ? [adventureTableCollision] : []),
       ];
       const proceduralWorldObstacles = authoredVillageSource ? [] : [CENTRAL_TREE_KEEP_OUT];
       if (options.worldLocation === 'sunrise-village' && sunriseVillageSource) {
@@ -1909,6 +2260,35 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         ) - worldGroundY;
         groundCharacterOnGrass();
       }
+      if (options.worldLocation === 'tideglow-archipelago' && tideglowArchipelagoSource) {
+        const authoredSpawn = getAuthoredSceneSpawnPosition(
+          staticWorldCollisions,
+          movementBoundary,
+          CHARACTER_COLLISION_RADIUS,
+          options.entryPosition ?? TIDEGLOW_ARCHIPELAGO_SPAWN_ANCHOR,
+        );
+        if (authoredSpawn) playerRoot.position.set(authoredSpawn.x, 0, authoredSpawn.z);
+        syncTideglowPlayerSurface();
+        groundCharacterOnGrass();
+      }
+      if (options.worldLocation === 'star-sand-wasteland' && starSandWastelandSource) {
+        const authoredSpawn = getAuthoredSceneSpawnPosition(
+          staticWorldCollisions,
+          movementBoundary,
+          CHARACTER_COLLISION_RADIUS,
+          options.entryPosition ?? STAR_SAND_WASTELAND_SPAWN_ANCHOR,
+        );
+        if (authoredSpawn) playerRoot.position.set(authoredSpawn.x, 0, authoredSpawn.z);
+        playerRoot.position.y = getAuthoredSceneSurfaceY(
+          THREE,
+          starSandWastelandSource,
+          'island',
+          playerRoot.position.x,
+          playerRoot.position.z,
+          worldGroundY,
+        ) - worldGroundY;
+        groundCharacterOnGrass();
+      }
       let lastReportedPlayerPosition: WorldPoint2D | null = null;
       const reportPlayerWorldPosition = () => {
         const nextPosition = { x: playerRoot.position.x, z: playerRoot.position.z };
@@ -1934,13 +2314,100 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         : [CHARACTER_SPAWN, ...wanderObstacles];
       let petSpawnIndex = 0;
       const characterWorldHeight = characterDefinition.size.y * characterScale;
-      const getRuntimePetBaseY = (entityY: number, groundOffset: number) => getPetWorldBaseY(
-        options.worldLocation,
-        entityY,
-        worldGroundY,
-        playerRoot.position.y,
-        groundOffset,
-      );
+      const getRuntimePetBaseY = (
+        entityY: number,
+        groundOffset: number,
+        position?: WorldPoint2D,
+      ) => {
+        const fallbackY = getPetWorldBaseY(
+          options.worldLocation,
+          entityY,
+          worldGroundY,
+          playerRoot.position.y,
+          groundOffset,
+        );
+        if (options.worldLocation !== 'tideglow-archipelago' || !position) return fallbackY;
+        const surface = getTideglowSurfaceAt(position.x, position.z);
+        return surface.walkable ? worldGroundY + surface.elevation + groundOffset : fallbackY;
+      };
+      const getRuntimeNpcGroundY = (position: WorldPoint2D) => {
+        const fallbackY = getRuntimePetBaseY(worldGroundY, 0, position);
+        if (!authoredVillageSource) return fallbackY;
+        const groundModuleKey = cloudWorkshopSource ? CLOUD_WORKSHOP_GROUND_MODULE_KEY : 'island';
+        return getAuthoredSceneSurfaceY(
+          THREE,
+          authoredVillageSource,
+          groundModuleKey,
+          position.x,
+          position.z,
+          fallbackY,
+        );
+      };
+      const npcCharacterLoads = new Map<string, Promise<{ scene: Object3D; animations: AnimationClip[] } | undefined>>();
+      const loadNpcCharacterModel = (assetKey: string) => {
+        const character = getWorldCharacterByAssetKey(assetKey);
+        if (!character) return Promise.resolve(undefined);
+        const pending = npcCharacterLoads.get(character.modelUrl);
+        if (pending) return pending;
+        const load = loadGltfSafely<{ scene: Object3D; animations: AnimationClip[] }>(loader, character.modelUrl, signal)
+          .then((result) => {
+            applyWarmHandPaintedCharacterStyle(result.scene);
+            return trackResourceRoot(result.scene) ? result : undefined;
+          })
+          .catch((error: unknown) => {
+            if (!disposed && !signal.aborted) console.warn(`Unable to load world NPC ${assetKey}; using the safe fallback.`, error);
+            return undefined;
+          })
+          .finally(() => npcCharacterLoads.delete(character.modelUrl));
+        npcCharacterLoads.set(character.modelUrl, load);
+        return load;
+      };
+      worldNpcSceneRuntime = await createWorldNpcSceneRuntime({
+        THREE,
+        scene: worldScene,
+        sceneId: options.worldLocation,
+        npcs: options.gameData.worldNpcs ?? [],
+        catalog: options.gameData.catalog,
+        characterHeight: characterWorldHeight,
+        groundY: worldGroundY,
+        wanderObstacles,
+        showNames: options.showPetNames,
+        cloneSkinnedObject,
+        loadCharacterModel: loadNpcCharacterModel,
+        loadPetModel: (item) => {
+          const modelUrl = getPetModelUrl(item);
+          return modelUrl ? loadPetModelSource(modelUrl, signal) : Promise.resolve(undefined);
+        },
+        createFallbackCharacter: options.createProceduralCharacter,
+        getPetPresentation: (item, definition) => ({
+          modelScale: getPetModelScale({
+            requestedScale: getPetVisualScaleMultiplier(item.assetKey, item.metadata),
+            petHeight: definition.size.y,
+            petSize: definition.size,
+            characterHeight: characterWorldHeight,
+          }),
+          groundOffset: getPetGroundOffset(item.assetKey, item.metadata),
+          movementSpeedMultiplier: getPetMovementSpeedMultiplier(item.assetKey, item.metadata),
+          radius: getPetNavigationRadius(item.collisionRadius, item.maxScale),
+          groundShadowScaleMultiplier: getPetGroundShadowScale(item.metadata),
+          nameLabelScaleMultiplier: getPetNameLabelScale(item.metadata),
+          // Scene NPCs use each pet's own scale/ground tuning, but their
+          // presentation intentionally has no ground shadow in any world.
+          hideGroundShadow: true,
+        }),
+        getNpcGroundY: getRuntimeNpcGroundY,
+        getNpcGroundOffset: (npc) => npc.id === 'npc.gilt' ? WORLD_NPC_GILT_GROUND_LIFT : 0,
+        getNpcFacingY: (npc) => npc.id === 'npc.gilt' ? Math.PI : undefined,
+        walkableBoundary: movementBoundary,
+        walkableRadialBoundary: authoredVillageRadialBoundary,
+        isPetPositionWalkable: (position) => {
+          if (options.worldLocation === 'tideglow-archipelago') return getTideglowSurfaceAt(position.x, position.z).walkable;
+          if (!authoredVillageSource) return true;
+          const groundModuleKey = cloudWorkshopSource ? CLOUD_WORKSHOP_GROUND_MODULE_KEY : 'island';
+          return hasAuthoredSceneSurface(THREE, authoredVillageSource, groundModuleKey, position.x, position.z);
+        },
+      });
+      worldNpcSceneRuntime.setDialogueOpen(dialogueNpcId, dialogueOpen);
       const decorationObjects: Array<{ entityId: string; object: Object3D }> = [];
       const petActors: Array<{
         entityId: string;
@@ -1955,6 +2422,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         follow: boolean;
         radius: number;
         baseY: number;
+        groundOffset: number;
         animationTime: number;
         idleCycleElapsed: number;
         movePending: boolean;
@@ -1970,6 +2438,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         wanderState: WanderState;
         active: boolean;
       }> = [];
+      const syncTideglowPetBaseY = (actor: (typeof petActors)[number]) => {
+        if (options.worldLocation !== 'tideglow-archipelago') return;
+        const surface = getTideglowSurfaceAt(actor.object.position.x, actor.object.position.z);
+        if (surface.walkable) actor.baseY = worldGroundY + surface.elevation + actor.groundOffset;
+      };
       playPetAnimation = (inventoryItemId, actionName) => {
         const actor = petActors.find((candidate) => candidate.inventoryItemId === inventoryItemId && candidate.active);
         const action = actor?.petActionActions[actionName];
@@ -2052,7 +2525,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const spawn = getDistributedPetSpawnPosition(petSpawnIndex, petRadius, petSpawnObstacles);
           petSpawnIndex += 1;
           petSpawnObstacles.push({ ...spawn, radius: petRadius });
-          object.position.set(spawn.x, getRuntimePetBaseY(entity.y, petGroundOffset), spawn.z);
+          const petBaseY = getRuntimePetBaseY(entity.y, petGroundOffset, spawn);
+          object.position.set(spawn.x, petBaseY, spawn.z);
           object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
         }
         if (!isPet) (object as Object3D & { castShadow?: boolean }).castShadow = true;
@@ -2062,7 +2536,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           const followIndex = followingPetInventoryIds.indexOf(entity.inventoryItemId);
           const follow = followIndex >= 0;
           const initialFacing = { x: Math.sin(PROTOTYPE_WORLD_CONFIG.initialCameraYaw), z: Math.cos(PROTOTYPE_WORLD_CONFIG.initialCameraYaw) };
-          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, idleAction: petModel!.idleAction, walkAction: petModel!.walkAction, activeAction: petModel!.activeAction, petActionActions: petModel!.petActionActions, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: getRuntimePetBaseY(entity.y, petGroundOffset), animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
+          const baseY = getRuntimePetBaseY(
+            entity.y,
+            petGroundOffset,
+            follow ? { x: playerRoot.position.x, z: playerRoot.position.z } : { x: object.position.x, z: object.position.z },
+          );
+          object.position.y = baseY;
+          petActors.push({ entityId: entity.id, inventoryItemId: entity.inventoryItemId, object, model: petModel!.model, mixer: petModel!.mixer, idleAction: petModel!.idleAction, walkAction: petModel!.walkAction, activeAction: petModel!.activeAction, petActionActions: petModel!.petActionActions, behaviorMode: entity.behaviorMode, follow, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY, groundOffset: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: getPetActorState(entity.behaviorMode, follow), target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`pet:${entity.id}:${entity.inventoryItemId}`), initialFacing), active: true });
         }
       });
       followingPetInventoryIds.forEach((inventoryId, followIndex) => {
@@ -2108,11 +2588,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           );
           object.position.set(
             leaderPosition.x - initialFacing.x * initialFollowDistance,
-            getRuntimePetBaseY(0, petGroundOffset),
+            getRuntimePetBaseY(0, petGroundOffset, leaderPosition),
             leaderPosition.z - initialFacing.z * initialFollowDistance,
           );
           worldScene.add(object);
-          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, idleAction: petModel.idleAction, walkAction: petModel.walkAction, activeAction: petModel.activeAction, petActionActions: petModel.petActionActions, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY: getRuntimePetBaseY(0, petGroundOffset), animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
+          const baseY = getRuntimePetBaseY(0, petGroundOffset, leaderPosition);
+          object.position.y = baseY;
+          petActors.push({ entityId: `following:${inventoryId}`, inventoryItemId: inventoryId, object, model: petModel.model, mixer: petModel.mixer, idleAction: petModel.idleAction, walkAction: petModel.walkAction, activeAction: petModel.activeAction, petActionActions: petModel.petActionActions, behaviorMode: 'idle', follow: true, followIndex, movementSpeedMultiplier: petMovementSpeedMultiplier, walkingGroundOffset: petWalkingGroundOffset, radius: petRadius, baseY, groundOffset: petGroundOffset, animationTime: 0, idleCycleElapsed: 0, movePending: false, facing: initialFacing, state: 'following', target: null, followHistory: [], wanderState: createWanderState(hashWanderSeed(`following:${inventoryId}`), initialFacing), active: true });
         }
       });
 
@@ -2230,8 +2712,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         actor.followIndex = followIndex;
         actor.movementSpeedMultiplier = getPetMovementSpeedMultiplier(catalogItem.assetKey, catalogItem.metadata);
         actor.walkingGroundOffset = walkingGroundOffset;
+        actor.groundOffset = groundOffset;
         actor.radius = getPetNavigationRadius(entity.collisionRadius ?? catalogItem.collisionRadius, following ? (catalogItem.maxScale ?? 1) : entity.scale);
-        actor.baseY = getRuntimePetBaseY(entity.y, groundOffset);
+        actor.baseY = getRuntimePetBaseY(
+          entity.y,
+          groundOffset,
+          following ? { x: playerRoot.position.x, z: playerRoot.position.z } : { x: actor.object.position.x, z: actor.object.position.z },
+        );
         actor.state = getPetActorState(actor.behaviorMode, following);
         actor.target = null;
         actor.followHistory.length = 0;
@@ -2250,11 +2737,17 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           );
           actor.object.position.set(
             leaderPosition.x - facing.x * followDistance,
-            actor.baseY,
+            getRuntimePetBaseY(0, groundOffset, leaderPosition),
             leaderPosition.z - facing.z * followDistance,
           );
+          actor.baseY = actor.object.position.y;
         } else {
-          actor.object.position.set(entity.x, actor.baseY, entity.z);
+          actor.object.position.set(
+            entity.x,
+            getRuntimePetBaseY(entity.y, groundOffset, { x: entity.x, z: entity.z }),
+            entity.z,
+          );
+          actor.baseY = actor.object.position.y;
           actor.object.rotation.set(entity.rotationX, entity.rotationY, entity.rotationZ);
         }
       };
@@ -2294,7 +2787,12 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           behaviorMode: entity.behaviorMode,
           follow: following,
           radius: getPetNavigationRadius(entity.collisionRadius ?? catalogItem.collisionRadius, following ? (catalogItem.maxScale ?? 1) : entity.scale),
-          baseY: getRuntimePetBaseY(entity.y, getPetGroundOffset(catalogItem.assetKey, catalogItem.metadata)),
+          baseY: getRuntimePetBaseY(
+            entity.y,
+            getPetGroundOffset(catalogItem.assetKey, catalogItem.metadata),
+            following ? { x: playerRoot.position.x, z: playerRoot.position.z } : { x: entity.x, z: entity.z },
+          ),
+          groundOffset: getPetGroundOffset(catalogItem.assetKey, catalogItem.metadata),
           animationTime: 0,
           idleCycleElapsed: 0,
           movePending: false,
@@ -2658,6 +3156,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       let adventureTableNearby = false;
       let forestValleyGateNearby = false;
       let cloudWorkshopGateNearby = false;
+      let tideglowGateNearby = false;
+      let starSandWastelandGateNearby = false;
       const updateAdventureTableProximity = () => {
         if (placementActive) return;
         const distance = Math.hypot(
@@ -2715,6 +3215,52 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         cloudWorkshopGateNearby = nextNearby;
         cloudWorkshopGateScreenPosition = null;
       };
+      const updateTideglowGateProximity = () => {
+        if (
+          (options.worldLocation !== 'sunrise-village' && options.worldLocation !== 'tideglow-archipelago')
+          || placementActive
+          || !tideglowGateObject
+        ) {
+          if (tideglowGateNearby || tideglowGateScreenPosition) {
+            tideglowGateNearby = false;
+            tideglowGateScreenPosition = null;
+          }
+          return;
+        }
+        tideglowGateObject.updateMatrixWorld(true);
+        tideglowGateObject.getWorldPosition(tideglowGateWorldPosition);
+        const distance = Math.hypot(
+          playerRoot.position.x - tideglowGateWorldPosition.x,
+          playerRoot.position.z - tideglowGateWorldPosition.z,
+        );
+        const nextNearby = isTideglowGateNearby(distance, tideglowGateNearby);
+        if (nextNearby === tideglowGateNearby) return;
+        tideglowGateNearby = nextNearby;
+        tideglowGateScreenPosition = null;
+      };
+      const updateStarSandWastelandGateProximity = () => {
+        if (
+          (options.worldLocation !== 'sunrise-village' && options.worldLocation !== 'star-sand-wasteland')
+          || placementActive
+          || !starSandWastelandGateObject
+        ) {
+          if (starSandWastelandGateNearby || starSandWastelandGateScreenPosition) {
+            starSandWastelandGateNearby = false;
+            starSandWastelandGateScreenPosition = null;
+          }
+          return;
+        }
+        starSandWastelandGateObject.updateMatrixWorld(true);
+        starSandWastelandGateObject.getWorldPosition(starSandWastelandGateWorldPosition);
+        const distance = Math.hypot(
+          playerRoot.position.x - starSandWastelandGateWorldPosition.x,
+          playerRoot.position.z - starSandWastelandGateWorldPosition.z,
+        );
+        const nextNearby = isStarSandWastelandGateNearby(distance, starSandWastelandGateNearby);
+        if (nextNearby === starSandWastelandGateNearby) return;
+        starSandWastelandGateNearby = nextNearby;
+        starSandWastelandGateScreenPosition = null;
+      };
       updateScene = (next) => {
         const fixedSpawn = (next.worldLocation ?? options.worldLocation) === 'sunrise-village'
           ? undefined
@@ -2722,7 +3268,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         appliedFixedSpawn = applyFixedSpawnIfChanged(playerRoot, fixedSpawn, appliedFixedSpawn, () => { playerFollowHistory.length = 0; controller?.reset(); });
         const wasPlacementActive = placementActive;
         placementActive = Boolean(next.placement);
-        weatherRuntime.setDayNightEnabled(next.dayNightEnabled);
+        weatherRuntime.setDayNightEnabled((options.worldLocation === 'sunrise-village' || options.worldLocation === 'cloud-workshop' || options.worldLocation === 'forest-valley') ? false : next.dayNightEnabled);
         if (placementActive) controller?.reset();
         else {
           placementPointers.clear();
@@ -3115,7 +3661,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             const direction = new THREE.Vector3(-Math.sin(cameraYaw) * forwardInput, 0, -Math.cos(cameraYaw) * forwardInput);
             direction.add(new THREE.Vector3(Math.cos(cameraYaw) * sideInput, 0, -Math.sin(cameraYaw) * sideInput));
             direction.normalize().multiplyScalar(delta * PROTOTYPE_WORLD_CONFIG.characterMoveSpeed);
-            const nextPosition = moveWorldCharacter(
+            const currentPosition = { x: playerRoot.position.x, z: playerRoot.position.z };
+            const collisionPosition = moveWorldCharacter(
               { x: playerRoot.position.x, z: playerRoot.position.z },
               { x: playerRoot.position.x + direction.x, z: playerRoot.position.z + direction.z },
               CHARACTER_COLLISION_RADIUS,
@@ -3124,6 +3671,14 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               authoredVillageRadialBoundary,
               !authoredVillageSource,
             );
+            const nextPosition = options.worldLocation === 'tideglow-archipelago'
+              ? canTraverseTideglowSurface(
+                getTideglowSurfaceAt(currentPosition.x, currentPosition.z),
+                getTideglowSurfaceAt(collisionPosition.x, collisionPosition.z),
+              )
+                ? collisionPosition
+                : currentPosition
+              : collisionPosition;
             isPlayerMoving = Math.hypot(nextPosition.x - playerRoot.position.x, nextPosition.z - playerRoot.position.z) > 0.0001;
             playerRoot.position.x = nextPosition.x;
             playerRoot.position.z = nextPosition.z;
@@ -3138,10 +3693,13 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             characterRoot.rotation.y += yawDelta * Math.min(1, delta * 12);
           }
         }
+        if (options.worldLocation === 'tideglow-archipelago') syncTideglowPlayerSurface(delta);
         reportPlayerWorldPosition();
         updateAdventureTableProximity();
         updateForestValleyGateProximity();
         updateCloudWorkshopGateProximity();
+        updateTideglowGateProximity();
+        updateStarSandWastelandGateProximity();
         if (interactionActionState) {
           if (isPlayerMoving) {
             finishInteractionAction('walk');
@@ -3220,6 +3778,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         let isPetMoving = false;
         petActors.forEach((actor) => {
           if (!actor.active) return;
+          syncTideglowPetBaseY(actor);
           if (actor.petAction) {
             isPetMoving = true;
             actor.target = null;
@@ -3263,12 +3822,21 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
               trailTarget ?? actor.target ?? undefined,
             );
             actor.target = followingStep.target;
+            const nextFollowingPosition = options.worldLocation === 'tideglow-archipelago'
+              ? canTraverseTideglowSurface(
+                getTideglowSurfaceAt(current.x, current.z),
+                getTideglowSurfaceAt(followingStep.next.x, followingStep.next.z),
+              )
+                ? followingStep.next
+                : current
+              : followingStep.next;
             const moved = Math.hypot(
-              followingStep.next.x - current.x,
-              followingStep.next.z - current.z,
+              nextFollowingPosition.x - current.x,
+              nextFollowingPosition.z - current.z,
             );
-            actor.object.position.x = followingStep.next.x;
-            actor.object.position.z = followingStep.next.z;
+            actor.object.position.x = nextFollowingPosition.x;
+            actor.object.position.z = nextFollowingPosition.z;
+            syncTideglowPetBaseY(actor);
             actor.object.position.y = actor.baseY;
             if (moved > 0.0001) {
               isPetMoving = true;
@@ -3279,7 +3847,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
                 Math.cos(targetYaw - actor.object.rotation.y),
               );
               actor.object.rotation.y += yawDelta * Math.min(1, delta * 10);
-              appendFollowingTrailSample(actor.followHistory, followingStep.next);
+              appendFollowingTrailSample(actor.followHistory, nextFollowingPosition);
               updatePetAnimation(actor, true, delta, prefersReducedMotion);
             } else {
               updatePetAnimation(actor, false, delta, prefersReducedMotion);
@@ -3302,15 +3870,32 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             now,
             actor.idleAction ? PET_IDLE_PAUSE_DURATION_RANGE : PET_WALK_ONLY_PAUSE_DURATION_RANGE,
           );
+          const nextPetPosition = options.worldLocation === 'tideglow-archipelago'
+            ? canTraverseTideglowSurface(
+              getTideglowSurfaceAt(current.x, current.z),
+              getTideglowSurfaceAt(step.next.x, step.next.z),
+            )
+              ? step.next
+              : current
+            : step.next;
           actor.facing = step.facing;
-          actor.object.position.x = step.next.x;
-          actor.object.position.z = step.next.z;
-          if (step.walking && !step.blocked) isPetMoving = true;
-          if (!step.walking || step.blocked) {
+          actor.object.position.x = nextPetPosition.x;
+          actor.object.position.z = nextPetPosition.z;
+          syncTideglowPetBaseY(actor);
+          const isTideglowStepBlocked = options.worldLocation === 'tideglow-archipelago'
+            && nextPetPosition.x === current.x
+            && nextPetPosition.z === current.z
+            && (step.next.x !== current.x || step.next.z !== current.z);
+          if (isTideglowStepBlocked) {
+            actor.state = 'idle';
+            actor.object.position.y = actor.baseY;
+            updatePetAnimation(actor, false, delta, prefersReducedMotion);
+          } else if (!step.walking || step.blocked) {
             actor.state = 'idle';
             actor.object.position.y = actor.baseY;
             updatePetAnimation(actor, false, delta, prefersReducedMotion);
           } else {
+            isPetMoving = true;
             actor.state = 'wandering';
             const targetYaw = Math.atan2(step.facing.x, step.facing.z);
             const yawDelta = Math.atan2(
@@ -3322,6 +3907,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             updatePetAnimation(actor, true, delta, prefersReducedMotion);
           }
         });
+        worldNpcSceneRuntime?.update(delta, now, prefersReducedMotion);
         activeRemoteAvatarRuntime.render(Date.now());
         if (mixer) mixer.update(delta);
         if (roamingMixer) roamingMixer.update(delta * (prefersReducedMotion ? 0.75 : 1));
@@ -3353,6 +3939,17 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           options.onAdventureTableIndicatorScreenPositionChange?.(tableScreenPosition);
           lastAdventureTableScreenPositionAt = frameTime;
         }
+        if (options.onWorldNpcScreenPositionChange && frameTime - lastWorldNpcScreenPositionAt >= 50) {
+          camera.updateMatrixWorld();
+          options.onWorldNpcScreenPositionChange(
+            worldNpcSceneRuntime?.getNearbyScreenPosition(
+              { x: playerRoot.position.x, z: playerRoot.position.z },
+              camera,
+              options.canvas,
+            ) ?? null,
+          );
+          lastWorldNpcScreenPositionAt = frameTime;
+        }
         if (options.onForestValleyGateScreenPositionChange && frameTime - lastForestValleyGateScreenPositionAt >= 50) {
           camera.updateMatrixWorld();
           const viewport = options.canvas.getBoundingClientRect();
@@ -3370,6 +3967,24 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             : null;
           options.onCloudWorkshopGateScreenPositionChange(cloudWorkshopGateScreenPosition);
           lastCloudWorkshopGateScreenPositionAt = frameTime;
+        }
+        if (options.onTideglowGateScreenPositionChange && frameTime - lastTideglowGateScreenPositionAt >= 50) {
+          camera.updateMatrixWorld();
+          const viewport = options.canvas.getBoundingClientRect();
+          tideglowGateScreenPosition = tideglowGateNearby
+            ? getTideglowGateScreenPosition(viewport) ?? null
+            : null;
+          options.onTideglowGateScreenPositionChange(tideglowGateScreenPosition);
+          lastTideglowGateScreenPositionAt = frameTime;
+        }
+        if (options.onStarSandWastelandGateScreenPositionChange && frameTime - lastStarSandWastelandGateScreenPositionAt >= 50) {
+          camera.updateMatrixWorld();
+          const viewport = options.canvas.getBoundingClientRect();
+          starSandWastelandGateScreenPosition = starSandWastelandGateNearby
+            ? getStarSandWastelandGateScreenPosition(viewport) ?? null
+            : null;
+          options.onStarSandWastelandGateScreenPositionChange(starSandWastelandGateScreenPosition);
+          lastStarSandWastelandGateScreenPositionAt = frameTime;
         }
         if (options.onAvatarScreenPositionsChange && frameTime - lastAvatarScreenPositionsAt >= 50) {
           camera.updateMatrixWorld();
@@ -3424,6 +4039,11 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     update: (next) => {
       latestRuntimeUpdate = next;
       updateScene(next);
+    },
+    setDialogueOpen: (npcId, open) => {
+      dialogueNpcId = npcId;
+      dialogueOpen = open;
+      worldNpcSceneRuntime?.setDialogueOpen(npcId, open);
     },
     optimisticallySetPetIdle: (selection) => {
       optimisticPetIdles.set(selection.inventoryItemId, selection);

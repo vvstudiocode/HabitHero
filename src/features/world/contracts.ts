@@ -1,4 +1,5 @@
 import type { WorldTransform } from './world-collision';
+import type { WorldSceneId } from './world-scene-content';
 
 export type { WorldTransform } from './world-collision';
 
@@ -16,6 +17,10 @@ export interface GameCatalogItem {
   thumbnailUrl: string | null;
   isActive: boolean;
   isStarter: boolean;
+  /** New-child selector gate; absent on pre-migration catalog snapshots. */
+  isChildCreationSelectable?: boolean;
+  /** Acquisition gate; absent means the legacy catalog behavior is retained. */
+  isNewlyObtainable?: boolean;
   isStackable: boolean;
   collisionRadius: number;
   minScale: number;
@@ -31,6 +36,62 @@ export interface ChildInventoryItem {
   acquiredVia: 'starter' | 'purchase' | 'grant';
   acquiredAt: string;
   displayName?: string | null;
+  sourceSceneId?: string | null;
+  sourceNpcId?: string | null;
+  sourceDialogueVersion?: number | null;
+}
+
+export interface WorldSceneUnlock {
+  familyId: string;
+  childProfileId: string;
+  sceneId: string;
+  unlockRuleVersion: number;
+  unlockedAt: string;
+}
+
+export interface WorldNpcDialogueProgress {
+  familyId: string;
+  childProfileId: string;
+  npcId: string;
+  dialogueVersion: number;
+  firstTalkedAt: string;
+  lastTalkedAt: string;
+}
+
+export interface WorldSceneSummary {
+  id: WorldSceneId;
+  name: string;
+  sortOrder: number;
+  requiredCompletedCount: number;
+  requiredGeneralCount: number;
+  unlockRuleVersion: number;
+  isActive: boolean;
+}
+
+export interface WorldNpcSummary {
+  id: string;
+  sceneId: WorldSceneId;
+  npcType: 'character_vendor' | 'roaming_pet';
+  name: string;
+  assetKey: string;
+  catalogItemId: string | null;
+  position: { x: number; y: number; z: number };
+  behaviorMode: 'dance_anchor' | 'roaming';
+  animationName: string;
+  roamBounds: Record<string, number> | null;
+  isActive: boolean;
+}
+
+export interface WorldNpcOffering {
+  sceneId: WorldSceneId;
+  sceneName: string;
+  npcId: string;
+  npcName: string;
+  catalogItemId: string;
+  sortOrder: number;
+  dialogueVersion: number;
+  isPrimarySource: boolean;
+  isActive: boolean;
 }
 
 export interface ChildWorldEntity extends WorldTransform {
@@ -67,6 +128,13 @@ export interface ChildGameData {
   } | null;
   worldEntities: ChildWorldEntity[];
   worldRevision: number;
+  /** Present only after the server-backed scene tables hydrate successfully. */
+  worldSceneDataStatus?: 'ready';
+  worldScenes?: WorldSceneSummary[];
+  worldNpcs?: WorldNpcSummary[];
+  worldNpcOfferings?: WorldNpcOffering[];
+  sceneUnlocks?: WorldSceneUnlock[];
+  npcDialogueProgress?: WorldNpcDialogueProgress[];
 }
 
 export interface GamePurchaseResult {
@@ -74,6 +142,9 @@ export interface GamePurchaseResult {
   inventoryItemId: string;
   walletBalance: number;
   quantity: number;
+  sourceSceneId?: string | null;
+  sourceNpcId?: string | null;
+  sourceDialogueVersion?: number | null;
 }
 
 export interface WorldMutationResult {
