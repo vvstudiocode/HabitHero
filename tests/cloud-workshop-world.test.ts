@@ -181,7 +181,7 @@ describe('Cloud Workshop authored world', () => {
 
     assert.doesNotMatch(runtime, /cloudWorkshopSource \? \{ preserveGroundModulePosition: true \}/);
     assert.match(runtime, /CLOUD_WORKSHOP_GROUND_Y/);
-    assert.match(runtime, /getAuthoredSceneSurfaceY/);
+    assert.match(runtime, /createAuthoredSceneSurfaceSampler/);
   });
 
   it('keeps authored dock height editable instead of overriding it during grounding', () => {

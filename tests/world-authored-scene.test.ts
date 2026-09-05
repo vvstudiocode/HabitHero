@@ -8,6 +8,7 @@ import {
   getAuthoredSceneModule,
   getAuthoredSceneSurfaceY,
   hasAuthoredSceneSurface,
+  createAuthoredSceneSurfaceSampler,
   alignAuthoredSceneToGround,
 } from '../src/features/world/world-authored-scene';
 
@@ -95,6 +96,45 @@ describe('authored world spawn', () => {
 
     assert.equal(hasAuthoredSceneSurface(THREE, source, 'cloud-ground-1', 0, 0), true);
     assert.equal(hasAuthoredSceneSurface(THREE, source, 'cloud-ground-1', 99, 99), false);
+  });
+
+  it('builds a reusable BVH sampler and deduplicates an exact repeated ground query', () => {
+    const source = new THREE.Group();
+    const ground = new THREE.Group();
+    const groundMesh = new THREE.Mesh(new THREE.BoxGeometry(20, 1, 20));
+    groundMesh.position.y = -0.5;
+    ground.userData.authoredWorldModule = 'cloud-ground-1';
+    ground.add(groundMesh);
+    source.add(ground);
+
+    let sourceMatrixUpdates = 0;
+    const originalUpdateMatrixWorld = source.updateMatrixWorld.bind(source);
+    source.updateMatrixWorld = ((force?: boolean) => {
+      sourceMatrixUpdates += 1;
+      return originalUpdateMatrixWorld(force);
+    }) as typeof source.updateMatrixWorld;
+
+    const originalMeshRaycast = groundMesh.raycast;
+    const sampler = createAuthoredSceneSurfaceSampler(THREE, source, 'cloud-ground-1');
+    const setupMatrixUpdates = sourceMatrixUpdates;
+    assert.ok(groundMesh.geometry.boundsTree);
+
+    const acceleratedRaycast = groundMesh.raycast;
+    let raycastCalls = 0;
+    groundMesh.raycast = function (this: THREE.Mesh, raycaster, intersections) {
+      raycastCalls += 1;
+      return acceleratedRaycast.call(this, raycaster, intersections);
+    };
+
+    assert.equal(sampler.sample(0, 0), 0);
+    assert.equal(sampler.sample(0, 0), 0);
+    assert.equal(raycastCalls, 1);
+    assert.equal(sourceMatrixUpdates, setupMatrixUpdates);
+
+    sampler.dispose();
+    assert.equal(sampler.sample(0, 0), undefined);
+    assert.equal(groundMesh.geometry.boundsTree, null);
+    assert.equal(groundMesh.raycast, originalMeshRaycast);
   });
 
   it('honors per-module collision flags and shrinks the central tree footprint', () => {

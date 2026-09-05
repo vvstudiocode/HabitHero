@@ -90,6 +90,7 @@ interface NpcActor {
   wanderState?: WanderState;
   paused: boolean;
   radius: number;
+  groundY: number;
   groundOffset: number;
   movementSpeedMultiplier: number;
   waitingForDanceCompletion: boolean;
@@ -198,14 +199,17 @@ function groundNpcCharacter(
   actor: NpcActor,
 ): void {
   const groundOffset = options.getNpcGroundOffset?.(actor.npc) ?? 0;
+  const terrainGroundY = isWorldNpcRoamingPet(actor.npc)
+    ? options.getNpcGroundY?.({
+      x: actor.object.position.x,
+      z: actor.object.position.z,
+    }) ?? options.groundY
+    : actor.groundY;
   groundWorldCharacter(options.THREE, {
     root: actor.object,
     model: actor.model,
     footNodes: actor.footNodes,
-    groundY: (options.getNpcGroundY?.({
-      x: actor.object.position.x,
-      z: actor.object.position.z,
-    }) ?? options.groundY) + groundOffset,
+    groundY: terrainGroundY + groundOffset,
   });
 }
 
@@ -251,11 +255,15 @@ async function createNpcActor(
     ? options.characterHeight
     : options.characterHeight * 0.42;
   const npcGroundOffset = options.getNpcGroundOffset?.(npc) ?? 0;
+  const getGroundY = (position: { x: number; z: number }) => (
+    options.getNpcGroundY?.(position) ?? options.groundY
+  );
+  const npcGroundY = getGroundY({ x: npc.position.x, z: npc.position.z });
   const mount = mountWorldCharacterModel(THREE, {
     root: object,
     model,
     targetHeight,
-    groundY: (options.getNpcGroundY?.({ x: npc.position.x, z: npc.position.z }) ?? options.groundY) + npcGroundOffset,
+    groundY: npcGroundY + npcGroundOffset,
   });
   const petPresentation = isPet && catalogItem
     ? options.getPetPresentation?.(catalogItem, mount.definition)
@@ -263,7 +271,7 @@ async function createNpcActor(
   const visualScale = petPresentation?.modelScale ?? mount.scale;
   if (petPresentation) {
     object.scale.setScalar(visualScale);
-    object.position.y = (options.getNpcGroundY?.({ x: npc.position.x, z: npc.position.z }) ?? options.groundY) + npcGroundOffset
+    object.position.y = npcGroundY + npcGroundOffset
       + petPresentation.groundOffset;
   }
   object.userData.worldNpcId = npc.id;
@@ -302,8 +310,10 @@ async function createNpcActor(
   const initialPosition = findWorldNpcPetSpawnPosition(options, npc, radius);
   object.position.x = initialPosition.x;
   object.position.z = initialPosition.z;
+  const initialPositionChanged = initialPosition.x !== npc.position.x || initialPosition.z !== npc.position.z;
+  const initialGroundY = isPet || initialPositionChanged ? getGroundY(initialPosition) : npcGroundY;
   if (petPresentation) {
-    object.position.y = (options.getNpcGroundY?.(initialPosition) ?? options.groundY) + npcGroundOffset + petPresentation.groundOffset;
+    object.position.y = initialGroundY + npcGroundOffset + petPresentation.groundOffset;
   }
   return {
     npc,
@@ -319,6 +329,7 @@ async function createNpcActor(
       : undefined,
     paused: false,
     radius,
+    groundY: initialGroundY,
     groundOffset: petPresentation?.groundOffset ?? 0,
     movementSpeedMultiplier,
     waitingForDanceCompletion: false,
@@ -432,7 +443,8 @@ export async function createWorldNpcSceneRuntime(
         const isWalking = step.walking && !step.blocked && moved > 0.0001;
         actor.object.position.x = next.x;
         actor.object.position.z = next.z;
-        actor.object.position.y = (options.getNpcGroundY?.(next) ?? options.groundY) + actor.groundOffset;
+        actor.groundY = options.getNpcGroundY?.(next) ?? options.groundY;
+        actor.object.position.y = actor.groundY + actor.groundOffset;
         if (!isWalking && moved <= 0.0001 && (step.next.x !== current.x || step.next.z !== current.z)) {
           actor.wanderState.explorationTarget = null;
           actor.wanderState.nextExploreAt = now;

@@ -209,12 +209,12 @@ import {
 } from './world-location';
 import {
   alignAuthoredSceneToGround,
+  createAuthoredSceneSurfaceSampler,
   getAuthoredSceneModule,
   getAuthoredSceneCollisionProxies,
   getAuthoredSceneRadialBoundary,
-  getAuthoredSceneSurfaceY,
   getAuthoredSceneSpawnPosition,
-  hasAuthoredSceneSurface,
+  type AuthoredSceneSurfaceSampler,
 } from './world-authored-scene';
 import { updateDecorationGroundCoverMasks } from './world-decoration-ground-cover';
 import { addDecorationPointLight, setDecorationObjectScale } from './world-decoration-effects';
@@ -942,6 +942,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
   let renderer: { dispose: () => void } | undefined;
   let scene: DisposableScene | undefined;
   let worldNpcSceneRuntime: WorldNpcSceneRuntime | undefined;
+  let authoredSceneSurfaceSampler: AuthoredSceneSurfaceSampler | undefined;
   let remoteAvatarRuntime: ReturnType<typeof createRemoteAvatarRuntimeManager> | undefined;
   let loadingAbortController: AbortController | undefined;
   let removeListeners: (() => void) | undefined;
@@ -1008,6 +1009,8 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
     remoteAvatarRuntime?.dispose();
     remoteAvatarRuntime = undefined;
     worldNpcSceneRuntime = undefined;
+    authoredSceneSurfaceSampler?.dispose();
+    authoredSceneSurfaceSampler = undefined;
     window.cancelAnimationFrame(animationFrame);
     if (pausedTimer !== undefined) window.clearTimeout(pausedTimer);
     removeListeners?.();
@@ -1865,6 +1868,21 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           starSandWastelandGateObject = getAuthoredSceneModule(starSandWastelandSource, STAR_SAND_WASTELAND_GATE_MODULE_ID);
         }
       }
+      const authoredVillageSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource ?? tideglowArchipelagoSource ?? starSandWastelandSource;
+      const authoredVillageGroundModuleKey = cloudWorkshopSource ? CLOUD_WORKSHOP_GROUND_MODULE_KEY : 'island';
+      if (authoredVillageSource) {
+        authoredSceneSurfaceSampler = createAuthoredSceneSurfaceSampler(
+          THREE,
+          authoredVillageSource,
+          authoredVillageGroundModuleKey,
+        );
+      }
+      const sampleAuthoredVillageSurface = (position: WorldPoint2D) => (
+        authoredSceneSurfaceSampler?.sample(position.x, position.z)
+      );
+      const hasAuthoredVillageSurface = (position: WorldPoint2D) => (
+        sampleAuthoredVillageSurface(position) !== undefined
+      );
       if (sunriseForestValleyGateSource) {
         forestValleyGateObject = new THREE.Group();
         forestValleyGateObject.name = 'forest-valley-entry-gate';
@@ -2038,13 +2056,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           x: roamingActor.object.position.x,
           z: roamingActor.object.position.z,
         };
-        if (cloudWorkshopSource && !hasAuthoredSceneSurface(
-          THREE,
-          cloudWorkshopSource,
-          CLOUD_WORKSHOP_GROUND_MODULE_KEY,
-          currentPosition.x,
-          currentPosition.z,
-        )) {
+        if (cloudWorkshopSource && !hasAuthoredVillageSurface(currentPosition)) {
           // The generic roaming boundary can reach empty sky in the authored
           // workshop. Recover to the player's visible ground instead of
           // leaving the Star Sprout suspended over the scene.
@@ -2055,13 +2067,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             z: roamingActor.object.position.z,
           };
         }
-        if (starSandWastelandSource && !hasAuthoredSceneSurface(
-          THREE,
-          starSandWastelandSource,
-          'island',
-          currentPosition.x,
-          currentPosition.z,
-        )) {
+        if (starSandWastelandSource && !hasAuthoredVillageSurface(currentPosition)) {
           roamingActor.object.position.x = playerRoot.position.x;
           roamingActor.object.position.z = playerRoot.position.z;
           currentPosition = {
@@ -2084,27 +2090,15 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         const roamingBounds = new THREE.Box3().setFromObject(roamingActor.model);
         const footYs = roamingActor.footNodes.map((node) => node.getWorldPosition(new THREE.Vector3()).y);
         const referenceY = getCharacterGroundingReferenceY(roamingBounds.min.y, footYs);
-        const groundY = cloudWorkshopSource
-          ? getAuthoredSceneSurfaceY(
-            THREE,
-            cloudWorkshopSource,
-            CLOUD_WORKSHOP_GROUND_MODULE_KEY,
-            roamingActor.object.position.x,
-            roamingActor.object.position.z,
-            getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y),
-          )
-          : starSandWastelandSource
-            ? getAuthoredSceneSurfaceY(
-              THREE,
-              starSandWastelandSource,
-              'island',
-              roamingActor.object.position.x,
-              roamingActor.object.position.z,
-              getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y),
-            )
-            : options.worldLocation === 'tideglow-archipelago'
-              ? worldGroundY + getTideglowSurfaceAt(currentPosition.x, currentPosition.z).elevation
-              : getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y);
+        const roamingFallbackGroundY = getRoamingWorldBaseY(options.worldLocation, worldGroundY, playerRoot.position.y);
+        const groundY = cloudWorkshopSource || starSandWastelandSource
+          ? sampleAuthoredVillageSurface({
+            x: roamingActor.object.position.x,
+            z: roamingActor.object.position.z,
+          }) ?? roamingFallbackGroundY
+          : options.worldLocation === 'tideglow-archipelago'
+            ? worldGroundY + getTideglowSurfaceAt(currentPosition.x, currentPosition.z).elevation
+            : roamingFallbackGroundY;
         roamingActor.object.position.y = getGroundedRootY(
           roamingActor.object.position.y,
           referenceY,
@@ -2199,7 +2193,6 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const adventureTableCollision = sunriseVillageSource || forestValleySource ? undefined : buildCollisionCircles([
         getAdventureTableCollisionInput(adventureTableTransform, adventureTableItem),
       ])[0];
-      const authoredVillageSource = sunriseVillageSource ?? forestValleySource ?? cloudWorkshopSource ?? tideglowArchipelagoSource ?? starSandWastelandSource;
       const authoredVillageCollisions = authoredVillageSource
         ? getAuthoredSceneCollisionProxies(THREE, authoredVillageSource)
         : [];
@@ -2207,13 +2200,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         ? getAuthoredSceneRadialBoundary(
           THREE,
           authoredVillageSource,
-          cloudWorkshopSource
-            ? CLOUD_WORKSHOP_GROUND_MODULE_KEY
-            : tideglowArchipelagoSource
-              ? 'island'
-              : starSandWastelandSource
-                ? 'island'
-                : undefined,
+          authoredVillageGroundModuleKey,
           options.worldLocation === 'forest-valley'
             ? FOREST_VALLEY_ISLAND_HORIZONTAL_SCALE_FACTOR
             : 1,
@@ -2250,14 +2237,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           options.entryPosition ?? CLOUD_WORKSHOP_SPAWN_ANCHOR,
         );
         if (authoredSpawn) playerRoot.position.set(authoredSpawn.x, 0, authoredSpawn.z);
-        playerRoot.position.y = getAuthoredSceneSurfaceY(
-          THREE,
-          cloudWorkshopSource,
-          CLOUD_WORKSHOP_GROUND_MODULE_KEY,
-          playerRoot.position.x,
-          playerRoot.position.z,
-          worldGroundY,
-        ) - worldGroundY;
+        playerRoot.position.y = (sampleAuthoredVillageSurface({
+          x: playerRoot.position.x,
+          z: playerRoot.position.z,
+        }) ?? worldGroundY) - worldGroundY;
         groundCharacterOnGrass();
       }
       if (options.worldLocation === 'tideglow-archipelago' && tideglowArchipelagoSource) {
@@ -2279,14 +2262,10 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
           options.entryPosition ?? STAR_SAND_WASTELAND_SPAWN_ANCHOR,
         );
         if (authoredSpawn) playerRoot.position.set(authoredSpawn.x, 0, authoredSpawn.z);
-        playerRoot.position.y = getAuthoredSceneSurfaceY(
-          THREE,
-          starSandWastelandSource,
-          'island',
-          playerRoot.position.x,
-          playerRoot.position.z,
-          worldGroundY,
-        ) - worldGroundY;
+        playerRoot.position.y = (sampleAuthoredVillageSurface({
+          x: playerRoot.position.x,
+          z: playerRoot.position.z,
+        }) ?? worldGroundY) - worldGroundY;
         groundCharacterOnGrass();
       }
       let lastReportedPlayerPosition: WorldPoint2D | null = null;
@@ -2333,15 +2312,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const getRuntimeNpcGroundY = (position: WorldPoint2D) => {
         const fallbackY = getRuntimePetBaseY(worldGroundY, 0, position);
         if (!authoredVillageSource) return fallbackY;
-        const groundModuleKey = cloudWorkshopSource ? CLOUD_WORKSHOP_GROUND_MODULE_KEY : 'island';
-        return getAuthoredSceneSurfaceY(
-          THREE,
-          authoredVillageSource,
-          groundModuleKey,
-          position.x,
-          position.z,
-          fallbackY,
-        );
+        return sampleAuthoredVillageSurface(position) ?? fallbackY;
       };
       const npcCharacterLoads = new Map<string, Promise<{ scene: Object3D; animations: AnimationClip[] } | undefined>>();
       const loadNpcCharacterModel = (assetKey: string) => {
@@ -2403,8 +2374,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
         isPetPositionWalkable: (position) => {
           if (options.worldLocation === 'tideglow-archipelago') return getTideglowSurfaceAt(position.x, position.z).walkable;
           if (!authoredVillageSource) return true;
-          const groundModuleKey = cloudWorkshopSource ? CLOUD_WORKSHOP_GROUND_MODULE_KEY : 'island';
-          return hasAuthoredSceneSurface(THREE, authoredVillageSource, groundModuleKey, position.x, position.z);
+          return hasAuthoredVillageSurface(position);
         },
       });
       worldNpcSceneRuntime.setDialogueOpen(dialogueNpcId, dialogueOpen);
@@ -3724,13 +3694,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
             roamingActor.wanderState,
             now,
           );
-          const nextPosition = cloudWorkshopSource && !hasAuthoredSceneSurface(
-            THREE,
-            cloudWorkshopSource,
-            CLOUD_WORKSHOP_GROUND_MODULE_KEY,
-            step.next.x,
-            step.next.z,
-          )
+          const nextPosition = cloudWorkshopSource && !hasAuthoredVillageSurface(step.next)
             ? current
             : step.next;
           const isWalking = step.walking && !step.blocked

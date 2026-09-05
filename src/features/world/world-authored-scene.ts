@@ -1,5 +1,12 @@
 import type { Object3D } from 'three';
 import { circlesOverlap, type CollisionCircle, type RadialWorldBoundary, type WorldPoint2D } from './world-collision';
+import { getAuthoredSceneModule } from './world-authored-scene-sampler';
+
+export {
+  createAuthoredSceneSurfaceSampler,
+  getAuthoredSceneModule,
+} from './world-authored-scene-sampler';
+export type { AuthoredSceneSurfaceSampler } from './world-authored-scene-sampler';
 
 type ThreeNamespace = typeof import('three');
 
@@ -12,13 +19,6 @@ const AUTHORED_SPAWN_GRID_STEP = 1.25;
 const AUTHORED_BOUNDARY_BUCKETS = 72;
 const AUTHORED_BOUNDARY_EDGE_MARGIN = 0.55;
 const AUTHORED_SCENE_GROUND_CLEARANCE = 0.06;
-
-export function getAuthoredSceneModule(source: Object3D, moduleKey: string): Object3D | undefined {
-  return source.children.find((child) => (
-    child.userData.sunriseVillageModule === moduleKey
-    || child.userData.authoredWorldModule === moduleKey
-  ));
-}
 
 /**
  * Read the authored surface below a world-space X/Z position. Authored

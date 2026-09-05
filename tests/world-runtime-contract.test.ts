@@ -41,6 +41,21 @@ const boundaryScenerySource = read('../terrain-prototype/natural-boundary-scener
 const eastFairytaleSource = read('../terrain-prototype/east-fairytale-scenery.js');
 
 describe('prototype world runtime contracts', () => {
+  it('routes authored ground checks through one reusable sampler and disposes it with the world', () => {
+    assert.match(runtimeSource, /createAuthoredSceneSurfaceSampler\(/);
+    assert.match(runtimeSource, /authoredSceneSurfaceSampler\s*=\s*createAuthoredSceneSurfaceSampler/);
+    assert.match(runtimeSource, /authoredSceneSurfaceSampler\?\.dispose\(\)/);
+    assert.doesNotMatch(runtimeSource, /getAuthoredSceneSurfaceY\(/);
+    assert.doesNotMatch(runtimeSource, /hasAuthoredSceneSurface\(/);
+  });
+
+  it('keeps vendor animation grounding while using a cached terrain height', () => {
+    assert.match(npcRuntimeSource, /groundY:\s*number;/);
+    assert.match(npcRuntimeSource, /isWorldNpcRoamingPet\(actor\.npc\)[\s\S]*?actor\.groundY/);
+    assert.match(npcRuntimeSource, /groundWorldCharacter\(options\.THREE/);
+    assert.match(runtimeSource, /sampleAuthoredVillageSurface\(position\) !== undefined/);
+  });
+
   it('keeps the original outer grass density budgets while retaining quality scaling', () => {
     assert.equal(getWorldQuality({ prefersReducedMotion: false, deviceMemory: 8, hardwareConcurrency: 8 }), 'high');
     assert.equal(getWorldQuality({ prefersReducedMotion: true, deviceMemory: 8, hardwareConcurrency: 8 }), 'low');
@@ -341,7 +356,8 @@ describe('prototype world runtime contracts', () => {
     assert.match(runtimeSource, /isPetPositionWalkable: \(position\) =>/);
     assert.match(npcRuntimeSource, /findWorldNpcPetSpawnPosition\(options, npc, radius\)/);
     assert.match(npcRuntimeSource, /getWanderStep\([\s\S]*?options\.walkableBoundary,[\s\S]*?options\.walkableRadialBoundary/);
-    assert.match(npcRuntimeSource, /actor\.object\.position\.y = \(options\.getNpcGroundY\?\.\(next\)/);
+    assert.match(npcRuntimeSource, /actor\.groundY = options\.getNpcGroundY\?\.\(next\)/);
+    assert.match(npcRuntimeSource, /actor\.object\.position\.y = actor\.groundY \+ actor\.groundOffset/);
     assert.match(npcRuntimeSource, /PET_WANDER_SPEED \* actor\.movementSpeedMultiplier/);
     assert.doesNotMatch(npcRuntimeSource, /0\.22 \* \(reducedMotion \? 0\.45 : 1\)/);
     assert.match(npcRuntimeSource, /nextAnimation\.crossFadeFrom\(actor\.activeAction, 0\.16, false\)/);
