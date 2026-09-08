@@ -18,6 +18,7 @@ namespace HabitHero.App
         private GameObject taskListObject;
         private HabitHeroParentTaskCreateView taskCreateView;
         private HabitHeroParentTaskManagementView taskManagementView;
+        private HabitHeroParentTaskTemplateView taskTemplateView;
         private HabitHeroParentGeneralAdventureCreateView generalAdventureCreateView;
         private HabitHeroParentAdventureScheduleView adventureScheduleView;
         private HabitHeroParentRewardManagementView rewardManagementView;
@@ -60,6 +61,16 @@ namespace HabitHero.App
             SupabaseParentTaskUpdateInput,
             Task<SupabaseParentTaskMutationResult>> updateTask;
         private Func<string, Task<SupabaseParentTaskMutationResult>> deleteTask;
+        private Func<
+            SupabaseParentTaskTemplateCreateInput,
+            Task<SupabaseParentTaskTemplateMutationResult>> createTaskTemplate;
+        private Func<
+            string,
+            SupabaseParentTaskTemplateUpdateInput,
+            Task<SupabaseParentTaskTemplateMutationResult>> updateTaskTemplate;
+        private Func<
+            string,
+            Task<SupabaseParentTaskTemplateMutationResult>> deleteTaskTemplate;
         private Func<
             SupabaseParentGeneralAdventureCreateInput,
             Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure;
@@ -131,6 +142,16 @@ namespace HabitHero.App
                 Task<SupabaseParentTaskMutationResult>> updateTask,
             Func<string, Task<SupabaseParentTaskMutationResult>> deleteTask,
             Func<
+                SupabaseParentTaskTemplateCreateInput,
+                Task<SupabaseParentTaskTemplateMutationResult>> createTaskTemplate,
+            Func<
+                string,
+                SupabaseParentTaskTemplateUpdateInput,
+                Task<SupabaseParentTaskTemplateMutationResult>> updateTaskTemplate,
+            Func<
+                string,
+                Task<SupabaseParentTaskTemplateMutationResult>> deleteTaskTemplate,
+            Func<
                 SupabaseParentGeneralAdventureCreateInput,
                 Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure,
             Func<Task<SupabaseParentAdventureScheduleRecord[]>> loadAdventureSchedules,
@@ -174,6 +195,9 @@ namespace HabitHero.App
             this.createTask = createTask;
             this.updateTask = updateTask;
             this.deleteTask = deleteTask;
+            this.createTaskTemplate = createTaskTemplate;
+            this.updateTaskTemplate = updateTaskTemplate;
+            this.deleteTaskTemplate = deleteTaskTemplate;
             this.createGeneralAdventure = createGeneralAdventure;
             this.loadAdventureSchedules = loadAdventureSchedules;
             this.createAdventureSchedule = createAdventureSchedule;
@@ -284,13 +308,20 @@ namespace HabitHero.App
                 font,
                 "建立孩子任務",
                 new Vector2(0.08f, 0.63f),
-                new Vector2(0.49f, 0.69f));
+                new Vector2(0.35f, 0.69f));
             createTaskButton.onClick.AddListener(OpenTaskCreatePanel);
+            Button templateButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "任務模板",
+                new Vector2(0.37f, 0.63f),
+                new Vector2(0.63f, 0.69f));
+            templateButton.onClick.AddListener(OpenTaskTemplatePanel);
             Button createAdventureButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "建立冒險",
-                new Vector2(0.51f, 0.63f),
+                new Vector2(0.65f, 0.63f),
                 new Vector2(0.92f, 0.69f));
             createAdventureButton.onClick.AddListener(OpenGeneralAdventurePanel);
             Button rewardButton = HabitHeroUiFactory.CreateButton(
@@ -333,6 +364,9 @@ namespace HabitHero.App
             createTask = null;
             updateTask = null;
             deleteTask = null;
+            createTaskTemplate = null;
+            updateTaskTemplate = null;
+            deleteTaskTemplate = null;
             createGeneralAdventure = null;
             loadAdventureSchedules = null;
             createAdventureSchedule = null;
@@ -358,6 +392,7 @@ namespace HabitHero.App
             CloseRewardPanel();
             CloseTaskCreatePanel();
             CloseTaskManagementPanel();
+            CloseTaskTemplatePanel();
             CloseGeneralAdventurePanel();
             CloseAdventureSchedulePanel();
             CloseRewardManagementPanel();
@@ -374,6 +409,10 @@ namespace HabitHero.App
         public void ApplySnapshot(SupabaseParentHomeSnapshot snapshot)
         {
             if (snapshot == null || panel == null) return;
+            if (snapshot.taskTemplates == null && latestSnapshot != null)
+            {
+                snapshot.taskTemplates = latestSnapshot.taskTemplates;
+            }
             latestSnapshot = snapshot;
             RenderSnapshot(snapshot);
             if (childPreviewView != null)
@@ -383,6 +422,10 @@ namespace HabitHero.App
             if (taskManagementView != null)
             {
                 taskManagementView.ApplySnapshot(snapshot);
+            }
+            if (taskTemplateView != null)
+            {
+                taskTemplateView.ApplySnapshot(snapshot);
             }
             SetStatus("家庭資料、待審任務與點數已更新。", false);
         }
@@ -598,6 +641,7 @@ namespace HabitHero.App
             }
 
             CloseTaskManagementPanel();
+            CloseTaskTemplatePanel();
             if (taskCreateView == null)
             {
                 taskCreateView = new HabitHeroParentTaskCreateView(canvasTransform, font);
@@ -623,6 +667,7 @@ namespace HabitHero.App
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
             CloseTaskCreatePanel();
+            CloseTaskTemplatePanel();
             CloseGeneralAdventurePanel();
             CloseAdventureSchedulePanel();
             CloseRewardManagementPanel();
@@ -643,6 +688,47 @@ namespace HabitHero.App
                 ApplySnapshot,
                 SetStatus,
                 CloseTaskManagementPanel);
+        }
+
+        private void OpenTaskTemplatePanel()
+        {
+            if (latestSnapshot == null
+                || createTaskTemplate == null
+                || updateTaskTemplate == null
+                || deleteTaskTemplate == null
+                || createTask == null)
+            {
+                SetStatus("任務模板尚未連線。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseWishlistApprovalPanel();
+            CloseRewardPanel();
+            CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
+            CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            CloseChildPreviewPanel();
+            if (taskTemplateView == null)
+            {
+                taskTemplateView = new HabitHeroParentTaskTemplateView(
+                    canvasTransform,
+                    font);
+            }
+
+            taskTemplateView.Show(
+                latestSnapshot,
+                createTaskTemplate,
+                updateTaskTemplate,
+                deleteTaskTemplate,
+                createTask,
+                ApplySnapshot,
+                SetStatus,
+                CloseTaskTemplatePanel);
         }
 
         private void OpenGeneralAdventurePanel()
@@ -1243,6 +1329,13 @@ namespace HabitHero.App
             if (taskManagementView == null) return;
             taskManagementView.Dispose();
             taskManagementView = null;
+        }
+
+        private void CloseTaskTemplatePanel()
+        {
+            if (taskTemplateView == null) return;
+            taskTemplateView.Dispose();
+            taskTemplateView = null;
         }
 
         private void CloseGeneralAdventurePanel()

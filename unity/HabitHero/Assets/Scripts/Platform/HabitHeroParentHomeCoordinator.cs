@@ -49,6 +49,9 @@ namespace HabitHero.App
                 SupabaseParentHomeSnapshot snapshot =
                     await client.LoadAsync(cancellationToken);
                 activeFamilyId = snapshot.familyId;
+                snapshot.taskTemplates = await client.LoadTaskTemplatesAsync(
+                    snapshot.familyId,
+                    cancellationToken);
                 if (view == null)
                 {
                     view = new HabitHeroParentHomeView(canvasTransform, font);
@@ -86,6 +89,19 @@ namespace HabitHero.App
                     (taskId) => client.DeleteTaskAndRefreshAsync(
                         snapshot.familyId,
                         taskId,
+                        cancellationToken),
+                    (input) => client.CreateTaskTemplateAndRefreshAsync(
+                        snapshot.familyId,
+                        input,
+                        cancellationToken),
+                    (templateId, input) => client.UpdateTaskTemplateAndRefreshAsync(
+                        snapshot.familyId,
+                        templateId,
+                        input,
+                        cancellationToken),
+                    (templateId) => client.DeleteTaskTemplateAndRefreshAsync(
+                        snapshot.familyId,
+                        templateId,
                         cancellationToken),
                     (input) => client.CreateGeneralAdventureAndRefreshAsync(
                         snapshot.familyId,
