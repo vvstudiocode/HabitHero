@@ -35,6 +35,8 @@ namespace HabitHero.App
             new List<HabitHeroWorldPetActor>();
         private readonly List<HabitHeroWorldLabelBinding> worldLabelBindings =
             new List<HabitHeroWorldLabelBinding>();
+        private readonly List<HabitHeroWorldShadowBinding> worldShadowBindings =
+            new List<HabitHeroWorldShadowBinding>();
         private Text sceneStatus;
         private SupabaseChildWorldData latestData;
         private SupabaseChildGameData latestGameData;
@@ -53,6 +55,9 @@ namespace HabitHero.App
             new Dictionary<string, Task<GltfImport>>(StringComparer.Ordinal);
         private CancellationTokenSource modelLoadingCancellation;
         private CancellationTokenSource worldMusicCancellation;
+        private readonly List<Texture2D> runtimeTextures = new List<Texture2D>();
+        private Material worldShadowMaterial;
+        private HabitHeroWorldShadowBinding playerShadow;
 
         private sealed class HabitHeroWorldPetActor
         {
@@ -65,6 +70,7 @@ namespace HabitHero.App
             public HabitHeroPetMotionState motionState;
             public SupabaseGameWorldRoamBoundsRecord roamBounds;
             public HabitHeroWorldLabelBinding label;
+            public HabitHeroWorldShadowBinding shadow;
 
             public Transform VisualRoot
             {
@@ -93,6 +99,23 @@ namespace HabitHero.App
                         toCamera,
                         Vector3.up);
                 }
+            }
+        }
+
+        private sealed class HabitHeroWorldShadowBinding
+        {
+            public GameObject shadowObject;
+            public Transform target;
+            public float groundY;
+
+            public void Update()
+            {
+                if (shadowObject == null || target == null) return;
+                Vector3 position = target.position;
+                shadowObject.transform.position = new Vector3(
+                    position.x,
+                    groundY + 0.015f,
+                    position.z);
             }
         }
 
@@ -148,6 +171,7 @@ namespace HabitHero.App
             UpdatePlayerFromJoystick(safeDelta);
             UpdatePetActors(safeDelta);
             UpdateWorldLabels();
+            UpdateWorldShadows();
             atmosphereRefreshTimer -= safeDelta;
             UpdateWorldAtmosphere(false);
         }
@@ -243,13 +267,18 @@ namespace HabitHero.App
                 spawnPosition + Vector3.up,
                 new Vector3(0.75f, 1f, 0.75f),
                 HabitHeroUiFactory.AccentColor);
+            playerShadow = CreateWorldShadowBinding(
+                player.transform,
+                spawnPosition.y,
+                0.72f,
+                0.42f);
             StartModelLoad(
                 player,
                 FindEquippedCharacterAssetKey(),
                 spawnPosition,
                 Vector3.zero,
                 1f,
-                animation => playerAnimation = animation);
+                AttachPlayerAnimation);
             UpdateWorldCamera();
             petActors.Clear();
             RenderNpcPlaceholders();
@@ -442,6 +471,11 @@ namespace HabitHero.App
                         placeholder.transform,
                         1.1f,
                         new Color(1f, 0.9f, 0.72f, 1f));
+                    actor.shadow = CreateWorldShadowBinding(
+                        placeholder.transform,
+                        npc.position_y,
+                        0.68f,
+                        0.38f);
                     petActors.Add(actor);
                     StartModelLoad(
                         placeholder,
@@ -459,6 +493,11 @@ namespace HabitHero.App
                         placeholder.transform,
                         1.55f,
                         Color.white);
+                    HabitHeroWorldShadowBinding npcShadow = CreateWorldShadowBinding(
+                        placeholder.transform,
+                        npc.position_y,
+                        0.72f,
+                        0.44f);
                     StartModelLoad(
                         placeholder,
                         npc.asset_key,
@@ -468,6 +507,7 @@ namespace HabitHero.App
                         animation =>
                         {
                             if (npcLabel != null) npcLabel.target = animation.transform;
+                            if (npcShadow != null) npcShadow.target = animation.transform;
                         });
                 }
             }
@@ -519,6 +559,11 @@ namespace HabitHero.App
                         placeholder.transform,
                         1.1f * Mathf.Clamp(visualScale, 0.5f, 2.5f),
                         new Color(1f, 0.9f, 0.72f, 1f));
+                    actor.shadow = CreateWorldShadowBinding(
+                        placeholder.transform,
+                        groundPosition.y,
+                        0.68f * Mathf.Clamp(visualScale, 0.5f, 2.5f),
+                        0.38f * Mathf.Clamp(visualScale, 0.5f, 2.5f));
                     petActors.Add(actor);
                     StartModelLoad(
                         placeholder,
@@ -646,6 +691,11 @@ namespace HabitHero.App
                     placeholder.transform,
                     1.1f * GetModelScaleMultiplier("pet", item.asset_key),
                     new Color(1f, 0.9f, 0.72f, 1f));
+                actor.shadow = CreateWorldShadowBinding(
+                    placeholder.transform,
+                    groundY,
+                    0.68f * GetModelScaleMultiplier("pet", item.asset_key),
+                    0.38f * GetModelScaleMultiplier("pet", item.asset_key));
                 petActors.Add(actor);
                 StartModelLoad(
                     placeholder,
@@ -665,6 +715,7 @@ namespace HabitHero.App
             if (actor == null || animation == null) return;
             actor.animation = animation;
             if (actor.label != null) actor.label.target = animation.transform;
+            if (actor.shadow != null) actor.shadow.target = animation.transform;
             if (actor.placeholder == null) return;
             Vector3 loadedPosition = animation.transform.position;
             Vector3 placeholderPosition = actor.placeholder.transform.position;
@@ -673,6 +724,15 @@ namespace HabitHero.App
                 loadedPosition.y,
                 placeholderPosition.z);
             animation.transform.rotation = actor.placeholder.transform.rotation;
+        }
+
+        private void AttachPlayerAnimation(HabitHeroWorldModelAnimation animation)
+        {
+            playerAnimation = animation;
+            if (animation != null && playerShadow != null)
+            {
+                playerShadow.target = animation.transform;
+            }
         }
 
         private void UpdatePetActors(float deltaSeconds)
@@ -918,6 +978,101 @@ namespace HabitHero.App
             {
                 if (binding != null) binding.Update(worldCamera);
             }
+        }
+
+        private void UpdateWorldShadows()
+        {
+            if (playerShadow != null) playerShadow.Update();
+            foreach (HabitHeroWorldShadowBinding binding in worldShadowBindings)
+            {
+                if (binding != null) binding.Update();
+            }
+        }
+
+        private HabitHeroWorldShadowBinding CreateWorldShadowBinding(
+            Transform target,
+            float groundY,
+            float width,
+            float depth)
+        {
+            if (target == null || worldRoot == null) return null;
+            EnsureWorldShadowMaterial();
+            if (worldShadowMaterial == null) return null;
+
+            GameObject shadowObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            shadowObject.name = "WorldGroundShadow";
+            shadowObject.transform.SetParent(worldRoot.transform, false);
+            shadowObject.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            shadowObject.transform.localScale = new Vector3(
+                Mathf.Max(0.1f, width),
+                Mathf.Max(0.06f, depth),
+                1f);
+            Renderer renderer = shadowObject.GetComponent<Renderer>();
+            if (renderer != null) renderer.sharedMaterial = worldShadowMaterial;
+            Collider collider = shadowObject.GetComponent<Collider>();
+            if (collider != null) UnityEngine.Object.Destroy(collider);
+
+            HabitHeroWorldShadowBinding binding = new HabitHeroWorldShadowBinding
+            {
+                shadowObject = shadowObject,
+                target = target,
+                groundY = groundY,
+            };
+            worldShadowBindings.Add(binding);
+            binding.Update();
+            return binding;
+        }
+
+        private void EnsureWorldShadowMaterial()
+        {
+            if (worldShadowMaterial != null) return;
+
+            Shader shader = Shader.Find("Unlit/Transparent")
+                ?? Shader.Find("Sprites/Default")
+                ?? Shader.Find("UI/Default")
+                ?? Shader.Find("Unlit/Color");
+            if (shader == null) return;
+
+            worldShadowMaterial = new Material(shader);
+            worldShadowMaterial.color = new Color(0.02f, 0.04f, 0.08f, 0.42f);
+            Texture2D texture = CreateWorldShadowTexture();
+            if (texture != null && worldShadowMaterial.HasProperty("_MainTex"))
+            {
+                worldShadowMaterial.mainTexture = texture;
+            }
+            runtimeMaterials.Add(worldShadowMaterial);
+        }
+
+        private Texture2D CreateWorldShadowTexture()
+        {
+            const int size = 32;
+            Texture2D texture = new Texture2D(
+                size,
+                size,
+                TextureFormat.RGBA32,
+                false,
+                true);
+            Color[] pixels = new Color[size * size];
+            for (int y = 0; y < size; y += 1)
+            {
+                for (int x = 0; x < size; x += 1)
+                {
+                    float normalizedX = (x + 0.5f) / size * 2f - 1f;
+                    float normalizedY = (y + 0.5f) / size * 2f - 1f;
+                    float distance = normalizedX * normalizedX
+                        + normalizedY * normalizedY;
+                    float alpha = Mathf.Clamp01(1f - distance);
+                    alpha *= alpha;
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            texture.Apply(false, true);
+            runtimeTextures.Add(texture);
+            return texture;
         }
 
         private GameObject CreateWorldEntityPlaceholder(
@@ -1950,6 +2105,13 @@ namespace HabitHero.App
             }
 
             runtimeMaterials.Clear();
+            foreach (Texture2D texture in runtimeTextures)
+            {
+                if (texture != null) UnityEngine.Object.Destroy(texture);
+            }
+
+            runtimeTextures.Clear();
+            worldShadowMaterial = null;
             worldCamera = null;
             worldCameraState = null;
             worldSun = null;
@@ -1967,6 +2129,8 @@ namespace HabitHero.App
             joystickDirection = Vector2.zero;
             petActors.Clear();
             worldLabelBindings.Clear();
+            worldShadowBindings.Clear();
+            playerShadow = null;
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             authoredCollisionProxyIndices.Clear();
             activeSceneProfile = null;
