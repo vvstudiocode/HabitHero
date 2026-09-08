@@ -328,7 +328,7 @@ describe('child game panel decoration editing', () => {
     assert.match(npcDialogueSource, /hh-world-npc-dialogue-panel--pet/);
     assert.match(npcDialogueSource, /hh-world-npc-pet-purchase/);
     assert.match(npcDialogueSource, /handlePetPurchase/);
-    assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(210px, \.9fr\)/);
+    assert.match(modalSourceForOverflow, /\.hh-game-item-lightbox-content\.hh-world-npc-dialogue-panel\.hh-world-npc-dialogue-panel--pet\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1\.15fr\) minmax\(230px, \.85fr\)/);
     assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet \.hh-game-item-lightbox-3d[\s\S]*?grid-column:\s*1/);
     assert.match(modalSourceForOverflow, /\.hh-world-npc-dialogue-panel--pet \.hh-game-item-lightbox-copy[\s\S]*?grid-column:\s*2/);
   });
