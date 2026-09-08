@@ -13,7 +13,8 @@ namespace HabitHero.App
         private GameObject gamePanel;
         private Text gameStatus;
         private SupabaseChildGameData latestData;
-        private Func<string, int, Task<SupabaseChildGameData>> purchaseGameItem;
+        private SupabaseChildWorldData latestWorldData;
+        private Func<string, int, string, Task<SupabaseChildGameData>> purchaseGameItem;
         private Func<string, Task<SupabaseChildGameData>> equipGameCharacter;
         private Func<string[], Task<SupabaseChildGameData>> setFollowingPets;
         private Func<string[], Task<SupabaseChildGameData>> setRoamingPets;
@@ -28,13 +29,15 @@ namespace HabitHero.App
 
         public void Show(
             SupabaseChildGameData data,
-            Func<string, int, Task<SupabaseChildGameData>> purchaseGameItem,
+            SupabaseChildWorldData worldData,
+            Func<string, int, string, Task<SupabaseChildGameData>> purchaseGameItem,
             Func<string, Task<SupabaseChildGameData>> equipGameCharacter,
             Func<string[], Task<SupabaseChildGameData>> setFollowingPets,
             Func<string[], Task<SupabaseChildGameData>> setRoamingPets)
         {
             Close();
             latestData = data;
+            latestWorldData = worldData;
             this.purchaseGameItem = purchaseGameItem;
             this.equipGameCharacter = equipGameCharacter;
             this.setFollowingPets = setFollowingPets;
@@ -161,6 +164,7 @@ namespace HabitHero.App
         {
             Close();
             latestData = null;
+            latestWorldData = null;
             purchaseGameItem = null;
             equipGameCharacter = null;
             setFollowingPets = null;
@@ -177,19 +181,34 @@ namespace HabitHero.App
                     continue;
                 }
 
+                SupabaseGamePurchaseGate gate = GetPurchaseGate(item);
+                if (!gate.visible) continue;
+
                 GameObject row = CreateRow(parent, "CatalogRow");
+                string sourceText = string.IsNullOrWhiteSpace(gate.source_label)
+                    ? string.Empty
+                    : "　來源：" + gate.source_label;
+                string gateText = gate.purchasable
+                    ? string.Empty
+                    : "　（" + GetGateLabel(gate.reason) + "）";
                 Text label = HabitHeroUiFactory.CreateText(
                     row.transform,
                     font,
-                    item.name + "　" + GetPrice(item) + " 捲",
+                    item.name + "　" + GetPrice(item) + " 捲" + sourceText + gateText,
                     16,
                     TextAnchor.MiddleLeft,
                     Color.white,
                     Vector2.zero,
                     Vector2.one);
                 AddFlexibleLayout(label.gameObject);
-                Button buyButton = CreateRowButton(row.transform, "購買");
-                buyButton.onClick.AddListener(() => PurchaseGameAsync(item, buyButton));
+                Button buyButton = CreateRowButton(
+                    row.transform,
+                    gate.purchasable ? "購買" : GetGateLabel(gate.reason));
+                buyButton.interactable = gate.purchasable;
+                if (gate.purchasable)
+                {
+                    buyButton.onClick.AddListener(() => PurchaseGameAsync(item, gate, buyButton));
+                }
                 visibleCount += 1;
                 if (visibleCount >= 6) break;
             }
@@ -251,14 +270,21 @@ namespace HabitHero.App
 
         private async void PurchaseGameAsync(
             SupabaseGameCatalogItemRecord item,
+            SupabaseGamePurchaseGate gate,
             Button button)
         {
-            if (item == null || purchaseGameItem == null) return;
+            if (item == null || gate == null || !gate.purchasable || purchaseGameItem == null) return;
             if (button != null) button.interactable = false;
-            SetGameStatus("正在購買「" + item.name + "」…", false);
+            string sourceText = string.IsNullOrWhiteSpace(gate.source_label)
+                ? string.Empty
+                : "（" + gate.source_label + "）";
+            SetGameStatus("正在購買「" + item.name + "」" + sourceText + "…", false);
             try
             {
-                SupabaseChildGameData refreshed = await purchaseGameItem(item.id, 1);
+                SupabaseChildGameData refreshed = await purchaseGameItem(
+                    item.id,
+                    1,
+                    gate.source_npc_id);
                 ApplyData(refreshed);
                 SetGameStatus("已購買「" + item.name + "」。", false);
             }
@@ -356,6 +382,36 @@ namespace HabitHero.App
             }
 
             return null;
+        }
+
+        private SupabaseGamePurchaseGate GetPurchaseGate(SupabaseGameCatalogItemRecord item)
+        {
+            if (latestWorldData == null)
+            {
+                return new SupabaseGamePurchaseGate
+                {
+                    visible = true,
+                    purchasable = false,
+                    reason = "world_data_unavailable",
+                };
+            }
+
+            return latestWorldData.GetPurchaseGate(item.id, item.item_type);
+        }
+
+        private static string GetGateLabel(string reason)
+        {
+            switch (reason)
+            {
+                case "scene_locked":
+                    return "解鎖場景";
+                case "dialogue_required":
+                    return "先找 NPC";
+                case "world_data_unavailable":
+                    return "等待同步";
+                default:
+                    return "暫不可購買";
+            }
         }
 
         private GameObject CreateList(

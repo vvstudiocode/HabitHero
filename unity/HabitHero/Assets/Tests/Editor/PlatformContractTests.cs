@@ -1128,6 +1128,157 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ChildWorldDataKeepsNpcPurchaseSourcesServerAuthoritative()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"sunrise-village\",\"name\":\"晨光村\",\"sort_order\":1,\"required_completed_count\":0,\"required_general_count\":0,\"unlock_rule_version\":1,\"is_active\":true}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"npc.oum\",\"scene_id\":\"sunrise-village\",\"npc_type\":\"roaming_pet\",\"name\":\"歐姆\",\"asset_key\":\"pet.oum\",\"catalog_item_id\":\"catalog-pet\",\"position_x\":-3,\"position_y\":0,\"position_z\":1,\"behavior_mode\":\"roaming\",\"animation_name\":\"Idle\",\"roam_bounds\":{\"minX\":-6,\"maxX\":6,\"minZ\":-4,\"maxZ\":4},\"is_active\":true}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"npc_id\":\"npc.oum\",\"catalog_item_id\":\"catalog-pet\",\"sort_order\":1,\"dialogue_version\":1,\"is_primary_source\":true,\"is_active\":true}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"scene_id\":\"sunrise-village\",\"unlock_rule_version\":1,\"unlocked_at\":\"2026-09-08T00:00:00Z\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"npc_id\":\"npc.oum\",\"dialogue_version\":1,\"first_talked_at\":\"2026-09-08T00:00:00Z\",\"last_talked_at\":\"2026-09-08T00:00:00Z\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"scene_id\":\"sunrise-village\",\"unlocked\":true,\"unlock_rule_version\":1,\"unlocked_at\":\"2026-09-08T00:00:00Z\"}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"npc_id\":\"npc.oum\",\"scene_id\":\"sunrise-village\",\"dialogue_version\":1,\"offerings\":[{\"catalog_item_id\":\"catalog-pet\",\"asset_key\":\"pet.oum\",\"name\":\"歐姆\",\"item_type\":\"pet\",\"scroll_price\":20,\"sort_order\":1,\"source_scene_id\":\"sunrise-village\",\"source_npc_id\":\"npc.oum\",\"source_dialogue_version\":1}]}",
+                    null));
+            SupabaseChildWorldClient client = new SupabaseChildWorldClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildWorldData data = await client.LoadAsync(
+                "family-1",
+                "child-1",
+                CancellationToken.None);
+            SupabaseGamePurchaseGate gate = data.GetPurchaseGate(
+                "catalog-pet",
+                "pet");
+            SupabaseWorldSceneUnlockResult unlock = await client.UnlockSceneAsync(
+                "sunrise-village",
+                "child-1",
+                CancellationToken.None);
+            SupabaseWorldNpcDialogueResult dialogue = await client.CompleteNpcDialogueAsync(
+                "npc.oum",
+                "child-1",
+                CancellationToken.None);
+
+            Assert.AreEqual("sunrise-village", data.scenes[0].id);
+            Assert.AreEqual("npc.oum", data.npcs[0].id);
+            Assert.AreEqual(12, data.npcs[0].roam_bounds.maxX - data.npcs[0].roam_bounds.minX);
+            Assert.IsTrue(gate.visible);
+            Assert.IsTrue(gate.purchasable);
+            Assert.AreEqual("npc.oum", gate.source_npc_id);
+            Assert.AreEqual("晨光村，找歐姆", gate.source_label);
+            Assert.IsTrue(unlock.unlocked);
+            Assert.AreEqual("npc.oum", dialogue.npc_id);
+            Assert.AreEqual("catalog-pet", dialogue.offerings[0].catalog_item_id);
+            Assert.AreEqual(7, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/game_world_scenes?select=*&is_active=eq.true&order=sort_order.asc",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_world_npc_dialogue_progress?select=*&family_id=eq.family-1&child_profile_id=eq.child-1",
+                dataTransport.Requests[4].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/unlock_world_scene_if_eligible",
+                dataTransport.Requests[5].Url);
+            Assert.AreEqual(
+                "{\"target_scene_id\":\"sunrise-village\",\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[5].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/complete_world_npc_dialogue",
+                dataTransport.Requests[6].Url);
+            Assert.AreEqual(
+                "{\"target_npc_id\":\"npc.oum\",\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[6].Body);
+        }
+
+        [Test]
+        public void ChildWorldPurchaseGateHidesUnlistedItemsAndExplainsBlockedSources()
+        {
+            SupabaseChildWorldData data = new SupabaseChildWorldData
+            {
+                scenes = new[]
+                {
+                    new SupabaseGameWorldSceneRecord { id = "sunrise-village", name = "晨光村" },
+                    new SupabaseGameWorldSceneRecord { id = "forest-valley", name = "森語谷" },
+                },
+                npcs = new[]
+                {
+                    new SupabaseGameWorldNpcRecord
+                    {
+                        id = "npc.oum",
+                        scene_id = "sunrise-village",
+                        npc_type = "roaming_pet",
+                        name = "歐姆",
+                        is_active = true,
+                    },
+                },
+                offerings = new[]
+                {
+                    new SupabaseGameWorldNpcOfferingRecord
+                    {
+                        npc_id = "npc.oum",
+                        catalog_item_id = "catalog-pet",
+                        dialogue_version = 1,
+                        is_primary_source = true,
+                        is_active = true,
+                    },
+                },
+                sceneUnlocks = new SupabaseChildWorldSceneUnlockRecord[0],
+                dialogueProgress = new SupabaseChildWorldNpcDialogueProgressRecord[0],
+            };
+
+            SupabaseGamePurchaseGate notOffered = data.GetPurchaseGate("catalog-character", "character");
+            SupabaseGamePurchaseGate sceneLocked = data.GetPurchaseGate("catalog-pet", "pet");
+            data.sceneUnlocks = new[]
+            {
+                new SupabaseChildWorldSceneUnlockRecord { scene_id = "sunrise-village" },
+            };
+            SupabaseGamePurchaseGate dialogueRequired = data.GetPurchaseGate("catalog-pet", "pet");
+
+            Assert.IsFalse(notOffered.visible);
+            Assert.AreEqual("not_offered", notOffered.reason);
+            Assert.IsTrue(sceneLocked.visible);
+            Assert.IsFalse(sceneLocked.purchasable);
+            Assert.AreEqual("scene_locked", sceneLocked.reason);
+            Assert.IsTrue(dialogueRequired.visible);
+            Assert.IsFalse(dialogueRequired.purchasable);
+            Assert.AreEqual("dialogue_required", dialogueRequired.reason);
+        }
+
+        [Test]
         public async Task ParentGeneralAdventureUsesServerRpcForEachSelectedChild()
         {
             SupabaseClientSettings settings = CreateSettings();

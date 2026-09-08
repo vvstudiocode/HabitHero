@@ -35,9 +35,9 @@ authorization into client-only rules.
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
-| 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
+| 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads and server-gated source rules; 3D scene placement pending) |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
-| Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client and child shop/backpack UI; 3D placement pending) |
+| Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating; 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Not started |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Not started |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
@@ -120,6 +120,12 @@ Partially completed locally:
   Purchases, character equipment, following pets, and roaming pets remain
   server-authoritative RPC mutations, with the child shop/backpack UI refreshing
   from Supabase after each successful mutation.
+- Child world data reads active scenes, NPCs, NPC offerings, scene unlocks, and
+  dialogue progress through scoped PostgREST calls. Scene unlocking and NPC
+  dialogue completion use the existing server RPCs. The Unity shop disables
+  source-bound purchases until the scene and required NPC dialogue are
+  available, hides items without an active offering, and sends the
+  server-selected `source_npc_id` with purchases.
 
 Still required:
 

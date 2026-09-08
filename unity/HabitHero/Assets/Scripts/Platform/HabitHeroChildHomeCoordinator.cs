@@ -12,6 +12,7 @@ namespace HabitHero.App
 
         private readonly SupabaseChildHomeClient client;
         private readonly SupabaseChildGameClient gameClient;
+        private readonly SupabaseChildWorldClient worldClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
         private HabitHeroChildHomeView view;
@@ -19,15 +20,18 @@ namespace HabitHero.App
         public HabitHeroChildHomeCoordinator(
             SupabaseChildHomeClient client,
             SupabaseChildGameClient gameClient,
+            SupabaseChildWorldClient worldClient,
             Transform canvasTransform,
             Font font)
         {
             if (client == null) throw new ArgumentNullException("client");
             if (gameClient == null) throw new ArgumentNullException("gameClient");
+            if (worldClient == null) throw new ArgumentNullException("worldClient");
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.client = client;
             this.gameClient = gameClient;
+            this.worldClient = worldClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
         }
@@ -66,10 +70,28 @@ namespace HabitHero.App
                     setStatus("任務已載入；冒險商店暫時無法連線：" + exception.Message, true);
                 }
 
+                SupabaseChildWorldData worldData = null;
+                try
+                {
+                    worldData = await worldClient.LoadAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    setStatus("任務已載入；NPC 商品來源暫時無法同步：" + exception.Message, true);
+                }
+
                 if (view == null) view = new HabitHeroChildHomeView(canvasTransform, font);
                 view.Show(
                     snapshot,
                     gameData,
+                    worldData,
                     (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
                     (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
                     (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
@@ -86,11 +108,12 @@ namespace HabitHero.App
                     (wishlistId) => client.DeleteWishlistItemAndRefreshAsync(
                         wishlistId,
                         cancellationToken),
-                    (catalogItemId, quantity) => PurchaseGameItemAndRefreshAsync(
+                    (catalogItemId, quantity, sourceNpcId) => PurchaseGameItemAndRefreshAsync(
                         snapshot.familyId,
                         snapshot.child.id,
                         catalogItemId,
                         quantity,
+                        sourceNpcId,
                         cancellationToken),
                     (inventoryItemId) => EquipGameCharacterAndRefreshAsync(
                         snapshot.familyId,
@@ -150,6 +173,7 @@ namespace HabitHero.App
             string childProfileId,
             string catalogItemId,
             int quantity,
+            string sourceNpcId,
             CancellationToken cancellationToken)
         {
             await gameClient.PurchaseGameItemAsync(
@@ -157,7 +181,7 @@ namespace HabitHero.App
                 catalogItemId,
                 quantity,
                 SupabaseChildGameClient.CreatePurchaseIdempotencyKey(),
-                null,
+                sourceNpcId,
                 cancellationToken);
             return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
         }

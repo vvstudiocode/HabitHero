@@ -64,6 +64,7 @@ namespace HabitHero.App
         public void Show(
             SupabaseChildHomeSnapshot snapshot,
             SupabaseChildGameData gameData,
+            SupabaseChildWorldData worldData,
             Func<
                 SupabaseChildTaskRecord,
                 SupabaseTaskCompletionDraft,
@@ -75,7 +76,7 @@ namespace HabitHero.App
             Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward,
             Func<string, Task<SupabaseWishlistMutationResult>> addWishlist,
             Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist,
-            Func<string, int, Task<SupabaseChildGameData>> purchaseGameItem,
+            Func<string, int, string, Task<SupabaseChildGameData>> purchaseGameItem,
             Func<string, Task<SupabaseChildGameData>> equipGameCharacter,
             Func<string[], Task<SupabaseChildGameData>> setFollowingPets,
             Func<string[], Task<SupabaseChildGameData>> setRoamingPets,
@@ -100,6 +101,7 @@ namespace HabitHero.App
             gameView = new HabitHeroChildGameView(canvasTransform, font);
             gameView.Show(
                 gameData,
+                worldData,
                 purchaseGameItem,
                 equipGameCharacter,
                 setFollowingPets,
