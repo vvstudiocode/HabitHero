@@ -918,6 +918,63 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentGeneralAdventureUsesServerRpcForEachSelectedChild()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"adventure-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"閱讀冒險\",\"adventure_type\":\"general\",\"status\":\"todo\"}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            string[] taskIds = await client.CreateGeneralAdventureAsync(
+                "family-1",
+                new SupabaseParentGeneralAdventureCreateInput
+                {
+                    childProfileIds = new[] { "child-1" },
+                    name = "閱讀冒險",
+                    description = "讀完一個章節",
+                    points = 20,
+                    icon = "Book",
+                    category = "learning",
+                    durationMinutes = 25,
+                    dueOn = "2026-09-08",
+                    startTime = "18:00",
+                    endTime = "19:00",
+                    reportMode = "reflection",
+                    requiresTimer = true,
+                    requiresReviewBeforeNextTask = true,
+                },
+                CancellationToken.None);
+
+            Assert.AreEqual(1, taskIds.Length);
+            Assert.AreEqual("adventure-1", taskIds[0]);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/create_general_adventure",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_family_id\":\"family-1\",\"target_child_profile_id\":\"child-1\",\"adventure_name\":\"閱讀冒險\",\"adventure_description\":\"讀完一個章節\",\"adventure_points\":20,\"adventure_icon\":\"Book\",\"adventure_category\":\"learning\",\"adventure_duration_minutes\":25,\"adventure_due_on\":\"2026-09-08\",\"adventure_start_time\":\"18:00\",\"adventure_end_time\":\"19:00\",\"adventure_completion_report_mode\":\"reflection\",\"adventure_requires_timer\":true,\"adventure_requires_review_before_next_task\":true}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
         public async Task ParentRewardCrudUsesRlsScopedPostgrestMutations()
         {
             SupabaseClientSettings settings = CreateSettings();
