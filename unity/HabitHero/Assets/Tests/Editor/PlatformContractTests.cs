@@ -346,6 +346,79 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task RealtimeChannelRejoinsAfterTheSocketCloses()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, "{}", null)));
+            SupabaseSession ignoredSession;
+            string error;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out ignoredSession,
+                    out error),
+                error);
+
+            List<FakeRealtimeTransport> transports = new List<FakeRealtimeTransport>();
+            SupabaseRealtimeChannel channel = new SupabaseRealtimeChannel(
+                settings,
+                authClient,
+                () =>
+                {
+                    FakeRealtimeTransport transport = new FakeRealtimeTransport();
+                    transports.Add(transport);
+                    return transport;
+                });
+            TaskCompletionSource<bool> reconnecting =
+                new TaskCompletionSource<bool>();
+            channel.StateChanged += (state, ignoredMessage) =>
+            {
+                if (state == SupabaseRealtimeChannelState.Reconnecting)
+                {
+                    reconnecting.TrySetResult(true);
+                }
+            };
+
+            try
+            {
+                await channel.ConnectAsync(
+                    "friend-world:owner-1",
+                    new SupabaseRealtimeChannelOptions
+                    {
+                        Private = true,
+                    },
+                    CancellationToken.None);
+                transports[0].SimulateServerClose();
+
+                Task completed = await Task.WhenAny(
+                    reconnecting.Task,
+                    Task.Delay(1000));
+                Assert.AreSame(reconnecting.Task, completed);
+
+                await channel.ReconnectAsync(CancellationToken.None);
+
+                Assert.AreEqual(SupabaseRealtimeChannelState.Joined, channel.State);
+                Assert.AreEqual(2, transports.Count);
+                StringAssert.Contains(
+                    "\"event\":\"phx_join\"",
+                    transports[1].SentMessages[0]);
+                StringAssert.Contains(
+                    "\"access_token\":\"access-token\"",
+                    transports[1].SentMessages[0]);
+            }
+            finally
+            {
+                channel.Dispose();
+            }
+        }
+
+        [Test]
         public void JsonArrayParserMapsPostgrestChildTaskRows()
         {
             SupabaseChildTaskRecord[] tasks;
@@ -2649,7 +2722,13 @@ namespace HabitHero.Tests
                 if (message.Contains("\"event\":\"phx_join\""))
                 {
                     Enqueue(
-                        "{\"topic\":\"realtime:friend-world:owner-1\",\"event\":\"phx_reply\",\"payload\":{\"status\":\"ok\",\"response\":{}},\"ref\":\"2\",\"join_ref\":\"1\"}");
+                        "{\"topic\":\""
+                        + ReadJsonString(message, "topic")
+                        + "\",\"event\":\"phx_reply\",\"payload\":{\"status\":\"ok\",\"response\":{}},\"ref\":\""
+                        + ReadJsonString(message, "ref")
+                        + "\",\"join_ref\":\""
+                        + ReadJsonString(message, "join_ref")
+                        + "\"}");
                 }
 
                 return Task.CompletedTask;
@@ -2674,6 +2753,25 @@ namespace HabitHero.Tests
             {
                 open = false;
                 if (waitingReceive != null) waitingReceive.TrySetResult(null);
+            }
+
+            public void SimulateServerClose()
+            {
+                open = false;
+                if (waitingReceive == null) return;
+                TaskCompletionSource<string> completion = waitingReceive;
+                waitingReceive = null;
+                completion.TrySetResult(null);
+            }
+
+            private static string ReadJsonString(string json, string key)
+            {
+                string marker = "\"" + key + "\":\"";
+                int start = json.IndexOf(marker, StringComparison.Ordinal);
+                if (start < 0) return string.Empty;
+                start += marker.Length;
+                int end = json.IndexOf('"', start);
+                return end < 0 ? string.Empty : json.Substring(start, end - start);
             }
 
             private void Enqueue(string message)

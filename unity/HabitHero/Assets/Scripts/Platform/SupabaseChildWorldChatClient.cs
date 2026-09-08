@@ -127,6 +127,13 @@ namespace HabitHero.Platform
                 onMessage(message);
             };
             channel.MessageReceived += messageHandler;
+            CancellationTokenSource subscriptionCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            RealtimeSubscription subscription = new RealtimeSubscription(
+                channel,
+                messageHandler,
+                subscriptionCancellation);
+            channel.StateChanged += subscription.HandleStateChanged;
 
             SupabaseRealtimeChannelOptions options = new SupabaseRealtimeChannelOptions
             {
@@ -148,13 +155,12 @@ namespace HabitHero.Platform
                 await channel.ConnectAsync(
                     "friend-world:" + normalizedOwner,
                     options,
-                    cancellationToken);
-                return new RealtimeSubscription(channel, messageHandler);
+                    subscriptionCancellation.Token);
+                return subscription;
             }
             catch
             {
-                channel.MessageReceived -= messageHandler;
-                channel.Dispose();
+                subscription.Dispose();
                 throw;
             }
         }
@@ -353,22 +359,70 @@ namespace HabitHero.Platform
         {
             private readonly SupabaseRealtimeChannel channel;
             private readonly Action<SupabaseRealtimeEnvelope> messageHandler;
+            private readonly CancellationTokenSource lifetimeCancellation;
+            private int reconnectInProgress;
             private bool disposed;
 
             public RealtimeSubscription(
                 SupabaseRealtimeChannel channel,
-                Action<SupabaseRealtimeEnvelope> messageHandler)
+                Action<SupabaseRealtimeEnvelope> messageHandler,
+                CancellationTokenSource lifetimeCancellation)
             {
                 this.channel = channel;
                 this.messageHandler = messageHandler;
+                this.lifetimeCancellation = lifetimeCancellation;
+            }
+
+            public void HandleStateChanged(
+                SupabaseRealtimeChannelState state,
+                string ignoredMessage)
+            {
+                if (state != SupabaseRealtimeChannelState.Reconnecting || disposed)
+                {
+                    return;
+                }
+
+                if (Interlocked.Exchange(ref reconnectInProgress, 1) != 0)
+                {
+                    return;
+                }
+
+                _ = ReconnectAsync();
+            }
+
+            private async Task ReconnectAsync()
+            {
+                try
+                {
+                    await channel.ReconnectAsync(lifetimeCancellation.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // The subscription was disposed or the child session ended.
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The subscription was disposed while reconnecting.
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref reconnectInProgress, 0);
+                    if (disposed) lifetimeCancellation.Dispose();
+                }
             }
 
             public void Dispose()
             {
                 if (disposed) return;
                 disposed = true;
+                lifetimeCancellation.Cancel();
+                channel.StateChanged -= HandleStateChanged;
                 channel.MessageReceived -= messageHandler;
                 channel.Dispose();
+                if (Interlocked.CompareExchange(ref reconnectInProgress, 0, 0) == 0)
+                {
+                    lifetimeCancellation.Dispose();
+                }
             }
         }
     }

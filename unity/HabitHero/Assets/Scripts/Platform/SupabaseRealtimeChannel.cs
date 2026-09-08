@@ -14,6 +14,20 @@ namespace HabitHero.Platform
         Closed,
     }
 
+    public static class SupabaseRealtimeReconnectPolicy
+    {
+        private const int InitialDelayMilliseconds = 250;
+        private const int MaximumDelayMilliseconds = 10000;
+
+        public static int GetDelayMilliseconds(int attempt)
+        {
+            int normalizedAttempt = Math.Max(1, attempt);
+            int shift = Math.Min(5, normalizedAttempt - 1);
+            int delay = InitialDelayMilliseconds * (1 << shift);
+            return Math.Min(MaximumDelayMilliseconds, delay);
+        }
+    }
+
     public sealed class SupabaseRealtimeChannel : IDisposable
     {
         private const int ReplyTimeoutMilliseconds = 10000;
@@ -127,6 +141,44 @@ namespace HabitHero.Platform
                 await CloseTransportAsync(CancellationToken.None);
                 SetState(SupabaseRealtimeChannelState.Disconnected, "Supabase Realtime channel disconnected.");
                 throw;
+            }
+        }
+
+        public async Task ReconnectAsync(CancellationToken cancellationToken)
+        {
+            if (disposed) throw new ObjectDisposedException("SupabaseRealtimeChannel");
+            if (string.IsNullOrWhiteSpace(topic))
+            {
+                throw new InvalidOperationException("Supabase Realtime channel has not been configured.");
+            }
+
+            int attempt = 0;
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (disposed) throw new ObjectDisposedException("SupabaseRealtimeChannel");
+
+                try
+                {
+                    await ConnectAsync(topic, options, cancellationToken);
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (ObjectDisposedException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    attempt += 1;
+                    SetState(SupabaseRealtimeChannelState.Reconnecting, exception.Message);
+                    await Task.Delay(
+                        SupabaseRealtimeReconnectPolicy.GetDelayMilliseconds(attempt),
+                        cancellationToken);
+                }
             }
         }
 
@@ -253,7 +305,7 @@ namespace HabitHero.Platform
                     string rawMessage = await transport.ReceiveTextAsync(cancellationToken);
                     if (string.IsNullOrEmpty(rawMessage))
                     {
-                        SetState(SupabaseRealtimeChannelState.Disconnected, "Realtime WebSocket closed.");
+                        SetState(SupabaseRealtimeChannelState.Reconnecting, "Realtime WebSocket closed.");
                         return;
                     }
 
@@ -261,7 +313,7 @@ namespace HabitHero.Platform
                     string error;
                     if (!SupabaseRealtimeMessageParser.TryParseEnvelope(rawMessage, out envelope, out error))
                     {
-                        SetState(SupabaseRealtimeChannelState.Disconnected, error);
+                        SetState(SupabaseRealtimeChannelState.Reconnecting, error);
                         return;
                     }
 
