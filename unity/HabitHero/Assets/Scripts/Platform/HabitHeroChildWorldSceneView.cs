@@ -24,6 +24,8 @@ namespace HabitHero.App
         private SupabaseChildGameData latestGameData;
         private string sceneId;
         private HabitHeroWorldSceneProfile activeSceneProfile;
+        private HabitHeroWorldCollisionProxy[] authoredCollisionProxies =
+            new HabitHeroWorldCollisionProxy[0];
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue;
         private Action onClose;
         private readonly List<Material> runtimeMaterials = new List<Material>();
@@ -104,6 +106,12 @@ namespace HabitHero.App
             modelLoadingCancellation = new CancellationTokenSource();
             activeSceneProfile = ResolveSceneProfile(scene.id);
             float movementBoundary = activeSceneProfile.MovementBoundary;
+            if (!HabitHeroWorldCollision.TryGetAuthoredProxies(
+                scene.id,
+                out authoredCollisionProxies))
+            {
+                authoredCollisionProxies = new HabitHeroWorldCollisionProxy[0];
+            }
             GameObject cameraObject = new GameObject("ChildWorldCamera");
             cameraObject.transform.SetParent(worldRoot.transform, false);
             worldCamera = cameraObject.AddComponent<Camera>();
@@ -148,7 +156,17 @@ namespace HabitHero.App
                 new Color(0.08f, 0.14f, 0.2f, 1f));
             RenderAuthoredWorldModules(scene.id);
 
-            Vector3 spawnPosition = activeSceneProfile.SpawnPosition;
+            Vector2 safeSpawn = HabitHeroWorldCollision.FindClearSpawn(
+                new Vector2(
+                    activeSceneProfile.SpawnPosition.x,
+                    activeSceneProfile.SpawnPosition.z),
+                0.35f,
+                movementBoundary,
+                authoredCollisionProxies);
+            Vector3 spawnPosition = new Vector3(
+                safeSpawn.x,
+                activeSceneProfile.SpawnPosition.y,
+                safeSpawn.y);
             player = CreatePrimitive(
                 PrimitiveType.Capsule,
                 "ChildAvatarPlaceholder",
@@ -807,11 +825,19 @@ namespace HabitHero.App
         {
             if (player == null) return;
             Vector3 position = player.transform.position;
-            float movementLimit = Mathf.Max(1f, activeSceneProfile == null
+            float movementBoundary = activeSceneProfile == null
                 ? 8f
-                : activeSceneProfile.MovementBoundary - 0.4f);
-            position.x = Mathf.Clamp(position.x + direction.x * 0.8f, -movementLimit, movementLimit);
-            position.z = Mathf.Clamp(position.z + direction.y * 0.8f, -movementLimit, movementLimit);
+                : activeSceneProfile.MovementBoundary;
+            Vector2 next = HabitHeroWorldCollision.MoveCharacter(
+                new Vector2(position.x, position.z),
+                new Vector2(
+                    position.x + direction.x * 0.8f,
+                    position.z + direction.y * 0.8f),
+                0.35f,
+                authoredCollisionProxies,
+                movementBoundary);
+            position.x = next.x;
+            position.z = next.y;
             player.transform.position = position;
             SetStatus("孩子角色已移動到 " + position.x.ToString("0.0") + ", " + position.z.ToString("0.0") + "。", false);
         }
@@ -978,6 +1004,7 @@ namespace HabitHero.App
             runtimeMaterials.Clear();
             worldCamera = null;
             player = null;
+            authoredCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             activeSceneProfile = null;
             sceneStatus = null;
             if (notify && onClose != null) onClose();

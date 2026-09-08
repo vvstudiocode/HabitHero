@@ -153,8 +153,10 @@ Partially completed locally:
   primitive fallback, server scene gating, NPC data, and world-entity flow
   intact. Unity scene profiles also preserve each authored scene's spawn anchor
   and movement boundary, including the expanded Forest Valley and Cloud
-  Workshop ranges. Collision parity, camera/weather/audio parity, and device
-  visual evidence remain pending.
+  Workshop ranges. Unity movement now consumes the authored collision flags
+  through conservative proxies and safe spawn selection; exact GLB-bound
+  rectangle precision, dynamic decoration collision, camera/weather/audio
+  parity, and device visual evidence remain pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

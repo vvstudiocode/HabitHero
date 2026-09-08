@@ -156,6 +156,41 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldCollisionUsesAuthoredProxiesAndBlocksMovement()
+        {
+            HabitHeroWorldCollisionProxy[] proxies;
+            Assert.IsTrue(
+                HabitHeroWorldCollision.TryGetAuthoredProxies("sunrise-village", out proxies));
+            Assert.AreEqual(6, proxies.Length);
+            foreach (HabitHeroWorldCollisionProxy proxy in proxies)
+            {
+                Assert.Greater(proxy.Radius, 0f);
+            }
+
+            HabitHeroWorldCollisionProxy[] obstacle =
+            {
+                new HabitHeroWorldCollisionProxy(1f, 0f, 0.8f),
+            };
+            Vector2 blocked = HabitHeroWorldCollision.MoveCharacter(
+                new Vector2(0f, 0f),
+                new Vector2(2f, 0f),
+                0.35f,
+                obstacle,
+                4.8f);
+            Assert.AreEqual(0f, blocked.x, 0.0001f);
+            Assert.AreEqual(0f, blocked.y, 0.0001f);
+
+            Vector2 clamped = HabitHeroWorldCollision.MoveCharacter(
+                new Vector2(0f, 0f),
+                new Vector2(8f, -8f),
+                0.35f,
+                new HabitHeroWorldCollisionProxy[0],
+                4.8f);
+            Assert.AreEqual(4.45f, clamped.x, 0.0001f);
+            Assert.AreEqual(-4.45f, clamped.y, 0.0001f);
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";

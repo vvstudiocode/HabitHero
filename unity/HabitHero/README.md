@@ -98,8 +98,10 @@ for Sunrise Village, Forest Valley, Cloud Workshop, Tideglow Archipelago, and
 Star-Sand Wasteland), with per-scene placement and scale data preserved;
 primitive fallback, server scene gating, and world-entity rendering remain
 available. `HabitHeroWorldSceneProfileCatalog` also preserves the Web scene
-spawn anchors and movement boundaries. Collision, weather, camera, and device
-parity remain pending.
+spawn anchors and movement boundaries. Authored collision flags now drive
+conservative Unity movement proxies and safe spawn selection; exact GLB-bound
+rectangle precision, dynamic decoration collision, weather, camera, and
+device parity remain pending.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device
