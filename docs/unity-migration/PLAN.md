@@ -146,9 +146,14 @@ Partially completed locally:
   world mutation, chat, presence, and Realtime transport remain pending.
 - Unity child social foundation now reads visible friend-world chat history,
   unread counts, and sends/marks-read/reports messages through the existing
-  server RPCs. The chat panel reloads server data after each mutation; private
-  Realtime subscription, presence, broadcast, and reconnect behavior remain
-  pending.
+  server RPCs. The chat panel reloads server data after each mutation; its
+  private Realtime subscription is still not wired into the panel.
+- Unity now has a Supabase Realtime protocol layer with private-channel join,
+  authenticated session token, heartbeat, token refresh, presence,
+  broadcast, leave, and incoming envelope parsing. Native platforms use the
+  managed WebSocket transport and WebGL uses a browser WebSocket bridge.
+  Channel reconnect orchestration, chat/presence/avatar feature wiring, and
+  two-account/device verification remain pending.
 
 Still required:
 
@@ -162,7 +167,8 @@ Still required:
   the runtime handler, token-fragment recovery, and PKCE exchange contract are
   now in place. A code-only callback is rejected because Supabase requires the
   original PKCE verifier.
-- Supabase Realtime transport adapters.
+- Supabase Realtime reconnect orchestration and feature wiring for chat,
+  presence, avatar broadcast, and co-op flows.
 - Native iOS/Android push and app URL plugins.
 
 ### Phase 2 — child core loop

@@ -207,6 +207,145 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void RealtimeJoinUsesThePrivateChannelAndAuthenticatedSession()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseRealtimeChannelOptions options = new SupabaseRealtimeChannelOptions
+            {
+                Private = true,
+                PresenceEnabled = true,
+                PresenceKey = "connection-1",
+                BroadcastSelf = false,
+                BroadcastAck = false,
+            };
+            options.PostgresChanges.Add(new SupabaseRealtimePostgresChange
+            {
+                Event = "INSERT",
+                Schema = "public",
+                Table = "friend_world_messages",
+                Filter = "world_owner_child_profile_id=eq.owner-1",
+            });
+
+            Assert.AreEqual(
+                "wss://example.supabase.co/realtime/v1/websocket?apikey=sb_publishable_test-key&vsn=1.0.0",
+                SupabaseRealtimeProtocol.BuildWebSocketUrl(settings));
+
+            string join = SupabaseRealtimeProtocol.BuildJoin(
+                "friend-world:owner-1",
+                "1",
+                "1",
+                "access-token",
+                options);
+
+            StringAssert.Contains("\"topic\":\"realtime:friend-world:owner-1\"", join);
+            StringAssert.Contains("\"event\":\"phx_join\"", join);
+            StringAssert.Contains("\"private\":true", join);
+            StringAssert.Contains("\"enabled\":true", join);
+            StringAssert.Contains("\"key\":\"connection-1\"", join);
+            StringAssert.Contains("\"table\":\"friend_world_messages\"", join);
+            StringAssert.Contains("\"access_token\":\"access-token\"", join);
+        }
+
+        [Test]
+        public void RealtimeProtocolBuildsHeartbeatBroadcastPresenceAndLeaveMessages()
+        {
+            Assert.AreEqual(
+                "{\"topic\":\"phoenix\",\"event\":\"heartbeat\",\"payload\":{},\"ref\":\"2\"}",
+                SupabaseRealtimeProtocol.BuildHeartbeat("2"));
+            Assert.AreEqual(
+                "{\"topic\":\"realtime:friend-world:owner-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"avatar_state_v1\",\"payload\":{\"x\":1}},\"ref\":\"3\",\"join_ref\":\"1\"}",
+                SupabaseRealtimeProtocol.BuildBroadcast(
+                    "friend-world:owner-1",
+                    "1",
+                    "3",
+                    "avatar_state_v1",
+                    "{\"x\":1}"));
+            Assert.AreEqual(
+                "{\"topic\":\"realtime:friend-world:owner-1\",\"event\":\"presence\",\"payload\":{\"type\":\"presence\",\"event\":\"track\",\"payload\":{\"connectionId\":\"connection-1\"}},\"ref\":\"4\",\"join_ref\":\"1\"}",
+                SupabaseRealtimeProtocol.BuildTrack(
+                    "friend-world:owner-1",
+                    "1",
+                    "4",
+                    "{\"connectionId\":\"connection-1\"}"));
+            Assert.AreEqual(
+                "{\"topic\":\"realtime:friend-world:owner-1\",\"event\":\"phx_leave\",\"payload\":{},\"ref\":\"5\",\"join_ref\":\"1\"}",
+                SupabaseRealtimeProtocol.BuildLeave("friend-world:owner-1", "1", "5"));
+        }
+
+        [Test]
+        public void RealtimeEnvelopeParserKeepsIncomingPayloadsUntypedForFeatureAdapters()
+        {
+            SupabaseRealtimeEnvelope envelope;
+            string error;
+
+            bool parsed = SupabaseRealtimeMessageParser.TryParseEnvelope(
+                "{\"topic\":\"realtime:friend-world:owner-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"avatar_state_v1\",\"payload\":{\"x\":1}},\"ref\":null,\"join_ref\":\"1\"}",
+                out envelope,
+                out error);
+
+            Assert.IsTrue(parsed, error);
+            Assert.AreEqual("broadcast", envelope.Event);
+            Assert.AreEqual("realtime:friend-world:owner-1", envelope.Topic);
+            Assert.IsInstanceOf<Dictionary<string, object>>(envelope.Payload);
+            Dictionary<string, object> payload = (Dictionary<string, object>)envelope.Payload;
+            Assert.AreEqual("avatar_state_v1", payload["event"]);
+            Assert.IsInstanceOf<Dictionary<string, object>>(payload["payload"]);
+        }
+
+        [Test]
+        public async Task RealtimeChannelJoinsWithTheSessionAndSendsOnlyAfterJoin()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, "{}", null)));
+            SupabaseSession ignoredSession;
+            string error;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out ignoredSession,
+                    out error),
+                error);
+
+            FakeRealtimeTransport transport = new FakeRealtimeTransport();
+            SupabaseRealtimeChannel channel = new SupabaseRealtimeChannel(
+                settings,
+                authClient,
+                () => transport);
+            try
+            {
+                await channel.ConnectAsync(
+                    "friend-world:owner-1",
+                    new SupabaseRealtimeChannelOptions
+                    {
+                        Private = true,
+                    },
+                    CancellationToken.None);
+
+                Assert.AreEqual(SupabaseRealtimeChannelState.Joined, channel.State);
+                Assert.AreEqual(1, transport.SentMessages.Count);
+                StringAssert.Contains("\"event\":\"phx_join\"", transport.SentMessages[0]);
+                StringAssert.Contains("\"access_token\":\"access-token\"", transport.SentMessages[0]);
+
+                await channel.BroadcastAsync(
+                    "avatar_state_v1",
+                    "{\"x\":1}",
+                    CancellationToken.None);
+                Assert.AreEqual(2, transport.SentMessages.Count);
+                StringAssert.Contains("\"event\":\"broadcast\"", transport.SentMessages[1]);
+            }
+            finally
+            {
+                channel.Dispose();
+            }
+        }
+
+        [Test]
         public void JsonArrayParserMapsPostgrestChildTaskRows()
         {
             SupabaseChildTaskRecord[] tasks;
@@ -2450,6 +2589,69 @@ namespace HabitHero.Tests
                     ? responses.Dequeue()
                     : responses.Peek();
                 return Task.FromResult(response);
+            }
+        }
+
+        private sealed class FakeRealtimeTransport : ISupabaseRealtimeTransport
+        {
+            private readonly Queue<string> incoming = new Queue<string>();
+            private TaskCompletionSource<string> waitingReceive;
+            private bool open;
+
+            public List<string> SentMessages { get; } = new List<string>();
+
+            public bool IsOpen { get { return open; } }
+
+            public Task ConnectAsync(Uri uri, CancellationToken cancellationToken)
+            {
+                open = true;
+                return Task.CompletedTask;
+            }
+
+            public Task SendTextAsync(string message, CancellationToken cancellationToken)
+            {
+                SentMessages.Add(message);
+                if (message.Contains("\"event\":\"phx_join\""))
+                {
+                    Enqueue(
+                        "{\"topic\":\"realtime:friend-world:owner-1\",\"event\":\"phx_reply\",\"payload\":{\"status\":\"ok\",\"response\":{}},\"ref\":\"2\",\"join_ref\":\"1\"}");
+                }
+
+                return Task.CompletedTask;
+            }
+
+            public Task<string> ReceiveTextAsync(CancellationToken cancellationToken)
+            {
+                if (incoming.Count > 0) return Task.FromResult(incoming.Dequeue());
+                waitingReceive = new TaskCompletionSource<string>();
+                cancellationToken.Register(() => waitingReceive.TrySetCanceled());
+                return waitingReceive.Task;
+            }
+
+            public Task CloseAsync(CancellationToken cancellationToken)
+            {
+                open = false;
+                if (waitingReceive != null) waitingReceive.TrySetResult(null);
+                return Task.CompletedTask;
+            }
+
+            public void Dispose()
+            {
+                open = false;
+                if (waitingReceive != null) waitingReceive.TrySetResult(null);
+            }
+
+            private void Enqueue(string message)
+            {
+                if (waitingReceive != null)
+                {
+                    TaskCompletionSource<string> completion = waitingReceive;
+                    waitingReceive = null;
+                    completion.TrySetResult(message);
+                    return;
+                }
+
+                incoming.Enqueue(message);
             }
         }
     }
