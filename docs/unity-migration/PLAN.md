@@ -39,7 +39,7 @@ authorization into client-only rules.
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating, and world-entity place/update/remove/collect RPCs; authored 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
-| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Not started |
+| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Foundation started (preference/device binding adapter; native token bridge pending) |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
 | Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Not started |
 
@@ -179,6 +179,14 @@ Partially completed locally:
   after a `world_revision_v1` event. Remote placeholders now interpolate toward
   newer states and are pruned after a bounded stale period. Two-account/device
   verification remains pending.
+
+- Unity now has a portable notification binding client that reads and updates
+  `profiles.notifications_enabled`, disables a parent's `push_devices` rows when
+  notifications are turned off, and upserts device bindings through the existing
+  `(profile_id, token)` conflict boundary. It sends only the public Supabase
+  session and remains subject to the existing RLS policies. Native iOS/Android
+  token acquisition, permission prompts, notification taps, and device delivery
+  are intentionally still pending.
 
 Still required:
 

@@ -91,6 +91,13 @@ session, with an explicit family/child scope and the existing RLS/RPC
 authorization. Returning to the parent workbench requires re-authenticating
 the parent password; social/friend-world controls stay disabled in this parent
 child mode because those RPCs are child-actor scoped.
+The portable Unity notification client also reads and updates the shared
+`profiles.notifications_enabled` preference, disables the parent's registered
+`push_devices` rows when notifications are turned off, and upserts a device
+binding through the existing RLS-scoped `(profile_id, token)` boundary. Native
+iOS/Android token acquisition, permission prompts, notification taps, and real
+device delivery still require the Unity native notification bridge and device
+verification; this adapter does not claim those capabilities by itself.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 
