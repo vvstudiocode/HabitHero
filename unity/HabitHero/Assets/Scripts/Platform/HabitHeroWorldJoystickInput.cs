@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace HabitHero.App
 {
@@ -22,7 +23,9 @@ namespace HabitHero.App
         IPointerDownHandler,
         IPointerMoveHandler,
         IPointerUpHandler,
-        IPointerExitHandler
+        IBeginDragHandler,
+        IDragHandler,
+        IEndDragHandler
     {
         private const int NoPointer = int.MinValue;
         private const float MinimumRadius = 1f;
@@ -42,6 +45,45 @@ namespace HabitHero.App
         {
             knob = target;
             UpdateKnobPosition();
+        }
+
+        public static HabitHeroWorldJoystickInput Create(
+            Transform parent,
+            Color surfaceColor,
+            Color knobColor)
+        {
+            GameObject joystickObject = new GameObject(
+                "WorldMovementJoystick",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(HabitHeroWorldJoystickInput));
+            joystickObject.transform.SetParent(parent, false);
+            RectTransform joystickRect = joystickObject.GetComponent<RectTransform>();
+            joystickRect.anchorMin = new Vector2(0.04f, 0.06f);
+            joystickRect.anchorMax = new Vector2(0.96f, 0.94f);
+            joystickRect.offsetMin = Vector2.zero;
+            joystickRect.offsetMax = Vector2.zero;
+            Image surface = joystickObject.GetComponent<Image>();
+            surface.color = surfaceColor;
+
+            GameObject knobObject = new GameObject(
+                "Knob",
+                typeof(RectTransform),
+                typeof(Image));
+            knobObject.transform.SetParent(joystickObject.transform, false);
+            RectTransform knobRect = knobObject.GetComponent<RectTransform>();
+            knobRect.anchorMin = new Vector2(0.5f, 0.5f);
+            knobRect.anchorMax = new Vector2(0.5f, 0.5f);
+            knobRect.sizeDelta = new Vector2(46f, 46f);
+            knobRect.anchoredPosition = Vector2.zero;
+            Image knob = knobObject.GetComponent<Image>();
+            knob.color = knobColor;
+            knob.raycastTarget = false;
+
+            HabitHeroWorldJoystickInput input =
+                joystickObject.GetComponent<HabitHeroWorldJoystickInput>();
+            input.SetKnob(knobRect);
+            return input;
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -64,13 +106,33 @@ namespace HabitHero.App
             UpdateFromPointer(eventData);
         }
 
-        public void OnPointerUp(PointerEventData eventData)
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (eventData == null) return;
+            if (activePointerId == NoPointer)
+            {
+                activePointerId = eventData.pointerId;
+            }
+
+            if (eventData.pointerId == activePointerId)
+            {
+                UpdateFromPointer(eventData);
+            }
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (eventData == null || eventData.pointerId != activePointerId) return;
+            UpdateFromPointer(eventData);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
         {
             if (eventData == null || eventData.pointerId != activePointerId) return;
             ResetPointer();
         }
 
-        public void OnPointerExit(PointerEventData eventData)
+        public void OnPointerUp(PointerEventData eventData)
         {
             if (eventData == null || eventData.pointerId != activePointerId) return;
             ResetPointer();

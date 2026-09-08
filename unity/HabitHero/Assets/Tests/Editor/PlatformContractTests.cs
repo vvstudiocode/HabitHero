@@ -8,6 +8,7 @@ using HabitHero.Platform;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace HabitHero.Tests
 {
@@ -345,6 +346,20 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 Vector2.zero,
                 HabitHeroWorldJoystickMath.GetValue(Vector2.zero, 0f));
+        }
+
+        [Test]
+        public void WorldJoystickSupportsDragLifecycleEvents()
+        {
+            Assert.IsTrue(
+                typeof(IBeginDragHandler).IsAssignableFrom(
+                    typeof(HabitHeroWorldJoystickInput)));
+            Assert.IsTrue(
+                typeof(IDragHandler).IsAssignableFrom(
+                    typeof(HabitHeroWorldJoystickInput)));
+            Assert.IsTrue(
+                typeof(IEndDragHandler).IsAssignableFrom(
+                    typeof(HabitHeroWorldJoystickInput)));
         }
 
         [Test]

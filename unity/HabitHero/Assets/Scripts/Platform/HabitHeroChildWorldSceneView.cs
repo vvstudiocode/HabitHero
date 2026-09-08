@@ -1483,36 +1483,10 @@ namespace HabitHero.App
 
         private void CreateMovementJoystick(Transform parent)
         {
-            GameObject joystickObject = new GameObject(
-                "WorldMovementJoystick",
-                typeof(RectTransform),
-                typeof(Image),
-                typeof(HabitHeroWorldJoystickInput));
-            joystickObject.transform.SetParent(parent, false);
-            RectTransform joystickRect = joystickObject.GetComponent<RectTransform>();
-            joystickRect.anchorMin = new Vector2(0.04f, 0.06f);
-            joystickRect.anchorMax = new Vector2(0.96f, 0.94f);
-            joystickRect.offsetMin = Vector2.zero;
-            joystickRect.offsetMax = Vector2.zero;
-            Image surface = joystickObject.GetComponent<Image>();
-            surface.color = new Color(0.12f, 0.2f, 0.3f, 0.78f);
-
-            GameObject knobObject = new GameObject(
-                "Knob",
-                typeof(RectTransform),
-                typeof(Image));
-            knobObject.transform.SetParent(joystickObject.transform, false);
-            RectTransform knobRect = knobObject.GetComponent<RectTransform>();
-            knobRect.anchorMin = new Vector2(0.5f, 0.5f);
-            knobRect.anchorMax = new Vector2(0.5f, 0.5f);
-            knobRect.sizeDelta = new Vector2(46f, 46f);
-            knobRect.anchoredPosition = Vector2.zero;
-            Image knob = knobObject.GetComponent<Image>();
-            knob.color = HabitHeroUiFactory.AccentColor;
-            knob.raycastTarget = false;
-
-            worldJoystick = joystickObject.GetComponent<HabitHeroWorldJoystickInput>();
-            worldJoystick.SetKnob(knobRect);
+            worldJoystick = HabitHeroWorldJoystickInput.Create(
+                parent,
+                new Color(0.12f, 0.2f, 0.3f, 0.78f),
+                HabitHeroUiFactory.AccentColor);
             worldJoystick.Changed += HandleWorldJoystickChanged;
         }
 

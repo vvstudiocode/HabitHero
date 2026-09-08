@@ -18,6 +18,9 @@ namespace HabitHero.App
         private Camera worldCamera;
         private RenderTexture renderTexture;
         private GameObject player;
+        private HabitHeroWorldJoystickInput worldJoystick;
+        private Vector2 joystickDirection;
+        private float nextLocalAvatarPublishSeconds;
         private Text statusText;
         private Text liveStatusText;
         private SupabaseChildFriendWorldData latestData;
@@ -248,6 +251,7 @@ namespace HabitHero.App
         {
             float safeDeltaSeconds = Mathf.Max(0f, deltaSeconds);
             realtimeSeconds += safeDeltaSeconds;
+            UpdatePlayerFromJoystick(safeDeltaSeconds);
             PruneStaleRemoteAvatarStates();
             if (!IsOpen) return;
 
@@ -549,30 +553,7 @@ namespace HabitHero.App
             controlsRect.anchorMax = new Vector2(0.96f, 0.32f);
             controlsRect.offsetMin = Vector2.zero;
             controlsRect.offsetMax = Vector2.zero;
-            CreateMovementButton(
-                controls.transform,
-                "上",
-                new Vector2(0.34f, 0.56f),
-                new Vector2(0.66f, 0.9f),
-                new Vector2(0f, 1f));
-            CreateMovementButton(
-                controls.transform,
-                "左",
-                new Vector2(0.04f, 0.24f),
-                new Vector2(0.36f, 0.58f),
-                new Vector2(-1f, 0f));
-            CreateMovementButton(
-                controls.transform,
-                "右",
-                new Vector2(0.64f, 0.24f),
-                new Vector2(0.96f, 0.58f),
-                new Vector2(1f, 0f));
-            CreateMovementButton(
-                controls.transform,
-                "下",
-                new Vector2(0.34f, 0.02f),
-                new Vector2(0.66f, 0.36f),
-                new Vector2(0f, -1f));
+            CreateMovementJoystick(controls.transform);
 
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
@@ -864,43 +845,75 @@ namespace HabitHero.App
             return button;
         }
 
-        private void CreateMovementButton(
-            Transform parent,
-            string label,
-            Vector2 anchorMin,
-            Vector2 anchorMax,
-            Vector2 direction)
+        private void CreateMovementJoystick(Transform parent)
         {
-            Button button = HabitHeroUiFactory.CreateButton(
+            worldJoystick = HabitHeroWorldJoystickInput.Create(
                 parent,
-                font,
-                label,
-                anchorMin,
-                anchorMax);
-            button.onClick.AddListener(() => MovePlayer(direction));
+                new Color(0.12f, 0.2f, 0.3f, 0.78f),
+                HabitHeroUiFactory.AccentColor);
+            worldJoystick.Changed += HandleWorldJoystickChanged;
         }
 
         private void MovePlayer(Vector2 direction)
         {
-            if (player == null) return;
+            if (MovePlayer(direction, 0.8f, true))
+            {
+                PublishLocalAvatarState();
+            }
+        }
+
+        private void HandleWorldJoystickChanged(Vector2 direction)
+        {
+            joystickDirection = direction;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                PublishLocalAvatarState();
+            }
+        }
+
+        private void UpdatePlayerFromJoystick(float deltaSeconds)
+        {
+            if (joystickDirection.sqrMagnitude <= 0.0001f) return;
+            bool moved = MovePlayer(
+                joystickDirection,
+                Mathf.Max(0f, deltaSeconds) * 3.2f,
+                false);
+            if (moved && realtimeSeconds >= nextLocalAvatarPublishSeconds)
+            {
+                nextLocalAvatarPublishSeconds = realtimeSeconds + 0.1f;
+                PublishLocalAvatarState();
+            }
+        }
+
+        private bool MovePlayer(
+            Vector2 direction,
+            float distance,
+            bool updateStatus)
+        {
+            if (player == null) return false;
             Vector3 position = player.transform.position;
+            Vector3 previousPosition = position;
             position.x = Mathf.Clamp(
-                position.x + direction.x * 0.8f,
+                position.x + direction.x * distance,
                 -SupabaseFriendWorldRealtimeContracts.WorldBoundary,
                 SupabaseFriendWorldRealtimeContracts.WorldBoundary);
             position.z = Mathf.Clamp(
-                position.z + direction.y * 0.8f,
+                position.z + direction.y * distance,
                 -SupabaseFriendWorldRealtimeContracts.WorldBoundary,
                 SupabaseFriendWorldRealtimeContracts.WorldBoundary);
             player.transform.position = position;
-            SetStatus(
-                "訪客角色已移動到 "
-                    + position.x.ToString("0.0")
-                    + ", "
-                    + position.z.ToString("0.0")
-                    + "；好友世界仍為唯讀。",
-                false);
-            PublishLocalAvatarState();
+            if (updateStatus)
+            {
+                SetStatus(
+                    "訪客角色已移動到 "
+                        + position.x.ToString("0.0")
+                        + ", "
+                        + position.z.ToString("0.0")
+                        + "；好友世界仍為唯讀。",
+                    false);
+            }
+
+            return Vector3.Distance(previousPosition, position) > 0.0001f;
         }
 
         private void PublishLocalAvatarState()
@@ -1067,6 +1080,13 @@ namespace HabitHero.App
             remoteAvatars.Clear();
             worldCamera = null;
             player = null;
+            if (worldJoystick != null)
+            {
+                worldJoystick.Changed -= HandleWorldJoystickChanged;
+            }
+            worldJoystick = null;
+            joystickDirection = Vector2.zero;
+            nextLocalAvatarPublishSeconds = 0f;
             statusText = null;
             liveStatusText = null;
             if (notify && onClose != null) onClose();
