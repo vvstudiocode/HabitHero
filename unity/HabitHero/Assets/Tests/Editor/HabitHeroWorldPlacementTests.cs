@@ -115,5 +115,24 @@ namespace HabitHero.Tests
             Assert.That(transform.rotationZ, Is.EqualTo(0f).Within(0.0001f));
             Assert.That(transform.scale, Is.EqualTo(1.1f).Within(0.0001f));
         }
+
+        [Test]
+        public void GroundRayResolvesWorldPositionAndRejectsParallelRay()
+        {
+            Vector2 position;
+            bool resolved = HabitHeroWorldPlacement.TryGetGroundPosition(
+                new Ray(new Vector3(2f, 4f, -3f), Vector3.down),
+                0f,
+                out position);
+
+            Assert.IsTrue(resolved);
+            Assert.That(position.x, Is.EqualTo(2f).Within(0.0001f));
+            Assert.That(position.y, Is.EqualTo(-3f).Within(0.0001f));
+
+            Assert.IsFalse(HabitHeroWorldPlacement.TryGetGroundPosition(
+                new Ray(new Vector3(2f, 4f, -3f), Vector3.forward),
+                0f,
+                out position));
+        }
     }
 }

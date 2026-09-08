@@ -112,7 +112,10 @@ renderer bounds and the same navigation inset used by the Web runtime;
 Supabase decorations retain their `collision_radius` circle proxies. Safe spawn
 selection uses those same shape checks. The camera now uses the Web runtime's
 50° perspective framing, follows the child, and supports drag/pinch/scroll
-controls. World background music now uses the same per-scene Vercel audio
+controls. When a child owns a decoration, the world view also exposes a
+server-backed decoration editor: tap the rendered ground to move the preview,
+rotate or scale it within the catalog limits, then save, cancel, edit, or
+return it to the backpack. World background music now uses the same per-scene Vercel audio
 assets, default volume, loop behavior, and child-scoped on/off preference as
 the Web client. A running timer reaching zero also loops the shared
 `timer-complete.mp3` alarm until it is dismissed or submitted. Device parity

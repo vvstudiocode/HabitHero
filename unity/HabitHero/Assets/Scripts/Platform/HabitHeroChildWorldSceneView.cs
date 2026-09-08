@@ -18,6 +18,8 @@ namespace HabitHero.App
         private GameObject scenePanel;
         private GameObject worldRoot;
         private Camera worldCamera;
+        private RectTransform cameraGestureRect;
+        private HabitHeroWorldCameraInput cameraInput;
         private HabitHeroWorldCameraState worldCameraState;
         private Light worldSun;
         private Light worldFill;
@@ -41,6 +43,27 @@ namespace HabitHero.App
         private SupabaseChildWorldData latestData;
         private SupabaseChildGameData latestGameData;
         private string sceneId;
+        private Func<
+            string,
+            long,
+            SupabaseFriendWorldTransform,
+            string,
+            int?,
+            Task<SupabaseChildGameData>> placeWorldEntity;
+        private Func<
+            string,
+            string,
+            long,
+            SupabaseFriendWorldTransform,
+            Task<SupabaseChildGameData>> updateWorldEntity;
+        private Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity;
+        private GameObject decorationEditor;
+        private GameObject placementPreview;
+        private string placementInventoryItemId;
+        private SupabaseGameCatalogItemRecord placementItem;
+        private SupabaseChildWorldEntityRecord placementEntity;
+        private HabitHeroWorldPlacementDraft placementDraft;
+        private float placementCollisionRadius;
         private HabitHeroWorldSceneProfile activeSceneProfile;
         private HabitHeroWorldCollisionProxy[] worldCollisionProxies =
             new HabitHeroWorldCollisionProxy[0];
@@ -140,12 +163,47 @@ namespace HabitHero.App
             Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue,
             Action onClose)
         {
+            Show(
+                data,
+                gameData,
+                sceneId,
+                completeNpcDialogue,
+                onClose,
+                null,
+                null,
+                null);
+        }
+
+        public void Show(
+            SupabaseChildWorldData data,
+            SupabaseChildGameData gameData,
+            string sceneId,
+            Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue,
+            Action onClose,
+            Func<
+                string,
+                long,
+                SupabaseFriendWorldTransform,
+                string,
+                int?,
+                Task<SupabaseChildGameData>> placeWorldEntity,
+            Func<
+                string,
+                string,
+                long,
+                SupabaseFriendWorldTransform,
+                Task<SupabaseChildGameData>> updateWorldEntity,
+            Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity)
+        {
             CloseInternal(false);
             latestData = data;
             latestGameData = gameData;
             this.sceneId = sceneId;
             this.completeNpcDialogue = completeNpcDialogue;
             this.onClose = onClose;
+            this.placeWorldEntity = placeWorldEntity;
+            this.updateWorldEntity = updateWorldEntity;
+            this.removeWorldEntity = removeWorldEntity;
         }
 
         public void ApplyData(SupabaseChildWorldData data)
@@ -194,6 +252,93 @@ namespace HabitHero.App
             sceneId = null;
             completeNpcDialogue = null;
             onClose = null;
+            placeWorldEntity = null;
+            updateWorldEntity = null;
+            removeWorldEntity = null;
+        }
+
+        public bool BeginDecorationPlacement(string inventoryItemId)
+        {
+            if (scenePanel == null || latestGameData == null)
+            {
+                return false;
+            }
+
+            SupabaseChildInventoryItemRecord inventory = FindInventoryItem(inventoryItemId);
+            SupabaseGameCatalogItemRecord item = FindCatalogItemForInventory(inventoryItemId);
+            if (inventory == null || item == null || item.item_type != "decoration")
+            {
+                return false;
+            }
+
+            SupabaseChildWorldEntityRecord entity = FindActiveDecoration(inventoryItemId);
+            placementInventoryItemId = inventoryItemId;
+            placementItem = item;
+            placementEntity = entity;
+            placementCollisionRadius = item.collision_radius;
+            if (entity != null)
+            {
+                placementDraft = new HabitHeroWorldPlacementDraft
+                {
+                    X = entity.position_x,
+                    Z = entity.position_z,
+                    RotationY = entity.rotation_y,
+                    Scale = entity.scale <= 0f ? 1f : entity.scale,
+                };
+                placementDraft = HabitHeroWorldPlacement.ClampToWorld(
+                    placementDraft,
+                    placementCollisionRadius,
+                    activeSceneProfile == null
+                        ? 8f
+                        : activeSceneProfile.MovementBoundary);
+            }
+            else
+            {
+                Vector2 characterPosition = player == null
+                    ? Vector2.zero
+                    : new Vector2(player.transform.position.x, player.transform.position.z);
+                float defaultScale = item.min_scale > 0f
+                    ? Mathf.Clamp(1f, item.min_scale, item.max_scale)
+                    : 1f;
+                placementDraft = HabitHeroWorldPlacement.CreateDraft(
+                    characterPosition,
+                    worldCameraState == null ? 0f : worldCameraState.Yaw,
+                    1.8f,
+                    defaultScale,
+                    item.min_scale,
+                    item.max_scale,
+                    activeSceneProfile == null
+                        ? 8f
+                        : activeSceneProfile.MovementBoundary);
+            }
+
+            RefreshPlacementPreview();
+            SetStatus(
+                "正在編輯「" + item.name + "」：可旋轉、縮放或點擊世界移動位置。",
+                false);
+            return true;
+        }
+
+        public bool ApplyPlacementControl(HabitHeroWorldPlacementControl control)
+        {
+            if (placementItem == null) return false;
+            placementDraft = HabitHeroWorldPlacement.ApplyControl(
+                placementDraft,
+                control,
+                placementItem.min_scale,
+                placementItem.max_scale);
+            placementDraft = HabitHeroWorldPlacement.ClampToWorld(
+                placementDraft,
+                placementCollisionRadius,
+                activeSceneProfile == null ? 8f : activeSceneProfile.MovementBoundary);
+            RefreshPlacementPreview();
+            return true;
+        }
+
+        public void CancelDecorationPlacement()
+        {
+            ClearPlacementState();
+            SetStatus("已取消裝飾編輯。", false);
         }
 
         private void CreateWorld(SupabaseGameWorldSceneRecord scene)
@@ -904,6 +1049,170 @@ namespace HabitHero.App
             }
 
             return null;
+        }
+
+        private SupabaseChildWorldEntityRecord FindActiveDecoration(
+            string inventoryItemId)
+        {
+            foreach (SupabaseChildWorldEntityRecord entity in
+                latestGameData == null
+                    ? new SupabaseChildWorldEntityRecord[0]
+                    : latestGameData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
+            {
+                if (entity != null
+                    && entity.is_active
+                    && entity.entity_kind == "decoration"
+                    && entity.inventory_item_id == inventoryItemId)
+                {
+                    return entity;
+                }
+            }
+
+            return null;
+        }
+
+        private void RefreshPlacementPreview()
+        {
+            if (placementPreview != null)
+            {
+                UnityEngine.Object.Destroy(placementPreview);
+                placementPreview = null;
+            }
+
+            if (placementItem == null || worldRoot == null) return;
+            placementPreview = CreateWorldEntityPlaceholder(
+                "WorldPlacementPreview",
+                "decoration",
+                placementItem.asset_key,
+                placementDraft.X,
+                0f,
+                placementDraft.Z,
+                0f,
+                placementDraft.RotationY,
+                0f,
+                placementDraft.Scale,
+                false);
+            Renderer renderer = placementPreview.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial.color = new Color(0.35f, 0.9f, 0.78f, 0.72f);
+            }
+        }
+
+        private void ClearPlacementState()
+        {
+            if (placementPreview != null)
+            {
+                UnityEngine.Object.Destroy(placementPreview);
+                placementPreview = null;
+            }
+
+            placementInventoryItemId = null;
+            placementItem = null;
+            placementEntity = null;
+            placementCollisionRadius = 0f;
+            placementDraft = new HabitHeroWorldPlacementDraft();
+        }
+
+        private async void ConfirmDecorationPlacementAsync(Button button)
+        {
+            if (placementItem == null || string.IsNullOrWhiteSpace(placementInventoryItemId))
+            {
+                SetStatus("請先選擇要編輯的裝飾。", true);
+                return;
+            }
+
+            bool isUpdate = placementEntity != null;
+            if (isUpdate && updateWorldEntity == null)
+            {
+                SetStatus("裝飾更新服務尚未連線。", true);
+                return;
+            }
+            if (!isUpdate && placeWorldEntity == null)
+            {
+                SetStatus("裝飾放置服務尚未連線。", true);
+                return;
+            }
+
+            if (button != null) button.interactable = false;
+            try
+            {
+                SupabaseFriendWorldTransform transform = HabitHeroWorldPlacement.ToTransform(
+                    placementDraft);
+                SupabaseChildGameData refreshed;
+                if (isUpdate)
+                {
+                    refreshed = await updateWorldEntity(
+                        placementInventoryItemId,
+                        placementEntity.id,
+                        latestGameData.worldRevision,
+                        transform);
+                }
+                else
+                {
+                    refreshed = await placeWorldEntity(
+                        placementInventoryItemId,
+                        latestGameData.worldRevision,
+                        transform,
+                        "static",
+                        null);
+                }
+
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+                }
+
+                if (latestGameData != refreshed && scenePanel != null)
+                {
+                    ApplyGameData(refreshed);
+                }
+                ClearPlacementState();
+                if (scenePanel != null)
+                {
+                    SetStatus(isUpdate ? "裝飾位置已儲存。" : "裝飾已放入我的世界。", false);
+                }
+            }
+            catch (Exception exception)
+            {
+                SetStatus("裝飾儲存失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private async void RemoveDecorationAsync(
+            string inventoryItemId,
+            SupabaseChildWorldEntityRecord entity,
+            Button button)
+        {
+            if (removeWorldEntity == null || entity == null) return;
+            if (button != null) button.interactable = false;
+            SetStatus("正在把裝飾收回背包…", false);
+            try
+            {
+                SupabaseChildGameData refreshed = await removeWorldEntity(
+                    inventoryItemId,
+                    entity.id,
+                    latestGameData.worldRevision);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+                }
+
+                if (latestGameData != refreshed && scenePanel != null)
+                {
+                    ApplyGameData(refreshed);
+                }
+                if (scenePanel != null)
+                {
+                    SetStatus("裝飾已收回背包。", false);
+                }
+            }
+            catch (Exception exception)
+            {
+                SetStatus("裝飾收回失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
         }
 
         private string GetPetDisplayName(
@@ -1653,15 +1962,15 @@ namespace HabitHero.App
             Image gestureImage = cameraGestureSurface.GetComponent<Image>();
             gestureImage.color = new Color(0f, 0f, 0f, 0f);
             gestureImage.raycastTarget = true;
-            RectTransform gestureRect = cameraGestureSurface.GetComponent<RectTransform>();
-            gestureRect.anchorMin = Vector2.zero;
-            gestureRect.anchorMax = Vector2.one;
-            gestureRect.offsetMin = Vector2.zero;
-            gestureRect.offsetMax = Vector2.zero;
-            HabitHeroWorldCameraInput cameraInput =
-                cameraGestureSurface.GetComponent<HabitHeroWorldCameraInput>();
+            cameraGestureRect = cameraGestureSurface.GetComponent<RectTransform>();
+            cameraGestureRect.anchorMin = Vector2.zero;
+            cameraGestureRect.anchorMax = Vector2.one;
+            cameraGestureRect.offsetMin = Vector2.zero;
+            cameraGestureRect.offsetMax = Vector2.zero;
+            cameraInput = cameraGestureSurface.GetComponent<HabitHeroWorldCameraInput>();
             cameraInput.Dragged += ApplyCameraDrag;
             cameraInput.Zoomed += ApplyCameraZoom;
+            cameraInput.Tapped += HandleWorldTap;
 
             GameObject hud = HabitHeroUiFactory.CreatePanel(
                 scenePanel.transform,
@@ -1713,6 +2022,7 @@ namespace HabitHero.App
                 new Vector2(0.04f, 0.34f),
                 new Vector2(0.44f, 0.73f));
             RenderNpcActions(npcList.transform);
+            CreateDecorationEditor();
 
             GameObject controls = HabitHeroUiFactory.CreatePanel(
                 scenePanel.transform,
@@ -1817,6 +2127,177 @@ namespace HabitHero.App
                         talkButton));
                 }
             }
+        }
+
+        private void CreateDecorationEditor()
+        {
+            decorationEditor = HabitHeroUiFactory.CreatePanel(
+                scenePanel.transform,
+                new Color(0.03f, 0.05f, 0.08f, 0.9f),
+                "WorldDecorationEditor");
+            RectTransform editorRect = decorationEditor.GetComponent<RectTransform>();
+            editorRect.anchorMin = new Vector2(0.04f, 0.34f);
+            editorRect.anchorMax = new Vector2(0.64f, 0.52f);
+            editorRect.offsetMin = Vector2.zero;
+            editorRect.offsetMax = Vector2.zero;
+
+            HabitHeroUiFactory.CreateText(
+                decorationEditor.transform,
+                font,
+                "世界裝飾編輯",
+                14,
+                TextAnchor.MiddleLeft,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.02f, 0.8f),
+                new Vector2(0.98f, 0.98f));
+            GameObject list = CreateList(
+                decorationEditor.transform,
+                "WorldDecorationEditorList",
+                new Vector2(0.02f, 0.28f),
+                new Vector2(0.98f, 0.8f));
+            RenderDecorationEntries(list.transform);
+
+            CreatePlacementControlButton(
+                decorationEditor.transform,
+                "左轉",
+                HabitHeroWorldPlacementControl.RotateLeft,
+                new Vector2(0.02f, 0.03f),
+                new Vector2(0.16f, 0.24f));
+            CreatePlacementControlButton(
+                decorationEditor.transform,
+                "右轉",
+                HabitHeroWorldPlacementControl.RotateRight,
+                new Vector2(0.18f, 0.03f),
+                new Vector2(0.32f, 0.24f));
+            CreatePlacementControlButton(
+                decorationEditor.transform,
+                "縮小",
+                HabitHeroWorldPlacementControl.ScaleDown,
+                new Vector2(0.34f, 0.03f),
+                new Vector2(0.48f, 0.24f));
+            CreatePlacementControlButton(
+                decorationEditor.transform,
+                "放大",
+                HabitHeroWorldPlacementControl.ScaleUp,
+                new Vector2(0.5f, 0.03f),
+                new Vector2(0.64f, 0.24f));
+            Button saveButton = HabitHeroUiFactory.CreateButton(
+                decorationEditor.transform,
+                font,
+                "儲存",
+                new Vector2(0.66f, 0.03f),
+                new Vector2(0.8f, 0.24f));
+            saveButton.interactable = placeWorldEntity != null || updateWorldEntity != null;
+            saveButton.onClick.AddListener(() => ConfirmDecorationPlacementAsync(saveButton));
+            Button cancelButton = HabitHeroUiFactory.CreateButton(
+                decorationEditor.transform,
+                font,
+                "取消",
+                new Vector2(0.82f, 0.03f),
+                new Vector2(0.98f, 0.24f));
+            cancelButton.onClick.AddListener(CancelDecorationPlacement);
+        }
+
+        private void RenderDecorationEntries(Transform parent)
+        {
+            int visibleCount = 0;
+            if (latestGameData != null)
+            {
+                foreach (SupabaseChildInventoryItemRecord inventory in
+                    latestGameData.inventory ?? new SupabaseChildInventoryItemRecord[0])
+                {
+                    if (inventory == null || inventory.quantity <= 0) continue;
+                    SupabaseGameCatalogItemRecord item = FindCatalogItemForInventory(inventory.id);
+                    if (item == null || item.item_type != "decoration") continue;
+
+                    string inventoryId = inventory.id;
+                    SupabaseChildWorldEntityRecord entity = FindActiveDecoration(inventoryId);
+                    GameObject row = new GameObject(
+                        "WorldDecorationEntry_" + inventoryId,
+                        typeof(RectTransform),
+                        typeof(HorizontalLayoutGroup));
+                    row.transform.SetParent(parent, false);
+                    row.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 30f);
+                    HorizontalLayoutGroup layout = row.GetComponent<HorizontalLayoutGroup>();
+                    layout.spacing = 3f;
+                    layout.childControlWidth = true;
+                    layout.childControlHeight = true;
+                    layout.childForceExpandWidth = false;
+                    layout.childForceExpandHeight = true;
+                    Text label = HabitHeroUiFactory.CreateText(
+                        row.transform,
+                        font,
+                        item.name + (entity == null ? "　未放置" : "　已放置"),
+                        12,
+                        TextAnchor.MiddleLeft,
+                        Color.white,
+                        Vector2.zero,
+                        Vector2.one);
+                    LayoutElement labelLayout = label.gameObject.AddComponent<LayoutElement>();
+                    labelLayout.flexibleWidth = 1f;
+
+                    Button editButton = HabitHeroUiFactory.CreateButton(
+                        row.transform,
+                        font,
+                        entity == null ? "放置" : "編輯",
+                        Vector2.zero,
+                        Vector2.one);
+                    LayoutElement editLayout = editButton.gameObject.AddComponent<LayoutElement>();
+                    editLayout.preferredWidth = 60f;
+                    editLayout.minWidth = 60f;
+                    editButton.onClick.AddListener(() => BeginDecorationPlacement(inventoryId));
+
+                    if (entity != null)
+                    {
+                        Button removeButton = HabitHeroUiFactory.CreateButton(
+                            row.transform,
+                            font,
+                            "收回",
+                            Vector2.zero,
+                            Vector2.one);
+                        LayoutElement removeLayout = removeButton.gameObject.AddComponent<LayoutElement>();
+                        removeLayout.preferredWidth = 60f;
+                        removeLayout.minWidth = 60f;
+                        removeButton.interactable = removeWorldEntity != null;
+                        removeButton.onClick.AddListener(() => RemoveDecorationAsync(
+                            inventoryId,
+                            entity,
+                            removeButton));
+                    }
+
+                    visibleCount += 1;
+                    if (visibleCount >= 4) break;
+                }
+            }
+
+            if (visibleCount == 0)
+            {
+                HabitHeroUiFactory.CreateText(
+                    parent,
+                    font,
+                    "背包中沒有可編輯的裝飾。",
+                    12,
+                    TextAnchor.MiddleLeft,
+                    new Color(0.75f, 0.8f, 0.88f, 1f),
+                    Vector2.zero,
+                    Vector2.one);
+            }
+        }
+
+        private void CreatePlacementControlButton(
+            Transform parent,
+            string label,
+            HabitHeroWorldPlacementControl control,
+            Vector2 anchorMin,
+            Vector2 anchorMax)
+        {
+            Button button = HabitHeroUiFactory.CreateButton(
+                parent,
+                font,
+                label,
+                anchorMin,
+                anchorMax);
+            button.onClick.AddListener(() => ApplyPlacementControl(control));
         }
 
         private void CreateMovementJoystick(Transform parent)
@@ -1927,6 +2408,57 @@ namespace HabitHero.App
             if (worldCameraState == null) return;
             worldCameraState.ApplyDrag(delta);
             UpdateWorldCamera();
+        }
+
+        private void HandleWorldTap(Vector2 screenPosition)
+        {
+            if (placementItem == null
+                || worldCamera == null
+                || cameraGestureRect == null)
+            {
+                return;
+            }
+
+            Vector2 localPoint;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                cameraGestureRect,
+                screenPosition,
+                null,
+                out localPoint))
+            {
+                return;
+            }
+
+            Rect rect = cameraGestureRect.rect;
+            if (rect.width <= 0f || rect.height <= 0f) return;
+            Vector2 viewport = new Vector2(
+                Mathf.InverseLerp(rect.xMin, rect.xMax, localPoint.x),
+                Mathf.InverseLerp(rect.yMin, rect.yMax, localPoint.y));
+            Ray ray = worldCamera.ViewportPointToRay(
+                new Vector3(viewport.x, viewport.y, 0f));
+            Vector2 position;
+            float groundY = activeSceneProfile == null
+                ? 0f
+                : activeSceneProfile.SpawnPosition.y;
+            if (!HabitHeroWorldPlacement.TryGetGroundPosition(ray, groundY, out position))
+            {
+                return;
+            }
+
+            placementDraft.X = position.x;
+            placementDraft.Z = position.y;
+            placementDraft = HabitHeroWorldPlacement.ClampToWorld(
+                placementDraft,
+                placementCollisionRadius,
+                activeSceneProfile == null ? 8f : activeSceneProfile.MovementBoundary);
+            RefreshPlacementPreview();
+            SetStatus(
+                "裝飾預覽已移動到 "
+                    + placementDraft.X.ToString("0.0")
+                    + ", "
+                    + placementDraft.Z.ToString("0.0")
+                    + "。",
+                false);
         }
 
         private void ApplyCameraZoom(float zoomDelta)
@@ -2071,6 +2603,16 @@ namespace HabitHero.App
             }
 
             StopWorldBackgroundMusic();
+            ClearPlacementState();
+
+            if (cameraInput != null)
+            {
+                cameraInput.Dragged -= ApplyCameraDrag;
+                cameraInput.Zoomed -= ApplyCameraZoom;
+                cameraInput.Tapped -= HandleWorldTap;
+            }
+            cameraInput = null;
+            cameraGestureRect = null;
 
             foreach (GltfImport gltf in modelImports.Values)
             {
@@ -2085,6 +2627,8 @@ namespace HabitHero.App
                 UnityEngine.Object.Destroy(scenePanel);
                 scenePanel = null;
             }
+
+            decorationEditor = null;
 
             if (worldRoot != null)
             {

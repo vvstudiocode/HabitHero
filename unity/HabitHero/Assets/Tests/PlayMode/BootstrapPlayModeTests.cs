@@ -270,6 +270,7 @@ namespace HabitHero.Tests
                 Assert.IsTrue(worldView.ApplyPlacementControl(
                     HabitHeroWorldPlacementControl.RotateRight));
                 worldView.CancelDecorationPlacement();
+                yield return null;
                 Assert.IsNull(GameObject.Find("WorldPlacementPreview"));
             }
             finally

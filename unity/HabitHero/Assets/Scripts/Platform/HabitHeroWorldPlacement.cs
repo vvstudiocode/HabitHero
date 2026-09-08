@@ -1,4 +1,3 @@
-using HabitHero.Platform;
 using UnityEngine;
 
 namespace HabitHero.Platform
@@ -45,6 +44,33 @@ namespace HabitHero.Platform
                 Scale = ClampScale(defaultScale, minScale, maxScale),
             };
             return ClampToWorld(draft, 0f, boundary);
+        }
+
+        public static bool TryGetGroundPosition(
+            Ray ray,
+            float groundY,
+            out Vector2 position)
+        {
+            position = Vector2.zero;
+            if (!IsFinite(ray.origin.x)
+                || !IsFinite(ray.origin.y)
+                || !IsFinite(ray.origin.z)
+                || !IsFinite(ray.direction.x)
+                || !IsFinite(ray.direction.y)
+                || !IsFinite(ray.direction.z)
+                || !IsFinite(groundY)
+                || Mathf.Abs(ray.direction.y) <= 0.0001f)
+            {
+                return false;
+            }
+
+            float distance = (groundY - ray.origin.y) / ray.direction.y;
+            if (!IsFinite(distance) || distance < 0f) return false;
+
+            Vector3 hit = ray.GetPoint(distance);
+            if (!IsFinite(hit.x) || !IsFinite(hit.z)) return false;
+            position = new Vector2(hit.x, hit.z);
+            return true;
         }
 
         public static HabitHeroWorldPlacementDraft ApplyControl(

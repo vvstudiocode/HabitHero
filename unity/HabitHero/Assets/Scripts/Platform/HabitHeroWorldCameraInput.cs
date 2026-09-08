@@ -12,11 +12,18 @@ namespace HabitHero.App
         IScrollHandler
     {
         private const float ScrollZoomScale = 32f;
+        private const float TapDistance = 18f;
+        private const float TapDuration = 0.35f;
         private readonly Dictionary<int, Vector2> pointers =
             new Dictionary<int, Vector2>();
+        private readonly Dictionary<int, Vector2> pointerDownPositions =
+            new Dictionary<int, Vector2>();
+        private readonly Dictionary<int, float> pointerDownTimes =
+            new Dictionary<int, float>();
 
         public Action<Vector2> Dragged;
         public Action<float> Zoomed;
+        public Action<Vector2> Tapped;
 
         public void OnPointerDown(PointerEventData eventData)
         {
@@ -24,6 +31,8 @@ namespace HabitHero.App
             if (eventData.pointerId < 0
                 && eventData.button != PointerEventData.InputButton.Left) return;
             pointers[eventData.pointerId] = eventData.position;
+            pointerDownPositions[eventData.pointerId] = eventData.position;
+            pointerDownTimes[eventData.pointerId] = Time.unscaledTime;
         }
 
         public void OnPointerMove(PointerEventData eventData)
@@ -51,7 +60,21 @@ namespace HabitHero.App
         public void OnPointerUp(PointerEventData eventData)
         {
             if (eventData == null) return;
+            bool isTap = false;
+            Vector2 downPosition;
+            float downTime;
+            if (pointers.Count == 1
+                && pointerDownPositions.TryGetValue(eventData.pointerId, out downPosition)
+                && pointerDownTimes.TryGetValue(eventData.pointerId, out downTime))
+            {
+                isTap = Vector2.Distance(downPosition, eventData.position) <= TapDistance
+                    && Time.unscaledTime - downTime <= TapDuration;
+            }
+
             pointers.Remove(eventData.pointerId);
+            pointerDownPositions.Remove(eventData.pointerId);
+            pointerDownTimes.Remove(eventData.pointerId);
+            if (isTap) Tapped?.Invoke(eventData.position);
         }
 
         public void OnScroll(PointerEventData eventData)
@@ -76,6 +99,8 @@ namespace HabitHero.App
         private void OnDisable()
         {
             pointers.Clear();
+            pointerDownPositions.Clear();
+            pointerDownTimes.Clear();
         }
     }
 }

@@ -67,6 +67,20 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseWishlistMutationResult>> addWishlist;
         private Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist;
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogueWorld;
+        private Func<
+            string,
+            long,
+            SupabaseFriendWorldTransform,
+            string,
+            int?,
+            Task<SupabaseChildGameData>> placeWorldEntity;
+        private Func<
+            string,
+            string,
+            long,
+            SupabaseFriendWorldTransform,
+            Task<SupabaseChildGameData>> updateWorldEntity;
+        private Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity;
         private Func<Task<SupabaseChildSocialData>> refreshSocial;
         private Func<string, Task<SupabaseChildSocialData>> sendFriendRequest;
         private Func<string, Task<SupabaseChildSocialData>> acceptFriendRequest;
@@ -240,6 +254,9 @@ namespace HabitHero.App
                 collectWorldDecorationsWithApply = (expectedRevision) =>
                     ApplyGameDataMutationAsync(() => collectWorldDecorations(expectedRevision));
             }
+            this.placeWorldEntity = placeWorldEntityWithApply;
+            this.updateWorldEntity = updateWorldEntityWithApply;
+            this.removeWorldEntity = removeWorldEntityWithApply;
             gameView = new HabitHeroChildGameView(canvasTransform, font);
             gameView.Show(
                 gameData,
@@ -443,6 +460,9 @@ namespace HabitHero.App
             addWishlist = null;
             deleteWishlist = null;
             completeNpcDialogueWorld = null;
+            placeWorldEntity = null;
+            updateWorldEntity = null;
+            removeWorldEntity = null;
             refreshSocial = null;
             sendFriendRequest = null;
             acceptFriendRequest = null;
@@ -584,7 +604,10 @@ namespace HabitHero.App
                 latestGameData,
                 sceneId,
                 (npcId) => CompleteNpcDialogueAndApplyAsync(completeNpcDialogueWorld, npcId),
-                CloseWorldScene);
+                CloseWorldScene,
+                placeWorldEntity,
+                updateWorldEntity,
+                removeWorldEntity);
             worldSceneView.Open();
         }
 
