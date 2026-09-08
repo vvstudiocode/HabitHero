@@ -19,6 +19,7 @@ namespace HabitHero.App
         private readonly SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
+        private readonly string gameAssetBaseUrl;
         private HabitHeroChildHomeView view;
         private IDisposable worldChatRealtimeSubscription;
         private CancellationTokenSource worldChatRealtimeCancellation;
@@ -43,7 +44,8 @@ namespace HabitHero.App
             SupabaseChildWorldChatClient worldChatClient,
             SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient,
             Transform canvasTransform,
-            Font font)
+            Font font,
+            string gameAssetBaseUrl)
         {
             if (client == null) throw new ArgumentNullException("client");
             if (gameClient == null) throw new ArgumentNullException("gameClient");
@@ -66,6 +68,9 @@ namespace HabitHero.App
             this.friendWorldRealtimeClient = friendWorldRealtimeClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
+            this.gameAssetBaseUrl = gameAssetBaseUrl == null
+                ? string.Empty
+                : gameAssetBaseUrl.Trim();
         }
 
         public async Task<bool> TryShowAsync(
@@ -135,7 +140,13 @@ namespace HabitHero.App
                     setStatus("任務已載入；好友資料暫時無法同步：" + exception.Message, true);
                 }
 
-                if (view == null) view = new HabitHeroChildHomeView(canvasTransform, font);
+                if (view == null)
+                {
+                    view = new HabitHeroChildHomeView(
+                        canvasTransform,
+                        font,
+                        gameAssetBaseUrl);
+                }
                 view.Show(
                     snapshot,
                     gameData,

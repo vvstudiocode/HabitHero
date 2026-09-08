@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using HabitHero.Platform;
+using GLTFast;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +13,7 @@ namespace HabitHero.App
     {
         private readonly Transform canvasTransform;
         private readonly Font font;
+        private readonly string gameAssetBaseUrl;
         private GameObject scenePanel;
         private GameObject worldRoot;
         private Camera worldCamera;
@@ -23,13 +26,24 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue;
         private Action onClose;
         private readonly List<Material> runtimeMaterials = new List<Material>();
+        private readonly Dictionary<string, GltfImport> modelImports =
+            new Dictionary<string, GltfImport>(StringComparer.Ordinal);
+        private readonly Dictionary<string, Task<GltfImport>> modelImportLoads =
+            new Dictionary<string, Task<GltfImport>>(StringComparer.Ordinal);
+        private CancellationTokenSource modelLoadingCancellation;
 
-        public HabitHeroChildWorldSceneView(Transform canvasTransform, Font font)
+        public HabitHeroChildWorldSceneView(
+            Transform canvasTransform,
+            Font font,
+            string gameAssetBaseUrl)
         {
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.canvasTransform = canvasTransform;
             this.font = font;
+            this.gameAssetBaseUrl = gameAssetBaseUrl == null
+                ? string.Empty
+                : gameAssetBaseUrl.Trim();
         }
 
         public void Show(
@@ -86,6 +100,7 @@ namespace HabitHero.App
         private void CreateWorld(SupabaseGameWorldSceneRecord scene)
         {
             worldRoot = new GameObject("ChildWorldRuntime");
+            modelLoadingCancellation = new CancellationTokenSource();
             GameObject cameraObject = new GameObject("ChildWorldCamera");
             cameraObject.transform.SetParent(worldRoot.transform, false);
             worldCamera = cameraObject.AddComponent<Camera>();
@@ -133,6 +148,12 @@ namespace HabitHero.App
                 new Vector3(0f, 1f, -4f),
                 new Vector3(0.75f, 1f, 0.75f),
                 HabitHeroUiFactory.AccentColor);
+            StartModelLoad(
+                player,
+                FindEquippedCharacterAssetKey(),
+                new Vector3(0f, 0f, -4f),
+                Vector3.zero,
+                1f);
             RenderNpcPlaceholders();
             RenderWorldEntityPlaceholders();
 
@@ -162,7 +183,18 @@ namespace HabitHero.App
                 Color color = npc.npc_type == "roaming_pet"
                     ? new Color(0.95f, 0.68f, 0.38f, 1f)
                     : new Color(0.52f, 0.68f, 0.95f, 1f);
-                CreatePrimitive(primitive, "Npc_" + npc.id, position, scale, color);
+                GameObject placeholder = CreatePrimitive(
+                    primitive,
+                    "Npc_" + npc.id,
+                    position,
+                    scale,
+                    color);
+                StartModelLoad(
+                    placeholder,
+                    npc.asset_key,
+                    new Vector3(npc.position_x, npc.position_y, npc.position_z),
+                    Vector3.zero,
+                    npc.npc_type == "roaming_pet" ? 1.3f : 1f);
             }
         }
 
@@ -177,7 +209,7 @@ namespace HabitHero.App
                 SupabaseGameCatalogItemRecord item = FindCatalogItemForInventory(
                     entity.inventory_item_id);
                 string assetKey = item == null ? entity.entity_kind : item.asset_key;
-                CreateWorldEntityPlaceholder(
+                GameObject placeholder = CreateWorldEntityPlaceholder(
                     "WorldEntity_" + entity.id,
                     entity.entity_kind,
                     assetKey,
@@ -189,6 +221,16 @@ namespace HabitHero.App
                     entity.rotation_z,
                     entity.scale,
                     false);
+                StartModelLoad(
+                    placeholder,
+                    assetKey,
+                    new Vector3(entity.position_x, entity.position_y, entity.position_z),
+                    new Vector3(
+                        RadiansToDegrees(entity.rotation_x),
+                        RadiansToDegrees(entity.rotation_y),
+                        RadiansToDegrees(entity.rotation_z)),
+                    GetModelScaleMultiplier(entity.entity_kind, assetKey)
+                        * Mathf.Clamp(entity.scale <= 0f ? 1f : entity.scale, 0.25f, 3f));
             }
 
             foreach (SupabaseChildSharedWorldDecorationRecord shared in
@@ -196,7 +238,7 @@ namespace HabitHero.App
                     ?? new SupabaseChildSharedWorldDecorationRecord[0])
             {
                 if (shared == null || !shared.is_active) continue;
-                CreateWorldEntityPlaceholder(
+                GameObject placeholder = CreateWorldEntityPlaceholder(
                     "SharedWorldEntity_" + shared.id,
                     "decoration",
                     shared.asset_key,
@@ -208,10 +250,20 @@ namespace HabitHero.App
                     shared.rotation_z,
                     shared.scale,
                     true);
+                StartModelLoad(
+                    placeholder,
+                    shared.asset_key,
+                    new Vector3(shared.position_x, shared.position_y, shared.position_z),
+                    new Vector3(
+                        RadiansToDegrees(shared.rotation_x),
+                        RadiansToDegrees(shared.rotation_y),
+                        RadiansToDegrees(shared.rotation_z)),
+                    GetModelScaleMultiplier("decoration", shared.asset_key)
+                        * Mathf.Clamp(shared.scale <= 0f ? 1f : shared.scale, 0.25f, 3f));
             }
         }
 
-        private void CreateWorldEntityPlaceholder(
+        private GameObject CreateWorldEntityPlaceholder(
             string name,
             string entityKind,
             string assetKey,
@@ -244,6 +296,7 @@ namespace HabitHero.App
                 RadiansToDegrees(rotationX),
                 RadiansToDegrees(rotationY),
                 RadiansToDegrees(rotationZ));
+            return worldEntity;
         }
 
         private SupabaseGameCatalogItemRecord FindCatalogItemForInventory(
@@ -261,6 +314,229 @@ namespace HabitHero.App
             }
 
             return null;
+        }
+
+        private string FindEquippedCharacterAssetKey()
+        {
+            if (latestGameData == null || latestGameData.loadout == null)
+            {
+                return null;
+            }
+
+            SupabaseChildInventoryItemRecord inventory = null;
+            foreach (SupabaseChildInventoryItemRecord candidate in
+                latestGameData.inventory ?? new SupabaseChildInventoryItemRecord[0])
+            {
+                if (candidate != null
+                    && candidate.id == latestGameData.loadout.equipped_character_inventory_id)
+                {
+                    inventory = candidate;
+                    break;
+                }
+            }
+
+            if (inventory == null) return null;
+            SupabaseGameCatalogItemRecord item = FindCatalogItem(inventory.catalog_item_id);
+            return item == null ? null : item.asset_key;
+        }
+
+        private SupabaseGameCatalogItemRecord FindCatalogItem(string catalogItemId)
+        {
+            foreach (SupabaseGameCatalogItemRecord item in
+                latestGameData == null
+                    ? new SupabaseGameCatalogItemRecord[0]
+                    : latestGameData.catalog ?? new SupabaseGameCatalogItemRecord[0])
+            {
+                if (item != null && item.id == catalogItemId) return item;
+            }
+
+            return null;
+        }
+
+        private void StartModelLoad(
+            GameObject placeholder,
+            string assetKey,
+            Vector3 groundPosition,
+            Vector3 eulerAngles,
+            float visualScale)
+        {
+            if (placeholder == null
+                || !HabitHeroGameAssetCatalog.TryResolveModelUrl(
+                    assetKey,
+                    gameAssetBaseUrl,
+                    out string modelUrl)
+                || modelLoadingCancellation == null
+                || worldRoot == null)
+            {
+                return;
+            }
+
+            _ = LoadModelAsync(
+                placeholder,
+                modelUrl,
+                groundPosition,
+                eulerAngles,
+                Mathf.Clamp(visualScale, 0.05f, 8f),
+                worldRoot,
+                modelLoadingCancellation.Token);
+        }
+
+        private async Task LoadModelAsync(
+            GameObject placeholder,
+            string modelUrl,
+            Vector3 groundPosition,
+            Vector3 eulerAngles,
+            float visualScale,
+            GameObject expectedWorldRoot,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                GltfImport gltf = await GetOrLoadModelImportAsync(
+                    modelUrl,
+                    cancellationToken);
+                if (gltf == null
+                    || cancellationToken.IsCancellationRequested
+                    || worldRoot != expectedWorldRoot)
+                {
+                    return;
+                }
+
+                GameObject modelRoot = new GameObject(placeholder.name + "Model");
+                modelRoot.transform.SetParent(expectedWorldRoot.transform, false);
+                GameObject modelContent = new GameObject("Content");
+                modelContent.transform.SetParent(modelRoot.transform, false);
+                bool instantiated = await gltf.InstantiateMainSceneAsync(
+                    modelContent.transform,
+                    cancellationToken);
+                if (!instantiated
+                    || cancellationToken.IsCancellationRequested
+                    || worldRoot != expectedWorldRoot)
+                {
+                    UnityEngine.Object.Destroy(modelRoot);
+                    return;
+                }
+
+                modelContent.transform.localScale = Vector3.one * visualScale;
+                CenterModelOnGround(modelContent, modelRoot, groundPosition, eulerAngles);
+                placeholder.SetActive(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Closing or refreshing the scene cancels in-flight asset loads.
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning(
+                    "HabitHero could not load world model " + modelUrl + ": "
+                    + exception.Message);
+            }
+        }
+
+        private async Task<GltfImport> GetOrLoadModelImportAsync(
+            string modelUrl,
+            CancellationToken cancellationToken)
+        {
+            GltfImport cached;
+            if (modelImports.TryGetValue(modelUrl, out cached)) return cached;
+
+            Task<GltfImport> pending;
+            if (!modelImportLoads.TryGetValue(modelUrl, out pending))
+            {
+                pending = LoadModelImportAsync(modelUrl, cancellationToken);
+                modelImportLoads[modelUrl] = pending;
+            }
+
+            try
+            {
+                return await pending;
+            }
+            finally
+            {
+                if (modelImportLoads.ContainsKey(modelUrl)
+                    && modelImportLoads[modelUrl] == pending)
+                {
+                    modelImportLoads.Remove(modelUrl);
+                }
+            }
+        }
+
+        private async Task<GltfImport> LoadModelImportAsync(
+            string modelUrl,
+            CancellationToken cancellationToken)
+        {
+            GltfImport gltf = new GltfImport();
+            try
+            {
+                bool loaded = await gltf.Load(
+                    modelUrl,
+                    null,
+                    cancellationToken);
+                if (!loaded || cancellationToken.IsCancellationRequested)
+                {
+                    gltf.Dispose();
+                    return null;
+                }
+
+                modelImports[modelUrl] = gltf;
+                return gltf;
+            }
+            catch
+            {
+                gltf.Dispose();
+                throw;
+            }
+        }
+
+        private static void CenterModelOnGround(
+            GameObject modelContent,
+            GameObject modelRoot,
+            Vector3 groundPosition,
+            Vector3 eulerAngles)
+        {
+            Bounds bounds;
+            if (!TryGetRendererBounds(modelContent, out bounds))
+            {
+                modelRoot.transform.position = groundPosition;
+                modelRoot.transform.eulerAngles = eulerAngles;
+                return;
+            }
+
+            modelContent.transform.localPosition = new Vector3(
+                -bounds.center.x,
+                -bounds.min.y,
+                -bounds.center.z);
+            modelRoot.transform.position = groundPosition;
+            modelRoot.transform.eulerAngles = eulerAngles;
+        }
+
+        private static bool TryGetRendererBounds(GameObject root, out Bounds bounds)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0)
+            {
+                bounds = new Bounds(Vector3.zero, Vector3.zero);
+                return false;
+            }
+
+            bounds = renderers[0].bounds;
+            for (int index = 1; index < renderers.Length; index += 1)
+            {
+                bounds.Encapsulate(renderers[index].bounds);
+            }
+
+            return bounds.size.sqrMagnitude > 0.000001f;
+        }
+
+        private static float GetModelScaleMultiplier(
+            string entityKind,
+            string assetKey)
+        {
+            if (entityKind != "pet") return 1f;
+            if (assetKey == "pet.yaoguang-deer") return 1.3f * (8f / 3f);
+            if (assetKey == "pet.murphy-bear") return 1.3f * 2f;
+            if (assetKey == "pet.oum") return 1.3f * 4f;
+            return 1.3f;
         }
 
         private static float RadiansToDegrees(float radians)
@@ -569,6 +845,21 @@ namespace HabitHero.App
 
         private void CloseInternal(bool notify)
         {
+            if (modelLoadingCancellation != null)
+            {
+                modelLoadingCancellation.Cancel();
+                modelLoadingCancellation.Dispose();
+                modelLoadingCancellation = null;
+            }
+
+            foreach (GltfImport gltf in modelImports.Values)
+            {
+                if (gltf != null) gltf.Dispose();
+            }
+
+            modelImports.Clear();
+            modelImportLoads.Clear();
+
             if (scenePanel != null)
             {
                 UnityEngine.Object.Destroy(scenePanel);

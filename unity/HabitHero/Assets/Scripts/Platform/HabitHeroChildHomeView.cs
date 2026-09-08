@@ -13,6 +13,7 @@ namespace HabitHero.App
     {
         private readonly Transform canvasTransform;
         private readonly Font font;
+        private readonly string gameAssetBaseUrl;
         private GameObject panel;
         private GameObject reportPanel;
         private GameObject timerPanel;
@@ -72,12 +73,18 @@ namespace HabitHero.App
         private int selectedDifficulty;
         private bool abandonConfirmationPending;
 
-        public HabitHeroChildHomeView(Transform canvasTransform, Font font)
+        public HabitHeroChildHomeView(
+            Transform canvasTransform,
+            Font font,
+            string gameAssetBaseUrl)
         {
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.canvasTransform = canvasTransform;
             this.font = font;
+            this.gameAssetBaseUrl = gameAssetBaseUrl == null
+                ? string.Empty
+                : gameAssetBaseUrl.Trim();
         }
 
         public void Show(
@@ -458,7 +465,10 @@ namespace HabitHero.App
             if (latestWorldData == null || !latestWorldData.IsSceneUnlocked(sceneId)) return;
             if (worldSceneView == null)
             {
-                worldSceneView = new HabitHeroChildWorldSceneView(canvasTransform, font);
+                worldSceneView = new HabitHeroChildWorldSceneView(
+                    canvasTransform,
+                    font,
+                    gameAssetBaseUrl);
             }
 
             worldSceneView.Show(

@@ -85,7 +85,8 @@ namespace HabitHero.App
                 new SupabaseChildWorldChatClient(restClient),
                 new SupabaseChildFriendWorldRealtimeClient(restClient),
                 canvas.transform,
-                uiFont);
+                uiFont,
+                config.GameAssetBaseUrl);
             parentHomeCoordinator = new HabitHeroParentHomeCoordinator(
                 new SupabaseParentHomeClient(restClient),
                 canvas.transform,

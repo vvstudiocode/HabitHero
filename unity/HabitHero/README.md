@@ -111,9 +111,15 @@ scene locally, expose the same public values used by the web client:
 ```text
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+
+# Optional for native builds that load the existing public Web GLB assets
+HABITHERO_GAME_ASSET_BASE_URL=https://habit-hero-gilt.vercel.app
 ```
 
 Then run the Unity Editor menu item `HabitHero/Configure Supabase Runtime`.
 It creates the ignored asset
 `Assets/Resources/SupabaseRuntimeConfig.asset`; do not commit that asset or
-paste its contents into source control.
+paste its contents into source control. WebGL can infer the public asset origin
+from the current page when this value is omitted. Native builds should set it
+to the public Vercel origin when they need the character, pet, and decoration
+models; it is an asset origin only and must never contain a secret.

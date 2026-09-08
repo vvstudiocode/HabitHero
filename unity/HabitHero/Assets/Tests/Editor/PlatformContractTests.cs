@@ -46,6 +46,27 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void GameAssetCatalogResolvesOnlyAllowListedPublicModels()
+        {
+            string modelUrl;
+            bool resolved = HabitHeroGameAssetCatalog.TryResolveModelUrl(
+                "pet.moko",
+                "https://habit-hero-gilt.vercel.app",
+                out modelUrl);
+
+            Assert.IsTrue(resolved);
+            Assert.AreEqual(
+                "https://habit-hero-gilt.vercel.app/assets/pets/moko.glb",
+                modelUrl);
+            Assert.IsTrue(HabitHeroGameAssetCatalog.HasModel("character.arthur"));
+            Assert.IsFalse(HabitHeroGameAssetCatalog.HasModel("character.anime-maiden"));
+            Assert.IsFalse(HabitHeroGameAssetCatalog.TryResolveModelUrl(
+                "../../private-secret",
+                "https://habit-hero-gilt.vercel.app",
+                out modelUrl));
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";

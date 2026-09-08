@@ -139,8 +139,11 @@ Partially completed locally:
   active world entities. Decoration place, transform, remove, and collect-all
   actions use the existing revision-checked RPCs and reload the snapshot after
   each mutation. It also reads the existing owner projection for shared
-  decorations, and the 3D runtime now renders owned/shared placeholder entities
-  from server transforms; authored assets and multi-copy placement remain
+  decorations, and the 3D runtime now renders owned/shared world entities from
+  server transforms. Existing allowlisted Web GLB assets are resolved at
+  runtime through Unity glTFast when a public asset origin is configured, with
+  placeholder fallback when loading is unavailable; authored terrain,
+  canonical movement/animation parity, and device visual evidence remain
   pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block

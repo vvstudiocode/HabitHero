@@ -46,6 +46,14 @@ namespace HabitHero.Editor
             }
 
             config.SetPublicClient(settings.Url, settings.PublishableKey);
+            string gameAssetBaseUrl = Environment.GetEnvironmentVariable(
+                "HABITHERO_GAME_ASSET_BASE_URL");
+            if (string.IsNullOrWhiteSpace(gameAssetBaseUrl))
+            {
+                gameAssetBaseUrl = Environment.GetEnvironmentVariable(
+                    "VITE_PUBLIC_WEB_ORIGIN");
+            }
+            config.SetGameAssetBaseUrl(gameAssetBaseUrl);
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

@@ -9,6 +9,7 @@ namespace HabitHero.Platform
     {
         [SerializeField] private string supabaseUrl;
         [SerializeField] private string publishableKey;
+        [SerializeField] private string gameAssetBaseUrl;
 
         public string SupabaseUrl
         {
@@ -18,6 +19,11 @@ namespace HabitHero.Platform
         public string PublishableKey
         {
             get { return publishableKey; }
+        }
+
+        public string GameAssetBaseUrl
+        {
+            get { return gameAssetBaseUrl; }
         }
 
         public bool TryCreateSettings(
@@ -35,6 +41,11 @@ namespace HabitHero.Platform
         {
             supabaseUrl = url == null ? string.Empty : url.Trim();
             publishableKey = key == null ? string.Empty : key.Trim();
+        }
+
+        public void SetGameAssetBaseUrl(string value)
+        {
+            gameAssetBaseUrl = value == null ? string.Empty : value.Trim();
         }
     }
 }
