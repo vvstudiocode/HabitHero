@@ -209,6 +209,36 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldCameraStateMatchesWebDragAndZoomLimits()
+        {
+            HabitHeroWorldCameraState state = new HabitHeroWorldCameraState();
+            state.ApplyDrag(new Vector2(20f, 40f));
+
+            Assert.AreEqual(Mathf.PI / 2f - 0.16f, state.Yaw, 0.0001f);
+            Assert.AreEqual(0.42f, state.Pitch, 0.0001f);
+            Assert.AreEqual(4.1f, state.Distance, 0.0001f);
+
+            state.ApplyDrag(new Vector2(0f, 10000f));
+            Assert.AreEqual(HabitHeroWorldCameraState.CameraPitchMax, state.Pitch, 0.0001f);
+            state.ApplyZoomDelta(1000f);
+            Assert.AreEqual(HabitHeroWorldCameraState.CameraDistanceMin, state.Distance, 0.0001f);
+            state.ApplyZoomDelta(-10000f);
+            Assert.AreEqual(HabitHeroWorldCameraState.CameraDistanceMax, state.Distance, 0.0001f);
+        }
+
+        [Test]
+        public void WorldCameraTargetHeightMatchesWebZoomAndPitchRules()
+        {
+            HabitHeroWorldCameraState state = new HabitHeroWorldCameraState();
+            Assert.AreEqual(0.38f, state.GetTargetHeight(), 0.0001f);
+
+            state.ApplyZoomDelta(1000f);
+            Assert.AreEqual(0.5f, state.GetTargetHeight(), 0.0001f);
+            state.ApplyDrag(new Vector2(0f, 10000f));
+            Assert.AreEqual(0.04f, state.GetTargetHeight(), 0.0001f);
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";

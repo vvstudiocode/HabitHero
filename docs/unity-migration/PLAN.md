@@ -157,8 +157,9 @@ Partially completed locally:
   existing Supabase decoration `collision_radius` and scale through
   conservative proxies and safe spawn selection. Exact GLB-bound rectangle
   precision remains pending; Unity now uses the Web runtime's 50° perspective
-  camera framing and follows the child, while drag/zoom controls,
-  weather/audio parity, and device visual evidence remain pending.
+  camera framing, follows the child, and supports drag/pinch/scroll camera
+  controls, while weather/audio parity and device visual evidence remain
+  pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

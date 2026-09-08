@@ -17,6 +17,7 @@ namespace HabitHero.App
         private GameObject scenePanel;
         private GameObject worldRoot;
         private Camera worldCamera;
+        private HabitHeroWorldCameraState worldCameraState;
         private RenderTexture renderTexture;
         private GameObject player;
         private Text sceneStatus;
@@ -116,6 +117,7 @@ namespace HabitHero.App
             worldCamera.fieldOfView = 50f;
             worldCamera.nearClipPlane = 0.1f;
             worldCamera.farClipPlane = 100f;
+            worldCameraState = new HabitHeroWorldCameraState();
 
             CreatePrimitive(
                 PrimitiveType.Plane,
@@ -738,6 +740,25 @@ namespace HabitHero.App
             imageRect.offsetMin = Vector2.zero;
             imageRect.offsetMax = Vector2.zero;
 
+            GameObject cameraGestureSurface = new GameObject(
+                "WorldCameraGestureSurface",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(HabitHeroWorldCameraInput));
+            cameraGestureSurface.transform.SetParent(scenePanel.transform, false);
+            Image gestureImage = cameraGestureSurface.GetComponent<Image>();
+            gestureImage.color = new Color(0f, 0f, 0f, 0f);
+            gestureImage.raycastTarget = true;
+            RectTransform gestureRect = cameraGestureSurface.GetComponent<RectTransform>();
+            gestureRect.anchorMin = Vector2.zero;
+            gestureRect.anchorMax = Vector2.one;
+            gestureRect.offsetMin = Vector2.zero;
+            gestureRect.offsetMax = Vector2.zero;
+            HabitHeroWorldCameraInput cameraInput =
+                cameraGestureSurface.GetComponent<HabitHeroWorldCameraInput>();
+            cameraInput.Dragged += ApplyCameraDrag;
+            cameraInput.Zoomed += ApplyCameraZoom;
+
             GameObject hud = HabitHeroUiFactory.CreatePanel(
                 scenePanel.transform,
                 new Color(0.03f, 0.05f, 0.08f, 0.84f),
@@ -786,6 +807,34 @@ namespace HabitHero.App
             CreateMovementButton(controls.transform, "左", new Vector2(0.04f, 0.24f), new Vector2(0.36f, 0.58f), new Vector2(-1f, 0f));
             CreateMovementButton(controls.transform, "右", new Vector2(0.64f, 0.24f), new Vector2(0.96f, 0.58f), new Vector2(1f, 0f));
             CreateMovementButton(controls.transform, "下", new Vector2(0.34f, 0.02f), new Vector2(0.66f, 0.36f), new Vector2(0f, -1f));
+
+            GameObject cameraControls = HabitHeroUiFactory.CreatePanel(
+                scenePanel.transform,
+                new Color(0.03f, 0.05f, 0.08f, 0.86f),
+                "WorldCameraControls");
+            RectTransform cameraControlsRect = cameraControls.GetComponent<RectTransform>();
+            cameraControlsRect.anchorMin = new Vector2(0.69f, 0.34f);
+            cameraControlsRect.anchorMax = new Vector2(0.96f, 0.51f);
+            cameraControlsRect.offsetMin = Vector2.zero;
+            cameraControlsRect.offsetMax = Vector2.zero;
+            CreateCameraButton(
+                cameraControls.transform,
+                "放大",
+                new Vector2(0.02f, 0.14f),
+                new Vector2(0.31f, 0.86f),
+                () => ApplyCameraZoom(50f));
+            CreateCameraButton(
+                cameraControls.transform,
+                "縮小",
+                new Vector2(0.345f, 0.14f),
+                new Vector2(0.655f, 0.86f),
+                () => ApplyCameraZoom(-50f));
+            CreateCameraButton(
+                cameraControls.transform,
+                "重設",
+                new Vector2(0.69f, 0.14f),
+                new Vector2(0.98f, 0.86f),
+                ResetCamera);
 
             sceneStatus = HabitHeroUiFactory.CreateText(
                 scenePanel.transform,
@@ -869,6 +918,22 @@ namespace HabitHero.App
             button.onClick.AddListener(() => MovePlayer(direction));
         }
 
+        private void CreateCameraButton(
+            Transform parent,
+            string label,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Action action)
+        {
+            Button button = HabitHeroUiFactory.CreateButton(
+                parent,
+                font,
+                label,
+                anchorMin,
+                anchorMax);
+            button.onClick.AddListener(() => action());
+        }
+
         private void MovePlayer(Vector2 direction)
         {
             if (player == null) return;
@@ -893,15 +958,36 @@ namespace HabitHero.App
 
         private void UpdateWorldCamera()
         {
-            if (worldCamera == null || player == null) return;
+            if (worldCamera == null || player == null || worldCameraState == null) return;
             Vector3 target = player.transform.position;
-            target.y = player.transform.position.y - 1f + 0.38f;
+            target.y = player.transform.position.y - 1f + worldCameraState.GetTargetHeight();
             Vector3 cameraPosition = target + HabitHeroWorldCameraMath.GetOffset(
-                Mathf.PI / 2f,
-                0.18f,
-                4.1f);
+                worldCameraState.Yaw,
+                worldCameraState.Pitch,
+                worldCameraState.Distance);
             worldCamera.transform.position = cameraPosition;
             worldCamera.transform.LookAt(target);
+        }
+
+        private void ApplyCameraDrag(Vector2 delta)
+        {
+            if (worldCameraState == null) return;
+            worldCameraState.ApplyDrag(delta);
+            UpdateWorldCamera();
+        }
+
+        private void ApplyCameraZoom(float zoomDelta)
+        {
+            if (worldCameraState == null) return;
+            worldCameraState.ApplyZoomDelta(zoomDelta);
+            UpdateWorldCamera();
+        }
+
+        private void ResetCamera()
+        {
+            if (worldCameraState == null) return;
+            worldCameraState.Reset();
+            UpdateWorldCamera();
         }
 
         private async void CompleteNpcDialogueAsync(string npcId, Button button)
@@ -1065,6 +1151,7 @@ namespace HabitHero.App
 
             runtimeMaterials.Clear();
             worldCamera = null;
+            worldCameraState = null;
             player = null;
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             activeSceneProfile = null;
