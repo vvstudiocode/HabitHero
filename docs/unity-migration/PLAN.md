@@ -33,7 +33,7 @@ authorization into client-only rules.
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Not started |
 | Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Not started |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
-| Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Not started |
+| Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Not started |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
@@ -80,6 +80,8 @@ Partially completed locally:
   RPC payloads with idempotency keys.
 - Child task completion queue with duplicate protection, offline persistence,
   reconnect drain, and EditMode coverage.
+- Child reward redemption through the server-authoritative `redeem_reward` RPC,
+  wallet/ledger refresh, and RLS-scoped wishlist add/cancel flows.
 
 Still required:
 
@@ -101,11 +103,11 @@ useful product loop:
 4. Points/ledger refresh.
 5. Offline queue and reconnect recovery.
 
-The current Unity slice covers items 1–3, timer transport/UI, and the
-transport part of item 5. Cached snapshots for cold-start offline use and a
-post-completion ledger refresh are now implemented locally. Production mobile
-release still requires device verification of encrypted storage, deep links,
-and recovery.
+The current Unity slice covers items 1–3, timer transport/UI, the child reward
+wallet, wishlist mutations, and the transport part of item 5. Cached snapshots
+for cold-start offline use and post-mutation ledger/wallet refreshes are now
+implemented locally. Production mobile release still requires device
+verification of encrypted storage, deep links, and recovery.
 
 ### Phase 3 — world and game systems
 

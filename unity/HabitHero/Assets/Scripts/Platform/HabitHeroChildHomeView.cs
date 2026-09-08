@@ -17,13 +17,16 @@ namespace HabitHero.App
         private GameObject reportPanel;
         private GameObject timerPanel;
         private GameObject rewardPanel;
+        private GameObject wishlistPanel;
         private Text statusText;
         private Text pointsText;
         private Text reportStatus;
         private Text timerText;
         private Text timerStatus;
         private Text rewardStatus;
+        private Text wishlistStatus;
         private InputField reflectionInput;
+        private InputField wishlistInput;
         private Button reportSubmitButton;
         private Button timerActionButton;
         private SupabaseChildTaskRecord activeTimerTask;
@@ -41,6 +44,8 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer;
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer;
         private Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward;
+        private Func<string, Task<SupabaseWishlistMutationResult>> addWishlist;
+        private Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist;
         private string selectedMood;
         private int selectedDifficulty;
 
@@ -62,6 +67,8 @@ namespace HabitHero.App
             Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer,
             Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer,
             Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward,
+            Func<string, Task<SupabaseWishlistMutationResult>> addWishlist,
+            Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist,
             Action onSignOut)
         {
             if (snapshot == null || snapshot.child == null)
@@ -75,6 +82,8 @@ namespace HabitHero.App
             this.pauseTimer = pauseTimer;
             this.resumeTimer = resumeTimer;
             this.redeemReward = redeemReward;
+            this.addWishlist = addWishlist;
+            this.deleteWishlist = deleteWishlist;
             latestSnapshot = snapshot;
             timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
             panel = HabitHeroUiFactory.CreatePanel(
@@ -160,6 +169,8 @@ namespace HabitHero.App
             pauseTimer = null;
             resumeTimer = null;
             redeemReward = null;
+            addWishlist = null;
+            deleteWishlist = null;
             timerSessions = null;
             latestSnapshot = null;
             pointsText = null;
@@ -167,6 +178,7 @@ namespace HabitHero.App
             CloseReportPanel();
             CloseTimerPanel();
             CloseRewardPanel();
+            CloseWishlistPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -344,6 +356,225 @@ namespace HabitHero.App
                 new Vector2(0.35f, 0.04f),
                 new Vector2(0.65f, 0.11f));
             closeButton.onClick.AddListener(CloseRewardPanel);
+            if (addWishlist != null && deleteWishlist != null)
+            {
+                Button wishlistButton = HabitHeroUiFactory.CreateButton(
+                    card.transform,
+                    font,
+                    "願望清單",
+                    new Vector2(0.08f, 0.04f),
+                    new Vector2(0.32f, 0.11f));
+                wishlistButton.onClick.AddListener(OpenWishlistPanel);
+            }
+        }
+
+        private void OpenWishlistPanel()
+        {
+            if (latestSnapshot == null || addWishlist == null || deleteWishlist == null)
+            {
+                SetStatus("願望清單尚未連線。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            CloseWishlistPanel();
+            wishlistPanel = HabitHeroUiFactory.CreatePanel(
+                canvasTransform,
+                new Color(0.02f, 0.035f, 0.06f, 0.86f),
+                "WishlistPanel");
+            GameObject card = HabitHeroUiFactory.CreatePanel(
+                wishlistPanel.transform,
+                HabitHeroUiFactory.PanelColor,
+                "WishlistCard");
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.1f, 0.16f);
+            cardRect.anchorMax = new Vector2(0.9f, 0.84f);
+            cardRect.offsetMin = Vector2.zero;
+            cardRect.offsetMax = Vector2.zero;
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "願望清單",
+                34,
+                TextAnchor.MiddleCenter,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.08f, 0.88f),
+                new Vector2(0.92f, 0.97f));
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "寫下想和爸媽分享的願望。",
+                17,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                new Vector2(0.08f, 0.81f),
+                new Vector2(0.92f, 0.88f));
+            wishlistInput = HabitHeroUiFactory.CreateInput(
+                card.transform,
+                font,
+                "例如：新的畫筆",
+                false,
+                new Vector2(0.08f, 0.69f),
+                new Vector2(0.72f, 0.78f));
+            wishlistInput.contentType = InputField.ContentType.Standard;
+            wishlistInput.lineType = InputField.LineType.SingleLine;
+            Button addButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "送出",
+                new Vector2(0.75f, 0.69f),
+                new Vector2(0.92f, 0.78f));
+            addButton.onClick.AddListener(() => AddWishlistAsync(addButton));
+
+            GameObject wishlistList = new GameObject(
+                "WishlistList",
+                typeof(RectTransform),
+                typeof(VerticalLayoutGroup));
+            wishlistList.transform.SetParent(card.transform, false);
+            RectTransform wishlistListRect = wishlistList.GetComponent<RectTransform>();
+            wishlistListRect.anchorMin = new Vector2(0.08f, 0.2f);
+            wishlistListRect.anchorMax = new Vector2(0.92f, 0.64f);
+            wishlistListRect.offsetMin = Vector2.zero;
+            wishlistListRect.offsetMax = Vector2.zero;
+            VerticalLayoutGroup layout = wishlistList.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            int visibleWishlistCount = 0;
+            foreach (SupabaseChildWishlistRecord item in
+                latestSnapshot.wishlist ?? new SupabaseChildWishlistRecord[0])
+            {
+                if (item == null || visibleWishlistCount >= 8) continue;
+                GameObject row = new GameObject(
+                    "WishlistItemRow",
+                    typeof(RectTransform),
+                    typeof(HorizontalLayoutGroup));
+                row.transform.SetParent(wishlistList.transform, false);
+                row.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 50f);
+                HorizontalLayoutGroup rowLayout = row.GetComponent<HorizontalLayoutGroup>();
+                rowLayout.spacing = 8f;
+                rowLayout.childControlWidth = true;
+                rowLayout.childControlHeight = true;
+                rowLayout.childForceExpandWidth = false;
+                rowLayout.childForceExpandHeight = true;
+
+                Text itemText = HabitHeroUiFactory.CreateText(
+                    row.transform,
+                    font,
+                    item.name,
+                    18,
+                    TextAnchor.MiddleLeft,
+                    Color.white,
+                    Vector2.zero,
+                    Vector2.one);
+                LayoutElement textLayout = itemText.gameObject.AddComponent<LayoutElement>();
+                textLayout.flexibleWidth = 1f;
+                Button cancelButton = HabitHeroUiFactory.CreateButton(
+                    row.transform,
+                    font,
+                    "取消",
+                    Vector2.zero,
+                    Vector2.one);
+                LayoutElement buttonLayout = cancelButton.gameObject.AddComponent<LayoutElement>();
+                buttonLayout.preferredWidth = 92f;
+                buttonLayout.minWidth = 92f;
+                cancelButton.onClick.AddListener(() => DeleteWishlistAsync(item.id, cancelButton));
+                visibleWishlistCount += 1;
+            }
+
+            if (visibleWishlistCount == 0)
+            {
+                HabitHeroUiFactory.CreateText(
+                    wishlistList.transform,
+                    font,
+                    "目前還沒有等待核准的願望。",
+                    20,
+                    TextAnchor.MiddleCenter,
+                    new Color(0.84f, 0.89f, 0.96f, 1f),
+                    Vector2.zero,
+                    Vector2.one);
+            }
+
+            wishlistStatus = HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "願望會送到家長端等待核准。",
+                16,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.13f),
+                new Vector2(0.92f, 0.2f));
+            Button closeButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "關閉",
+                new Vector2(0.35f, 0.04f),
+                new Vector2(0.65f, 0.11f));
+            closeButton.onClick.AddListener(CloseWishlistPanel);
+        }
+
+        private async void AddWishlistAsync(Button addButton)
+        {
+            if (addWishlist == null || wishlistInput == null) return;
+            string name = wishlistInput.text == null ? string.Empty : wishlistInput.text.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                SetWishlistStatus("請先寫下一個願望。", true);
+                return;
+            }
+
+            if (addButton != null) addButton.interactable = false;
+            SetWishlistStatus("正在送出願望…", false);
+            try
+            {
+                SupabaseWishlistMutationResult result = await addWishlist(name);
+                if (result != null && result.RefreshedSnapshot != null)
+                {
+                    ApplySnapshot(result.RefreshedSnapshot);
+                }
+
+                CloseWishlistPanel();
+                SetStatus(
+                    result != null && string.IsNullOrWhiteSpace(result.RefreshError)
+                        ? "願望已送出，已同步到家長端。"
+                        : "願望已送出；清單更新稍後會自動重試。",
+                    false);
+            }
+            catch (Exception exception)
+            {
+                SetWishlistStatus("送出失敗：" + exception.Message, true);
+                if (addButton != null) addButton.interactable = true;
+            }
+        }
+
+        private async void DeleteWishlistAsync(string wishlistId, Button cancelButton)
+        {
+            if (deleteWishlist == null || string.IsNullOrWhiteSpace(wishlistId)) return;
+            if (cancelButton != null) cancelButton.interactable = false;
+            SetWishlistStatus("正在取消願望…", false);
+            try
+            {
+                SupabaseWishlistMutationResult result = await deleteWishlist(wishlistId);
+                if (result != null && result.RefreshedSnapshot != null)
+                {
+                    ApplySnapshot(result.RefreshedSnapshot);
+                }
+
+                CloseWishlistPanel();
+                SetStatus(
+                    result != null && string.IsNullOrWhiteSpace(result.RefreshError)
+                        ? "願望已取消。"
+                        : "願望已取消；清單更新稍後會自動重試。",
+                    false);
+            }
+            catch (Exception exception)
+            {
+                SetWishlistStatus("取消失敗：" + exception.Message, true);
+                if (cancelButton != null) cancelButton.interactable = true;
+            }
         }
 
         private async void RedeemRewardAsync(
@@ -392,11 +623,37 @@ namespace HabitHero.App
             rewardStatus = null;
         }
 
+        private void CloseWishlistPanel()
+        {
+            if (wishlistPanel != null)
+            {
+                UnityEngine.Object.Destroy(wishlistPanel);
+                wishlistPanel = null;
+            }
+
+            wishlistInput = null;
+            wishlistStatus = null;
+        }
+
         private void SetRewardStatus(string message, bool isError)
         {
             if (rewardStatus == null) return;
             rewardStatus.text = message;
             rewardStatus.color = isError
+                ? new Color(1f, 0.52f, 0.52f, 1f)
+                : new Color(0.84f, 0.89f, 0.96f, 1f);
+        }
+
+        private void SetWishlistStatus(string message, bool isError)
+        {
+            if (wishlistStatus == null)
+            {
+                SetStatus(message, isError);
+                return;
+            }
+
+            wishlistStatus.text = message;
+            wishlistStatus.color = isError
                 ? new Color(1f, 0.52f, 0.52f, 1f)
                 : new Color(0.84f, 0.89f, 0.96f, 1f);
         }

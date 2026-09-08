@@ -177,6 +177,13 @@ namespace HabitHero.Platform
         public string RefreshError { get; set; }
     }
 
+    public sealed class SupabaseWishlistMutationResult
+    {
+        public SupabaseChildHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
     public sealed class SupabaseChildHomeClient
     {
         private readonly SupabaseRestClient restClient;
@@ -533,6 +540,92 @@ namespace HabitHero.Platform
             {
                 Ticket = await RedeemRewardAsync(rewardId, cancellationToken),
             };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        public async Task AddWishlistItemAsync(
+            string familyId,
+            string childProfileId,
+            string name,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (string.IsNullOrWhiteSpace(childProfileId))
+            {
+                throw new SupabaseDataException("孩子 ID 不可為空。");
+            }
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new SupabaseDataException("願望名稱不可為空。");
+            }
+
+            string body = "{\"family_id\":" + SupabaseJson.Quote(familyId)
+                + ",\"child_profile_id\":" + SupabaseJson.Quote(childProfileId)
+                + ",\"name\":" + SupabaseJson.Quote(name.Trim()) + "}";
+            await restClient.InsertAsync(
+                "wishlist_items",
+                body,
+                cancellationToken);
+        }
+
+        public Task DeleteWishlistItemAsync(
+            string wishlistId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(wishlistId))
+            {
+                throw new SupabaseDataException("願望 ID 不可為空。");
+            }
+
+            return restClient.DeleteAsync(
+                "wishlist_items",
+                new[] { new SupabaseRestFilter("id", "eq", wishlistId) },
+                cancellationToken);
+        }
+
+        public async Task<SupabaseWishlistMutationResult> AddWishlistItemAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string name,
+            CancellationToken cancellationToken)
+        {
+            await AddWishlistItemAsync(
+                familyId,
+                childProfileId,
+                name,
+                cancellationToken);
+            return await RefreshAfterWishlistMutationAsync(cancellationToken);
+        }
+
+        public async Task<SupabaseWishlistMutationResult> DeleteWishlistItemAndRefreshAsync(
+            string wishlistId,
+            CancellationToken cancellationToken)
+        {
+            await DeleteWishlistItemAsync(wishlistId, cancellationToken);
+            return await RefreshAfterWishlistMutationAsync(cancellationToken);
+        }
+
+        private async Task<SupabaseWishlistMutationResult> RefreshAfterWishlistMutationAsync(
+            CancellationToken cancellationToken)
+        {
+            SupabaseWishlistMutationResult result =
+                new SupabaseWishlistMutationResult();
             try
             {
                 result.RefreshedSnapshot = await LoadAsync(cancellationToken);

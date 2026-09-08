@@ -121,6 +121,47 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void RestBuilderCreatesScopedWishlistMutations()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseRequestContract insertRequest;
+            SupabaseRequestContract deleteRequest;
+            string error;
+
+            bool insertCreated = SupabaseRestRequestBuilder.TryBuildTableInsert(
+                settings,
+                "wishlist_items",
+                "{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"新畫筆\"}",
+                "access-token",
+                out insertRequest,
+                out error);
+            Assert.IsTrue(insertCreated, error);
+            Assert.AreEqual("POST", insertRequest.Method);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/wishlist_items",
+                insertRequest.Url);
+            Assert.AreEqual(
+                "{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"新畫筆\"}",
+                insertRequest.Body);
+            Assert.AreEqual("return=minimal", insertRequest.Headers["Prefer"]);
+            Assert.AreEqual("Bearer access-token", insertRequest.Headers["Authorization"]);
+
+            bool deleteCreated = SupabaseRestRequestBuilder.TryBuildTableDelete(
+                settings,
+                "wishlist_items",
+                new[] { new SupabaseRestFilter("id", "eq", "wish-1") },
+                "access-token",
+                out deleteRequest,
+                out error);
+            Assert.IsTrue(deleteCreated, error);
+            Assert.AreEqual("DELETE", deleteRequest.Method);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/wishlist_items?id=eq.wish-1",
+                deleteRequest.Url);
+            Assert.AreEqual("Bearer access-token", deleteRequest.Headers["Authorization"]);
+        }
+
+        [Test]
         public void JsonArrayParserMapsPostgrestChildTaskRows()
         {
             SupabaseChildTaskRecord[] tasks;
@@ -457,6 +498,94 @@ namespace HabitHero.Tests
                 "{\"target_reward_id\":\"reward-1\"}",
                 dataTransport.Requests[0].Body);
             Assert.AreEqual(10, dataTransport.Requests.Count);
+        }
+
+        [Test]
+        public async Task WishlistMutationsUseRlsScopedRestCallsAndRefreshTheSnapshot()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(201, string.Empty, null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"role\":\"child\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":30}]",
+                    null),
+                new SupabaseHttpResponse(200, "{}", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"wish-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"新畫筆\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"role\":\"child\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":30}]",
+                    null),
+                new SupabaseHttpResponse(200, "{}", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport),
+                new InMemorySupabaseTaskCompletionQueueStore(),
+                new InMemorySupabaseChildHomeSnapshotStore(),
+                () => true);
+
+            SupabaseWishlistMutationResult addResult =
+                await client.AddWishlistItemAndRefreshAsync(
+                    "family-1",
+                    "child-1",
+                    "新畫筆",
+                    CancellationToken.None);
+            SupabaseWishlistMutationResult deleteResult =
+                await client.DeleteWishlistItemAndRefreshAsync(
+                    "wish-1",
+                    CancellationToken.None);
+
+            Assert.IsNull(addResult.RefreshError);
+            Assert.IsNotNull(addResult.RefreshedSnapshot);
+            Assert.AreEqual("新畫筆", addResult.RefreshedSnapshot.wishlist[0].name);
+            Assert.IsNull(deleteResult.RefreshError);
+            Assert.IsNotNull(deleteResult.RefreshedSnapshot);
+            Assert.AreEqual(20, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/wishlist_items",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"新畫筆\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/wishlist_items?id=eq.wish-1",
+                dataTransport.Requests[10].Url);
         }
 
         [Test]

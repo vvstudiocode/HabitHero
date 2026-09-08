@@ -127,6 +127,164 @@ namespace HabitHero.Platform
             return true;
         }
 
+        public static bool TryBuildTableInsert(
+            SupabaseClientSettings settings,
+            string table,
+            string jsonBody,
+            string accessToken,
+            out SupabaseRequestContract request,
+            out string error)
+        {
+            request = null;
+            error = null;
+
+            if (!TryValidateTableMutation(settings, table, jsonBody, out error))
+            {
+                return false;
+            }
+
+            Dictionary<string, string> headers = CreateMutationHeaders(
+                settings,
+                accessToken,
+                true);
+            request = new SupabaseRequestContract(
+                "POST",
+                settings.Url + "/rest/v1/" + table.Trim(),
+                headers,
+                jsonBody.Trim());
+            return true;
+        }
+
+        public static bool TryBuildTableDelete(
+            SupabaseClientSettings settings,
+            string table,
+            IEnumerable<SupabaseRestFilter> filters,
+            string accessToken,
+            out SupabaseRequestContract request,
+            out string error)
+        {
+            request = null;
+            error = null;
+
+            if (settings == null)
+            {
+                error = "Supabase client settings are missing.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(table) || !SafeIdentifier.IsMatch(table))
+            {
+                error = "Supabase table name is invalid.";
+                return false;
+            }
+
+            StringBuilder query = new StringBuilder("?");
+            bool hasFilter;
+            if (!TryAppendFilters(query, filters, out hasFilter, out error))
+            {
+                return false;
+            }
+
+            if (!hasFilter)
+            {
+                error = "Supabase delete requires at least one filter.";
+                return false;
+            }
+
+            request = new SupabaseRequestContract(
+                "DELETE",
+                settings.Url + "/rest/v1/" + table.Trim() + query,
+                CreateMutationHeaders(settings, accessToken, false),
+                string.Empty);
+            return true;
+        }
+
+        private static bool TryValidateTableMutation(
+            SupabaseClientSettings settings,
+            string table,
+            string jsonBody,
+            out string error)
+        {
+            error = null;
+            if (settings == null)
+            {
+                error = "Supabase client settings are missing.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(table) || !SafeIdentifier.IsMatch(table))
+            {
+                error = "Supabase table name is invalid.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(jsonBody))
+            {
+                error = "Supabase insert body is missing.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static Dictionary<string, string> CreateMutationHeaders(
+            SupabaseClientSettings settings,
+            string accessToken,
+            bool includeJsonContentType)
+        {
+            Dictionary<string, string> headers = new Dictionary<string, string>
+            {
+                { "apikey", settings.PublishableKey },
+                { "Accept", "application/json" },
+                { "Prefer", "return=minimal" },
+            };
+            if (includeJsonContentType)
+            {
+                headers["Content-Type"] = "application/json";
+            }
+
+            if (!string.IsNullOrWhiteSpace(accessToken))
+            {
+                headers["Authorization"] = "Bearer " + accessToken.Trim();
+            }
+
+            return headers;
+        }
+
+        private static bool TryAppendFilters(
+            StringBuilder query,
+            IEnumerable<SupabaseRestFilter> filters,
+            out bool hasFilter,
+            out string error)
+        {
+            hasFilter = false;
+            error = null;
+            if (filters == null) return true;
+
+            foreach (SupabaseRestFilter filter in filters)
+            {
+                if (filter == null
+                    || string.IsNullOrWhiteSpace(filter.Column)
+                    || !SafeIdentifier.IsMatch(filter.Column)
+                    || string.IsNullOrWhiteSpace(filter.Operation)
+                    || !IsSupportedOperation(filter.Operation))
+                {
+                    error = "Supabase table filter is invalid.";
+                    return false;
+                }
+
+                if (hasFilter) query.Append('&');
+                query.Append(filter.Column)
+                    .Append('=')
+                    .Append(filter.Operation)
+                    .Append('.')
+                    .Append(Uri.EscapeDataString(filter.Value ?? string.Empty));
+                hasFilter = true;
+            }
+
+            return true;
+        }
+
         private static bool IsSupportedOperation(string operation)
         {
             switch (operation.Trim().ToLowerInvariant())
