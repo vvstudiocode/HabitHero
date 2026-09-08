@@ -975,6 +975,159 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ChildGameEconomyReadsFamilyAndChildScopedData()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"catalog-1\",\"item_type\":\"pet\",\"name\":\"星光鹿\",\"description\":\"跟隨寵物\",\"scroll_price\":30,\"asset_key\":\"pet.starlight-deer\",\"thumbnail_url\":null,\"is_active\":true,\"is_starter\":false,\"is_child_creation_selectable\":false,\"is_newly_obtainable\":true,\"is_stackable\":false,\"collision_radius\":0.35,\"min_scale\":0.75,\"max_scale\":1.25,\"sort_order\":1,\"metadata\":{\"visualScaleMultiplier\":2}}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"catalog_item_id\":\"catalog-1\",\"scroll_price\":25}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"child_profile_id\":\"child-1\",\"family_id\":\"family-1\",\"scroll_balance\":120}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"inventory-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"catalog_item_id\":\"catalog-1\",\"quantity\":2,\"acquired_via\":\"purchase\",\"acquired_at\":\"2026-09-08T00:00:00Z\",\"source_scene_id\":\"sunrise-village\",\"source_npc_id\":\"vendor-1\",\"source_dialogue_version\":1}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"child_profile_id\":\"child-1\",\"family_id\":\"family-1\",\"equipped_character_inventory_id\":\"character-inventory-1\",\"following_pet_inventory_id\":\"inventory-1\",\"following_pet_inventory_ids\":[\"inventory-1\"]}]",
+                    null));
+            SupabaseChildGameClient client = new SupabaseChildGameClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildGameData data = await client.LoadAsync(
+                "family-1",
+                "child-1",
+                CancellationToken.None);
+
+            Assert.AreEqual("family-1", data.familyId);
+            Assert.AreEqual("child-1", data.childProfileId);
+            Assert.AreEqual("catalog-1", data.catalog[0].id);
+            Assert.AreEqual(25, data.prices[0].scroll_price);
+            Assert.AreEqual(120L, data.walletBalance);
+            Assert.AreEqual("inventory-1", data.inventory[0].id);
+            Assert.AreEqual(2L, data.inventory[0].quantity);
+            Assert.AreEqual("vendor-1", data.inventory[0].source_npc_id);
+            Assert.AreEqual("character-inventory-1", data.loadout.equipped_character_inventory_id);
+            Assert.AreEqual(1, data.loadout.following_pet_inventory_ids.Length);
+            Assert.AreEqual("inventory-1", data.loadout.following_pet_inventory_ids[0]);
+
+            Assert.AreEqual(5, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/game_catalog_items?select=*&order=sort_order.asc",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/family_game_item_prices?select=catalog_item_id,scroll_price&family_id=eq.family-1",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_game_wallets?select=*&family_id=eq.family-1&child_profile_id=eq.child-1",
+                dataTransport.Requests[2].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_inventory_items?select=*&family_id=eq.family-1&child_profile_id=eq.child-1&order=acquired_at.asc",
+                dataTransport.Requests[3].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_game_loadouts?select=*&family_id=eq.family-1&child_profile_id=eq.child-1",
+                dataTransport.Requests[4].Url);
+        }
+
+        [Test]
+        public async Task ChildGameEconomyUsesServerAuthoritativePurchaseAndLoadoutRpcs()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"purchase_id\":\"purchase-1\",\"inventory_item_id\":\"inventory-1\",\"wallet_balance\":90,\"quantity\":2,\"source_scene_id\":\"sunrise-village\",\"source_npc_id\":\"vendor-1\",\"source_dialogue_version\":1}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"child_profile_id\":\"child-1\",\"equipped_character_inventory_id\":\"character-inventory-1\",\"following_pet_inventory_id\":null,\"following_pet_inventory_ids\":[]}",
+                    null),
+                new SupabaseHttpResponse(200, "{\"revision\":4}", null),
+                new SupabaseHttpResponse(200, "{\"revision\":5}", null));
+            SupabaseChildGameClient client = new SupabaseChildGameClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseGamePurchaseResult purchase = await client.PurchaseGameItemAsync(
+                "child-1",
+                "catalog-1",
+                2,
+                "purchase-key",
+                "vendor-1",
+                CancellationToken.None);
+            SupabaseChildGameLoadoutRecord loadout = await client.EquipGameCharacterAsync(
+                "child-1",
+                "character-inventory-1",
+                CancellationToken.None);
+            SupabaseGameMutationResult following = await client.SetFollowingPetsAsync(
+                "child-1",
+                new[] { "pet-inventory-1", "pet-inventory-2" },
+                CancellationToken.None);
+            SupabaseGameMutationResult roaming = await client.SetRoamingPetsAsync(
+                "child-1",
+                new[] { "pet-inventory-3" },
+                CancellationToken.None);
+
+            Assert.AreEqual("purchase-1", purchase.purchase_id);
+            Assert.AreEqual("inventory-1", purchase.inventory_item_id);
+            Assert.AreEqual(90L, purchase.wallet_balance);
+            Assert.AreEqual("character-inventory-1", loadout.equipped_character_inventory_id);
+            Assert.AreEqual(4L, following.revision);
+            Assert.AreEqual(5L, roaming.revision);
+            Assert.AreEqual(4, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/purchase_game_item",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_catalog_item_id\":\"catalog-1\",\"target_quantity\":2,\"purchase_idempotency_key\":\"purchase-key\",\"target_child_profile_id\":\"child-1\",\"target_source_npc_id\":\"vendor-1\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "{\"target_inventory_item_id\":\"character-inventory-1\",\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "{\"target_inventory_item_ids\":[\"pet-inventory-1\",\"pet-inventory-2\"],\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[2].Body);
+            Assert.AreEqual(
+                "{\"target_inventory_item_ids\":[\"pet-inventory-3\"],\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[3].Body);
+        }
+
+        [Test]
         public async Task ParentGeneralAdventureUsesServerRpcForEachSelectedChild()
         {
             SupabaseClientSettings settings = CreateSettings();

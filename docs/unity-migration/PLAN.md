@@ -37,7 +37,7 @@ authorization into client-only rules.
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
-| Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Not started |
+| Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client and child shop/backpack UI; 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Not started |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Not started |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
@@ -115,6 +115,11 @@ Partially completed locally:
 - Parent child-view preview with explicit child selection and client-side
   snapshot filtering; preview is read-only and does not impersonate a child
   session or bypass Supabase RLS.
+- Child game economy reads the family catalog, family price overrides, child
+  quest-scroll wallet, inventory, and loadout through scoped PostgREST calls.
+  Purchases, character equipment, following pets, and roaming pets remain
+  server-authoritative RPC mutations, with the child shop/backpack UI refreshing
+  from Supabase after each successful mutation.
 
 Still required:
 
@@ -143,9 +148,9 @@ useful product loop:
 5. Offline queue and reconnect recovery.
 
 The current Unity slice covers items 1–3, timer transport/UI, the child reward
-wallet, wishlist mutations, parent task/reward management, parent task review,
-parent wishlist approval, parent reward-ticket fulfillment, and the transport
-part of item 5. Cached snapshots
+wallet, wishlist mutations, the first game-economy shop/backpack loop, parent
+task/reward management, parent task review, parent wishlist approval, parent
+reward-ticket fulfillment, and the transport part of item 5. Cached snapshots
 for cold-start offline use and post-mutation ledger/wallet refreshes are now
 implemented locally. Production mobile release still requires device
 verification of encrypted storage, deep links, and recovery.

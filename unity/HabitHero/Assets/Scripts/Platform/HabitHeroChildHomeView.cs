@@ -18,6 +18,7 @@ namespace HabitHero.App
         private GameObject timerPanel;
         private GameObject rewardPanel;
         private GameObject wishlistPanel;
+        private HabitHeroChildGameView gameView;
         private HabitHeroChildLedgerView ledgerView;
         private Text statusText;
         private Text pointsText;
@@ -62,6 +63,7 @@ namespace HabitHero.App
 
         public void Show(
             SupabaseChildHomeSnapshot snapshot,
+            SupabaseChildGameData gameData,
             Func<
                 SupabaseChildTaskRecord,
                 SupabaseTaskCompletionDraft,
@@ -73,6 +75,10 @@ namespace HabitHero.App
             Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward,
             Func<string, Task<SupabaseWishlistMutationResult>> addWishlist,
             Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist,
+            Func<string, int, Task<SupabaseChildGameData>> purchaseGameItem,
+            Func<string, Task<SupabaseChildGameData>> equipGameCharacter,
+            Func<string[], Task<SupabaseChildGameData>> setFollowingPets,
+            Func<string[], Task<SupabaseChildGameData>> setRoamingPets,
             Action onSignOut)
         {
             if (snapshot == null || snapshot.child == null)
@@ -91,6 +97,13 @@ namespace HabitHero.App
             this.deleteWishlist = deleteWishlist;
             latestSnapshot = snapshot;
             timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
+            gameView = new HabitHeroChildGameView(canvasTransform, font);
+            gameView.Show(
+                gameData,
+                purchaseGameItem,
+                equipGameCharacter,
+                setFollowingPets,
+                setRoamingPets);
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -148,18 +161,26 @@ namespace HabitHero.App
 
             RenderTaskList(snapshot);
 
+            Button gameButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "冒險商店",
+                new Vector2(0.08f, 0.14f),
+                new Vector2(0.33f, 0.2f));
+            gameButton.interactable = gameData != null;
+            gameButton.onClick.AddListener(() => gameView.Open());
             Button rewardsButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "獎勵商店",
-                new Vector2(0.08f, 0.14f),
-                new Vector2(0.55f, 0.2f));
+                new Vector2(0.35f, 0.14f),
+                new Vector2(0.59f, 0.2f));
             rewardsButton.onClick.AddListener(OpenRewardPanel);
             Button ledgerButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "點數紀錄",
-                new Vector2(0.57f, 0.14f),
+                new Vector2(0.61f, 0.14f),
                 new Vector2(0.92f, 0.2f));
             ledgerButton.onClick.AddListener(OpenLedgerPanel);
 
@@ -193,6 +214,11 @@ namespace HabitHero.App
             CloseRewardPanel();
             CloseWishlistPanel();
             CloseLedgerPanel();
+            if (gameView != null)
+            {
+                gameView.Dispose();
+                gameView = null;
+            }
             abandonConfirmationPending = false;
             if (panel != null)
             {

@@ -11,19 +11,23 @@ namespace HabitHero.App
         private const string ChildEmailDomain = "@children.habithero.local";
 
         private readonly SupabaseChildHomeClient client;
+        private readonly SupabaseChildGameClient gameClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
         private HabitHeroChildHomeView view;
 
         public HabitHeroChildHomeCoordinator(
             SupabaseChildHomeClient client,
+            SupabaseChildGameClient gameClient,
             Transform canvasTransform,
             Font font)
         {
             if (client == null) throw new ArgumentNullException("client");
+            if (gameClient == null) throw new ArgumentNullException("gameClient");
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.client = client;
+            this.gameClient = gameClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
         }
@@ -45,9 +49,27 @@ namespace HabitHero.App
             try
             {
                 SupabaseChildHomeSnapshot snapshot = await client.LoadAsync(cancellationToken);
+                SupabaseChildGameData gameData = null;
+                try
+                {
+                    gameData = await gameClient.LoadAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    setStatus("任務已載入；冒險商店暫時無法連線：" + exception.Message, true);
+                }
+
                 if (view == null) view = new HabitHeroChildHomeView(canvasTransform, font);
                 view.Show(
                     snapshot,
+                    gameData,
                     (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
                     (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
                     (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
@@ -63,6 +85,27 @@ namespace HabitHero.App
                         cancellationToken),
                     (wishlistId) => client.DeleteWishlistItemAndRefreshAsync(
                         wishlistId,
+                        cancellationToken),
+                    (catalogItemId, quantity) => PurchaseGameItemAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        catalogItemId,
+                        quantity,
+                        cancellationToken),
+                    (inventoryItemId) => EquipGameCharacterAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        inventoryItemId,
+                        cancellationToken),
+                    (inventoryItemIds) => SetFollowingPetsAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        inventoryItemIds,
+                        cancellationToken),
+                    (inventoryItemIds) => SetRoamingPetsAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        inventoryItemIds,
                         cancellationToken),
                     onSignOut);
                 hideLogin();
@@ -100,6 +143,62 @@ namespace HabitHero.App
             }
 
             return result;
+        }
+
+        private async Task<SupabaseChildGameData> PurchaseGameItemAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string catalogItemId,
+            int quantity,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.PurchaseGameItemAsync(
+                childProfileId,
+                catalogItemId,
+                quantity,
+                SupabaseChildGameClient.CreatePurchaseIdempotencyKey(),
+                null,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> EquipGameCharacterAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string inventoryItemId,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.EquipGameCharacterAsync(
+                childProfileId,
+                inventoryItemId,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> SetFollowingPetsAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string[] inventoryItemIds,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.SetFollowingPetsAsync(
+                childProfileId,
+                inventoryItemIds,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> SetRoamingPetsAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string[] inventoryItemIds,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.SetRoamingPetsAsync(
+                childProfileId,
+                inventoryItemIds,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
         }
 
         public void Dispose()

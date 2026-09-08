@@ -70,6 +70,7 @@ namespace HabitHero.App
             SupabaseRestClient restClient = new SupabaseRestClient(settings, authClient);
             childHomeCoordinator = new HabitHeroChildHomeCoordinator(
                 new SupabaseChildHomeClient(restClient),
+                new SupabaseChildGameClient(restClient),
                 canvas.transform,
                 uiFont);
             parentHomeCoordinator = new HabitHeroParentHomeCoordinator(
