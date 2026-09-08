@@ -203,6 +203,16 @@ namespace HabitHero.Platform
             return matches.ToArray();
         }
 
+        public bool IsSceneUnlocked(string sceneId)
+        {
+            return IsSceneUnlockedInternal(sceneId);
+        }
+
+        public bool HasDialogue(string npcId, int requiredVersion)
+        {
+            return HasDialogueInternal(npcId, requiredVersion);
+        }
+
         private SupabaseGameWorldNpcRecord FindNpc(string npcId)
         {
             foreach (SupabaseGameWorldNpcRecord npc in npcs ?? new SupabaseGameWorldNpcRecord[0])
@@ -213,7 +223,7 @@ namespace HabitHero.Platform
             return null;
         }
 
-        private bool IsSceneUnlocked(string sceneId)
+        private bool IsSceneUnlockedInternal(string sceneId)
         {
             foreach (SupabaseChildWorldSceneUnlockRecord unlock in sceneUnlocks ?? new SupabaseChildWorldSceneUnlockRecord[0])
             {
@@ -223,7 +233,7 @@ namespace HabitHero.Platform
             return false;
         }
 
-        private bool HasDialogue(string npcId, int requiredVersion)
+        private bool HasDialogueInternal(string npcId, int requiredVersion)
         {
             foreach (SupabaseChildWorldNpcDialogueProgressRecord progress in dialogueProgress ?? new SupabaseChildWorldNpcDialogueProgressRecord[0])
             {

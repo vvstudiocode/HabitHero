@@ -19,6 +19,7 @@ namespace HabitHero.App
         private GameObject rewardPanel;
         private GameObject wishlistPanel;
         private HabitHeroChildGameView gameView;
+        private HabitHeroChildWorldView worldView;
         private HabitHeroChildLedgerView ledgerView;
         private Text statusText;
         private Text pointsText;
@@ -65,6 +66,8 @@ namespace HabitHero.App
             SupabaseChildHomeSnapshot snapshot,
             SupabaseChildGameData gameData,
             SupabaseChildWorldData worldData,
+            Func<string, Task<SupabaseChildWorldData>> unlockWorldScene,
+            Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue,
             Func<
                 SupabaseChildTaskRecord,
                 SupabaseTaskCompletionDraft,
@@ -106,6 +109,8 @@ namespace HabitHero.App
                 equipGameCharacter,
                 setFollowingPets,
                 setRoamingPets);
+            worldView = new HabitHeroChildWorldView(canvasTransform, font);
+            worldView.Show(worldData, unlockWorldScene, completeNpcDialogue);
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -167,22 +172,30 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "冒險商店",
-                new Vector2(0.08f, 0.14f),
-                new Vector2(0.33f, 0.2f));
+                new Vector2(0.3f, 0.14f),
+                new Vector2(0.49f, 0.2f));
             gameButton.interactable = gameData != null;
             gameButton.onClick.AddListener(() => gameView.Open());
+            Button worldButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "世界",
+                new Vector2(0.08f, 0.14f),
+                new Vector2(0.28f, 0.2f));
+            worldButton.interactable = worldData != null;
+            worldButton.onClick.AddListener(() => worldView.Open());
             Button rewardsButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "獎勵商店",
-                new Vector2(0.35f, 0.14f),
-                new Vector2(0.59f, 0.2f));
+                new Vector2(0.51f, 0.14f),
+                new Vector2(0.7f, 0.2f));
             rewardsButton.onClick.AddListener(OpenRewardPanel);
             Button ledgerButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "點數紀錄",
-                new Vector2(0.61f, 0.14f),
+                new Vector2(0.72f, 0.14f),
                 new Vector2(0.92f, 0.2f));
             ledgerButton.onClick.AddListener(OpenLedgerPanel);
 
@@ -220,6 +233,11 @@ namespace HabitHero.App
             {
                 gameView.Dispose();
                 gameView = null;
+            }
+            if (worldView != null)
+            {
+                worldView.Dispose();
+                worldView = null;
             }
             abandonConfirmationPending = false;
             if (panel != null)

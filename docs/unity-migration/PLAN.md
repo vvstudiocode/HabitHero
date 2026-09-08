@@ -126,6 +126,9 @@ Partially completed locally:
   source-bound purchases until the scene and required NPC dialogue are
   available, hides items without an active offering, and sends the
   server-selected `source_npc_id` with purchases.
+- The Unity child home exposes a world hub view for scene unlock attempts and
+  NPC dialogue completion. Each successful action reloads the child-scoped
+  world data and updates the shop gate without mutating progress locally.
 
 Still required:
 

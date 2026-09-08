@@ -92,6 +92,16 @@ namespace HabitHero.App
                     snapshot,
                     gameData,
                     worldData,
+                    (sceneId) => UnlockWorldSceneAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        sceneId,
+                        cancellationToken),
+                    (npcId) => CompleteNpcDialogueAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        npcId,
+                        cancellationToken),
                     (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
                     (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
                     (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
@@ -197,6 +207,38 @@ namespace HabitHero.App
                 inventoryItemId,
                 cancellationToken);
             return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildWorldData> UnlockWorldSceneAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string sceneId,
+            CancellationToken cancellationToken)
+        {
+            await worldClient.UnlockSceneAsync(
+                sceneId,
+                childProfileId,
+                cancellationToken);
+            return await worldClient.LoadAsync(
+                familyId,
+                childProfileId,
+                cancellationToken);
+        }
+
+        private async Task<SupabaseChildWorldData> CompleteNpcDialogueAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string npcId,
+            CancellationToken cancellationToken)
+        {
+            await worldClient.CompleteNpcDialogueAsync(
+                npcId,
+                childProfileId,
+                cancellationToken);
+            return await worldClient.LoadAsync(
+                familyId,
+                childProfileId,
+                cancellationToken);
         }
 
         private async Task<SupabaseChildGameData> SetFollowingPetsAndRefreshAsync(

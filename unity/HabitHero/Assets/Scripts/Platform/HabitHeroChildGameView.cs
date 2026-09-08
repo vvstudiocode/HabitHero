@@ -52,6 +52,14 @@ namespace HabitHero.App
             Open();
         }
 
+        public void ApplyWorldData(SupabaseChildWorldData data)
+        {
+            latestWorldData = data;
+            if (gamePanel == null) return;
+            Close();
+            Open();
+        }
+
         public void Open()
         {
             if (latestData == null)
