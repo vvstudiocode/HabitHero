@@ -193,6 +193,61 @@ namespace HabitHero.App
             return toggle;
         }
 
+        public static Toggle CreateSwitch(
+            Transform parent,
+            Vector2 anchorMin,
+            Vector2 anchorMax)
+        {
+            GameObject toggleObject = new GameObject(
+                "Switch",
+                typeof(RectTransform),
+                typeof(Toggle));
+            toggleObject.transform.SetParent(parent, false);
+            RectTransform toggleRect = toggleObject.GetComponent<RectTransform>();
+            toggleRect.anchorMin = anchorMin;
+            toggleRect.anchorMax = anchorMax;
+            toggleRect.offsetMin = Vector2.zero;
+            toggleRect.offsetMax = Vector2.zero;
+
+            GameObject backgroundObject = new GameObject(
+                "Track",
+                typeof(RectTransform),
+                typeof(Image));
+            backgroundObject.transform.SetParent(toggleObject.transform, false);
+            RectTransform backgroundRect = backgroundObject.GetComponent<RectTransform>();
+            backgroundRect.anchorMin = new Vector2(0.05f, 0.18f);
+            backgroundRect.anchorMax = new Vector2(0.95f, 0.82f);
+            backgroundRect.offsetMin = Vector2.zero;
+            backgroundRect.offsetMax = Vector2.zero;
+            Image background = backgroundObject.GetComponent<Image>();
+            background.color = new Color(1f, 1f, 1f, 0.18f);
+
+            GameObject thumbObject = new GameObject(
+                "Thumb",
+                typeof(RectTransform),
+                typeof(Image));
+            thumbObject.transform.SetParent(backgroundObject.transform, false);
+            RectTransform thumbRect = thumbObject.GetComponent<RectTransform>();
+            thumbRect.anchorMin = new Vector2(0.08f, 0.14f);
+            thumbRect.anchorMax = new Vector2(0.42f, 0.86f);
+            thumbRect.offsetMin = Vector2.zero;
+            thumbRect.offsetMax = Vector2.zero;
+            Image thumb = thumbObject.GetComponent<Image>();
+            thumb.color = Color.white;
+
+            Toggle toggle = toggleObject.GetComponent<Toggle>();
+            toggle.targetGraphic = background;
+            toggle.graphic = thumb;
+            toggle.isOn = false;
+            ColorBlock colors = toggle.colors;
+            colors.normalColor = new Color(1f, 1f, 1f, 0.18f);
+            colors.highlightedColor = new Color(1f, 1f, 1f, 0.28f);
+            colors.pressedColor = AccentColor;
+            colors.disabledColor = new Color(1f, 1f, 1f, 0.08f);
+            toggle.colors = colors;
+            return toggle;
+        }
+
         public static Button CreateButton(
             Transform parent,
             Font font,

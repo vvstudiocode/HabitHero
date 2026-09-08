@@ -20,6 +20,7 @@ namespace HabitHero.App
         private readonly Transform canvasTransform;
         private readonly Font font;
         private readonly string gameAssetBaseUrl;
+        private readonly Action openNotificationSettings;
         private HabitHeroChildHomeView view;
         private IDisposable worldChatRealtimeSubscription;
         private CancellationTokenSource worldChatRealtimeCancellation;
@@ -48,7 +49,8 @@ namespace HabitHero.App
             SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient,
             Transform canvasTransform,
             Font font,
-            string gameAssetBaseUrl)
+            string gameAssetBaseUrl,
+            Action openNotificationSettings = null)
         {
             if (client == null) throw new ArgumentNullException("client");
             if (gameClient == null) throw new ArgumentNullException("gameClient");
@@ -74,7 +76,12 @@ namespace HabitHero.App
             this.gameAssetBaseUrl = gameAssetBaseUrl == null
                 ? string.Empty
                 : gameAssetBaseUrl.Trim();
+            this.openNotificationSettings = openNotificationSettings;
         }
+
+        public string ActiveFamilyId { get { return activeFamilyId; } }
+
+        public string ActiveChildProfileId { get { return activeChildProfileId; } }
 
         public async Task<bool> TryShowAsync(
             SupabaseSession session,
@@ -468,7 +475,8 @@ namespace HabitHero.App
                     expectedRevision,
                     cancellationToken),
                 onSignOut,
-                onSwitchToParent);
+                onSwitchToParent,
+                openNotificationSettings);
         }
 
         private Task<SupabaseChildHomeSnapshot> LoadActiveHomeAsync(

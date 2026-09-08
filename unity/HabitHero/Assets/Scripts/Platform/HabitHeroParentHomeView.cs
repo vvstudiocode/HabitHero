@@ -96,6 +96,7 @@ namespace HabitHero.App
             string,
             Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount;
         private Func<string, Task<bool>> enterChildMode;
+        private Action onOpenNotificationSettings;
 
         public HabitHeroParentHomeView(Transform canvasTransform, Font font)
         {
@@ -160,7 +161,8 @@ namespace HabitHero.App
                 string,
                 Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount,
             Func<string, Task<bool>> enterChildMode,
-            Action onSignOut)
+            Action onSignOut,
+            Action onOpenNotificationSettings)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
 
@@ -185,6 +187,7 @@ namespace HabitHero.App
             this.resetChildPassword = resetChildPassword;
             this.deleteChildAccount = deleteChildAccount;
             this.enterChildMode = enterChildMode;
+            this.onOpenNotificationSettings = onOpenNotificationSettings;
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -223,6 +226,18 @@ namespace HabitHero.App
                 new Color(0.84f, 0.89f, 0.96f, 1f),
                 new Vector2(0.08f, 0.7f),
                 new Vector2(0.92f, 0.77f));
+
+            if (onOpenNotificationSettings != null)
+            {
+                Button notificationButton = HabitHeroUiFactory.CreateButton(
+                    panel.transform,
+                    font,
+                    "通知",
+                    new Vector2(0.08f, 0.91f),
+                    new Vector2(0.25f, 0.97f));
+                notificationButton.onClick.AddListener(
+                    () => onOpenNotificationSettings());
+            }
 
             Button signOutButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
@@ -331,6 +346,7 @@ namespace HabitHero.App
             resetChildPassword = null;
             deleteChildAccount = null;
             enterChildMode = null;
+            onOpenNotificationSettings = null;
             latestSnapshot = null;
             activeReviewTask = null;
             activeWishlist = null;

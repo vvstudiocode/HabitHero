@@ -94,12 +94,14 @@ child mode because those RPCs are child-actor scoped.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device
-binding through the existing RLS-scoped `(profile_id, token)` boundary. Unity
-Mobile Notifications `2.4.2` is pinned for Unity 6.0; iOS builds request
-permission and obtain the APNs token, while Editor/WebGL and Android return an
-explicit unsupported result. Android push token/delivery, notification taps,
-and real-device verification are still pending; the adapter does not claim
-those capabilities by itself.
+binding through the existing RLS-scoped `(profile_id, token)` boundary. Parent
+and child home screens expose the same notification settings flow and
+automatically bind the active family/child scope after login or a protected
+parent-to-child switch. Unity Mobile Notifications `2.4.2` is pinned for
+Unity 6.0; iOS builds request permission and obtain the APNs token, while
+Editor/WebGL and Android return an explicit unsupported result. Android push
+token/delivery, notification taps, and real-device verification are still
+pending; the adapter does not claim those capabilities by itself.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

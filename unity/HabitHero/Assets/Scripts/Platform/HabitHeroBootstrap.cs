@@ -14,6 +14,12 @@ namespace HabitHero.App
 
         private CancellationTokenSource lifetimeCancellation;
         private SupabaseAuthClient authClient;
+        private SupabaseNotificationClient notificationClient;
+        private ISupabasePushTokenProvider pushTokenProvider;
+        private HabitHeroNotificationSettingsController notificationSettingsController;
+        private HabitHeroNotificationSettingsView notificationSettingsView;
+        private CancellationTokenSource notificationContextCancellation;
+        private string notificationContextKey;
         private HabitHeroChildHomeCoordinator childHomeCoordinator;
         private HabitHeroParentHomeCoordinator parentHomeCoordinator;
         private Canvas canvas;
@@ -80,6 +86,8 @@ namespace HabitHero.App
 
             authClient = new SupabaseAuthClient(settings);
             SupabaseRestClient restClient = new SupabaseRestClient(settings, authClient);
+            notificationClient = new SupabaseNotificationClient(restClient);
+            pushTokenProvider = new UnityMobilePushTokenProvider();
             childHomeCoordinator = new HabitHeroChildHomeCoordinator(
                 new SupabaseChildHomeClient(restClient),
                 new SupabaseChildGameClient(restClient),
@@ -90,11 +98,13 @@ namespace HabitHero.App
                 new SupabaseChildFriendWorldRealtimeClient(restClient),
                 canvas.transform,
                 uiFont,
-                config.GameAssetBaseUrl);
+                config.GameAssetBaseUrl,
+                OpenNotificationSettings);
             parentHomeCoordinator = new HabitHeroParentHomeCoordinator(
                 new SupabaseParentHomeClient(restClient),
                 canvas.transform,
-                uiFont);
+                uiFont,
+                OpenNotificationSettings);
             authClient.AuthStateChanged += HandleAuthStateChanged;
             SetBusy(true);
             SetStatus("正在恢復登入狀態…", false);
@@ -156,6 +166,8 @@ namespace HabitHero.App
                 parentHomeCoordinator.Dispose();
                 parentHomeCoordinator = null;
             }
+
+            ClearNotificationContext();
 
             CloseRecoveryPanel();
             CloseParentUnlockPanel();
@@ -690,6 +702,7 @@ namespace HabitHero.App
                 {
                     parentHomeCoordinator.Dispose();
                 }
+                ClearNotificationContext();
                 if (loginPanel != null) loginPanel.SetActive(true);
                 SetSignedInControls(false);
                 SetStatus("已登出，請重新登入。", false);
@@ -708,6 +721,7 @@ namespace HabitHero.App
                 {
                     parentHomeCoordinator.Dispose();
                 }
+                ClearNotificationContext();
                 if (loginPanel != null) loginPanel.SetActive(true);
                 SetSignedInControls(false);
                 SetStatus("已清除本機登入，但遠端登出回報錯誤：" + exception.Message, true);
@@ -806,6 +820,14 @@ namespace HabitHero.App
             if (shown && parentHomeCoordinator != null)
             {
                 parentHomeCoordinator.Dispose();
+            }
+
+            if (shown)
+            {
+                ConfigureNotificationContext(
+                    authClient.CurrentSession,
+                    childHomeCoordinator.ActiveFamilyId,
+                    childHomeCoordinator.ActiveChildProfileId);
             }
 
             return shown;
@@ -992,13 +1014,22 @@ namespace HabitHero.App
             }
 
             childModeToggle.isOn = true;
-            return await childHomeCoordinator.TryShowAsync(
+            bool shown = await childHomeCoordinator.TryShowAsync(
                 session,
                 lifetimeCancellation.Token,
                 SetStatus,
                 HandleSignOutClicked,
                 () => loginPanel.SetActive(false),
                 () => loginPanel.SetActive(true));
+            if (shown)
+            {
+                ConfigureNotificationContext(
+                    session,
+                    childHomeCoordinator.ActiveFamilyId,
+                    childHomeCoordinator.ActiveChildProfileId);
+            }
+
+            return shown;
         }
 
         private async Task<bool> TryShowParentHomeAsync(SupabaseSession session)
@@ -1015,7 +1046,7 @@ namespace HabitHero.App
             }
 
             childModeToggle.isOn = false;
-            return await parentHomeCoordinator.TryShowAsync(
+            bool shown = await parentHomeCoordinator.TryShowAsync(
                 session,
                 lifetimeCancellation.Token,
                 SetStatus,
@@ -1025,6 +1056,141 @@ namespace HabitHero.App
                     childProfileId),
                 () => loginPanel.SetActive(false),
                 () => loginPanel.SetActive(true));
+            if (shown)
+            {
+                ConfigureNotificationContext(
+                    session,
+                    parentHomeCoordinator.ActiveFamilyId,
+                    null);
+            }
+
+            return shown;
+        }
+
+        private void OpenNotificationSettings()
+        {
+            if (notificationSettingsController == null
+                || canvas == null
+                || uiFont == null)
+            {
+                SetStatus("找不到目前的家庭通知設定，請重新載入畫面。", true);
+                return;
+            }
+
+            if (notificationSettingsView == null)
+            {
+                notificationSettingsView = new HabitHeroNotificationSettingsView(
+                    canvas.transform,
+                    uiFont);
+            }
+
+            CancellationToken token = notificationContextCancellation == null
+                ? lifetimeCancellation.Token
+                : notificationContextCancellation.Token;
+            notificationSettingsView.Show(
+                notificationSettingsController,
+                token,
+                CloseNotificationSettings);
+        }
+
+        private void CloseNotificationSettings()
+        {
+            if (notificationSettingsView == null) return;
+            notificationSettingsView.Dispose();
+            notificationSettingsView = null;
+        }
+
+        private void ConfigureNotificationContext(
+            SupabaseSession session,
+            string familyId,
+            string childProfileId)
+        {
+            string profileId = session == null || session.User == null
+                ? string.Empty
+                : session.User.Id;
+            if (notificationClient == null
+                || pushTokenProvider == null
+                || string.IsNullOrWhiteSpace(profileId)
+                || string.IsNullOrWhiteSpace(familyId))
+            {
+                ClearNotificationContext();
+                return;
+            }
+
+            string key = profileId.Trim()
+                + ":" + familyId.Trim()
+                + ":" + (string.IsNullOrWhiteSpace(childProfileId)
+                    ? "parent"
+                    : childProfileId.Trim());
+            if (string.Equals(notificationContextKey, key, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            ClearNotificationContext();
+            notificationContextKey = key;
+            notificationContextCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    lifetimeCancellation.Token);
+            notificationSettingsController =
+                new HabitHeroNotificationSettingsController(
+                    notificationClient,
+                    pushTokenProvider,
+                    familyId,
+                    profileId,
+                    childProfileId,
+                    GetNotificationPlatform());
+            _ = EnsureNotificationsRegisteredAsync(
+                notificationSettingsController,
+                notificationContextCancellation.Token);
+        }
+
+        private async Task EnsureNotificationsRegisteredAsync(
+            HabitHeroNotificationSettingsController controller,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await controller.EnsureRegisteredAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // The account or selected child changed while registration was pending.
+            }
+            catch (Exception)
+            {
+                // Notification permission is optional; the settings panel exposes errors.
+            }
+        }
+
+        private void ClearNotificationContext()
+        {
+            CloseNotificationSettings();
+            if (notificationContextCancellation != null)
+            {
+                notificationContextCancellation.Cancel();
+                notificationContextCancellation.Dispose();
+                notificationContextCancellation = null;
+            }
+
+            if (notificationSettingsController != null)
+            {
+                notificationSettingsController.Dispose();
+                notificationSettingsController = null;
+            }
+
+            notificationContextKey = null;
+        }
+
+        private static string GetNotificationPlatform()
+        {
+#if UNITY_IOS && !UNITY_EDITOR
+            return "ios";
+#elif UNITY_ANDROID && !UNITY_EDITOR
+            return "android";
+#else
+            return "web";
+#endif
         }
 
     }

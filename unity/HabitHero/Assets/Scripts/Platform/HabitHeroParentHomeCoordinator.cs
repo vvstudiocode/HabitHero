@@ -11,12 +11,15 @@ namespace HabitHero.App
         private readonly SupabaseParentHomeClient client;
         private readonly Transform canvasTransform;
         private readonly Font font;
+        private readonly Action openNotificationSettings;
         private HabitHeroParentHomeView view;
+        private string activeFamilyId;
 
         public HabitHeroParentHomeCoordinator(
             SupabaseParentHomeClient client,
             Transform canvasTransform,
-            Font font)
+            Font font,
+            Action openNotificationSettings = null)
         {
             if (client == null) throw new ArgumentNullException("client");
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
@@ -24,7 +27,10 @@ namespace HabitHero.App
             this.client = client;
             this.canvasTransform = canvasTransform;
             this.font = font;
+            this.openNotificationSettings = openNotificationSettings;
         }
+
+        public string ActiveFamilyId { get { return activeFamilyId; } }
 
         public async Task<bool> TryShowAsync(
             SupabaseSession session,
@@ -42,6 +48,7 @@ namespace HabitHero.App
             {
                 SupabaseParentHomeSnapshot snapshot =
                     await client.LoadAsync(cancellationToken);
+                activeFamilyId = snapshot.familyId;
                 if (view == null)
                 {
                     view = new HabitHeroParentHomeView(canvasTransform, font);
@@ -134,7 +141,8 @@ namespace HabitHero.App
                         : (childProfileId) => enterChildMode(
                             snapshot.familyId,
                             childProfileId),
-                    onSignOut);
+                    onSignOut,
+                    openNotificationSettings);
                 hideLogin();
                 return true;
             }
@@ -180,6 +188,7 @@ namespace HabitHero.App
 
         public void Dispose()
         {
+            activeFamilyId = null;
             if (view == null) return;
             view.Dispose();
             view = null;

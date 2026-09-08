@@ -9,6 +9,18 @@ namespace HabitHero.Platform
 {
     public sealed class UnityMobilePushTokenProvider : ISupabasePushTokenProvider
     {
+        public bool IsSupported
+        {
+            get
+            {
+#if UNITY_IOS && !UNITY_EDITOR
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
+
         public async Task<SupabasePushTokenResult> RequestTokenAsync(
             CancellationToken cancellationToken)
         {

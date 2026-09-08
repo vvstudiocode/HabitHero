@@ -39,7 +39,7 @@ authorization into client-only rules.
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating, and world-entity place/update/remove/collect RPCs; authored 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
-| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Foundation started (preference/device binding adapter; native token bridge pending) |
+| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Foundation started (shared preference/device binding, iOS APNs provider, context-aware registration, and Unity settings UI; Android/taps/device verification pending) |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
 | Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Not started |
 
@@ -187,8 +187,11 @@ Partially completed locally:
   session and remains subject to the existing RLS policies. Unity Mobile
   Notifications `2.4.2` is pinned for Unity 6.0; the iOS provider requests
   permission and obtains the APNs token in an iOS build, while Editor/WebGL and
-  Android return an explicit unsupported result. Android push token/delivery,
-  notification taps, and real-device verification remain pending.
+  Android return an explicit unsupported result. Parent and child Unity home
+  screens now expose the same notification preference flow, automatically retry
+  registration for the active family/child scope, and clear the context on
+  sign-out or scope changes. Android push token/delivery, notification taps,
+  and real-device verification remain pending.
 
 Still required:
 
@@ -204,7 +207,8 @@ Still required:
   live preview intentionally uses bounded placeholder avatars until the
   character asset contract and visual/device evidence are approved.
 - Native Android push token/delivery, notification tap routing, and iOS/Android
-  device verification; the iOS token/capability foundation is now in place.
+  device verification; the iOS token/capability and Unity preference UI
+  foundations are now in place.
 
 ### Phase 2 — child core loop
 

@@ -25,6 +25,8 @@ namespace HabitHero.Platform
 
     public interface ISupabasePushTokenProvider
     {
+        bool IsSupported { get; }
+
         Task<SupabasePushTokenResult> RequestTokenAsync(
             CancellationToken cancellationToken);
     }

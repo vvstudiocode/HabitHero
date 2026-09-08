@@ -70,6 +70,7 @@ namespace HabitHero.App
         private Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead;
         private Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat;
         private Action onSwitchToParent;
+        private Action onOpenNotificationSettings;
         private string selectedMood;
         private int selectedDifficulty;
         private bool abandonConfirmationPending;
@@ -130,7 +131,8 @@ namespace HabitHero.App
             Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity,
             Func<long, Task<SupabaseChildGameData>> collectWorldDecorations,
             Action onSignOut,
-            Action onSwitchToParent)
+            Action onSwitchToParent,
+            Action onOpenNotificationSettings)
         {
             if (snapshot == null || snapshot.child == null)
             {
@@ -160,6 +162,7 @@ namespace HabitHero.App
             this.markWorldChatRead = markWorldChatRead;
             this.reportWorldChat = reportWorldChat;
             this.onSwitchToParent = onSwitchToParent;
+            this.onOpenNotificationSettings = onOpenNotificationSettings;
             latestSnapshot = snapshot;
             latestGameData = gameData;
             latestWorldData = worldData;
@@ -269,6 +272,18 @@ namespace HabitHero.App
                 Color.white,
                 new Vector2(0.08f, 0.76f),
                 new Vector2(0.92f, 0.84f));
+
+            if (onOpenNotificationSettings != null)
+            {
+                Button notificationButton = HabitHeroUiFactory.CreateButton(
+                    panel.transform,
+                    font,
+                    "通知",
+                    new Vector2(0.08f, 0.91f),
+                    new Vector2(0.25f, 0.97f));
+                notificationButton.onClick.AddListener(
+                    () => onOpenNotificationSettings());
+            }
 
             Button signOutButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
@@ -381,6 +396,7 @@ namespace HabitHero.App
             markWorldChatRead = null;
             reportWorldChat = null;
             onSwitchToParent = null;
+            onOpenNotificationSettings = null;
             timerSessions = null;
             latestSnapshot = null;
             latestGameData = null;

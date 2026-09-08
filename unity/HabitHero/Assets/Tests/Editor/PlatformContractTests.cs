@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitHero.App;
 using HabitHero.Platform;
 using NUnit.Framework;
 using UnityEditor;
@@ -1137,6 +1138,110 @@ namespace HabitHero.Tests
             StringAssert.Contains(
                 "\"token\":\"ios-token-12345678901234567890\"",
                 dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task NotificationSettingsRegistersBeforePersistingEnabledPreference()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"parent-access\",\"refresh_token\":\"parent-refresh\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "[{\"notifications_enabled\":false}]", null),
+                new SupabaseHttpResponse(200, "", null),
+                new SupabaseHttpResponse(200, "", null));
+            SupabaseNotificationClient client = new SupabaseNotificationClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+            FakePushTokenProvider tokenProvider = new FakePushTokenProvider(
+                new SupabasePushTokenResult(
+                    true,
+                    true,
+                    "ios-token-12345678901234567890",
+                    null));
+            HabitHeroNotificationSettingsController controller =
+                new HabitHeroNotificationSettingsController(
+                    client,
+                    tokenProvider,
+                    "family-1",
+                    "parent-user-1",
+                    null,
+                    "ios");
+
+            HabitHeroNotificationSettingsState state =
+                await controller.SetEnabledAsync(true, CancellationToken.None);
+
+            Assert.IsTrue(state.Enabled);
+            Assert.AreEqual(3, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/profiles?select=notifications_enabled&id=eq.parent-user-1",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/push_devices?on_conflict=profile_id%2Ctoken",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/profiles?id=eq.parent-user-1",
+                dataTransport.Requests[2].Url);
+            Assert.AreEqual(
+                "{\"notifications_enabled\":true}",
+                dataTransport.Requests[2].Body);
+        }
+
+        [Test]
+        public async Task NotificationSettingsDoesNotPersistWhenPermissionIsDenied()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"parent-access\",\"refresh_token\":\"parent-refresh\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "[{\"notifications_enabled\":false}]", null));
+            SupabaseNotificationClient client = new SupabaseNotificationClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+            FakePushTokenProvider tokenProvider = new FakePushTokenProvider(
+                new SupabasePushTokenResult(
+                    true,
+                    false,
+                    null,
+                    "使用者未允許通知。"));
+            HabitHeroNotificationSettingsController controller =
+                new HabitHeroNotificationSettingsController(
+                    client,
+                    tokenProvider,
+                    "family-1",
+                    "parent-user-1",
+                    null,
+                    "ios");
+
+            HabitHeroNotificationSettingsState state =
+                await controller.SetEnabledAsync(true, CancellationToken.None);
+
+            Assert.IsFalse(state.Enabled);
+            Assert.IsFalse(state.Granted);
+            Assert.AreEqual("使用者未允許通知。", state.Error);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
         }
 
         [Test]
@@ -3435,6 +3540,11 @@ namespace HabitHero.Tests
             public FakePushTokenProvider(SupabasePushTokenResult result)
             {
                 this.result = result;
+            }
+
+            public bool IsSupported
+            {
+                get { return result != null && result.IsSupported; }
             }
 
             public int RequestCount { get; private set; }
