@@ -29,6 +29,8 @@ namespace HabitHero.App
         private RenderTexture renderTexture;
         private GameObject player;
         private HabitHeroWorldModelAnimation playerAnimation;
+        private HabitHeroWorldJoystickInput worldJoystick;
+        private Vector2 joystickDirection;
         private readonly List<HabitHeroWorldPetActor> petActors =
             new List<HabitHeroWorldPetActor>();
         private Text sceneStatus;
@@ -119,6 +121,7 @@ namespace HabitHero.App
         {
             if (scenePanel == null) return;
             float safeDelta = Mathf.Max(0f, deltaSeconds);
+            UpdatePlayerFromJoystick(safeDelta);
             UpdatePetActors(safeDelta);
             atmosphereRefreshTimer -= safeDelta;
             UpdateWorldAtmosphere(false);
@@ -1382,10 +1385,7 @@ namespace HabitHero.App
             controlsRect.anchorMax = new Vector2(0.96f, 0.32f);
             controlsRect.offsetMin = Vector2.zero;
             controlsRect.offsetMax = Vector2.zero;
-            CreateMovementButton(controls.transform, "上", new Vector2(0.34f, 0.56f), new Vector2(0.66f, 0.9f), new Vector2(0f, 1f));
-            CreateMovementButton(controls.transform, "左", new Vector2(0.04f, 0.24f), new Vector2(0.36f, 0.58f), new Vector2(-1f, 0f));
-            CreateMovementButton(controls.transform, "右", new Vector2(0.64f, 0.24f), new Vector2(0.96f, 0.58f), new Vector2(1f, 0f));
-            CreateMovementButton(controls.transform, "下", new Vector2(0.34f, 0.02f), new Vector2(0.66f, 0.36f), new Vector2(0f, -1f));
+            CreateMovementJoystick(controls.transform);
 
             GameObject cameraControls = HabitHeroUiFactory.CreatePanel(
                 scenePanel.transform,
@@ -1418,7 +1418,7 @@ namespace HabitHero.App
             sceneStatus = HabitHeroUiFactory.CreateText(
                 scenePanel.transform,
                 font,
-                "方向按鈕可移動孩子角色；可從左側與 NPC 對話。",
+                "拖曳搖桿可移動孩子角色；可從左側與 NPC 對話。",
                 14,
                 TextAnchor.MiddleCenter,
                 Color.white,
@@ -1481,20 +1481,48 @@ namespace HabitHero.App
             }
         }
 
-        private void CreateMovementButton(
-            Transform parent,
-            string label,
-            Vector2 anchorMin,
-            Vector2 anchorMax,
-            Vector2 direction)
+        private void CreateMovementJoystick(Transform parent)
         {
-            Button button = HabitHeroUiFactory.CreateButton(
-                parent,
-                font,
-                label,
-                anchorMin,
-                anchorMax);
-            button.onClick.AddListener(() => MovePlayer(direction));
+            GameObject joystickObject = new GameObject(
+                "WorldMovementJoystick",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(HabitHeroWorldJoystickInput));
+            joystickObject.transform.SetParent(parent, false);
+            RectTransform joystickRect = joystickObject.GetComponent<RectTransform>();
+            joystickRect.anchorMin = new Vector2(0.04f, 0.06f);
+            joystickRect.anchorMax = new Vector2(0.96f, 0.94f);
+            joystickRect.offsetMin = Vector2.zero;
+            joystickRect.offsetMax = Vector2.zero;
+            Image surface = joystickObject.GetComponent<Image>();
+            surface.color = new Color(0.12f, 0.2f, 0.3f, 0.78f);
+
+            GameObject knobObject = new GameObject(
+                "Knob",
+                typeof(RectTransform),
+                typeof(Image));
+            knobObject.transform.SetParent(joystickObject.transform, false);
+            RectTransform knobRect = knobObject.GetComponent<RectTransform>();
+            knobRect.anchorMin = new Vector2(0.5f, 0.5f);
+            knobRect.anchorMax = new Vector2(0.5f, 0.5f);
+            knobRect.sizeDelta = new Vector2(46f, 46f);
+            knobRect.anchoredPosition = Vector2.zero;
+            Image knob = knobObject.GetComponent<Image>();
+            knob.color = HabitHeroUiFactory.AccentColor;
+            knob.raycastTarget = false;
+
+            worldJoystick = joystickObject.GetComponent<HabitHeroWorldJoystickInput>();
+            worldJoystick.SetKnob(knobRect);
+            worldJoystick.Changed += HandleWorldJoystickChanged;
+        }
+
+        private void HandleWorldJoystickChanged(Vector2 direction)
+        {
+            joystickDirection = direction;
+            if (direction.sqrMagnitude <= 0.0001f && playerAnimation != null)
+            {
+                playerAnimation.SetMoving(false);
+            }
         }
 
         private void CreateCameraButton(
@@ -1515,6 +1543,20 @@ namespace HabitHero.App
 
         private void MovePlayer(Vector2 direction)
         {
+            MovePlayer(direction, 0.8f, true);
+        }
+
+        private void UpdatePlayerFromJoystick(float deltaSeconds)
+        {
+            if (joystickDirection.sqrMagnitude <= 0.0001f) return;
+            MovePlayer(joystickDirection, Mathf.Max(0f, deltaSeconds) * 3.2f, false);
+        }
+
+        private void MovePlayer(
+            Vector2 direction,
+            float distance,
+            bool updateStatus)
+        {
             if (player == null) return;
             Vector3 position = player.transform.position;
             Vector2 previousPosition = new Vector2(position.x, position.z);
@@ -1524,8 +1566,8 @@ namespace HabitHero.App
             Vector2 next = HabitHeroWorldCollision.MoveCharacter(
                 new Vector2(position.x, position.z),
                 new Vector2(
-                    position.x + direction.x * 0.8f,
-                    position.z + direction.y * 0.8f),
+                    position.x + direction.x * distance,
+                    position.z + direction.y * distance),
                 0.35f,
                 worldCollisionProxies,
                 movementBoundary);
@@ -1543,7 +1585,16 @@ namespace HabitHero.App
                 playerAnimation.SetMoving(moved);
             }
             UpdateWorldCamera();
-            SetStatus("孩子角色已移動到 " + position.x.ToString("0.0") + ", " + position.z.ToString("0.0") + "。", false);
+            if (updateStatus)
+            {
+                SetStatus(
+                    "孩子角色已移動到 "
+                        + position.x.ToString("0.0")
+                        + ", "
+                        + position.z.ToString("0.0")
+                        + "。",
+                    false);
+            }
         }
 
         private void UpdateWorldCamera()
@@ -1751,6 +1802,12 @@ namespace HabitHero.App
             atmosphereRefreshTimer = 0f;
             player = null;
             playerAnimation = null;
+            if (worldJoystick != null)
+            {
+                worldJoystick.Changed -= HandleWorldJoystickChanged;
+            }
+            worldJoystick = null;
+            joystickDirection = Vector2.zero;
             petActors.Clear();
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             authoredCollisionProxyIndices.Clear();

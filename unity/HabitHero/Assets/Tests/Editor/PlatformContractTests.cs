@@ -334,6 +334,20 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldJoystickClampsAndNormalizesTheMovementVector()
+        {
+            Vector2 clamped = HabitHeroWorldJoystickMath.GetValue(
+                new Vector2(3f, 4f),
+                2f);
+
+            Assert.AreEqual(0.6f, clamped.x, 0.0001f);
+            Assert.AreEqual(0.8f, clamped.y, 0.0001f);
+            Assert.AreEqual(
+                Vector2.zero,
+                HabitHeroWorldJoystickMath.GetValue(Vector2.zero, 0f));
+        }
+
+        [Test]
         public void WorldBackgroundMusicPreferenceDefaultsOnAndIsScopedToChild()
         {
             string firstKey = HabitHeroWorldBackgroundMusic.GetPreferenceKey("child-1");
