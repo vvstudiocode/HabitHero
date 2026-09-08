@@ -93,6 +93,7 @@ namespace HabitHero.App
                 new SupabaseChildGameClient(restClient),
                 new SupabaseChildWorldClient(restClient),
                 new SupabaseChildSocialClient(restClient),
+                new SupabaseChildCoopAdventureClient(restClient),
                 new SupabaseChildFriendWorldClient(restClient),
                 new SupabaseChildWorldChatClient(restClient),
                 new SupabaseChildFriendWorldRealtimeClient(restClient),

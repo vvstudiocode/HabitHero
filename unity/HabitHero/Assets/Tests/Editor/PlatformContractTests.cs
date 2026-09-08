@@ -1547,6 +1547,46 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void CoopAdventureEligibilityRequiresAnActionableGeneralAdventure()
+        {
+            Assert.IsTrue(HabitHeroCoopAdventureEligibility.CanCreate(
+                new SupabaseChildTaskRecord
+                {
+                    adventure_type = "general",
+                    is_daily = false,
+                    status = "todo",
+                }));
+            Assert.IsTrue(HabitHeroCoopAdventureEligibility.CanCreate(
+                new SupabaseChildTaskRecord
+                {
+                    adventure_type = "general",
+                    is_daily = false,
+                    status = "revision_requested",
+                }));
+            Assert.IsFalse(HabitHeroCoopAdventureEligibility.CanCreate(
+                new SupabaseChildTaskRecord
+                {
+                    adventure_type = "daily",
+                    is_daily = false,
+                    status = "todo",
+                }));
+            Assert.IsFalse(HabitHeroCoopAdventureEligibility.CanCreate(
+                new SupabaseChildTaskRecord
+                {
+                    adventure_type = "general",
+                    is_daily = true,
+                    status = "todo",
+                }));
+            Assert.IsFalse(HabitHeroCoopAdventureEligibility.CanCreate(
+                new SupabaseChildTaskRecord
+                {
+                    adventure_type = "general",
+                    is_daily = false,
+                    status = "completed",
+                }));
+        }
+
+        [Test]
         public async Task CoopClientUsesTheServerRpcsAndMapsAuthoritativeState()
         {
             SupabaseClientSettings settings = CreateSettings();

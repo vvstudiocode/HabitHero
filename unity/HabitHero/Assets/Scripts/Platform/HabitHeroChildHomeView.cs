@@ -24,6 +24,7 @@ namespace HabitHero.App
         private HabitHeroChildWorldView worldView;
         private HabitHeroChildWorldSceneView worldSceneView;
         private HabitHeroChildSocialView socialView;
+        private HabitHeroChildCoopAdventureView coopAdventureView;
         private HabitHeroChildLedgerView ledgerView;
         private Text statusText;
         private Text pointsText;
@@ -76,6 +77,14 @@ namespace HabitHero.App
         private Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat;
         private Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead;
         private Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat;
+        private Func<string, Task<SupabaseCoopAdventureSummary[]>> listCoopAdventures;
+        private Func<string, Task<SupabaseCoopAdventureState>> loadCoopAdventureState;
+        private Func<string, Task<SupabaseCoopAdventureNotification>> createCoopAdventure;
+        private Func<string, Task<SupabaseCoopMutationResult>> joinCoopAdventure;
+        private Func<
+            string,
+            SupabaseCoopCompletionInput,
+            Task<SupabaseCoopMutationResult>> submitCoopCompletion;
         private Action onSwitchToParent;
         private Action onOpenNotificationSettings;
         private string selectedMood;
@@ -118,6 +127,14 @@ namespace HabitHero.App
             Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat,
             Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead,
             Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat,
+            Func<string, Task<SupabaseCoopAdventureSummary[]>> listCoopAdventures,
+            Func<string, Task<SupabaseCoopAdventureState>> loadCoopAdventureState,
+            Func<string, Task<SupabaseCoopAdventureNotification>> createCoopAdventure,
+            Func<string, Task<SupabaseCoopMutationResult>> joinCoopAdventure,
+            Func<
+                string,
+                SupabaseCoopCompletionInput,
+                Task<SupabaseCoopMutationResult>> submitCoopCompletion,
             Func<
                 SupabaseChildTaskRecord,
                 SupabaseTaskCompletionDraft,
@@ -172,6 +189,11 @@ namespace HabitHero.App
             this.sendWorldChat = sendWorldChat;
             this.markWorldChatRead = markWorldChatRead;
             this.reportWorldChat = reportWorldChat;
+            this.listCoopAdventures = listCoopAdventures;
+            this.loadCoopAdventureState = loadCoopAdventureState;
+            this.createCoopAdventure = createCoopAdventure;
+            this.joinCoopAdventure = joinCoopAdventure;
+            this.submitCoopCompletion = submitCoopCompletion;
             this.onSwitchToParent = onSwitchToParent;
             this.onOpenNotificationSettings = onOpenNotificationSettings;
             latestSnapshot = snapshot;
@@ -307,6 +329,17 @@ namespace HabitHero.App
                 goalButton.onClick.AddListener(OpenGoalProposalPanel);
             }
 
+            if (listCoopAdventures != null)
+            {
+                Button coopButton = HabitHeroUiFactory.CreateButton(
+                    panel.transform,
+                    font,
+                    "合作冒險",
+                    new Vector2(0.5f, 0.91f),
+                    new Vector2(0.69f, 0.97f));
+                coopButton.onClick.AddListener(OpenCoopAdventurePanel);
+            }
+
             Button signOutButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
@@ -418,6 +451,11 @@ namespace HabitHero.App
             sendWorldChat = null;
             markWorldChatRead = null;
             reportWorldChat = null;
+            listCoopAdventures = null;
+            loadCoopAdventureState = null;
+            createCoopAdventure = null;
+            joinCoopAdventure = null;
+            submitCoopCompletion = null;
             onSwitchToParent = null;
             onOpenNotificationSettings = null;
             timerSessions = null;
@@ -458,6 +496,11 @@ namespace HabitHero.App
             {
                 socialView.Dispose();
                 socialView = null;
+            }
+            if (coopAdventureView != null)
+            {
+                coopAdventureView.Dispose();
+                coopAdventureView = null;
             }
             abandonConfirmationPending = false;
             if (panel != null)
@@ -746,6 +789,43 @@ namespace HabitHero.App
         private void CloseSocialPanel()
         {
             if (socialView != null) socialView.Close();
+            SetStatus("已返回今日任務。", false);
+        }
+
+        private void OpenCoopAdventurePanel()
+        {
+            if (latestSnapshot == null || listCoopAdventures == null)
+            {
+                SetStatus("合作冒險功能尚未連線。", true);
+                return;
+            }
+
+            CloseReportPanel();
+            CloseTimerPanel();
+            CloseRewardPanel();
+            CloseWishlistPanel();
+            CloseLedgerPanel();
+            if (coopAdventureView == null)
+            {
+                coopAdventureView = new HabitHeroChildCoopAdventureView(
+                    canvasTransform,
+                    font);
+            }
+
+            coopAdventureView.Show(
+                latestSnapshot,
+                latestSocialData,
+                listCoopAdventures,
+                loadCoopAdventureState,
+                createCoopAdventure,
+                joinCoopAdventure,
+                submitCoopCompletion,
+                CloseCoopAdventurePanel);
+        }
+
+        private void CloseCoopAdventurePanel()
+        {
+            if (coopAdventureView != null) coopAdventureView.Close();
             SetStatus("已返回今日任務。", false);
         }
 

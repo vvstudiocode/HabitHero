@@ -14,6 +14,7 @@ namespace HabitHero.App
         private readonly SupabaseChildGameClient gameClient;
         private readonly SupabaseChildWorldClient worldClient;
         private readonly SupabaseChildSocialClient socialClient;
+        private readonly SupabaseChildCoopAdventureClient coopAdventureClient;
         private readonly SupabaseChildFriendWorldClient friendWorldClient;
         private readonly SupabaseChildWorldChatClient worldChatClient;
         private readonly SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient;
@@ -44,6 +45,7 @@ namespace HabitHero.App
             SupabaseChildGameClient gameClient,
             SupabaseChildWorldClient worldClient,
             SupabaseChildSocialClient socialClient,
+            SupabaseChildCoopAdventureClient coopAdventureClient,
             SupabaseChildFriendWorldClient friendWorldClient,
             SupabaseChildWorldChatClient worldChatClient,
             SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient,
@@ -56,6 +58,10 @@ namespace HabitHero.App
             if (gameClient == null) throw new ArgumentNullException("gameClient");
             if (worldClient == null) throw new ArgumentNullException("worldClient");
             if (socialClient == null) throw new ArgumentNullException("socialClient");
+            if (coopAdventureClient == null)
+            {
+                throw new ArgumentNullException("coopAdventureClient");
+            }
             if (friendWorldClient == null) throw new ArgumentNullException("friendWorldClient");
             if (worldChatClient == null) throw new ArgumentNullException("worldChatClient");
             if (friendWorldRealtimeClient == null)
@@ -68,6 +74,7 @@ namespace HabitHero.App
             this.gameClient = gameClient;
             this.worldClient = worldClient;
             this.socialClient = socialClient;
+            this.coopAdventureClient = coopAdventureClient;
             this.friendWorldClient = friendWorldClient;
             this.worldChatClient = worldChatClient;
             this.friendWorldRealtimeClient = friendWorldRealtimeClient;
@@ -301,6 +308,14 @@ namespace HabitHero.App
             Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat = null;
             Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead = null;
             Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat = null;
+            Func<string, Task<SupabaseCoopAdventureSummary[]>> listCoopAdventures = null;
+            Func<string, Task<SupabaseCoopAdventureState>> loadCoopAdventureState = null;
+            Func<string, Task<SupabaseCoopAdventureNotification>> createCoopAdventure = null;
+            Func<string, Task<SupabaseCoopMutationResult>> joinCoopAdventure = null;
+            Func<
+                string,
+                SupabaseCoopCompletionInput,
+                Task<SupabaseCoopMutationResult>> submitCoopCompletion = null;
             if (!parentChildMode)
             {
                 refreshSocial = () => RefreshSocialAsync(snapshot.child.id, cancellationToken);
@@ -370,6 +385,27 @@ namespace HabitHero.App
                     friendChildProfileId,
                     messageId,
                     cancellationToken);
+                listCoopAdventures = (worldOwnerChildProfileId) =>
+                    coopAdventureClient.ListAsync(
+                        worldOwnerChildProfileId,
+                        cancellationToken);
+                loadCoopAdventureState = (adventureId) =>
+                    coopAdventureClient.LoadStateAsync(
+                        adventureId,
+                        cancellationToken);
+                createCoopAdventure = (taskId) =>
+                    coopAdventureClient.CreateFromGeneralTaskAsync(
+                        taskId,
+                        cancellationToken);
+                joinCoopAdventure = (adventureId) =>
+                    coopAdventureClient.JoinAsync(
+                        adventureId,
+                        cancellationToken);
+                submitCoopCompletion = (participantId, input) =>
+                    coopAdventureClient.SubmitCompletionAsync(
+                        participantId,
+                        input,
+                        cancellationToken);
             }
 
             view.Show(
@@ -402,6 +438,11 @@ namespace HabitHero.App
                 sendWorldChat,
                 markWorldChatRead,
                 reportWorldChat,
+                listCoopAdventures,
+                loadCoopAdventureState,
+                createCoopAdventure,
+                joinCoopAdventure,
+                submitCoopCompletion,
                 (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
                 (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
                 (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
