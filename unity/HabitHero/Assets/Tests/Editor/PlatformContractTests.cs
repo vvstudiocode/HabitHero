@@ -589,6 +589,105 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentHomeLoadsFamilyDataAndReviewsPendingTasksThroughRpc()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"parent-user-1\",\"role\":\"parent\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"family-1\",\"name\":\"小小冒險家\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":20}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"pending\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"completed\",\"approved_points\":10}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"parent-user-1\",\"role\":\"parent\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"family-1\",\"name\":\"小小冒險家\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":30}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"completed\",\"approved_points\":10}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"ledger-1\",\"child_profile_id\":\"child-1\",\"task_id\":\"task-1\",\"points_delta\":10,\"entry_type\":\"task_approved\"}]",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseParentHomeSnapshot snapshot =
+                await client.LoadAsync(CancellationToken.None);
+            SupabaseParentTaskReviewResult result =
+                await client.ReviewTaskAndRefreshAsync(
+                    snapshot.tasks[0],
+                    true,
+                    10,
+                    "做得很好",
+                    null,
+                    "encouraging",
+                    null,
+                    CancellationToken.None);
+
+            Assert.AreEqual("小小冒險家", snapshot.family.name);
+            Assert.AreEqual(1, snapshot.children.Length);
+            Assert.AreEqual("pending", snapshot.tasks[0].status);
+            Assert.AreEqual("completed", result.Task.status);
+            Assert.AreEqual(30, result.RefreshedSnapshot.children[0].points_balance);
+            Assert.AreEqual(17, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/family_members?select=*&profile_id=eq.parent-user-1&role=eq.parent",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/review_task_completion",
+                dataTransport.Requests[8].Url);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\",\"approved\":true,\"approved_points\":10,\"feedback\":\"做得很好\",\"correction\":null,\"tone\":\"encouraging\",\"revision_note\":null}",
+                dataTransport.Requests[8].Body);
+        }
+
+        [Test]
         public void TaskCompletionQueueDeduplicatesByTaskAndPersistsOwnerScope()
         {
             InMemorySupabaseTaskCompletionQueueStore store =

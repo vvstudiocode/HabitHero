@@ -51,6 +51,10 @@ namespace HabitHero.Platform
         public string child_reflection_text;
         public string child_mood;
         public int child_difficulty;
+        public string parent_feedback_text;
+        public string parent_correction_text;
+        public string feedback_tone;
+        public string revision_note;
         public string adventure_type;
         public string completion_report_mode;
         public string quick_report;

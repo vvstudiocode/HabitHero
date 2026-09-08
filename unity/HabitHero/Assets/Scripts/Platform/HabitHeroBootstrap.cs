@@ -15,6 +15,7 @@ namespace HabitHero.App
         private CancellationTokenSource lifetimeCancellation;
         private SupabaseAuthClient authClient;
         private HabitHeroChildHomeCoordinator childHomeCoordinator;
+        private HabitHeroParentHomeCoordinator parentHomeCoordinator;
         private Canvas canvas;
         private GameObject loginPanel;
         private GameObject recoveryPanel;
@@ -66,8 +67,13 @@ namespace HabitHero.App
             }
 
             authClient = new SupabaseAuthClient(settings);
+            SupabaseRestClient restClient = new SupabaseRestClient(settings, authClient);
             childHomeCoordinator = new HabitHeroChildHomeCoordinator(
-                new SupabaseChildHomeClient(new SupabaseRestClient(settings, authClient)),
+                new SupabaseChildHomeClient(restClient),
+                canvas.transform,
+                uiFont);
+            parentHomeCoordinator = new HabitHeroParentHomeCoordinator(
+                new SupabaseParentHomeClient(restClient),
                 canvas.transform,
                 uiFont);
             authClient.AuthStateChanged += HandleAuthStateChanged;
@@ -93,7 +99,10 @@ namespace HabitHero.App
                 else
                 {
                     ShowSignedIn(session);
-                    await TryShowChildHomeAsync(session);
+                    if (!await TryShowChildHomeAsync(session))
+                    {
+                        await TryShowParentHomeAsync(session);
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -122,6 +131,11 @@ namespace HabitHero.App
             {
                 childHomeCoordinator.Dispose();
                 childHomeCoordinator = null;
+            }
+            if (parentHomeCoordinator != null)
+            {
+                parentHomeCoordinator.Dispose();
+                parentHomeCoordinator = null;
             }
 
             CloseRecoveryPanel();
@@ -300,7 +314,10 @@ namespace HabitHero.App
                     await authClient.GetUserAsync(lifetimeCancellation.Token);
                     session = authClient.CurrentSession;
                     ShowSignedIn(session);
-                    await TryShowChildHomeAsync(session);
+                    if (!await TryShowChildHomeAsync(session))
+                    {
+                        await TryShowParentHomeAsync(session);
+                    }
                 }
                 catch (Exception exception)
                 {
@@ -581,7 +598,10 @@ namespace HabitHero.App
                     password,
                     lifetimeCancellation.Token);
                 ShowSignedIn(session);
-                await TryShowChildHomeAsync(session);
+                if (!await TryShowChildHomeAsync(session))
+                {
+                    await TryShowParentHomeAsync(session);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -610,6 +630,10 @@ namespace HabitHero.App
                 {
                     childHomeCoordinator.Dispose();
                 }
+                if (parentHomeCoordinator != null)
+                {
+                    parentHomeCoordinator.Dispose();
+                }
                 if (loginPanel != null) loginPanel.SetActive(true);
                 SetSignedInControls(false);
                 SetStatus("已登出，請重新登入。", false);
@@ -623,6 +647,10 @@ namespace HabitHero.App
                 if (childHomeCoordinator != null)
                 {
                     childHomeCoordinator.Dispose();
+                }
+                if (parentHomeCoordinator != null)
+                {
+                    parentHomeCoordinator.Dispose();
                 }
                 if (loginPanel != null) loginPanel.SetActive(true);
                 SetSignedInControls(false);
@@ -699,12 +727,44 @@ namespace HabitHero.App
             return username.Trim().ToLowerInvariant() + ChildEmailDomain;
         }
 
-        private async Task TryShowChildHomeAsync(SupabaseSession session)
+        private async Task<bool> TryShowChildHomeAsync(SupabaseSession session)
         {
-            if (childHomeCoordinator == null || canvas == null) return;
+            string email = session == null || session.User == null
+                ? string.Empty
+                : session.User.Email;
+            if (childHomeCoordinator == null
+                || canvas == null
+                || string.IsNullOrWhiteSpace(email)
+                || !email.EndsWith(ChildEmailDomain, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
 
             childModeToggle.isOn = true;
-            await childHomeCoordinator.TryShowAsync(
+            return await childHomeCoordinator.TryShowAsync(
+                session,
+                lifetimeCancellation.Token,
+                SetStatus,
+                HandleSignOutClicked,
+                () => loginPanel.SetActive(false),
+                () => loginPanel.SetActive(true));
+        }
+
+        private async Task<bool> TryShowParentHomeAsync(SupabaseSession session)
+        {
+            string email = session == null || session.User == null
+                ? string.Empty
+                : session.User.Email;
+            if (parentHomeCoordinator == null
+                || canvas == null
+                || string.IsNullOrWhiteSpace(email)
+                || email.EndsWith(ChildEmailDomain, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            childModeToggle.isOn = false;
+            return await parentHomeCoordinator.TryShowAsync(
                 session,
                 lifetimeCancellation.Token,
                 SetStatus,

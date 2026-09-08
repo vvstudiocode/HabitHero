@@ -30,7 +30,8 @@ parallel client rewrite.
 
 1. Establish the Unity project and platform adapters.
 2. Port authentication and session/deep-link handling.
-3. Port the child task, points, reward, wishlist, and offline-sync loop.
+3. Port the parent review and child task, points, reward, wishlist, and
+   offline-sync loops.
 4. Port the world, pet, adventure, inventory, and decoration runtime.
 5. Port realtime social/co-op behavior and native notifications.
 6. Verify production update, account continuity, and store builds before
@@ -53,6 +54,8 @@ Capacitor exports.
 The child home slice also reads rewards, tickets, point ledger, and wishlist
 items; reward redemption uses the server `redeem_reward` RPC, while wishlist
 add/cancel uses RLS-scoped PostgREST mutations followed by a fresh snapshot.
+The parent home slice reads the shared family data and reviews pending tasks via
+the existing review RPCs; it never awards points from client-side state.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

@@ -31,7 +31,7 @@ authorization into client-only rules.
 | --- | --- | --- | --- |
 | Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started |
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Not started |
-| Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Not started |
+| Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (family read/review) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Not started |
@@ -82,6 +82,8 @@ Partially completed locally:
   reconnect drain, and EditMode coverage.
 - Child reward redemption through the server-authoritative `redeem_reward` RPC,
   wallet/ledger refresh, and RLS-scoped wishlist add/cancel flows.
+- Parent family/child/task hydration plus task approval or revision through the
+  existing server-authoritative review RPCs.
 
 Still required:
 
