@@ -92,12 +92,14 @@ authorization. Returning to the parent workbench requires re-authenticating
 the parent password; social/friend-world controls stay disabled in this parent
 child mode because those RPCs are child-actor scoped.
 The Unity child world view now resolves the same public authored GLB modules as
-the Web client through `HabitHeroWorldAssetCatalog`. Primary terrain and
-landmark modules are available for all five existing scenes, with per-scene
-placement and scale data preserved; primitive fallback, server scene gating,
-and world-entity rendering remain available. `HabitHeroWorldSceneProfileCatalog`
-also preserves the Web scene spawn anchors and movement boundaries while full
-module coverage, collision, weather, camera, and device parity are completed.
+the Web client through `HabitHeroWorldAssetCatalog`. Complete authored module
+catalogs are available for all five existing scenes (10/12/23/11/12 placements
+for Sunrise Village, Forest Valley, Cloud Workshop, Tideglow Archipelago, and
+Star-Sand Wasteland), with per-scene placement and scale data preserved;
+primitive fallback, server scene gating, and world-entity rendering remain
+available. `HabitHeroWorldSceneProfileCatalog` also preserves the Web scene
+spawn anchors and movement boundaries. Collision, weather, camera, and device
+parity remain pending.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device

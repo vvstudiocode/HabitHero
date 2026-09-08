@@ -84,8 +84,15 @@ namespace HabitHero.Tests
             HabitHeroWorldAssetModule[] modules;
             Assert.IsTrue(HabitHeroWorldAssetCatalog.TryGetModules("sunrise-village", out modules));
             Assert.IsTrue(modules.Length >= 3);
-            Assert.AreEqual("world.sunrise-village.island", modules[0].AssetKey);
-            Assert.Less(modules[0].Scale.x, -20f);
+            bool foundSunriseIsland = false;
+            foreach (HabitHeroWorldAssetModule module in modules)
+            {
+                if (module.AssetKey != "world.sunrise-village.island") continue;
+                foundSunriseIsland = true;
+                Assert.Less(module.Scale.x, -20f);
+                break;
+            }
+            Assert.IsTrue(foundSunriseIsland);
             Assert.IsTrue(HabitHeroWorldAssetCatalog.TryGetModules("tideglow-archipelago", out modules));
             Assert.IsTrue(modules.Length >= 1);
             foreach (HabitHeroWorldAssetModule module in modules)
