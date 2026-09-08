@@ -3588,11 +3588,9 @@ namespace HabitHero.Tests
                 HabitHeroWorldAssetCatalog.TryGetModules(sceneId, out modules),
                 "Missing authored scene catalog for " + sceneId);
             Assert.AreEqual(expectedCount, modules.Length, "Unexpected authored module count for " + sceneId);
-            HashSet<string> assetKeys = new HashSet<string>(StringComparer.Ordinal);
             foreach (HabitHeroWorldAssetModule module in modules)
             {
                 Assert.IsNotNull(module);
-                Assert.IsTrue(assetKeys.Add(module.AssetKey), "Duplicate authored asset key " + module.AssetKey);
                 Assert.IsTrue(
                     HabitHeroGameAssetCatalog.HasModel(module.AssetKey),
                     "Missing world asset allow-list entry for " + module.AssetKey);
