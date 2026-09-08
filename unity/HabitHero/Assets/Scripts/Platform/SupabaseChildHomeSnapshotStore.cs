@@ -27,22 +27,35 @@ namespace HabitHero.Platform
             string ownerUserId,
             out SupabaseChildHomeSnapshot snapshot)
         {
-            snapshot = null;
-            if (string.IsNullOrWhiteSpace(ownerUserId)) return false;
-
-            string serialized = store.Load(ownerUserId);
-            if (string.IsNullOrWhiteSpace(serialized)) return false;
-
-            try
+            if (!TryLoadSerialized(ownerUserId, out snapshot))
             {
-                snapshot = JsonUtility.FromJson<SupabaseChildHomeSnapshot>(serialized);
+                return false;
             }
-            catch (Exception)
+
+            if (!IsOwnedByUser(ownerUserId, snapshot))
             {
                 snapshot = null;
+                return false;
             }
 
-            if (!IsValid(ownerUserId, snapshot))
+            Normalize(snapshot);
+            return true;
+        }
+
+        public bool TryLoadScoped(
+            string ownerUserId,
+            string familyId,
+            string childProfileId,
+            out SupabaseChildHomeSnapshot snapshot)
+        {
+            if (!TryLoadSerialized(ownerUserId, out snapshot))
+            {
+                return false;
+            }
+
+            if (snapshot.familyId != familyId
+                || snapshot.child == null
+                || snapshot.child.id != childProfileId)
             {
                 snapshot = null;
                 return false;
@@ -65,6 +78,27 @@ namespace HabitHero.Platform
             store.Save(ownerUserId, JsonUtility.ToJson(snapshot));
         }
 
+        public void SaveScoped(
+            string ownerUserId,
+            string familyId,
+            string childProfileId,
+            SupabaseChildHomeSnapshot snapshot)
+        {
+            if (string.IsNullOrWhiteSpace(familyId)
+                || string.IsNullOrWhiteSpace(childProfileId)
+                || !IsValidSnapshot(snapshot)
+                || snapshot.familyId != familyId
+                || snapshot.child.id != childProfileId)
+            {
+                throw new ArgumentException(
+                    "Scoped child home snapshot is incomplete or belongs to another child.",
+                    "snapshot");
+            }
+
+            Normalize(snapshot);
+            store.Save(ownerUserId, JsonUtility.ToJson(snapshot));
+        }
+
         public void Clear(string ownerUserId)
         {
             if (string.IsNullOrWhiteSpace(ownerUserId)) return;
@@ -76,12 +110,53 @@ namespace HabitHero.Platform
             SupabaseChildHomeSnapshot snapshot)
         {
             return !string.IsNullOrWhiteSpace(ownerUserId)
-                && snapshot != null
+                && IsValidSnapshot(snapshot)
+                && IsOwnedByUser(ownerUserId, snapshot);
+        }
+
+        private bool TryLoadSerialized(
+            string ownerUserId,
+            out SupabaseChildHomeSnapshot snapshot)
+        {
+            snapshot = null;
+            if (string.IsNullOrWhiteSpace(ownerUserId)) return false;
+
+            string serialized = store.Load(ownerUserId);
+            if (string.IsNullOrWhiteSpace(serialized)) return false;
+
+            try
+            {
+                snapshot = JsonUtility.FromJson<SupabaseChildHomeSnapshot>(serialized);
+            }
+            catch (Exception)
+            {
+                snapshot = null;
+            }
+
+            if (!IsValidSnapshot(snapshot))
+            {
+                snapshot = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsValidSnapshot(SupabaseChildHomeSnapshot snapshot)
+        {
+            return snapshot != null
                 && snapshot.child != null
                 && !string.IsNullOrWhiteSpace(snapshot.child.id)
-                && (string.IsNullOrWhiteSpace(snapshot.child.profile_id)
-                    || snapshot.child.profile_id == ownerUserId)
                 && !string.IsNullOrWhiteSpace(snapshot.familyId);
+        }
+
+        private static bool IsOwnedByUser(
+            string ownerUserId,
+            SupabaseChildHomeSnapshot snapshot)
+        {
+            return IsValidSnapshot(snapshot)
+                && (string.IsNullOrWhiteSpace(snapshot.child.profile_id)
+                    || snapshot.child.profile_id == ownerUserId);
         }
 
         private static void Normalize(SupabaseChildHomeSnapshot snapshot)

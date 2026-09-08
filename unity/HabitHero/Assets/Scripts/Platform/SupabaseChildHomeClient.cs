@@ -302,6 +302,89 @@ namespace HabitHero.Platform
             }
         }
 
+        public async Task<SupabaseChildHomeSnapshot> LoadForParentAsync(
+            string familyId,
+            string childProfileId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (string.IsNullOrWhiteSpace(childProfileId))
+            {
+                throw new SupabaseDataException("孩子 ID 不可為空。");
+            }
+
+            SupabaseSession currentSession = restClient.CurrentSession;
+            if (!isNetworkAvailable())
+            {
+                return LoadCachedParentSnapshotOrThrow(
+                    currentSession,
+                    familyId,
+                    childProfileId,
+                    new SupabaseDataException(
+                        "目前沒有網路連線，且無法載入最新的孩子資料。"));
+            }
+
+            SupabaseSession session;
+            try
+            {
+                session = await restClient.EnsureSessionAsync(cancellationToken);
+            }
+            catch (SupabaseDataException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedParentSnapshotOrThrow(
+                    currentSession,
+                    familyId,
+                    childProfileId,
+                    exception);
+            }
+            catch (SupabaseAuthException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedParentSnapshotOrThrow(
+                    currentSession,
+                    familyId,
+                    childProfileId,
+                    exception);
+            }
+
+            if (session == null || session.User == null
+                || string.IsNullOrWhiteSpace(session.User.Id))
+            {
+                throw new SupabaseDataException("家長帳號的 Supabase session 缺少使用者 ID。");
+            }
+
+            try
+            {
+                return await LoadScopedOnlineAsync(
+                    session,
+                    familyId,
+                    childProfileId,
+                    null,
+                    false,
+                    GetParentSnapshotCacheKey(session.User.Id, childProfileId),
+                    "找不到指定的孩子資料。",
+                    cancellationToken);
+            }
+            catch (SupabaseDataException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedParentSnapshotOrThrow(
+                    session,
+                    familyId,
+                    childProfileId,
+                    exception);
+            }
+            catch (SupabaseAuthException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedParentSnapshotOrThrow(
+                    session,
+                    familyId,
+                    childProfileId,
+                    exception);
+            }
+        }
+
         public async Task<SupabaseTaskCompletionResult> SubmitTaskCompletionAndRefreshAsync(
             string taskId,
             string quickReport,
@@ -352,19 +435,57 @@ namespace HabitHero.Platform
                 throw new SupabaseDataException("此孩子帳號尚未加入家庭。");
             }
 
-            string familyId = members[0].family_id;
-            SupabaseChildProfileRecord child = await restClient.SelectSingleAsync<SupabaseChildProfileRecord>(
-                "child_profiles",
-                new[]
+            return await LoadScopedOnlineAsync(
+                session,
+                members[0].family_id,
+                null,
+                userId,
+                true,
+                userId,
+                "找不到目前登入的孩子資料。",
+                cancellationToken);
+        }
+
+        private async Task<SupabaseChildHomeSnapshot> LoadScopedOnlineAsync(
+            SupabaseSession session,
+            string familyId,
+            string targetChildProfileId,
+            string profileId,
+            bool flushPendingCompletions,
+            string cacheKey,
+            string childNotFoundMessage,
+            CancellationToken cancellationToken)
+        {
+            List<SupabaseRestFilter> profileFilters =
+                new List<SupabaseRestFilter>
                 {
                     new SupabaseRestFilter("family_id", "eq", familyId),
-                    new SupabaseRestFilter("profile_id", "eq", userId),
-                },
-                "*",
-                cancellationToken);
+                };
+            if (!string.IsNullOrWhiteSpace(targetChildProfileId))
+            {
+                profileFilters.Add(
+                    new SupabaseRestFilter("id", "eq", targetChildProfileId));
+            }
+            if (!string.IsNullOrWhiteSpace(profileId))
+            {
+                profileFilters.Add(
+                    new SupabaseRestFilter("profile_id", "eq", profileId));
+            }
+
+            SupabaseChildProfileRecord child =
+                await restClient.SelectSingleAsync<SupabaseChildProfileRecord>(
+                    "child_profiles",
+                    profileFilters,
+                    "*",
+                    cancellationToken);
             if (child == null || string.IsNullOrWhiteSpace(child.id))
             {
-                throw new SupabaseDataException("找不到目前登入的孩子資料。");
+                throw new SupabaseDataException(childNotFoundMessage);
+            }
+            if (!string.IsNullOrWhiteSpace(targetChildProfileId)
+                && child.id != targetChildProfileId)
+            {
+                throw new SupabaseDataException("Supabase 回傳的孩子資料與要求的 scope 不一致。");
             }
 
             await restClient.CallRpcAsync(
@@ -377,7 +498,11 @@ namespace HabitHero.Platform
                 new SupabaseRestFilter("family_id", "eq", familyId),
                 new SupabaseRestFilter("child_profile_id", "eq", child.id),
             };
-            await FlushPendingCompletionsAsync(cancellationToken);
+            if (flushPendingCompletions)
+            {
+                await FlushPendingCompletionsAsync(cancellationToken);
+            }
+
             Task<SupabaseChildTaskRecord[]> tasks = restClient.SelectManyAsync<SupabaseChildTaskRecord>(
                 "tasks",
                 childFilters,
@@ -423,7 +548,9 @@ namespace HabitHero.Platform
 
             await Task.WhenAll(tasks, rewards, wishlist, tickets, ledger, timers);
             List<SupabaseTaskCompletionQueueEntry> pendingCompletions =
-                completionQueue.Load(userId);
+                flushPendingCompletions
+                    ? completionQueue.Load(session.User.Id)
+                    : new List<SupabaseTaskCompletionQueueEntry>();
             foreach (SupabaseChildTaskRecord task in tasks.Result)
             {
                 foreach (SupabaseTaskCompletionQueueEntry pending in pendingCompletions)
@@ -446,7 +573,18 @@ namespace HabitHero.Platform
                 ledger = ledger.Result,
                 timers = timers.Result,
             };
-            snapshotCache.Save(userId, snapshot);
+            if (cacheKey == session.User.Id)
+            {
+                snapshotCache.Save(cacheKey, snapshot);
+            }
+            else
+            {
+                snapshotCache.SaveScoped(
+                    cacheKey,
+                    familyId,
+                    child.id,
+                    snapshot);
+            }
             return snapshot;
         }
 
@@ -467,6 +605,41 @@ namespace HabitHero.Platform
 
             if (fallbackException != null) throw fallbackException;
             throw new SupabaseDataException("找不到可供離線使用的孩子首頁快照。");
+        }
+
+        private SupabaseChildHomeSnapshot LoadCachedParentSnapshotOrThrow(
+            SupabaseSession session,
+            string familyId,
+            string childProfileId,
+            Exception fallbackException)
+        {
+            if (session != null && session.User != null
+                && !string.IsNullOrWhiteSpace(session.User.Id))
+            {
+                string cacheKey = GetParentSnapshotCacheKey(
+                    session.User.Id,
+                    childProfileId);
+                SupabaseChildHomeSnapshot snapshot;
+                if (snapshotCache.TryLoadScoped(
+                        cacheKey,
+                        familyId,
+                        childProfileId,
+                        out snapshot))
+                {
+                    MarkPendingCompletions(session.User.Id, snapshot);
+                    return snapshot;
+                }
+            }
+
+            if (fallbackException != null) throw fallbackException;
+            throw new SupabaseDataException("找不到可供離線使用的孩子首頁快照。");
+        }
+
+        private static string GetParentSnapshotCacheKey(
+            string parentUserId,
+            string childProfileId)
+        {
+            return parentUserId + ":child:" + childProfileId;
         }
 
         private void MarkPendingCompletions(
