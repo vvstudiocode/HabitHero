@@ -1,0 +1,35 @@
+name: HabitHero platform contract
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check the Web client
+        run: npm run lint
+
+      - name: Run security checks
+        run: npm run security:check
+
+      - name: Verify the platform migration contract
+        run: node --test tests/platform-migration-contract.test.ts
