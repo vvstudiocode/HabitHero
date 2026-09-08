@@ -1094,6 +1094,52 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task NotificationClientBindsOnlyAfterPlatformProviderReturnsToken()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"parent-access\",\"refresh_token\":\"parent-refresh\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "", null));
+            SupabaseNotificationClient client = new SupabaseNotificationClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+            FakePushTokenProvider tokenProvider = new FakePushTokenProvider(
+                new SupabasePushTokenResult(
+                    true,
+                    true,
+                    "ios-token-12345678901234567890",
+                    null));
+
+            SupabasePushTokenResult result = await client.RegisterCurrentDeviceAsync(
+                tokenProvider,
+                "family-1",
+                "parent-user-1",
+                null,
+                "ios",
+                CancellationToken.None);
+
+            Assert.IsTrue(result.IsSupported);
+            Assert.IsTrue(result.IsGranted);
+            Assert.AreEqual(1, tokenProvider.RequestCount);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            StringAssert.Contains(
+                "\"token\":\"ios-token-12345678901234567890\"",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
         public async Task FriendWorldClientLoadsTheServerProjectionThroughRpc()
         {
             SupabaseClientSettings settings = CreateSettings();
@@ -3379,6 +3425,25 @@ namespace HabitHero.Tests
                     ? responses.Dequeue()
                     : responses.Peek();
                 return Task.FromResult(response);
+            }
+        }
+
+        private sealed class FakePushTokenProvider : ISupabasePushTokenProvider
+        {
+            private readonly SupabasePushTokenResult result;
+
+            public FakePushTokenProvider(SupabasePushTokenResult result)
+            {
+                this.result = result;
+            }
+
+            public int RequestCount { get; private set; }
+
+            public Task<SupabasePushTokenResult> RequestTokenAsync(
+                CancellationToken cancellationToken)
+            {
+                RequestCount += 1;
+                return Task.FromResult(result);
             }
         }
 

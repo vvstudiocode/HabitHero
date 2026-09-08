@@ -20,6 +20,47 @@ namespace HabitHero.Platform
             this.restClient = restClient;
         }
 
+        public async Task<SupabasePushTokenResult> RegisterCurrentDeviceAsync(
+            ISupabasePushTokenProvider tokenProvider,
+            string familyId,
+            string profileId,
+            string childProfileId,
+            string platform,
+            CancellationToken cancellationToken)
+        {
+            if (tokenProvider == null)
+            {
+                throw new ArgumentNullException("tokenProvider");
+            }
+            RequireFamilyId(familyId);
+            RequireProfileId(profileId);
+            NormalizePlatform(platform);
+
+            SupabasePushTokenResult tokenResult =
+                await tokenProvider.RequestTokenAsync(cancellationToken);
+            if (tokenResult == null)
+            {
+                throw new SupabaseDataException("通知平台沒有回傳 token 結果。");
+            }
+            if (!tokenResult.IsSupported || !tokenResult.IsGranted)
+            {
+                return tokenResult;
+            }
+            if (string.IsNullOrWhiteSpace(tokenResult.Token))
+            {
+                throw new SupabaseDataException("通知平台回傳的 token 不可為空。");
+            }
+
+            await RegisterDeviceAsync(
+                familyId,
+                profileId,
+                childProfileId,
+                platform,
+                tokenResult.Token,
+                cancellationToken);
+            return tokenResult;
+        }
+
         public async Task<bool> LoadPreferenceAsync(
             string profileId,
             CancellationToken cancellationToken)
@@ -73,16 +114,9 @@ namespace HabitHero.Platform
             string token,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(familyId))
-            {
-                throw new SupabaseDataException("家庭 ID 不可為空。");
-            }
+            RequireFamilyId(familyId);
             RequireProfileId(profileId);
-            if (string.IsNullOrWhiteSpace(platform)
-                || !IsSupportedPlatform(platform.Trim().ToLowerInvariant()))
-            {
-                throw new SupabaseDataException("通知平台不受支援。");
-            }
+            string normalizedPlatform = NormalizePlatform(platform);
             if (string.IsNullOrWhiteSpace(token)
                 || token.Trim().Length < 20
                 || token.Trim().Length > 4096)
@@ -93,7 +127,7 @@ namespace HabitHero.Platform
             string body = "{\"family_id\":" + SupabaseJson.Quote(familyId)
                 + ",\"profile_id\":" + SupabaseJson.Quote(profileId)
                 + ",\"child_profile_id\":" + SupabaseJson.NullableString(childProfileId)
-                + ",\"platform\":" + SupabaseJson.Quote(platform.Trim().ToLowerInvariant())
+                + ",\"platform\":" + SupabaseJson.Quote(normalizedPlatform)
                 + ",\"token\":" + SupabaseJson.Quote(token.Trim())
                 + ",\"enabled\":true}";
             return restClient.UpsertAsync(
@@ -109,6 +143,27 @@ namespace HabitHero.Platform
             {
                 throw new SupabaseDataException("使用者 ID 不可為空。");
             }
+        }
+
+        private static void RequireFamilyId(string familyId)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+        }
+
+        private static string NormalizePlatform(string platform)
+        {
+            string normalized = platform == null
+                ? string.Empty
+                : platform.Trim().ToLowerInvariant();
+            if (!IsSupportedPlatform(normalized))
+            {
+                throw new SupabaseDataException("通知平台不受支援。");
+            }
+
+            return normalized;
         }
 
         private static bool IsSupportedPlatform(string platform)

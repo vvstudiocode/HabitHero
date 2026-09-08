@@ -184,9 +184,11 @@ Partially completed locally:
   `profiles.notifications_enabled`, disables a parent's `push_devices` rows when
   notifications are turned off, and upserts device bindings through the existing
   `(profile_id, token)` conflict boundary. It sends only the public Supabase
-  session and remains subject to the existing RLS policies. Native iOS/Android
-  token acquisition, permission prompts, notification taps, and device delivery
-  are intentionally still pending.
+  session and remains subject to the existing RLS policies. Unity Mobile
+  Notifications `2.4.2` is pinned for Unity 6.0; the iOS provider requests
+  permission and obtains the APNs token in an iOS build, while Editor/WebGL and
+  Android return an explicit unsupported result. Android push token/delivery,
+  notification taps, and real-device verification remain pending.
 
 Still required:
 
@@ -201,7 +203,8 @@ Still required:
 - Unity co-op flows, plus two-account/device reconnect verification. The current
   live preview intentionally uses bounded placeholder avatars until the
   character asset contract and visual/device evidence are approved.
-- Native iOS/Android push and app URL plugins.
+- Native Android push token/delivery, notification tap routing, and iOS/Android
+  device verification; the iOS token/capability foundation is now in place.
 
 ### Phase 2 — child core loop
 
