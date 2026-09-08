@@ -975,6 +975,124 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentAdventureScheduleUsesScopedReadsAndServerRpcLifecycle()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"schedule-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"每日閱讀\",\"description\":\"讀一章\",\"points\":20,\"icon\":\"Book\",\"category\":\"learning\",\"duration_minutes\":25,\"start_time\":\"18:00:00\",\"end_time\":\"19:00:00\",\"weekdays\":[1,2,3,4,5],\"timezone\":\"Asia/Taipei\",\"requires_timer\":true,\"requires_review_before_next_task\":false,\"active_from\":\"2026-09-08\",\"is_active\":true}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"schedule-2\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"每日閱讀\"}",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"schedule-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"平日閱讀\",\"points\":30,\"duration_minutes\":30,\"weekdays\":[1,3,5],\"is_active\":true}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"schedule-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"平日閱讀\",\"is_active\":false}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseParentAdventureScheduleRecord[] schedules =
+                await client.LoadAdventureSchedulesAsync(
+                    "family-1",
+                    CancellationToken.None);
+            string[] createdIds = await client.CreateAdventureScheduleAsync(
+                "family-1",
+                new SupabaseParentAdventureScheduleCreateInput
+                {
+                    childProfileIds = new[] { "child-1" },
+                    name = "每日閱讀",
+                    description = "讀一章",
+                    points = 20,
+                    icon = "Book",
+                    category = "learning",
+                    durationMinutes = 25,
+                    startTime = "18:00",
+                    endTime = "19:00",
+                    weekdays = new[] { 1, 2, 3, 4, 5 },
+                    timezone = "Asia/Taipei",
+                    requiresTimer = true,
+                    activeFrom = "2026-09-08",
+                },
+                CancellationToken.None);
+            SupabaseParentAdventureScheduleRecord updated =
+                await client.UpdateAdventureScheduleAsync(
+                    "schedule-1",
+                    new SupabaseParentAdventureScheduleUpdateInput
+                    {
+                        name = "平日閱讀",
+                        description = "讀兩章",
+                        points = 30,
+                        icon = "Book",
+                        category = "learning",
+                        durationMinutes = 30,
+                        startTime = "18:00",
+                        endTime = "19:00",
+                        weekdays = new[] { 1, 3, 5 },
+                        timezone = "Asia/Taipei",
+                        requiresTimer = true,
+                        activeFrom = "2026-09-08",
+                        applyMode = "today_and_future",
+                    },
+                    CancellationToken.None);
+            SupabaseParentAdventureScheduleRecord disabled =
+                await client.DisableAdventureScheduleAsync(
+                    "schedule-1",
+                    CancellationToken.None);
+
+            Assert.AreEqual(1, schedules.Length);
+            Assert.AreEqual("schedule-1", schedules[0].id);
+            Assert.AreEqual(5, schedules[0].weekdays.Length);
+            Assert.AreEqual(1, createdIds.Length);
+            Assert.AreEqual("schedule-2", createdIds[0]);
+            Assert.AreEqual("平日閱讀", updated.name);
+            Assert.IsFalse(disabled.is_active);
+            Assert.AreEqual(5, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/task_schedules?select=*&family_id=eq.family-1&order=active_from.desc",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/create_adventure_schedule",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "{\"target_family_id\":\"family-1\",\"target_child_profile_id\":\"child-1\",\"schedule_name\":\"每日閱讀\",\"schedule_description\":\"讀一章\",\"schedule_points\":20,\"schedule_icon\":\"Book\",\"schedule_category\":\"learning\",\"schedule_duration_minutes\":25,\"schedule_start_time\":\"18:00\",\"schedule_end_time\":\"19:00\",\"schedule_weekdays\":[1,2,3,4,5],\"schedule_timezone\":\"Asia/Taipei\",\"schedule_requires_timer\":true,\"schedule_requires_review_before_next_task\":false,\"schedule_active_from\":\"2026-09-08\",\"schedule_active_until\":null}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[2].Body);
+            Assert.AreEqual(
+                "{\"target_schedule_id\":\"schedule-1\",\"schedule_name\":\"平日閱讀\",\"schedule_description\":\"讀兩章\",\"schedule_points\":30,\"schedule_icon\":\"Book\",\"schedule_category\":\"learning\",\"schedule_duration_minutes\":30,\"schedule_start_time\":\"18:00\",\"schedule_end_time\":\"19:00\",\"schedule_weekdays\":[1,3,5],\"schedule_timezone\":\"Asia/Taipei\",\"schedule_requires_timer\":true,\"schedule_requires_review_before_next_task\":false,\"schedule_active_from\":\"2026-09-08\",\"schedule_active_until\":null,\"update_scope\":\"today_and_future\"}",
+                dataTransport.Requests[3].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/disable_adventure_schedule",
+                dataTransport.Requests[4].Url);
+            Assert.AreEqual(
+                "{\"target_schedule_id\":\"schedule-1\"}",
+                dataTransport.Requests[4].Body);
+        }
+
+        [Test]
         public async Task ParentRewardCrudUsesRlsScopedPostgrestMutations()
         {
             SupabaseClientSettings settings = CreateSettings();

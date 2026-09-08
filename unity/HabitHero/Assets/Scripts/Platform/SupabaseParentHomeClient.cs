@@ -66,6 +66,69 @@ namespace HabitHero.Platform
         public bool requiresReviewBeforeNextTask;
     }
 
+    [Serializable]
+    public sealed class SupabaseParentAdventureScheduleRecord
+    {
+        public string id;
+        public string family_id;
+        public string child_profile_id;
+        public string name;
+        public string description;
+        public int points;
+        public string icon;
+        public string category;
+        public int duration_minutes;
+        public string start_time;
+        public string end_time;
+        public int[] weekdays;
+        public string timezone;
+        public bool requires_timer;
+        public bool requires_review_before_next_task;
+        public string active_from;
+        public string active_until;
+        public bool is_active;
+        public string created_at;
+        public string updated_at;
+    }
+
+    public sealed class SupabaseParentAdventureScheduleCreateInput
+    {
+        public string[] childProfileIds;
+        public string name;
+        public string description;
+        public int points;
+        public string icon;
+        public string category;
+        public int durationMinutes;
+        public string startTime;
+        public string endTime;
+        public int[] weekdays;
+        public string timezone;
+        public bool requiresTimer;
+        public bool requiresReviewBeforeNextTask;
+        public string activeFrom;
+        public string activeUntil;
+    }
+
+    public sealed class SupabaseParentAdventureScheduleUpdateInput
+    {
+        public string name;
+        public string description;
+        public int points;
+        public string icon;
+        public string category;
+        public int durationMinutes;
+        public string startTime;
+        public string endTime;
+        public int[] weekdays;
+        public string timezone;
+        public bool requiresTimer;
+        public bool requiresReviewBeforeNextTask;
+        public string activeFrom;
+        public string activeUntil;
+        public string applyMode;
+    }
+
     public sealed class SupabaseParentTaskMutationResult
     {
         public bool Created { get; set; }
@@ -451,6 +514,88 @@ namespace HabitHero.Platform
             }
 
             return result;
+        }
+
+        public async Task<SupabaseParentAdventureScheduleRecord[]>
+            LoadAdventureSchedulesAsync(
+                string familyId,
+                CancellationToken cancellationToken)
+        {
+            ValidateFamilyId(familyId);
+            return await restClient.SelectManyAsync<SupabaseParentAdventureScheduleRecord>(
+                "task_schedules",
+                new[] { new SupabaseRestFilter("family_id", "eq", familyId) },
+                "*",
+                "active_from.desc",
+                0,
+                cancellationToken);
+        }
+
+        public async Task<string[]> CreateAdventureScheduleAsync(
+            string familyId,
+            SupabaseParentAdventureScheduleCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            ValidateAdventureScheduleCreate(familyId, input);
+            List<string> scheduleIds = new List<string>();
+            foreach (string childProfileId in input.childProfileIds)
+            {
+                string response = await restClient.CallRpcAsync(
+                    "create_adventure_schedule",
+                    BuildCreateAdventureScheduleBody(
+                        familyId,
+                        childProfileId,
+                        input),
+                    cancellationToken);
+                SupabaseParentAdventureScheduleRecord schedule =
+                    ParseAdventureSchedule(response);
+                if (string.IsNullOrWhiteSpace(schedule.id))
+                {
+                    throw new SupabaseDataException(
+                        "Supabase 沒有回傳每日冒險排程 ID。");
+                }
+
+                scheduleIds.Add(schedule.id);
+                await restClient.CallRpcAsync(
+                    "ensure_daily_adventure_occurrences",
+                    "{\"target_child_profile_id\":"
+                        + SupabaseJson.Quote(childProfileId) + "}",
+                    cancellationToken);
+            }
+
+            return scheduleIds.ToArray();
+        }
+
+        public async Task<SupabaseParentAdventureScheduleRecord>
+            UpdateAdventureScheduleAsync(
+                string scheduleId,
+                SupabaseParentAdventureScheduleUpdateInput input,
+                CancellationToken cancellationToken)
+        {
+            ValidateAdventureScheduleUpdate(scheduleId, input);
+            string response = await restClient.CallRpcAsync(
+                "update_adventure_schedule",
+                BuildUpdateAdventureScheduleBody(scheduleId, input),
+                cancellationToken);
+            return ParseAdventureSchedule(response);
+        }
+
+        public async Task<SupabaseParentAdventureScheduleRecord>
+            DisableAdventureScheduleAsync(
+                string scheduleId,
+                CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(scheduleId))
+            {
+                throw new SupabaseDataException("每日冒險排程 ID 不可為空。");
+            }
+
+            string response = await restClient.CallRpcAsync(
+                "disable_adventure_schedule",
+                "{\"target_schedule_id\":"
+                    + SupabaseJson.Quote(scheduleId.Trim()) + "}",
+                cancellationToken);
+            return ParseAdventureSchedule(response);
         }
 
         public async Task<SupabaseChildRewardRecord> ApproveWishlistAsync(
@@ -866,6 +1011,370 @@ namespace HabitHero.Platform
                 new SupabaseParentRewardMutationResult();
             await RefreshParentMutationAsync(result, cancellationToken);
             return result;
+        }
+
+        private static void ValidateFamilyId(string familyId)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+        }
+
+        private static void ValidateAdventureScheduleCreate(
+            string familyId,
+            SupabaseParentAdventureScheduleCreateInput input)
+        {
+            ValidateFamilyId(familyId);
+            if (input == null || input.childProfileIds == null
+                || input.childProfileIds.Length == 0)
+            {
+                throw new SupabaseDataException("至少要指定一位孩子建立每日冒險排程。");
+            }
+
+            HashSet<string> childIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string childProfileId in input.childProfileIds)
+            {
+                if (string.IsNullOrWhiteSpace(childProfileId)
+                    || !childIds.Add(childProfileId))
+                {
+                    throw new SupabaseDataException("指定的孩子資料不可重複或為空。");
+                }
+            }
+
+            ValidateAdventureScheduleFields(
+                input.name,
+                input.description,
+                input.points,
+                input.icon,
+                input.category,
+                input.durationMinutes,
+                input.startTime,
+                input.endTime,
+                input.weekdays,
+                input.timezone,
+                input.requiresTimer,
+                input.activeFrom,
+                input.activeUntil);
+        }
+
+        private static void ValidateAdventureScheduleUpdate(
+            string scheduleId,
+            SupabaseParentAdventureScheduleUpdateInput input)
+        {
+            if (string.IsNullOrWhiteSpace(scheduleId))
+            {
+                throw new SupabaseDataException("每日冒險排程 ID 不可為空。");
+            }
+            if (input == null)
+            {
+                throw new SupabaseDataException("每日冒險排程更新資料不可為空。");
+            }
+
+            string applyMode = string.IsNullOrWhiteSpace(input.applyMode)
+                ? "from_tomorrow"
+                : input.applyMode.Trim();
+            if (applyMode != "today_unfinished"
+                && applyMode != "from_tomorrow"
+                && applyMode != "today_and_future")
+            {
+                throw new SupabaseDataException("每日冒險排程更新範圍無效。");
+            }
+
+            ValidateAdventureScheduleFields(
+                input.name,
+                input.description,
+                input.points,
+                input.icon,
+                input.category,
+                input.durationMinutes,
+                input.startTime,
+                input.endTime,
+                input.weekdays,
+                input.timezone,
+                input.requiresTimer,
+                input.activeFrom,
+                input.activeUntil);
+        }
+
+        private static void ValidateAdventureScheduleFields(
+            string name,
+            string description,
+            int points,
+            string icon,
+            string category,
+            int durationMinutes,
+            string startTime,
+            string endTime,
+            int[] weekdays,
+            string timezone,
+            bool requiresTimer,
+            string activeFrom,
+            string activeUntil)
+        {
+            string normalizedName = name == null ? string.Empty : name.Trim();
+            if (normalizedName.Length < 1 || normalizedName.Length > 120)
+            {
+                throw new SupabaseDataException(
+                    "每日冒險排程名稱長度必須介於 1 到 120 個字元。");
+            }
+
+            string normalizedDescription = string.IsNullOrWhiteSpace(description)
+                ? string.Empty
+                : description.Trim();
+            if (normalizedDescription.Length > 2000)
+            {
+                throw new SupabaseDataException("每日冒險排程說明不可超過 2000 個字元。");
+            }
+
+            if (points < 0)
+            {
+                throw new SupabaseDataException("每日冒險排程點數不可為負數。");
+            }
+
+            string normalizedIcon = string.IsNullOrWhiteSpace(icon)
+                ? "Target"
+                : icon.Trim();
+            if (normalizedIcon.Length < 1 || normalizedIcon.Length > 32)
+            {
+                throw new SupabaseDataException("每日冒險排程圖示設定無效。");
+            }
+            if (!IsAdventureCategory(category))
+            {
+                throw new SupabaseDataException("每日冒險排程分類設定無效。");
+            }
+            if (durationMinutes < 0 || durationMinutes > 1440)
+            {
+                throw new SupabaseDataException("每日冒險排程時間必須介於 1 到 1440 分鐘，或留空。");
+            }
+            if (requiresTimer && durationMinutes == 0)
+            {
+                throw new SupabaseDataException("需要計時的每日冒險排程必須設定時間。");
+            }
+
+            ValidateOptionalTime(startTime);
+            ValidateOptionalTime(endTime);
+            if (!string.IsNullOrWhiteSpace(startTime)
+                && !string.IsNullOrWhiteSpace(endTime))
+            {
+                TimeSpan start;
+                TimeSpan end;
+                bool validStart = TimeSpan.TryParse(
+                    startTime.Trim(),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out start);
+                bool validEnd = TimeSpan.TryParse(
+                    endTime.Trim(),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out end);
+                if (validStart && validEnd && end <= start)
+                {
+                    throw new SupabaseDataException("每日冒險排程執行時段無效。");
+                }
+            }
+
+            if (weekdays == null || weekdays.Length < 1 || weekdays.Length > 7)
+            {
+                throw new SupabaseDataException("每日冒險排程至少要選擇一天。");
+            }
+            HashSet<int> weekdaySet = new HashSet<int>();
+            foreach (int weekday in weekdays)
+            {
+                if (weekday < 1 || weekday > 7 || !weekdaySet.Add(weekday))
+                {
+                    throw new SupabaseDataException("每日冒險排程星期設定無效。");
+                }
+            }
+
+            string normalizedTimezone = NormalizeTimezone(timezone);
+            if (normalizedTimezone != "Asia/Taipei")
+            {
+                throw new SupabaseDataException("目前只支援 Asia/Taipei 時區。");
+            }
+
+            DateTime activeFromDate = ParseScheduleDate(activeFrom, "開始日期");
+            if (!string.IsNullOrWhiteSpace(activeUntil))
+            {
+                DateTime activeUntilDate = ParseScheduleDate(activeUntil, "結束日期");
+                if (activeUntilDate < activeFromDate)
+                {
+                    throw new SupabaseDataException("每日冒險排程結束日期不可早於開始日期。");
+                }
+            }
+        }
+
+        private static void ValidateOptionalTime(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return;
+            TimeSpan parsed;
+            if (!TimeSpan.TryParse(
+                    value.Trim(),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out parsed)
+                || parsed < TimeSpan.Zero
+                || parsed >= TimeSpan.FromDays(1))
+            {
+                throw new SupabaseDataException("每日冒險排程時間格式無效。");
+            }
+        }
+
+        private static DateTime ParseScheduleDate(string value, string label)
+        {
+            DateTime parsed;
+            if (!DateTime.TryParseExact(
+                    value == null ? string.Empty : value.Trim(),
+                    "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out parsed))
+            {
+                throw new SupabaseDataException("每日冒險排程" + label + "格式無效。");
+            }
+
+            return parsed.Date;
+        }
+
+        private static string NormalizeTimezone(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "Asia/Taipei" : value.Trim();
+        }
+
+        private static string BuildCreateAdventureScheduleBody(
+            string familyId,
+            string childProfileId,
+            SupabaseParentAdventureScheduleCreateInput input)
+        {
+            return "{\"target_family_id\":" + SupabaseJson.Quote(familyId.Trim())
+                + ",\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId.Trim())
+                + BuildAdventureScheduleFields(
+                    input.name,
+                    input.description,
+                    input.points,
+                    input.icon,
+                    input.category,
+                    input.durationMinutes,
+                    input.startTime,
+                    input.endTime,
+                    input.weekdays,
+                    input.timezone,
+                    input.requiresTimer,
+                    input.requiresReviewBeforeNextTask,
+                    input.activeFrom,
+                    input.activeUntil)
+                + "}";
+        }
+
+        private static string BuildUpdateAdventureScheduleBody(
+            string scheduleId,
+            SupabaseParentAdventureScheduleUpdateInput input)
+        {
+            string applyMode = string.IsNullOrWhiteSpace(input.applyMode)
+                ? "from_tomorrow"
+                : input.applyMode.Trim();
+            return "{\"target_schedule_id\":"
+                + SupabaseJson.Quote(scheduleId.Trim())
+                + BuildAdventureScheduleFields(
+                    input.name,
+                    input.description,
+                    input.points,
+                    input.icon,
+                    input.category,
+                    input.durationMinutes,
+                    input.startTime,
+                    input.endTime,
+                    input.weekdays,
+                    input.timezone,
+                    input.requiresTimer,
+                    input.requiresReviewBeforeNextTask,
+                    input.activeFrom,
+                    input.activeUntil)
+                + ",\"update_scope\":" + SupabaseJson.Quote(applyMode)
+                + "}";
+        }
+
+        private static string BuildAdventureScheduleFields(
+            string name,
+            string description,
+            int points,
+            string icon,
+            string category,
+            int durationMinutes,
+            string startTime,
+            string endTime,
+            int[] weekdays,
+            string timezone,
+            bool requiresTimer,
+            bool requiresReviewBeforeNextTask,
+            string activeFrom,
+            string activeUntil)
+        {
+            string normalizedDescription = NormalizeOptional(description);
+            string normalizedIcon = string.IsNullOrWhiteSpace(icon)
+                ? "Target"
+                : icon.Trim();
+            string normalizedCategory = category == null ? string.Empty : category.Trim();
+            string normalizedTimezone = NormalizeTimezone(timezone);
+            string durationJson = durationMinutes == 0
+                ? "null"
+                : durationMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return ",\"schedule_name\":" + SupabaseJson.Quote(name.Trim())
+                + ",\"schedule_description\":"
+                + SupabaseJson.NullableString(normalizedDescription)
+                + ",\"schedule_points\":"
+                + points.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                + ",\"schedule_icon\":" + SupabaseJson.Quote(normalizedIcon)
+                + ",\"schedule_category\":"
+                + SupabaseJson.Quote(normalizedCategory)
+                + ",\"schedule_duration_minutes\":" + durationJson
+                + ",\"schedule_start_time\":"
+                + SupabaseJson.NullableString(NormalizeOptional(startTime))
+                + ",\"schedule_end_time\":"
+                + SupabaseJson.NullableString(NormalizeOptional(endTime))
+                + ",\"schedule_weekdays\":"
+                + BuildIntegerArrayJson(weekdays)
+                + ",\"schedule_timezone\":"
+                + SupabaseJson.Quote(normalizedTimezone)
+                + ",\"schedule_requires_timer\":"
+                + (requiresTimer ? "true" : "false")
+                + ",\"schedule_requires_review_before_next_task\":"
+                + (requiresReviewBeforeNextTask ? "true" : "false")
+                + ",\"schedule_active_from\":"
+                + SupabaseJson.Quote(activeFrom.Trim())
+                + ",\"schedule_active_until\":"
+                + SupabaseJson.NullableString(NormalizeOptional(activeUntil));
+        }
+
+        private static string BuildIntegerArrayJson(int[] values)
+        {
+            string json = "[";
+            for (int index = 0; index < values.Length; index += 1)
+            {
+                if (index > 0) json += ",";
+                json += values[index].ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            return json + "]";
+        }
+
+        private static SupabaseParentAdventureScheduleRecord ParseAdventureSchedule(
+            string response)
+        {
+            SupabaseParentAdventureScheduleRecord schedule;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out schedule,
+                    out error))
+            {
+                throw new SupabaseDataException(
+                    string.IsNullOrWhiteSpace(error)
+                        ? "Supabase 沒有回傳每日冒險排程資料。"
+                        : error);
+            }
+
+            return schedule;
         }
 
         private static void ValidateGeneralAdventureCreate(
