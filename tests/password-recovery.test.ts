@@ -64,6 +64,16 @@ test('password recovery deep link does not copy unrelated query data', () => {
   assert.equal(appUrl.includes('access-123'), true);
 });
 
+test('PKCE code deep link preserves only the explicit verifier needed by Unity', () => {
+  const callbackUrl = 'https://habit-hero-gilt.vercel.app/?code=one-time-code&code_verifier=pkce-verifier&utm_source=mail';
+  const appUrl = buildAppDeepLink('login', callbackUrl);
+  const appParams = getAuthCallbackParams(appUrl);
+
+  assert.equal(appParams.code, 'one-time-code');
+  assert.equal(appParams.codeVerifier, 'pkce-verifier');
+  assert.equal(appUrl.includes('utm_source'), false);
+});
+
 test('app link intent separates login from password recovery', () => {
   assert.equal(getAppLinkIntent(`${APP_URL_SCHEME}://login`), 'login');
   assert.equal(getAppLinkIntent(`${APP_URL_SCHEME}://reset-password`), 'password-recovery');

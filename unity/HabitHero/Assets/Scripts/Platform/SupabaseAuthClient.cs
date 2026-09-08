@@ -133,6 +133,43 @@ namespace HabitHero.Platform
             return CurrentSession;
         }
 
+        public async Task<SupabaseSession> ExchangeCodeForSessionAsync(
+            string authCode,
+            string codeVerifier,
+            bool isPasswordRecovery,
+            CancellationToken cancellationToken)
+        {
+            SupabaseRequestContract request;
+            string error;
+            if (!SupabaseAuthRequestBuilder.TryBuildPkceGrant(
+                    settings,
+                    authCode,
+                    codeVerifier,
+                    out request,
+                    out error))
+            {
+                throw new SupabaseAuthException(error);
+            }
+
+            SupabaseHttpResponse response = await transport.SendAsync(request, cancellationToken);
+            EnsureSuccess(response);
+
+            SupabaseSession session;
+            if (!SupabaseAuthResponseParser.TryParseSession(
+                    response.Body,
+                    Now(),
+                    out session,
+                    out error))
+            {
+                throw new SupabaseAuthException(error, response.StatusCode);
+            }
+
+            SetSession(
+                session,
+                isPasswordRecovery ? SupabaseAuthEvent.PasswordRecovery : SupabaseAuthEvent.SignedIn);
+            return CurrentSession;
+        }
+
         public async Task<SupabaseAuthResponse> SignUpAsync(
             string email,
             string password,

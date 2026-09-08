@@ -47,7 +47,10 @@ Android Keystore session plugin by default; the Editor and non-mobile fallback
 uses PlayerPrefs only for local development. Device build, reinstall, and
 recovery verification are still required before a production mobile release.
 `HabitHeroBootstrap` also consumes the Unity deep-link lifecycle and supports
-Supabase token-fragment recovery plus the in-app parent password reset screen.
+Supabase token-fragment recovery, PKCE code exchange when the native callback
+supplies the original verifier, plus the in-app parent password reset screen.
+Code-only callbacks are intentionally rejected: the PKCE verifier must stay on
+the client that initiated the flow and cannot be safely reconstructed by Unity.
 The iOS and Android post-build hook adds the existing
 `com.vvstudiocode.habithero` URL scheme without modifying the current
 Capacitor exports.

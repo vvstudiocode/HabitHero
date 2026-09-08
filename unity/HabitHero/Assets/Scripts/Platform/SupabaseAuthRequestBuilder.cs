@@ -76,6 +76,39 @@ namespace HabitHero.Platform
                 out error);
         }
 
+        public static bool TryBuildPkceGrant(
+            SupabaseClientSettings settings,
+            string authCode,
+            string codeVerifier,
+            out SupabaseRequestContract request,
+            out string error)
+        {
+            if (string.IsNullOrWhiteSpace(authCode))
+            {
+                request = null;
+                error = "Supabase authorization code is missing.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(codeVerifier))
+            {
+                request = null;
+                error = "Supabase PKCE code verifier is missing.";
+                return false;
+            }
+
+            return TryBuildAuthRequest(
+                settings,
+                "POST",
+                "/auth/v1/token?grant_type=pkce",
+                "{\"auth_code\":\"" + SupabaseJson.Escape(authCode.Trim())
+                    + "\",\"code_verifier\":\""
+                    + SupabaseJson.Escape(codeVerifier.Trim()) + "\"}",
+                null,
+                out request,
+                out error);
+        }
+
         public static bool TryBuildUser(
             SupabaseClientSettings settings,
             string accessToken,

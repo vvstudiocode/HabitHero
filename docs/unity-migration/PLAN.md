@@ -71,7 +71,8 @@ Partially completed locally:
 - Unity package manifest pins `com.unity.ugui` `2.6.0` for the login shell.
 
 - Pure C# Supabase client configuration validation.
-- Auth callback parsing for fragment tokens, OAuth code, login, and recovery.
+- Auth callback parsing for fragment tokens, OAuth code, login, and recovery;
+  PKCE codes exchange through Supabase when the callback includes the verifier.
 - Auth request builders, session serialization, restore/refresh, sign-in,
   sign-out, user refresh, password recovery, and password update contracts.
 - Local C# smoke test: `npm run test:unity-platform`.
@@ -121,7 +122,9 @@ Still required:
 - Device build and recovery verification for the iOS Keychain and Android
   Keystore session plugins.
 - Device build and callback verification for the Unity deep-link replacement;
-  the runtime handler and iOS/Android build hooks are now in place.
+  the runtime handler, token-fragment recovery, and PKCE exchange contract are
+  now in place. A code-only callback is rejected because Supabase requires the
+  original PKCE verifier.
 - Supabase Realtime transport adapters.
 - Native iOS/Android push and app URL plugins.
 

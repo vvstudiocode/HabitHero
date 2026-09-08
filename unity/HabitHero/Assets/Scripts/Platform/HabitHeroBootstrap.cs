@@ -329,9 +329,45 @@ namespace HabitHero.App
 
             if (!string.IsNullOrWhiteSpace(payload.Code))
             {
-                SetStatus(
-                    "此登入連結需要回到原本的登入頁完成驗證，請重新開啟登入流程。",
-                    true);
+                if (string.IsNullOrWhiteSpace(payload.CodeVerifier))
+                {
+                    SetStatus(
+                        "此登入連結缺少 PKCE 驗證資訊，請回到原本的登入頁重新開啟登入流程。",
+                        true);
+                    return true;
+                }
+
+                try
+                {
+                    SupabaseSession session = await authClient.ExchangeCodeForSessionAsync(
+                        payload.Code,
+                        payload.CodeVerifier,
+                        intent == AuthIntent.PasswordRecovery,
+                        lifetimeCancellation.Token);
+                    if (intent == AuthIntent.PasswordRecovery)
+                    {
+                        ShowSignedIn(session);
+                        ShowRecoveryPanel();
+                        return true;
+                    }
+
+                    await authClient.GetUserAsync(lifetimeCancellation.Token);
+                    session = authClient.CurrentSession;
+                    ShowSignedIn(session);
+                    if (!await TryShowChildHomeAsync(session))
+                    {
+                        await TryShowParentHomeAsync(session);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    SetStatus("登入連結交換失敗：" + exception.Message, true);
+                }
+
                 return true;
             }
 

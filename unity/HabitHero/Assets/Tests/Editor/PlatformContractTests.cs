@@ -59,10 +59,11 @@ namespace HabitHero.Tests
         [Test]
         public void LoginDeepLinkPreservesOAuthCode()
         {
-            string callback = "com.vvstudiocode.habithero://login?code=oauth-code";
+            string callback = "com.vvstudiocode.habithero://login?code=oauth-code&code_verifier=pkce-verifier";
             AuthCallbackPayload payload = AuthCallbackParser.Parse(callback);
 
             Assert.AreEqual("oauth-code", payload.Code);
+            Assert.AreEqual("pkce-verifier", payload.CodeVerifier);
             Assert.AreEqual(AuthIntent.Login, AuthCallbackParser.GetIntent(callback));
         }
 
@@ -1601,6 +1602,66 @@ namespace HabitHero.Tests
                 SupabaseSessionSerializer.TryDeserialize(store.Load(), out persisted, out error),
                 error);
             Assert.AreEqual("refresh-token", persisted.RefreshToken);
+        }
+
+        [Test]
+        public void AuthRequestBuilderBuildsTheSupabasePkceGrant()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseRequestContract request;
+            string error;
+
+            bool created = SupabaseAuthRequestBuilder.TryBuildPkceGrant(
+                settings,
+                "auth-code",
+                "verifier-value",
+                out request,
+                out error);
+
+            Assert.IsTrue(created, error);
+            Assert.AreEqual(
+                "https://example.supabase.co/auth/v1/token?grant_type=pkce",
+                request.Url);
+            Assert.AreEqual("sb_publishable_test-key", request.Headers["apikey"]);
+            Assert.AreEqual("application/json", request.Headers["Content-Type"]);
+            Assert.AreEqual(
+                "{\"auth_code\":\"auth-code\",\"code_verifier\":\"verifier-value\"}",
+                request.Body);
+        }
+
+        [Test]
+        public async Task AuthClientExchangesPkceCodeAndPersistsSession()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore store = new InMemorySupabaseSessionStore();
+            FakeSupabaseTransport transport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"access_token\":\"pkce-access\",\"refresh_token\":\"pkce-refresh\",\"expires_in\":3600,\"user\":{\"id\":\"user-pkce\",\"email\":\"parent@example.com\"}}",
+                    null));
+            SupabaseAuthClient client = new SupabaseAuthClient(settings, store, transport);
+
+            SupabaseSession session = await client.ExchangeCodeForSessionAsync(
+                "auth-code",
+                "verifier-value",
+                false,
+                CancellationToken.None);
+
+            Assert.AreEqual("user-pkce", session.User.Id);
+            Assert.AreEqual(1, transport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/auth/v1/token?grant_type=pkce",
+                transport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"auth_code\":\"auth-code\",\"code_verifier\":\"verifier-value\"}",
+                transport.Requests[0].Body);
+
+            SupabaseSession persisted;
+            string error;
+            Assert.IsTrue(
+                SupabaseSessionSerializer.TryDeserialize(store.Load(), out persisted, out error),
+                error);
+            Assert.AreEqual("pkce-refresh", persisted.RefreshToken);
         }
 
         [Test]

@@ -6,6 +6,7 @@ export interface AuthCallbackParams {
   accessToken: string | null;
   refreshToken: string | null;
   code: string | null;
+  codeVerifier: string | null;
   type: string | null;
   error: string | null;
   errorCode: string | null;
@@ -32,6 +33,7 @@ const callbackParamNames = [
   'error_code',
   'error_description',
   'error_uri',
+  'code_verifier',
   'state',
 ] as const;
 
@@ -63,6 +65,7 @@ export function getAuthCallbackParams(rawUrl: string): AuthCallbackParams {
       accessToken: null,
       refreshToken: null,
       code: null,
+      codeVerifier: null,
       type: null,
       error: null,
       errorCode: null,
@@ -75,6 +78,7 @@ export function getAuthCallbackParams(rawUrl: string): AuthCallbackParams {
     accessToken: getParam(url, hashParams, 'access_token'),
     refreshToken: getParam(url, hashParams, 'refresh_token'),
     code: getParam(url, hashParams, 'code'),
+    codeVerifier: getParam(url, hashParams, 'code_verifier'),
     type: getParam(url, hashParams, 'type'),
     error: getParam(url, hashParams, 'error'),
     errorCode: getParam(url, hashParams, 'error_code'),
@@ -131,6 +135,7 @@ export function buildAppDeepLink(
 
   if (callbackParams) {
     setIfPresent(queryParams, 'code', callbackParams.code);
+    setIfPresent(queryParams, 'code_verifier', callbackParams.codeVerifier);
     setIfPresent(queryParams, 'state', getUrlParam(callbackUrl, 'state'));
     setIfPresent(hashParams, 'access_token', callbackParams.accessToken);
     setIfPresent(hashParams, 'refresh_token', callbackParams.refreshToken);

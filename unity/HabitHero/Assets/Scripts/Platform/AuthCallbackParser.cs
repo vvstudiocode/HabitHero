@@ -18,6 +18,8 @@ namespace HabitHero.Platform
 
         public string Code { get; internal set; }
 
+        public string CodeVerifier { get; internal set; }
+
         public string Type { get; internal set; }
 
         public string Error { get; internal set; }
@@ -54,6 +56,7 @@ namespace HabitHero.Platform
                 AccessToken = GetValue(query, fragment, "access_token"),
                 RefreshToken = GetValue(query, fragment, "refresh_token"),
                 Code = GetValue(query, fragment, "code"),
+                CodeVerifier = GetValue(query, fragment, "code_verifier"),
                 Type = GetValue(query, fragment, "type"),
                 Error = GetValue(query, fragment, "error"),
                 ErrorCode = GetValue(query, fragment, "error_code"),
