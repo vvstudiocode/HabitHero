@@ -322,7 +322,7 @@ Current local verification:
 - Unity platform contract smoke test passed.
 - Unity EditMode `PlatformContractTests` passed, including all current parent
   Supabase contract checks, notification payload parsing, and safe-area mapping
-  (`123` tests in the latest run).
+  (`124` tests in the latest run).
 - Unity PlayMode `BootstrapPlayModeTests` passed: the login shell loaded with
   no runtime errors in the headless Unity Editor run.
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
