@@ -82,6 +82,8 @@ Partially completed locally:
   reconnect drain, and EditMode coverage.
 - Child reward redemption through the server-authoritative `redeem_reward` RPC,
   wallet/ledger refresh, and RLS-scoped wishlist add/cancel flows.
+- Child point-ledger history view reads the same server-returned ledger rows
+  used by wallet refreshes; it does not calculate or mutate balances locally.
 - Parent family/child/task hydration plus task approval or revision through the
   existing server-authoritative review RPCs.
 - Parent task creation for a selected child through RLS-scoped PostgREST

@@ -54,6 +54,9 @@ Capacitor exports.
 The child home slice also reads rewards, tickets, point ledger, and wishlist
 items; reward redemption uses the server `redeem_reward` RPC, while wishlist
 add/cancel uses RLS-scoped PostgREST mutations followed by a fresh snapshot.
+The child client exposes the loaded point ledger as a history panel so task
+awards, redemptions, and parent adjustments remain auditable without creating
+client-side balance calculations.
 The parent home slice reads the shared family data, creates tasks for a selected
 child through an RLS-scoped insert, reviews pending tasks via the existing
 review RPCs, manages reward records through RLS-scoped mutations, approves

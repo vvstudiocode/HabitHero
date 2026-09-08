@@ -18,6 +18,7 @@ namespace HabitHero.App
         private GameObject timerPanel;
         private GameObject rewardPanel;
         private GameObject wishlistPanel;
+        private HabitHeroChildLedgerView ledgerView;
         private Text statusText;
         private Text pointsText;
         private Text reportStatus;
@@ -148,8 +149,15 @@ namespace HabitHero.App
                 font,
                 "獎勵商店",
                 new Vector2(0.08f, 0.14f),
-                new Vector2(0.92f, 0.2f));
+                new Vector2(0.55f, 0.2f));
             rewardsButton.onClick.AddListener(OpenRewardPanel);
+            Button ledgerButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "點數紀錄",
+                new Vector2(0.57f, 0.14f),
+                new Vector2(0.92f, 0.2f));
+            ledgerButton.onClick.AddListener(OpenLedgerPanel);
 
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
@@ -179,6 +187,7 @@ namespace HabitHero.App
             CloseTimerPanel();
             CloseRewardPanel();
             CloseWishlistPanel();
+            CloseLedgerPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -201,6 +210,10 @@ namespace HabitHero.App
             }
 
             RenderTaskList(snapshot);
+            if (ledgerView != null)
+            {
+                ledgerView.ApplySnapshot(snapshot);
+            }
             SetStatus("點數與任務資料已更新。", false);
         }
 
@@ -366,6 +379,26 @@ namespace HabitHero.App
                     new Vector2(0.32f, 0.11f));
                 wishlistButton.onClick.AddListener(OpenWishlistPanel);
             }
+        }
+
+        private void OpenLedgerPanel()
+        {
+            if (latestSnapshot == null || latestSnapshot.child == null)
+            {
+                SetStatus("點數紀錄尚未載入。", true);
+                return;
+            }
+
+            CloseReportPanel();
+            CloseTimerPanel();
+            CloseRewardPanel();
+            CloseWishlistPanel();
+            if (ledgerView == null)
+            {
+                ledgerView = new HabitHeroChildLedgerView(canvasTransform, font);
+            }
+
+            ledgerView.Show(latestSnapshot, CloseLedgerPanel);
         }
 
         private void OpenWishlistPanel()
@@ -633,6 +666,13 @@ namespace HabitHero.App
 
             wishlistInput = null;
             wishlistStatus = null;
+        }
+
+        private void CloseLedgerPanel()
+        {
+            if (ledgerView == null) return;
+            ledgerView.Dispose();
+            ledgerView = null;
         }
 
         private void SetRewardStatus(string message, bool isError)
