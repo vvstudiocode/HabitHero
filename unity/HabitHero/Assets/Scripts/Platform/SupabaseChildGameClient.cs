@@ -446,6 +446,35 @@ namespace HabitHero.Platform
             return loadout;
         }
 
+        public async Task SetPetDisplayNameAsync(
+            string childProfileId,
+            string inventoryItemId,
+            string displayName,
+            CancellationToken cancellationToken)
+        {
+            RequireValue(childProfileId, "孩子資料");
+            RequireValue(inventoryItemId, "寵物背包項目");
+            string normalizedName = string.IsNullOrWhiteSpace(displayName)
+                ? null
+                : displayName.Trim();
+            if (normalizedName != null && normalizedName.Length > 12)
+            {
+                throw new SupabaseDataException("寵物名字最多 12 個字。");
+            }
+
+            string body = "{\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId.Trim())
+                + ",\"target_inventory_item_id\":"
+                + SupabaseJson.Quote(inventoryItemId.Trim())
+                + ",\"target_display_name\":"
+                + SupabaseJson.NullableString(normalizedName)
+                + "}";
+            await restClient.CallRpcAsync(
+                "set_pet_display_name",
+                body,
+                cancellationToken);
+        }
+
         public Task<SupabaseGameMutationResult> SetFollowingPetsAsync(
             string childProfileId,
             string[] inventoryItemIds,

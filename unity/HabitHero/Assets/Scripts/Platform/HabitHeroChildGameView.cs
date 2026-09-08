@@ -16,6 +16,7 @@ namespace HabitHero.App
         private SupabaseChildWorldData latestWorldData;
         private Func<string, int, string, Task<SupabaseChildGameData>> purchaseGameItem;
         private Func<string, Task<SupabaseChildGameData>> equipGameCharacter;
+        private Func<string, string, Task<SupabaseChildGameData>> setPetDisplayName;
         private Func<string[], Task<SupabaseChildGameData>> setFollowingPets;
         private Func<string[], Task<SupabaseChildGameData>> setRoamingPets;
         private Func<string, long, SupabaseFriendWorldTransform, string, int?, Task<SupabaseChildGameData>> placeWorldEntity;
@@ -36,6 +37,7 @@ namespace HabitHero.App
             SupabaseChildWorldData worldData,
             Func<string, int, string, Task<SupabaseChildGameData>> purchaseGameItem,
             Func<string, Task<SupabaseChildGameData>> equipGameCharacter,
+            Func<string, string, Task<SupabaseChildGameData>> setPetDisplayName,
             Func<string[], Task<SupabaseChildGameData>> setFollowingPets,
             Func<string[], Task<SupabaseChildGameData>> setRoamingPets,
             Func<string, long, SupabaseFriendWorldTransform, string, int?, Task<SupabaseChildGameData>> placeWorldEntity,
@@ -48,6 +50,7 @@ namespace HabitHero.App
             latestWorldData = worldData;
             this.purchaseGameItem = purchaseGameItem;
             this.equipGameCharacter = equipGameCharacter;
+            this.setPetDisplayName = setPetDisplayName;
             this.setFollowingPets = setFollowingPets;
             this.setRoamingPets = setRoamingPets;
             this.placeWorldEntity = placeWorldEntity;
@@ -196,6 +199,7 @@ namespace HabitHero.App
             latestWorldData = null;
             purchaseGameItem = null;
             equipGameCharacter = null;
+            setPetDisplayName = null;
             setFollowingPets = null;
             setRoamingPets = null;
             placeWorldEntity = null;
@@ -281,6 +285,18 @@ namespace HabitHero.App
                 }
                 else if (item != null && item.item_type == "pet")
                 {
+                    InputField nameInput = CreateRowInput(
+                        row.transform,
+                        string.IsNullOrWhiteSpace(inventory.display_name)
+                            ? itemName
+                            : inventory.display_name,
+                        inventory.display_name);
+                    Button renameButton = CreateRowButton(row.transform, "命名");
+                    renameButton.interactable = setPetDisplayName != null;
+                    renameButton.onClick.AddListener(() => SetPetDisplayNameAsync(
+                        inventory.id,
+                        nameInput,
+                        renameButton));
                     Button followButton = CreateRowButton(row.transform, IsFollowing(inventory.id) ? "取消跟隨" : "跟隨");
                     followButton.onClick.AddListener(() => SetFollowingPetsAsync(
                         IsFollowing(inventory.id) ? new string[0] : new[] { inventory.id },
@@ -387,6 +403,45 @@ namespace HabitHero.App
             catch (Exception exception)
             {
                 SetGameStatus("跟隨寵物更新失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private async void SetPetDisplayNameAsync(
+            string inventoryItemId,
+            InputField nameInput,
+            Button button)
+        {
+            if (setPetDisplayName == null) return;
+            if (button != null) button.interactable = false;
+            string displayName = nameInput == null ? string.Empty : nameInput.text.Trim();
+            if (displayName.Length > 12)
+            {
+                SetGameStatus("寵物名字最多 12 個字。", true);
+                if (button != null) button.interactable = true;
+                return;
+            }
+
+            SetGameStatus(
+                displayName.Length == 0 ? "正在恢復寵物預設名稱…" : "正在更新寵物名字…",
+                false);
+            try
+            {
+                SupabaseChildGameData refreshed = await setPetDisplayName(
+                    inventoryItemId,
+                    displayName.Length == 0 ? null : displayName);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+                }
+                ApplyData(refreshed);
+                SetGameStatus(
+                    displayName.Length == 0 ? "已恢復寵物預設名稱。" : "寵物名字已更新。",
+                    false);
+            }
+            catch (Exception exception)
+            {
+                SetGameStatus("寵物命名失敗：" + exception.Message, true);
                 if (button != null) button.interactable = true;
             }
         }
@@ -725,6 +780,28 @@ namespace HabitHero.App
             layout.preferredWidth = 82f;
             layout.minWidth = 82f;
             return button;
+        }
+
+        private InputField CreateRowInput(
+            Transform parent,
+            string placeholder,
+            string value)
+        {
+            InputField input = HabitHeroUiFactory.CreateInput(
+                parent,
+                font,
+                placeholder,
+                false,
+                Vector2.zero,
+                Vector2.one);
+            input.contentType = InputField.ContentType.Standard;
+            input.lineType = InputField.LineType.SingleLine;
+            input.characterLimit = 12;
+            input.text = value ?? string.Empty;
+            LayoutElement layout = input.gameObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = 150f;
+            layout.minWidth = 110f;
+            return input;
         }
 
         private static void AddFlexibleLayout(GameObject target)

@@ -489,6 +489,12 @@ namespace HabitHero.App
                     snapshot.child.id,
                     inventoryItemId,
                     cancellationToken),
+                (inventoryItemId, displayName) => SetPetDisplayNameAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    inventoryItemId,
+                    displayName,
+                    cancellationToken),
                 (inventoryItemIds) => SetFollowingPetsAndRefreshAsync(
                     snapshot.familyId,
                     snapshot.child.id,
@@ -1513,6 +1519,21 @@ namespace HabitHero.App
             await gameClient.SetFollowingPetsAsync(
                 childProfileId,
                 inventoryItemIds,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> SetPetDisplayNameAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string inventoryItemId,
+            string displayName,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.SetPetDisplayNameAsync(
+                childProfileId,
+                inventoryItemId,
+                displayName,
                 cancellationToken);
             return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
         }

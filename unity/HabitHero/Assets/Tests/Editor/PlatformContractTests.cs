@@ -3320,7 +3320,8 @@ namespace HabitHero.Tests
                     "{\"child_profile_id\":\"child-1\",\"equipped_character_inventory_id\":\"character-inventory-1\",\"following_pet_inventory_id\":null,\"following_pet_inventory_ids\":[]}",
                     null),
                 new SupabaseHttpResponse(200, "{\"revision\":4}", null),
-                new SupabaseHttpResponse(200, "{\"revision\":5}", null));
+                new SupabaseHttpResponse(200, "{\"revision\":5}", null),
+                new SupabaseHttpResponse(200, "null", null));
             SupabaseChildGameClient client = new SupabaseChildGameClient(
                 new SupabaseRestClient(settings, authClient, dataTransport));
 
@@ -3343,6 +3344,11 @@ namespace HabitHero.Tests
                 "child-1",
                 new[] { "pet-inventory-3" },
                 CancellationToken.None);
+            await client.SetPetDisplayNameAsync(
+                "child-1",
+                "pet-inventory-3",
+                "小星星",
+                CancellationToken.None);
 
             Assert.AreEqual("purchase-1", purchase.purchase_id);
             Assert.AreEqual("inventory-1", purchase.inventory_item_id);
@@ -3350,7 +3356,7 @@ namespace HabitHero.Tests
             Assert.AreEqual("character-inventory-1", loadout.equipped_character_inventory_id);
             Assert.AreEqual(4L, following.revision);
             Assert.AreEqual(5L, roaming.revision);
-            Assert.AreEqual(4, dataTransport.Requests.Count);
+            Assert.AreEqual(5, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/rpc/purchase_game_item",
                 dataTransport.Requests[0].Url);
@@ -3366,6 +3372,12 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "{\"target_inventory_item_ids\":[\"pet-inventory-3\"],\"target_child_profile_id\":\"child-1\"}",
                 dataTransport.Requests[3].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/set_pet_display_name",
+                dataTransport.Requests[4].Url);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"child-1\",\"target_inventory_item_id\":\"pet-inventory-3\",\"target_display_name\":\"小星星\"}",
+                dataTransport.Requests[4].Body);
         }
 
         [Test]
