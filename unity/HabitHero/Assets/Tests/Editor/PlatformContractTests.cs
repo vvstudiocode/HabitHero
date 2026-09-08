@@ -68,6 +68,30 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldAssetCatalogPreservesAuthoredSceneModules()
+        {
+            string modelUrl;
+            bool resolved = HabitHeroGameAssetCatalog.TryResolveModelUrl(
+                "world.sunrise-village.island",
+                "https://habit-hero-gilt.vercel.app",
+                out modelUrl);
+
+            Assert.IsTrue(resolved);
+            Assert.AreEqual(
+                "https://habit-hero-gilt.vercel.app/assets/world/sunrise-village/island.glb",
+                modelUrl);
+
+            HabitHeroWorldAssetModule[] modules;
+            Assert.IsTrue(HabitHeroWorldAssetCatalog.TryGetModules("sunrise-village", out modules));
+            Assert.IsTrue(modules.Length >= 3);
+            Assert.AreEqual("world.sunrise-village.island", modules[0].AssetKey);
+            Assert.IsTrue(HabitHeroWorldAssetCatalog.TryGetModules("tideglow-archipelago", out modules));
+            Assert.IsTrue(modules.Length >= 1);
+            Assert.IsFalse(HabitHeroWorldAssetCatalog.TryGetModules("private-scene", out modules));
+            Assert.IsFalse(HabitHeroGameAssetCatalog.HasModel("world.sunrise-village.private-secret"));
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";
