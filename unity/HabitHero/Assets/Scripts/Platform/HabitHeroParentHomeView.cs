@@ -17,6 +17,7 @@ namespace HabitHero.App
         private GameObject wishlistApprovalPanel;
         private GameObject taskListObject;
         private HabitHeroParentTaskCreateView taskCreateView;
+        private HabitHeroParentTaskManagementView taskManagementView;
         private HabitHeroParentGeneralAdventureCreateView generalAdventureCreateView;
         private HabitHeroParentAdventureScheduleView adventureScheduleView;
         private HabitHeroParentRewardManagementView rewardManagementView;
@@ -54,6 +55,11 @@ namespace HabitHero.App
         private Func<
             SupabaseParentTaskCreateInput,
             Task<SupabaseParentTaskMutationResult>> createTask;
+        private Func<
+            string,
+            SupabaseParentTaskUpdateInput,
+            Task<SupabaseParentTaskMutationResult>> updateTask;
+        private Func<string, Task<SupabaseParentTaskMutationResult>> deleteTask;
         private Func<
             SupabaseParentGeneralAdventureCreateInput,
             Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure;
@@ -118,6 +124,11 @@ namespace HabitHero.App
                 SupabaseParentTaskCreateInput,
                 Task<SupabaseParentTaskMutationResult>> createTask,
             Func<
+                string,
+                SupabaseParentTaskUpdateInput,
+                Task<SupabaseParentTaskMutationResult>> updateTask,
+            Func<string, Task<SupabaseParentTaskMutationResult>> deleteTask,
+            Func<
                 SupabaseParentGeneralAdventureCreateInput,
                 Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure,
             Func<Task<SupabaseParentAdventureScheduleRecord[]>> loadAdventureSchedules,
@@ -157,6 +168,8 @@ namespace HabitHero.App
             this.approveWishlist = approveWishlist;
             this.fulfillTicket = fulfillTicket;
             this.createTask = createTask;
+            this.updateTask = updateTask;
+            this.deleteTask = deleteTask;
             this.createGeneralAdventure = createGeneralAdventure;
             this.loadAdventureSchedules = loadAdventureSchedules;
             this.createAdventureSchedule = createAdventureSchedule;
@@ -222,6 +235,13 @@ namespace HabitHero.App
                 new Vector2(0.5f, 0.91f),
                 new Vector2(0.69f, 0.97f));
             childPreviewButton.onClick.AddListener(OpenChildPreviewPanel);
+            Button taskManagementButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "任務管理",
+                new Vector2(0.28f, 0.91f),
+                new Vector2(0.49f, 0.97f));
+            taskManagementButton.onClick.AddListener(OpenTaskManagementPanel);
 
             taskListObject = new GameObject(
                 "ParentPendingTaskList",
@@ -293,6 +313,8 @@ namespace HabitHero.App
             approveWishlist = null;
             fulfillTicket = null;
             createTask = null;
+            updateTask = null;
+            deleteTask = null;
             createGeneralAdventure = null;
             loadAdventureSchedules = null;
             createAdventureSchedule = null;
@@ -315,6 +337,7 @@ namespace HabitHero.App
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
             CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
             CloseGeneralAdventurePanel();
             CloseAdventureSchedulePanel();
             CloseRewardManagementPanel();
@@ -336,6 +359,10 @@ namespace HabitHero.App
             if (childPreviewView != null)
             {
                 childPreviewView.ApplySnapshot(snapshot);
+            }
+            if (taskManagementView != null)
+            {
+                taskManagementView.ApplySnapshot(snapshot);
             }
             SetStatus("家庭資料、待審任務與點數已更新。", false);
         }
@@ -550,6 +577,7 @@ namespace HabitHero.App
                 return;
             }
 
+            CloseTaskManagementPanel();
             if (taskCreateView == null)
             {
                 taskCreateView = new HabitHeroParentTaskCreateView(canvasTransform, font);
@@ -563,6 +591,40 @@ namespace HabitHero.App
                 CloseTaskCreatePanel);
         }
 
+        private void OpenTaskManagementPanel()
+        {
+            if (latestSnapshot == null || updateTask == null || deleteTask == null)
+            {
+                SetStatus("任務管理尚未連線。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseWishlistApprovalPanel();
+            CloseRewardPanel();
+            CloseTaskCreatePanel();
+            CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            CloseChildPreviewPanel();
+            if (taskManagementView == null)
+            {
+                taskManagementView = new HabitHeroParentTaskManagementView(
+                    canvasTransform,
+                    font);
+            }
+
+            taskManagementView.Show(
+                latestSnapshot,
+                updateTask,
+                deleteTask,
+                ApplySnapshot,
+                SetStatus,
+                CloseTaskManagementPanel);
+        }
+
         private void OpenGeneralAdventurePanel()
         {
             if (latestSnapshot == null || createGeneralAdventure == null)
@@ -572,6 +634,7 @@ namespace HabitHero.App
             }
 
             CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
             if (generalAdventureCreateView == null)
             {
                 generalAdventureCreateView =
@@ -1152,6 +1215,13 @@ namespace HabitHero.App
             if (taskCreateView == null) return;
             taskCreateView.Dispose();
             taskCreateView = null;
+        }
+
+        private void CloseTaskManagementPanel()
+        {
+            if (taskManagementView == null) return;
+            taskManagementView.Dispose();
+            taskManagementView = null;
         }
 
         private void CloseGeneralAdventurePanel()

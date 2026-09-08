@@ -49,6 +49,19 @@ namespace HabitHero.Platform
         public bool requiresReviewBeforeNextTask;
     }
 
+    public sealed class SupabaseParentTaskUpdateInput
+    {
+        public string name;
+        public int points;
+        public string icon;
+        public int? durationMinutes;
+        public bool isDaily;
+        public string dueOn;
+        public string dueTime;
+        public string endTime;
+        public string category;
+    }
+
     public sealed class SupabaseParentGeneralAdventureCreateInput
     {
         public string[] childProfileIds;
@@ -132,6 +145,10 @@ namespace HabitHero.Platform
     public sealed class SupabaseParentTaskMutationResult
     {
         public bool Created { get; set; }
+
+        public bool Updated { get; set; }
+
+        public bool Deleted { get; set; }
 
         public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
 
@@ -422,6 +439,71 @@ namespace HabitHero.Platform
                 + ",\"category\":" + SupabaseJson.Quote(category)
                 + ",\"origin\":\"parent_assigned\"}";
             await restClient.InsertAsync("tasks", body, cancellationToken);
+        }
+
+        public async Task UpdateTaskAsync(
+            string familyId,
+            string taskId,
+            SupabaseParentTaskUpdateInput input,
+            CancellationToken cancellationToken)
+        {
+            ValidateTaskUpdate(familyId, taskId, input);
+            await restClient.UpdateAsync(
+                "tasks",
+                new[]
+                {
+                    new SupabaseRestFilter("family_id", "eq", familyId),
+                    new SupabaseRestFilter("id", "eq", taskId),
+                },
+                BuildTaskUpdateBody(input),
+                cancellationToken);
+        }
+
+        public async Task DeleteTaskAsync(
+            string familyId,
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (string.IsNullOrWhiteSpace(taskId))
+            {
+                throw new SupabaseDataException("任務 ID 不可為空。");
+            }
+
+            await restClient.DeleteAsync(
+                "tasks",
+                new[]
+                {
+                    new SupabaseRestFilter("family_id", "eq", familyId),
+                    new SupabaseRestFilter("id", "eq", taskId),
+                },
+                cancellationToken);
+        }
+
+        public async Task<SupabaseParentTaskMutationResult> UpdateTaskAndRefreshAsync(
+            string familyId,
+            string taskId,
+            SupabaseParentTaskUpdateInput input,
+            CancellationToken cancellationToken)
+        {
+            await UpdateTaskAsync(familyId, taskId, input, cancellationToken);
+            return await RefreshTaskMutationAsync(
+                new SupabaseParentTaskMutationResult { Updated = true },
+                cancellationToken);
+        }
+
+        public async Task<SupabaseParentTaskMutationResult> DeleteTaskAndRefreshAsync(
+            string familyId,
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            await DeleteTaskAsync(familyId, taskId, cancellationToken);
+            return await RefreshTaskMutationAsync(
+                new SupabaseParentTaskMutationResult { Deleted = true },
+                cancellationToken);
         }
 
         public async Task<SupabaseParentTaskMutationResult> CreateTaskAndRefreshAsync(
@@ -1453,6 +1535,81 @@ namespace HabitHero.Platform
                 || category == "relationship"
                 || category == "family_contribution"
                 || category == "creativity";
+        }
+
+        private static void ValidateTaskUpdate(
+            string familyId,
+            string taskId,
+            SupabaseParentTaskUpdateInput input)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (string.IsNullOrWhiteSpace(taskId))
+            {
+                throw new SupabaseDataException("任務 ID 不可為空。");
+            }
+            if (input == null)
+            {
+                throw new SupabaseDataException("任務更新資料不可為空。");
+            }
+
+            string name = input.name == null ? string.Empty : input.name.Trim();
+            if (name.Length < 1 || name.Length > 120)
+            {
+                throw new SupabaseDataException("任務名稱長度必須介於 1 到 120 個字元。");
+            }
+            if (input.points <= 0)
+            {
+                throw new SupabaseDataException("任務點數必須大於 0。");
+            }
+            if (input.durationMinutes.HasValue
+                && (input.durationMinutes.Value <= 0 || input.durationMinutes.Value > 1440))
+            {
+                throw new SupabaseDataException("任務時間必須介於 1 到 1440 分鐘。");
+            }
+        }
+
+        private static string BuildTaskUpdateBody(SupabaseParentTaskUpdateInput input)
+        {
+            string icon = string.IsNullOrWhiteSpace(input.icon) ? "Star" : input.icon.Trim();
+            string category = string.IsNullOrWhiteSpace(input.category)
+                ? "life_habit"
+                : input.category.Trim();
+            string durationJson = input.durationMinutes.HasValue
+                ? input.durationMinutes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : "null";
+            return "{\"name\":" + SupabaseJson.Quote(input.name.Trim())
+                + ",\"points\":"
+                + input.points.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                + ",\"icon\":" + SupabaseJson.Quote(icon)
+                + ",\"duration_minutes\":" + durationJson
+                + ",\"is_daily\":" + (input.isDaily ? "true" : "false")
+                + ",\"due_on\":" + SupabaseJson.NullableString(NormalizeOptional(input.dueOn))
+                + ",\"due_time\":" + SupabaseJson.NullableString(NormalizeOptional(input.dueTime))
+                + ",\"end_time\":" + SupabaseJson.NullableString(NormalizeOptional(input.endTime))
+                + ",\"category\":" + SupabaseJson.Quote(category) + "}";
+        }
+
+        private async Task<SupabaseParentTaskMutationResult> RefreshTaskMutationAsync(
+            SupabaseParentTaskMutationResult result,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
         }
 
         private static string BuildGeneralAdventureBody(

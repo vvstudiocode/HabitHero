@@ -70,6 +70,15 @@ namespace HabitHero.App
                         snapshot.familyId,
                         input,
                         cancellationToken),
+                    (taskId, input) => client.UpdateTaskAndRefreshAsync(
+                        snapshot.familyId,
+                        taskId,
+                        input,
+                        cancellationToken),
+                    (taskId) => client.DeleteTaskAndRefreshAsync(
+                        snapshot.familyId,
+                        taskId,
+                        cancellationToken),
                     (input) => client.CreateGeneralAdventureAndRefreshAsync(
                         snapshot.familyId,
                         input,

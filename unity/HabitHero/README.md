@@ -63,9 +63,10 @@ client-side balance calculations.
 Child-proposed general adventures can also be abandoned through the server
 `abandon_child_adventure` RPC; Unity refreshes the child snapshot after the
 mutation and does not change the task status locally.
-The parent home slice reads the shared family data, creates tasks for a selected
-child through an RLS-scoped insert, reviews pending tasks via the existing
-review RPCs, manages reward records through RLS-scoped mutations, approves
+The parent home slice reads the shared family data, creates and manages tasks
+for a selected child through RLS-scoped PostgREST insert/PATCH/DELETE calls,
+reviews pending tasks via the existing review RPCs, manages reward records
+through RLS-scoped mutations, approves
 wishlist items through the server RPC, and fulfills pending reward tickets
 through an RLS-scoped update. Manual point changes use the server
 `adjust_child_points` RPC; the client never edits balances directly.

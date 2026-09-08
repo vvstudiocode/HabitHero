@@ -919,6 +919,62 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentTaskManagementUsesFamilyScopedPatchAndDelete()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            await client.UpdateTaskAsync(
+                "family-1",
+                "task-1",
+                new SupabaseParentTaskUpdateInput
+                {
+                    name = "整理書包與水壺",
+                    points = 15,
+                    icon = "Star",
+                    durationMinutes = 20,
+                    isDaily = true,
+                    dueOn = "2026-09-08",
+                    dueTime = "18:00",
+                    endTime = "19:00",
+                    category = "life_habit",
+                },
+                CancellationToken.None);
+            await client.DeleteTaskAsync("family-1", "task-1", CancellationToken.None);
+
+            Assert.AreEqual(2, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/tasks?family_id=eq.family-1&id=eq.task-1",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual("PATCH", dataTransport.Requests[0].Method);
+            Assert.AreEqual(
+                "{\"name\":\"整理書包與水壺\",\"points\":15,\"icon\":\"Star\",\"duration_minutes\":20,\"is_daily\":true,\"due_on\":\"2026-09-08\",\"due_time\":\"18:00\",\"end_time\":\"19:00\",\"category\":\"life_habit\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/tasks?family_id=eq.family-1&id=eq.task-1",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual("DELETE", dataTransport.Requests[1].Method);
+        }
+
+        [Test]
         public async Task ParentGeneralAdventureUsesServerRpcForEachSelectedChild()
         {
             SupabaseClientSettings settings = CreateSettings();

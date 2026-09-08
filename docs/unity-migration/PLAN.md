@@ -31,7 +31,7 @@ authorization into client-only rules.
 | --- | --- | --- | --- |
 | Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started (child account management) |
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Foundation started (parent child preview) |
-| Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task/adventure/schedule creation, review, reward actions) |
+| Parent workflow | Task creation, task edit/delete, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task CRUD, adventure/schedule creation, review, reward actions) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
@@ -92,6 +92,9 @@ Partially completed locally:
   existing server-authoritative review RPCs.
 - Parent task creation for a selected child through RLS-scoped PostgREST
   insertion, followed by a fresh family snapshot.
+- Parent task management for existing unfinished tasks through family-scoped
+  PostgREST PATCH/DELETE operations, with completed and pending history left
+  read-only in the Unity workbench.
 - Parent general-adventure creation for one or more selected children through
   the server `create_general_adventure` RPC, followed by a fresh family
   snapshot.
