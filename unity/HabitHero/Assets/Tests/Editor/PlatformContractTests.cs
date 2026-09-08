@@ -1279,6 +1279,118 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ChildSocialClientLoadsFriendCodeFriendsAndRequests()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "\"ABCD1234\"", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"child_profile_id\":\"friend-1\",\"display_name\":\"小安\",\"is_online\":true,\"world_revision\":4,\"can_collaborate_in_my_world\":true}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"request-1\",\"direction\":\"incoming\",\"child_profile_id\":\"friend-2\",\"display_name\":\"小明\",\"created_at\":\"2026-09-08T00:00:00Z\"}]",
+                    null));
+            SupabaseChildSocialClient client = new SupabaseChildSocialClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildSocialData data = await client.LoadAsync(
+                "child-1",
+                CancellationToken.None);
+
+            Assert.AreEqual("child-1", data.childProfileId);
+            Assert.AreEqual("ABCD1234", data.friendCode);
+            Assert.AreEqual("friend-1", data.friends[0].child_profile_id);
+            Assert.IsTrue(data.friends[0].is_online);
+            Assert.IsTrue(data.friends[0].can_collaborate_in_my_world);
+            Assert.AreEqual("request-1", data.requests[0].id);
+            Assert.AreEqual("incoming", data.requests[0].direction);
+            Assert.AreEqual(3, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/get_my_friend_code",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual("{}", dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/list_my_friends",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/list_my_friend_requests",
+                dataTransport.Requests[2].Url);
+        }
+
+        [Test]
+        public async Task ChildSocialClientKeepsFriendMutationsServerAuthoritative()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null));
+            SupabaseChildSocialClient client = new SupabaseChildSocialClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            await client.SendFriendRequestAsync(" abcd-1234 ", CancellationToken.None);
+            await client.AcceptFriendRequestAsync("request-1", CancellationToken.None);
+            await client.DeclineFriendRequestAsync("request-2", CancellationToken.None);
+            await client.RemoveFriendAsync("friend-1", CancellationToken.None);
+            await client.BlockFriendAsync("friend-2", CancellationToken.None);
+
+            Assert.AreEqual(5, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/send_friend_request",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_friend_code\":\"abcd-1234\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "{\"target_request_id\":\"request-1\"}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "{\"target_request_id\":\"request-2\"}",
+                dataTransport.Requests[2].Body);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"friend-1\"}",
+                dataTransport.Requests[3].Body);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"friend-2\"}",
+                dataTransport.Requests[4].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/block_child",
+                dataTransport.Requests[4].Url);
+        }
+
+        [Test]
         public async Task ParentGeneralAdventureUsesServerRpcForEachSelectedChild()
         {
             SupabaseClientSettings settings = CreateSettings();
