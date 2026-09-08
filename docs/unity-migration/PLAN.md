@@ -138,8 +138,8 @@ Partially completed locally:
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social
-  data before updating the view; friend-world visits and chat are now wired as
-  read-only/server-authoritative flows, while presence remains pending.
+  data before updating the view; friend-world visits, chat, and live Presence
+  are now wired as read-only/server-authoritative flows.
 - Unity child social foundation now also loads the existing
   `get_friend_world_snapshot` RPC for an accepted friend and displays the
   server-scoped result as a read-only 3D preview with a local visitor avatar;
@@ -160,9 +160,10 @@ Partially completed locally:
   and avatar broadcasts, rejects stale or out-of-bounds avatar state, tracks
   Presence again after reconnect, and exposes avatar state/request callbacks.
   Unity now renders bounded remote-avatar placeholders, broadcasts local visitor
-  movement, requests the latest peer state on join, and keeps Presence visible
-  when the preview opens after the socket handshake. Capacity admission UI,
-  world-revision reload, and two-account/device verification remain pending.
+  movement, requests the latest peer state on join, keeps Presence visible when
+  the preview opens after the socket handshake, and applies the same three-person
+  capacity admission rule as the Web client. World-revision reload,
+  interpolation, and two-account/device verification remain pending.
 
 Still required:
 
@@ -176,8 +177,8 @@ Still required:
   the runtime handler, token-fragment recovery, and PKCE exchange contract are
   now in place. A code-only callback is rejected because Supabase requires the
   original PKCE verifier.
-- Unity capacity admission, remote-avatar interpolation, world-revision reload,
-  and co-op flows, plus two-account/device reconnect verification. The current
+- Unity remote-avatar interpolation, world-revision reload, and co-op flows,
+  plus two-account/device reconnect verification. The current
   live preview intentionally uses bounded placeholder avatars until the
   character asset contract and visual/device evidence are approved.
 - Native iOS/Android push and app URL plugins.

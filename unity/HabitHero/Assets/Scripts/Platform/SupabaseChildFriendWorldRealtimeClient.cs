@@ -45,7 +45,8 @@ namespace HabitHero.Platform
             Action<SupabaseFriendWorldAvatarState> onAvatarState,
             Action onAvatarStateRequest,
             Action onWorldRevision,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Action<bool> onCapacityChanged = null)
         {
             RequireValue(worldOwnerChildProfileId, "worldOwnerChildProfileId");
             RequireValue(connectionId, "connectionId");
@@ -63,7 +64,8 @@ namespace HabitHero.Platform
                     onPresence,
                     onAvatarState,
                     onAvatarStateRequest,
-                    onWorldRevision);
+                    onWorldRevision,
+                    onCapacityChanged);
             SupabaseRealtimeChannelOptions options = new SupabaseRealtimeChannelOptions
             {
                 Private = true,

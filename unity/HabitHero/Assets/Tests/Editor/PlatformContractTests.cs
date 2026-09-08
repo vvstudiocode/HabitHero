@@ -553,6 +553,75 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void FriendWorldPresenceAdmissionKeepsTheEarliestThreeMembers()
+        {
+            SupabaseFriendWorldPresenceMember[] members =
+            {
+                new SupabaseFriendWorldPresenceMember
+                {
+                    connectionId = "connection-late",
+                    childProfileId = "child-late",
+                    joinedAt = "2026-09-08T10:03:00Z",
+                },
+                new SupabaseFriendWorldPresenceMember
+                {
+                    connectionId = "connection-first",
+                    childProfileId = "child-first",
+                    joinedAt = "2026-09-08T10:00:00Z",
+                },
+                new SupabaseFriendWorldPresenceMember
+                {
+                    connectionId = "connection-third",
+                    childProfileId = "child-third",
+                    joinedAt = "2026-09-08T10:02:00Z",
+                },
+                new SupabaseFriendWorldPresenceMember
+                {
+                    connectionId = "connection-second",
+                    childProfileId = "child-second",
+                    joinedAt = "2026-09-08T10:01:00Z",
+                },
+            };
+
+            SupabaseFriendWorldPresenceAdmissionDecision decision =
+                SupabaseFriendWorldPresenceAdmission.Decide(
+                    members,
+                    "connection-late");
+
+            Assert.IsFalse(decision.accepted);
+            Assert.IsTrue(decision.shouldUntrack);
+            CollectionAssert.AreEqual(
+                new[] { "connection-first", "connection-second", "connection-third" },
+                decision.acceptedConnectionIds);
+            CollectionAssert.AreEqual(
+                new[] { "connection-late" },
+                decision.rejectedConnectionIds);
+        }
+
+        [Test]
+        public void FriendWorldPresenceAdmissionAcceptsAnUntrackedMemberWhenASlotIsFree()
+        {
+            SupabaseFriendWorldPresenceAdmissionDecision decision =
+                SupabaseFriendWorldPresenceAdmission.Decide(
+                    new[]
+                    {
+                        new SupabaseFriendWorldPresenceMember
+                        {
+                            connectionId = "connection-first",
+                            childProfileId = "child-first",
+                            joinedAt = "2026-09-08T10:00:00Z",
+                        },
+                    },
+                    "connection-local");
+
+            Assert.IsTrue(decision.accepted);
+            Assert.IsFalse(decision.shouldUntrack);
+            CollectionAssert.Contains(
+                decision.acceptedConnectionIds,
+                "connection-local");
+        }
+
+        [Test]
         public async Task FriendWorldLiveRealtimeClientJoinsPrivateChannelAndTracksPresence()
         {
             SupabaseClientSettings settings = CreateSettings();

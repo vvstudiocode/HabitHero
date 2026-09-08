@@ -138,7 +138,9 @@ namespace HabitHero.App
             {
                 if (member == null || string.IsNullOrWhiteSpace(member.connectionId)) continue;
                 activeConnections[member.connectionId] = true;
-                count += 1;
+                count = Mathf.Min(
+                    count + 1,
+                    SupabaseFriendWorldRealtimeContracts.MaxWorldMembers);
             }
 
             List<string> removedConnections = new List<string>();
@@ -155,6 +157,16 @@ namespace HabitHero.App
                 remoteAvatars.Remove(connectionId);
                 remoteAvatarStates.Remove(connectionId);
             }
+
+            List<string> removedCachedStates = new List<string>();
+            foreach (string connectionId in remoteAvatarStates.Keys)
+            {
+                if (!activeConnections.ContainsKey(connectionId))
+                    removedCachedStates.Add(connectionId);
+            }
+
+            foreach (string connectionId in removedCachedStates)
+                remoteAvatarStates.Remove(connectionId);
 
             SetRealtimeStatus(
                 "多人狀態：線上角色 "

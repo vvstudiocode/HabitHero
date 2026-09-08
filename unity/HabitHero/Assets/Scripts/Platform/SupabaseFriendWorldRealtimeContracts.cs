@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace HabitHero.Platform
 {
@@ -21,6 +22,132 @@ namespace HabitHero.Platform
         public string connectionId;
         public string childProfileId;
         public string joinedAt;
+    }
+
+    public sealed class SupabaseFriendWorldPresenceAdmissionDecision
+    {
+        public bool accepted;
+        public bool shouldUntrack;
+        public string[] acceptedConnectionIds;
+        public string[] rejectedConnectionIds;
+    }
+
+    public static class SupabaseFriendWorldPresenceAdmission
+    {
+        public static SupabaseFriendWorldPresenceAdmissionDecision Decide(
+            SupabaseFriendWorldPresenceMember[] members,
+            string connectionId,
+            int capacity = SupabaseFriendWorldRealtimeContracts.MaxWorldMembers)
+        {
+            int safeCapacity = capacity >= 0
+                ? capacity
+                : SupabaseFriendWorldRealtimeContracts.MaxWorldMembers;
+            List<SupabaseFriendWorldPresenceMember> uniqueMembers =
+                DeduplicateMembers(members);
+            uniqueMembers.Sort(CompareMembers);
+
+            List<string> acceptedConnectionIds = new List<string>();
+            List<string> rejectedConnectionIds = new List<string>();
+            for (int index = 0; index < uniqueMembers.Count; index += 1)
+            {
+                if (index < safeCapacity)
+                    acceptedConnectionIds.Add(uniqueMembers[index].connectionId);
+                else
+                    rejectedConnectionIds.Add(uniqueMembers[index].connectionId);
+            }
+
+            bool localPresent = acceptedConnectionIds.Contains(connectionId)
+                || rejectedConnectionIds.Contains(connectionId);
+            if (!localPresent
+                && SupabaseFriendWorldRealtimeValidation.IsIdentity(connectionId)
+                && acceptedConnectionIds.Count < safeCapacity)
+            {
+                acceptedConnectionIds.Add(connectionId);
+            }
+
+            bool accepted = acceptedConnectionIds.Contains(connectionId);
+            return new SupabaseFriendWorldPresenceAdmissionDecision
+            {
+                accepted = accepted,
+                shouldUntrack = !accepted,
+                acceptedConnectionIds = acceptedConnectionIds.ToArray(),
+                rejectedConnectionIds = rejectedConnectionIds.ToArray(),
+            };
+        }
+
+        internal static int CompareMembers(
+            SupabaseFriendWorldPresenceMember left,
+            SupabaseFriendWorldPresenceMember right)
+        {
+            double leftNumber;
+            double rightNumber;
+            bool leftNumeric = double.TryParse(
+                left.joinedAt,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out leftNumber);
+            bool rightNumeric = double.TryParse(
+                right.joinedAt,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out rightNumber);
+            if (leftNumeric && rightNumeric && leftNumber != rightNumber)
+                return leftNumber < rightNumber ? -1 : 1;
+            if (leftNumeric != rightNumeric)
+                return leftNumeric ? -1 : 1;
+
+            DateTimeOffset leftDate;
+            DateTimeOffset rightDate;
+            bool leftDateValid = DateTimeOffset.TryParse(
+                left.joinedAt,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out leftDate);
+            bool rightDateValid = DateTimeOffset.TryParse(
+                right.joinedAt,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out rightDate);
+            if (leftDateValid && rightDateValid && leftDate != rightDate)
+                return leftDate < rightDate ? -1 : 1;
+            if (leftDateValid != rightDateValid)
+                return leftDateValid ? -1 : 1;
+
+            int textComparison = string.CompareOrdinal(left.joinedAt, right.joinedAt);
+            return textComparison != 0
+                ? textComparison
+                : string.CompareOrdinal(left.connectionId, right.connectionId);
+        }
+
+        private static List<SupabaseFriendWorldPresenceMember> DeduplicateMembers(
+            SupabaseFriendWorldPresenceMember[] members)
+        {
+            List<SupabaseFriendWorldPresenceMember> uniqueMembers =
+                new List<SupabaseFriendWorldPresenceMember>();
+            if (members == null) return uniqueMembers;
+
+            foreach (SupabaseFriendWorldPresenceMember candidate in members)
+            {
+                if (candidate == null
+                    || !SupabaseFriendWorldRealtimeValidation.IsIdentity(candidate.connectionId)
+                    || string.IsNullOrWhiteSpace(candidate.joinedAt))
+                    continue;
+
+                bool replaced = false;
+                for (int index = 0; index < uniqueMembers.Count; index += 1)
+                {
+                    if (uniqueMembers[index].connectionId != candidate.connectionId) continue;
+                    if (CompareMembers(candidate, uniqueMembers[index]) < 0)
+                        uniqueMembers[index] = candidate;
+                    replaced = true;
+                    break;
+                }
+
+                if (!replaced) uniqueMembers.Add(candidate);
+            }
+
+            return uniqueMembers;
+        }
     }
 
     [Serializable]

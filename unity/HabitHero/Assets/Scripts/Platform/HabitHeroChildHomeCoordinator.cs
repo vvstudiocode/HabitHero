@@ -30,6 +30,7 @@ namespace HabitHero.App
         private string friendWorldRealtimeChildProfileId;
         private readonly string friendWorldRealtimeConnectionId = Guid.NewGuid().ToString("N");
         private SupabaseFriendWorldAvatarState latestLocalFriendWorldAvatarState;
+        private bool friendWorldRealtimeCrowded;
         private int friendWorldRealtimeVersion;
 
         public HabitHeroChildHomeCoordinator(
@@ -435,7 +436,8 @@ namespace HabitHero.App
                         HandleFriendWorldAvatarState,
                         HandleFriendWorldAvatarStateRequest,
                         HandleFriendWorldRevision,
-                        subscriptionCancellation.Token);
+                        subscriptionCancellation.Token,
+                        HandleFriendWorldCapacityChanged);
                 if (subscriptionCancellation.IsCancellationRequested
                     || requestVersion != friendWorldRealtimeVersion
                     || view == null)
@@ -447,6 +449,7 @@ namespace HabitHero.App
                 friendWorldRealtimeSubscription = subscription;
                 friendWorldRealtimeOwner = normalizedOwner;
                 friendWorldRealtimeChildProfileId = normalizedViewer;
+                friendWorldRealtimeCrowded = !subscription.IsAdmissionAccepted;
                 latestLocalFriendWorldAvatarState = null;
                 view.AttachFriendWorldRealtime(
                     friendWorldRealtimeConnectionId,
@@ -457,8 +460,10 @@ namespace HabitHero.App
                     subscription.GetPresenceSnapshot(),
                     friendWorldRealtimeConnectionId);
                 view.NotifyFriendWorldRealtimeStatus(
-                    "多人世界已連線；正在同步線上角色。",
-                    false);
+                    friendWorldRealtimeCrowded
+                        ? "這個好友世界目前已滿，最多只能 3 人；仍可查看唯讀快照。"
+                        : "多人世界已連線；正在同步線上角色。",
+                    friendWorldRealtimeCrowded);
                 _ = RequestLatestFriendWorldAvatarStatesAsync(subscription);
             }
             catch (OperationCanceledException)
@@ -496,6 +501,19 @@ namespace HabitHero.App
                 friendWorldRealtimeConnectionId);
         }
 
+        private void HandleFriendWorldCapacityChanged(bool crowded)
+        {
+            friendWorldRealtimeCrowded = crowded;
+            if (view != null)
+            {
+                view.NotifyFriendWorldRealtimeStatus(
+                    crowded
+                        ? "這個好友世界目前已滿，最多只能 3 人；仍可查看唯讀快照。"
+                        : "多人世界已連線；正在同步線上角色。",
+                    crowded);
+            }
+        }
+
         private void HandleFriendWorldAvatarState(
             SupabaseFriendWorldAvatarState state)
         {
@@ -508,7 +526,10 @@ namespace HabitHero.App
         private void HandleFriendWorldAvatarStateRequest()
         {
             SupabaseFriendWorldAvatarState state = latestLocalFriendWorldAvatarState;
-            if (state == null || friendWorldRealtimeSubscription == null) return;
+            if (state == null
+                || friendWorldRealtimeSubscription == null
+                || !friendWorldRealtimeSubscription.IsAdmissionAccepted)
+                return;
             _ = BroadcastFriendWorldAvatarStateAsync(
                 friendWorldRealtimeSubscription,
                 state);
@@ -527,7 +548,10 @@ namespace HabitHero.App
         private void HandleLocalFriendWorldAvatarState(
             SupabaseFriendWorldAvatarState state)
         {
-            if (state == null || friendWorldRealtimeSubscription == null) return;
+            if (state == null
+                || friendWorldRealtimeSubscription == null
+                || !friendWorldRealtimeSubscription.IsAdmissionAccepted)
+                return;
             latestLocalFriendWorldAvatarState = state;
             _ = BroadcastFriendWorldAvatarStateAsync(
                 friendWorldRealtimeSubscription,
@@ -596,6 +620,7 @@ namespace HabitHero.App
 
             friendWorldRealtimeOwner = null;
             friendWorldRealtimeChildProfileId = null;
+            friendWorldRealtimeCrowded = false;
             latestLocalFriendWorldAvatarState = null;
         }
 

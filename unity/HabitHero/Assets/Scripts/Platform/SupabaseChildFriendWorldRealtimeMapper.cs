@@ -268,27 +268,7 @@ namespace HabitHero.Platform
             SupabaseFriendWorldPresenceMember left,
             SupabaseFriendWorldPresenceMember right)
         {
-            double leftNumber;
-            double rightNumber;
-            bool leftNumeric = double.TryParse(
-                left.joinedAt, NumberStyles.Float, CultureInfo.InvariantCulture, out leftNumber);
-            bool rightNumeric = double.TryParse(
-                right.joinedAt, NumberStyles.Float, CultureInfo.InvariantCulture, out rightNumber);
-            if (leftNumeric && rightNumeric && leftNumber != rightNumber)
-                return leftNumber < rightNumber ? -1 : 1;
-
-            DateTimeOffset leftDate;
-            DateTimeOffset rightDate;
-            bool leftDateValid = DateTimeOffset.TryParse(
-                left.joinedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out leftDate);
-            bool rightDateValid = DateTimeOffset.TryParse(
-                right.joinedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out rightDate);
-            if (leftDateValid && rightDateValid && leftDate != rightDate)
-                return leftDate < rightDate ? -1 : 1;
-            int textComparison = string.CompareOrdinal(left.joinedAt, right.joinedAt);
-            return textComparison != 0
-                ? textComparison
-                : string.CompareOrdinal(left.connectionId, right.connectionId);
+            return SupabaseFriendWorldPresenceAdmission.CompareMembers(left, right);
         }
 
         private static bool IsTopicEvent(
