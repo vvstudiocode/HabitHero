@@ -85,7 +85,8 @@ Still required:
 
 - Device build and recovery verification for the iOS Keychain and Android
   Keystore session plugins.
-- Capacitor-to-Unity deep-link replacement.
+- Device build and callback verification for the Unity deep-link replacement;
+  the runtime handler and iOS/Android build hooks are now in place.
 - Supabase Realtime transport adapters.
 - Native iOS/Android push and app URL plugins.
 
@@ -101,10 +102,10 @@ useful product loop:
 5. Offline queue and reconnect recovery.
 
 The current Unity slice covers items 1–3, timer transport/UI, and the
-transport part of item 5. It still needs cached snapshots for cold-start
-offline use and a post-completion ledger refresh before this phase is closed.
-The temporary PlayerPrefs queue is functional for the editor slice; production
-mobile release still requires encrypted/native storage review.
+transport part of item 5. Cached snapshots for cold-start offline use and a
+post-completion ledger refresh are now implemented locally. Production mobile
+release still requires device verification of encrypted storage, deep links,
+and recovery.
 
 ### Phase 3 — world and game systems
 

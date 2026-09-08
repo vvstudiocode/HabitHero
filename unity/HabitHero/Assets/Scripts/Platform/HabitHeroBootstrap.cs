@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using HabitHero.Platform;
@@ -16,21 +17,34 @@ namespace HabitHero.App
         private HabitHeroChildHomeCoordinator childHomeCoordinator;
         private Canvas canvas;
         private GameObject loginPanel;
+        private GameObject recoveryPanel;
         private Font uiFont;
         private InputField accountInput;
         private InputField passwordInput;
+        private InputField recoveryPasswordInput;
+        private InputField recoveryConfirmationInput;
         private Toggle childModeToggle;
         private Button loginButton;
         private Button signOutButton;
+        private Button recoverySubmitButton;
         private Text statusText;
+        private Text recoveryStatusText;
         private Text titleText;
         private Text accountLabel;
         private bool isBusy;
+        private string pendingDeepLinkUrl;
+        private readonly HashSet<string> handledDeepLinks = new HashSet<string>();
+
+        private void OnEnable()
+        {
+            Application.deepLinkActivated += HandleDeepLinkActivated;
+        }
 
         private async void Start()
         {
             lifetimeCancellation = new CancellationTokenSource();
             BuildInterface();
+            string launchUrl = Application.absoluteURL;
 
             SupabaseRuntimeConfig config = Resources.Load<SupabaseRuntimeConfig>(
                 "SupabaseRuntimeConfig");
@@ -61,6 +75,15 @@ namespace HabitHero.App
             SetStatus("正在恢復登入狀態…", false);
             try
             {
+                string callbackUrl = !string.IsNullOrWhiteSpace(pendingDeepLinkUrl)
+                    ? pendingDeepLinkUrl
+                    : launchUrl;
+                if (!string.IsNullOrWhiteSpace(callbackUrl)
+                    && await ProcessDeepLinkAsync(callbackUrl))
+                {
+                    return;
+                }
+
                 SupabaseSession session = await authClient.InitializeAsync(
                     lifetimeCancellation.Token);
                 if (session == null)
@@ -89,6 +112,7 @@ namespace HabitHero.App
 
         private void OnDestroy()
         {
+            Application.deepLinkActivated -= HandleDeepLinkActivated;
             if (authClient != null)
             {
                 authClient.AuthStateChanged -= HandleAuthStateChanged;
@@ -99,6 +123,8 @@ namespace HabitHero.App
                 childHomeCoordinator.Dispose();
                 childHomeCoordinator = null;
             }
+
+            CloseRecoveryPanel();
 
             if (lifetimeCancellation != null)
             {
@@ -217,6 +243,306 @@ namespace HabitHero.App
                 new Vector2(0.92f, 0.075f));
             HandleChildModeChanged(false);
             SetSignedInControls(false);
+        }
+
+        private void HandleDeepLinkActivated(string rawUrl)
+        {
+            if (string.IsNullOrWhiteSpace(rawUrl)) return;
+            pendingDeepLinkUrl = rawUrl;
+            if (authClient == null) return;
+            _ = ProcessDeepLinkAsync(rawUrl);
+        }
+
+        private async Task<bool> ProcessDeepLinkAsync(string rawUrl)
+        {
+            if (string.IsNullOrWhiteSpace(rawUrl)
+                || !handledDeepLinks.Add(rawUrl)) return false;
+
+            AuthIntent intent = AuthCallbackParser.GetIntent(rawUrl);
+            if (intent == AuthIntent.None) return false;
+
+            AuthCallbackPayload payload = AuthCallbackParser.Parse(rawUrl);
+            if (!string.IsNullOrWhiteSpace(payload.Error))
+            {
+                string message = !string.IsNullOrWhiteSpace(payload.ErrorDescription)
+                    ? payload.ErrorDescription
+                    : payload.Error;
+                SetStatus("登入連結失敗：" + message, true);
+                return true;
+            }
+
+            if (payload.HasSessionPayload
+                && !string.IsNullOrWhiteSpace(payload.AccessToken)
+                && !string.IsNullOrWhiteSpace(payload.RefreshToken))
+            {
+                SupabaseSession session;
+                string error;
+                if (!authClient.TrySetSessionFromCallback(
+                        payload.AccessToken,
+                        payload.RefreshToken,
+                        intent == AuthIntent.PasswordRecovery,
+                        out session,
+                        out error))
+                {
+                    SetStatus("登入連結無效：" + error, true);
+                    return true;
+                }
+
+                if (intent == AuthIntent.PasswordRecovery)
+                {
+                    ShowSignedIn(session);
+                    ShowRecoveryPanel();
+                    return true;
+                }
+
+                try
+                {
+                    await authClient.GetUserAsync(lifetimeCancellation.Token);
+                    session = authClient.CurrentSession;
+                    ShowSignedIn(session);
+                    await TryShowChildHomeAsync(session);
+                }
+                catch (Exception exception)
+                {
+                    SetStatus("登入連結已收到，但無法確認帳號：" + exception.Message, true);
+                }
+
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(payload.Code))
+            {
+                SetStatus(
+                    "此登入連結需要回到原本的登入頁完成驗證，請重新開啟登入流程。",
+                    true);
+                return true;
+            }
+
+            if (intent == AuthIntent.PasswordRecovery)
+            {
+                SetStatus("重設連結無效或已過期，請重新寄送重設連結。", true);
+                return true;
+            }
+
+            if (loginPanel != null) loginPanel.SetActive(true);
+            SetSignedInControls(false);
+            SetStatus("請輸入帳號與密碼登入。", false);
+            return true;
+        }
+
+        private void ShowRecoveryPanel()
+        {
+            if (canvas == null) return;
+            if (recoveryPanel != null) CloseRecoveryPanel();
+            if (loginPanel != null) loginPanel.SetActive(false);
+
+            recoveryPanel = HabitHeroUiFactory.CreatePanel(
+                canvas.transform,
+                HabitHeroUiFactory.PanelColor,
+                "RecoveryPanel");
+            RectTransform panelRect = recoveryPanel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(680f, 720f);
+            panelRect.anchoredPosition = Vector2.zero;
+
+            HabitHeroUiFactory.CreateText(
+                recoveryPanel.transform,
+                uiFont,
+                "重設家長密碼",
+                42,
+                TextAnchor.MiddleCenter,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.08f, 0.79f),
+                new Vector2(0.92f, 0.94f));
+            HabitHeroUiFactory.CreateText(
+                recoveryPanel.transform,
+                uiFont,
+                "請設定至少 8 碼，並包含大小寫英文字母的新密碼。",
+                18,
+                TextAnchor.MiddleCenter,
+                new Color(0.74f, 0.81f, 0.9f, 1f),
+                new Vector2(0.08f, 0.7f),
+                new Vector2(0.92f, 0.78f));
+            HabitHeroUiFactory.CreateText(
+                recoveryPanel.transform,
+                uiFont,
+                "新密碼",
+                20,
+                TextAnchor.MiddleLeft,
+                Color.white,
+                new Vector2(0.1f, 0.59f),
+                new Vector2(0.9f, 0.66f));
+            recoveryPasswordInput = HabitHeroUiFactory.CreateInput(
+                recoveryPanel.transform,
+                uiFont,
+                "輸入新密碼",
+                true,
+                new Vector2(0.1f, 0.48f),
+                new Vector2(0.9f, 0.59f));
+            HabitHeroUiFactory.CreateText(
+                recoveryPanel.transform,
+                uiFont,
+                "再次輸入新密碼",
+                20,
+                TextAnchor.MiddleLeft,
+                Color.white,
+                new Vector2(0.1f, 0.38f),
+                new Vector2(0.9f, 0.45f));
+            recoveryConfirmationInput = HabitHeroUiFactory.CreateInput(
+                recoveryPanel.transform,
+                uiFont,
+                "再次輸入新密碼",
+                true,
+                new Vector2(0.1f, 0.27f),
+                new Vector2(0.9f, 0.38f));
+            recoverySubmitButton = HabitHeroUiFactory.CreateButton(
+                recoveryPanel.transform,
+                uiFont,
+                "更新密碼",
+                new Vector2(0.1f, 0.14f),
+                new Vector2(0.43f, 0.23f));
+            recoverySubmitButton.onClick.AddListener(HandleRecoverySubmitClicked);
+            Button backButton = HabitHeroUiFactory.CreateButton(
+                recoveryPanel.transform,
+                uiFont,
+                "返回登入",
+                new Vector2(0.57f, 0.14f),
+                new Vector2(0.9f, 0.23f));
+            backButton.onClick.AddListener(HandleRecoveryBackClicked);
+            recoveryStatusText = HabitHeroUiFactory.CreateText(
+                recoveryPanel.transform,
+                uiFont,
+                "",
+                17,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.02f),
+                new Vector2(0.92f, 0.11f));
+            SetRecoveryStatus("請輸入新的家長密碼。", false);
+            SetBusy(false);
+        }
+
+        private async void HandleRecoverySubmitClicked()
+        {
+            if (authClient == null || isBusy) return;
+            string password = recoveryPasswordInput == null
+                ? string.Empty
+                : recoveryPasswordInput.text ?? string.Empty;
+            string confirmation = recoveryConfirmationInput == null
+                ? string.Empty
+                : recoveryConfirmationInput.text ?? string.Empty;
+            if (password.Length < 8
+                || !HasUppercase(password)
+                || !HasLowercase(password))
+            {
+                SetRecoveryStatus("密碼需至少 8 碼，並包含大小寫英文字母。", true);
+                return;
+            }
+
+            if (password != confirmation)
+            {
+                SetRecoveryStatus("兩次輸入的密碼不一致。", true);
+                return;
+            }
+
+            SetBusy(true);
+            SetRecoveryStatus("正在更新密碼…", false);
+            try
+            {
+                await authClient.UpdatePasswordAsync(password, lifetimeCancellation.Token);
+                try
+                {
+                    await authClient.SignOutAsync(lifetimeCancellation.Token);
+                }
+                catch (Exception)
+                {
+                    // Update succeeded; local SignOut still clears the session in the auth client.
+                }
+
+                CloseRecoveryPanel();
+                if (loginPanel != null) loginPanel.SetActive(true);
+                SetSignedInControls(false);
+                SetStatus("密碼已更新，請使用新密碼登入。", false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Scene shutdown cancels the request.
+            }
+            catch (Exception exception)
+            {
+                SetRecoveryStatus("密碼更新失敗：" + exception.Message, true);
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async void HandleRecoveryBackClicked()
+        {
+            if (authClient == null || isBusy) return;
+            SetBusy(true);
+            try
+            {
+                await authClient.SignOutAsync(lifetimeCancellation.Token);
+            }
+            catch (Exception)
+            {
+                // SignOut clears the local session even when the network is unavailable.
+            }
+            finally
+            {
+                CloseRecoveryPanel();
+                if (loginPanel != null) loginPanel.SetActive(true);
+                SetSignedInControls(false);
+                SetStatus("已返回登入畫面。", false);
+                SetBusy(false);
+            }
+        }
+
+        private void CloseRecoveryPanel()
+        {
+            if (recoveryPanel != null)
+            {
+                UnityEngine.Object.Destroy(recoveryPanel);
+                recoveryPanel = null;
+            }
+
+            recoveryPasswordInput = null;
+            recoveryConfirmationInput = null;
+            recoverySubmitButton = null;
+            recoveryStatusText = null;
+        }
+
+        private void SetRecoveryStatus(string message, bool isError)
+        {
+            if (recoveryStatusText == null) return;
+            recoveryStatusText.text = message;
+            recoveryStatusText.color = isError
+                ? new Color(1f, 0.52f, 0.52f, 1f)
+                : new Color(0.84f, 0.89f, 0.96f, 1f);
+        }
+
+        private static bool HasUppercase(string value)
+        {
+            foreach (char character in value)
+            {
+                if (char.IsUpper(character)) return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasLowercase(string value)
+        {
+            foreach (char character in value)
+            {
+                if (char.IsLower(character)) return true;
+            }
+
+            return false;
         }
 
         private void HandleChildModeChanged(bool isChildMode)

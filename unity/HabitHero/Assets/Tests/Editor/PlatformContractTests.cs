@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using HabitHero.Platform;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 
 namespace HabitHero.Tests
 {
@@ -773,6 +775,22 @@ namespace HabitHero.Tests
             }
 
             Assert.IsTrue(isInBuildSettings);
+        }
+
+        [Test]
+        public void DeepLinkRuntimeAndMobileBuildHooksUseTheExistingAppScheme()
+        {
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string bootstrap = File.ReadAllText(
+                Path.Combine(projectRoot, "Assets/Scripts/Platform/HabitHeroBootstrap.cs"));
+            string postProcess = File.ReadAllText(
+                Path.Combine(projectRoot, "Assets/Editor/HabitHeroDeepLinkPostProcess.cs"));
+
+            StringAssert.Contains("Application.deepLinkActivated", bootstrap);
+            StringAssert.Contains("Application.absoluteURL", bootstrap);
+            StringAssert.Contains("CFBundleURLTypes", postProcess);
+            StringAssert.Contains("android.intent.action.VIEW", postProcess);
+            StringAssert.Contains("AuthCallbackParser.AppUrlScheme", postProcess);
         }
 
         private static SupabaseClientSettings CreateSettings()

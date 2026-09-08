@@ -45,6 +45,11 @@ scene-entrypoint contract. Device builds now select the native iOS Keychain or
 Android Keystore session plugin by default; the Editor and non-mobile fallback
 uses PlayerPrefs only for local development. Device build, reinstall, and
 recovery verification are still required before a production mobile release.
+`HabitHeroBootstrap` also consumes the Unity deep-link lifecycle and supports
+Supabase token-fragment recovery plus the in-app parent password reset screen.
+The iOS and Android post-build hook adds the existing
+`com.vvstudiocode.habithero` URL scheme without modifying the current
+Capacitor exports.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 
