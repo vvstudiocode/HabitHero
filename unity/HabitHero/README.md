@@ -15,6 +15,10 @@ parallel client rewrite.
   application ID recorded in `config/platform-contract.json`.
 - Unity clients may receive only the public Supabase URL and publishable key.
   A service-role key must never be embedded in an app build.
+- The checked-in Unity project targets Editor `6000.6.0f1` and already uses the
+  existing store identity: product name `習慣冒險島`, iOS Bundle ID
+  `com.vvstudiocode.habithero`, and Android application ID
+  `com.vvstudiocode.habithero`.
 
 ## Implementation order
 
@@ -26,13 +30,9 @@ parallel client rewrite.
 6. Verify production update, account continuity, and store builds before
    retiring the existing mobile client.
 
-The Unity editor project files will be added in the next implementation slice
-after the editor version and local build toolchain are available. This README
-is intentionally the first owner document so the migration cannot silently
-overwrite the current mobile project.
-
-The first platform slice is already executable without the Unity editor:
-`npm run test:unity-platform` compiles and runs the pure C# Supabase settings
-and authentication callback contracts. Unity UI, native plugins, and feature
-flows must not be marked complete until they pass their own editor/device
-tests.
+The pure C# platform slice remains executable without the Unity editor:
+`npm run test:unity-platform` compiles and runs the Supabase settings,
+authentication callback, and request contracts. With Unity installed locally,
+`npm run test:unity-editmode` runs the Editor-side platform contract tests.
+Unity UI, native plugins, and feature flows must not be marked complete until
+they pass their own editor/device tests.

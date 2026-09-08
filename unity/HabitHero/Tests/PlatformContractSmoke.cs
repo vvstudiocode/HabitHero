@@ -9,6 +9,7 @@ internal static class PlatformContractSmoke
     {
         TestSupabaseSettings();
         TestAuthCallbackParsing();
+        TestSupabaseRequestBuilder();
 
         if (failures > 0)
         {
@@ -73,6 +74,47 @@ internal static class PlatformContractSmoke
             "com.vvstudiocode.habithero://reset-password#error=access_denied&error_description=expired");
         Assert(errorPayload.Error == "access_denied", "preserves the provider error code");
         Assert(errorPayload.ErrorDescription == "expired", "preserves the provider error description");
+    }
+
+    private static void TestSupabaseRequestBuilder()
+    {
+        SupabaseClientSettings settings;
+        string error;
+        SupabaseClientSettings.TryCreate(
+            "https://example.supabase.co",
+            "sb_publishable_test-key",
+            out settings,
+            out error);
+
+        SupabaseRequestContract request;
+        Assert(
+            SupabaseRequestBuilder.TryBuildRpc(
+                settings,
+                "purchase_game_item",
+                "access-token",
+                "{\"item_id\":\"item-1\"}",
+                out request,
+                out error),
+            "builds an authenticated Supabase RPC request");
+        Assert(request != null && request.Method == "POST", "uses POST for RPC calls");
+        Assert(
+            request != null && request.Url == "https://example.supabase.co/rest/v1/rpc/purchase_game_item",
+            "builds the canonical RPC endpoint");
+        Assert(
+            request != null
+                && request.Headers["apikey"] == "sb_publishable_test-key"
+                && request.Headers["Authorization"] == "Bearer access-token",
+            "sends only the publishable key and current access token");
+        Assert(request != null && request.Body == "{\"item_id\":\"item-1\"}", "preserves the RPC JSON body");
+        Assert(
+            !SupabaseRequestBuilder.TryBuildRpc(
+                settings,
+                "purchase_game_item;drop_table",
+                "access-token",
+                "{}",
+                out request,
+                out error),
+            "rejects unsafe RPC function names");
     }
 
     private static void Assert(bool condition, string description)

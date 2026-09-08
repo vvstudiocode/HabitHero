@@ -1,0 +1,147 @@
+# HabitHero Unity Migration Plan
+
+## Objective
+
+Rebuild the existing HabitHero client behavior in Unity while keeping the
+existing Supabase backend, production data, parent Web experience, and store
+identity intact. This is a parallel client rewrite, not a product redesign.
+
+The current React/Capacitor client remains the behavioral and release
+reference until the Unity client passes feature, data, device, and store-update
+verification.
+
+## Architecture boundary
+
+```text
+GitHub monorepo
+├── src/ + existing iOS/Android exports  # current production reference
+├── unity/HabitHero                      # Unity child/mobile client
+├── supabase/                            # shared schema, RLS, RPC, functions
+├── config/platform-contract.json        # cross-client release identity
+└── vercel.json                          # parent Web SPA deployment
+```
+
+The Unity client must use the same server-authoritative Supabase rules. It may
+not copy pricing, permissions, point awards, inventory ownership, or family
+authorization into client-only rules.
+
+## Feature parity matrix
+
+| Area | Current behavior to preserve | Unity acceptance gate | Status |
+| --- | --- | --- | --- |
+| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started |
+| Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Not started |
+| Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Not started |
+| Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Not started |
+| Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Not started |
+| Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Not started |
+| 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
+| Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
+| Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Not started |
+| Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Not started |
+| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Not started |
+| Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
+| Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Not started |
+
+## Implementation phases
+
+### Phase 0 — platform and release contract
+
+Completed locally:
+
+- GitHub repository remains the source repository.
+- Unity client has an isolated owner path.
+- Vercel build/output/history fallback is explicit.
+- Existing iOS Bundle ID and Android application ID are locked.
+- Client configuration names only the public Supabase URL and publishable key.
+- GitHub has a pull-request platform contract workflow.
+
+### Phase 1 — Unity platform foundation
+
+Partially completed locally:
+
+- Unity Editor `6000.6.0f1` project created at `unity/HabitHero`.
+- Unity EditMode platform contract tests pass locally.
+- Production product name, iOS Bundle ID, Android application ID, and next
+  build number are configured in the Unity project.
+
+- Pure C# Supabase client configuration validation.
+- Auth callback parsing for fragment tokens, OAuth code, login, and recovery.
+- Local C# smoke test: `npm run test:unity-platform`.
+
+Still required:
+
+- Secure session persistence and refresh.
+- Capacitor-to-Unity deep-link replacement.
+- Supabase REST/RPC/Realtime transport adapters.
+- Native iOS/Android push and app URL plugins.
+
+### Phase 2 — child core loop
+
+Port the smallest useful product slice first:
+
+1. Authenticated child session.
+2. Hydrated child profile and today tasks.
+3. Task completion and server result.
+4. Points/ledger refresh.
+5. Offline queue and reconnect recovery.
+
+This phase must be usable before the world runtime is ported.
+
+### Phase 3 — world and game systems
+
+Port the existing scene contracts without changing product behavior:
+
+- authored scene manifests and gates;
+- character and pet loadout;
+- animation, grounding, movement, camera, joystick, and touch input;
+- NPC dialogue, shops, inventory, decorations, weather, and audio;
+- performance quality settings and resource disposal.
+
+Existing pet assets, exporters, metadata, migrations, and catalog rows remain
+read-only unless a separately approved asset correction plan is created.
+
+### Phase 4 — realtime and social systems
+
+Port friendship, friend-world access, presence, broadcast, chat, remote
+avatars, shared decorations, and co-op adventure behavior. The same RLS and
+private authorization boundaries must be exercised from Unity; client-side
+visibility is not an authorization mechanism.
+
+### Phase 5 — release replacement
+
+- Test Unity builds with development identifiers and a non-production backend.
+- Test the update path with the production identifiers only after parity.
+- Verify server data continuity, local session behavior, push registration,
+  deep links, universal/app links, background audio, and safe-area layouts.
+- Submit the Unity binary as an update to the existing store records.
+- Retain the React/Capacitor client until the rollout is stable.
+
+## Completion criteria
+
+The migration is not complete until all of the following are true:
+
+- Every row in the feature matrix has a passing automated or device evidence
+  record.
+- Parent and child accounts can use the same Supabase data from both clients.
+- Offline, reconnect, Realtime, idempotency, and RLS behavior are preserved.
+- iOS and Android production builds use the existing app identities and signing
+  path, with an increased build number.
+- TestFlight and closed testing verify update/install behavior before review.
+- No service-role key or server secret is present in Unity, Web, GitHub
+  artifacts, or a mobile bundle.
+- The existing app remains a precise rollback path until release verification
+  is complete.
+
+## Current verification notes
+
+The repository baseline currently has pre-existing failures unrelated to this
+migration: one of 1151 existing tests fails in the child game panel CSS
+contract, and source-size governance reports existing baseline growth in
+dashboard/world/CSS hotspots. These must be handled as a separate baseline
+repair or evidence task; they are not silently changed as part of the Unity
+port.
+
+The local machine has Unity Editor `6000.6.0f1`. Editor compilation and the
+platform contract test suite are verified; Unity scene import, mobile export,
+and device behavior are intentionally not claimed as verified yet.

@@ -14,6 +14,7 @@
     "cap:open:android": "npx cap open android",
     "test": "tsx --test tests/*.test.ts",
     "test:unity-platform": "node scripts/verify-unity-platform.mjs",
+    "test:unity-editmode": "node scripts/run-unity-editmode-tests.mjs",
     "security:check": "node scripts/security-check.mjs",
     "quality:structure": "node scripts/check-source-size.mjs && node scripts/check-import-boundaries.mjs",
     "docs:mindmap": "npx --yes markmap-cli@0.18.12 --no-open --offline docs/strategy/01-product-mindmap.md -o docs/strategy/rendered/product-mindmap.html",

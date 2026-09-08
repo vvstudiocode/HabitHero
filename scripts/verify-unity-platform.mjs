@@ -9,6 +9,7 @@ const executablePath = path.join(tempDirectory, 'platform-contract-smoke.exe');
 const sourceFiles = [
   path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/SupabaseClientSettings.cs'),
   path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/AuthCallbackParser.cs'),
+  path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/SupabaseRequestBuilder.cs'),
   path.join(repositoryRoot, 'unity/HabitHero/Tests/PlatformContractSmoke.cs'),
 ];
 
