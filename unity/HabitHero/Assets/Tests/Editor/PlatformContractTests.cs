@@ -1033,6 +1033,67 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task NotificationClientKeepsPreferenceAndDeviceBindingRlsScoped()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"parent-access\",\"refresh_token\":\"parent-refresh\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "[{\"notifications_enabled\":true}]", null),
+                new SupabaseHttpResponse(200, "", null),
+                new SupabaseHttpResponse(200, "", null),
+                new SupabaseHttpResponse(200, "", null));
+            SupabaseNotificationClient client = new SupabaseNotificationClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            Assert.IsTrue(await client.LoadPreferenceAsync(
+                "parent-user-1",
+                CancellationToken.None));
+            await client.SetPreferenceAsync(
+                "parent-user-1",
+                false,
+                CancellationToken.None);
+            await client.RegisterDeviceAsync(
+                "family-1",
+                "parent-user-1",
+                null,
+                "ios",
+                "token-12345678901234567890",
+                CancellationToken.None);
+
+            Assert.AreEqual(4, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/profiles?select=notifications_enabled&id=eq.parent-user-1",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/profiles?id=eq.parent-user-1",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual("{\"notifications_enabled\":false}", dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/push_devices?profile_id=eq.parent-user-1",
+                dataTransport.Requests[2].Url);
+            Assert.AreEqual("{\"enabled\":false}", dataTransport.Requests[2].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/push_devices?on_conflict=profile_id%2Ctoken",
+                dataTransport.Requests[3].Url);
+            StringAssert.Contains(
+                "\"family_id\":\"family-1\",\"profile_id\":\"parent-user-1\",\"child_profile_id\":null,\"platform\":\"ios\"",
+                dataTransport.Requests[3].Body);
+        }
+
+        [Test]
         public async Task FriendWorldClientLoadsTheServerProjectionThroughRpc()
         {
             SupabaseClientSettings settings = CreateSettings();
