@@ -142,8 +142,11 @@ Partially completed locally:
   are now wired as read-only/server-authoritative flows.
 - Unity child social foundation now also loads the existing
   `get_friend_world_snapshot` RPC for an accepted friend and displays the
-  server-scoped result as a read-only 3D preview with a local visitor avatar;
-  world mutation remains pending, while live Presence and avatar broadcast now
+  server-scoped result as a 3D preview with a local visitor avatar. The same
+  slice now carries the server-provided shared-decoration permission and
+  capability fields, exposes the owner's friend-list permission toggle, and
+  wires visitor-side place, transform, and remove actions through the existing
+  revision-checked Supabase RPCs. Live Presence and avatar broadcast still
   update the preview with bounded remote-avatar placeholders.
 - Unity child social foundation now reads visible friend-world chat history,
   unread counts, and sends/marks-read/reports messages through the existing

@@ -18,12 +18,17 @@ namespace HabitHero.App
         private InputField friendCodeInput;
         private Text statusText;
         private SupabaseChildSocialData latestData;
+        private SupabaseChildGameData gameData;
         private Func<Task<SupabaseChildSocialData>> refresh;
         private Func<string, Task<SupabaseChildSocialData>> sendRequest;
         private Func<string, Task<SupabaseChildSocialData>> acceptRequest;
         private Func<string, Task<SupabaseChildSocialData>> declineRequest;
         private Func<string, Task<SupabaseChildSocialData>> removeFriend;
         private Func<string, Task<SupabaseChildSocialData>> blockFriend;
+        private Func<string, bool, Task<SupabaseChildSocialData>> toggleFriendWorldCollaboration;
+        private Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> placeSharedDecoration;
+        private Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> updateSharedDecoration;
+        private Func<string, string, long, Task<SupabaseChildFriendWorldData>> removeSharedDecoration;
         private Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld;
         private Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat;
         private Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat;
@@ -46,12 +51,17 @@ namespace HabitHero.App
 
         public void Show(
             SupabaseChildSocialData data,
+            SupabaseChildGameData gameData,
             Func<Task<SupabaseChildSocialData>> refresh,
             Func<string, Task<SupabaseChildSocialData>> sendRequest,
             Func<string, Task<SupabaseChildSocialData>> acceptRequest,
             Func<string, Task<SupabaseChildSocialData>> declineRequest,
             Func<string, Task<SupabaseChildSocialData>> removeFriend,
             Func<string, Task<SupabaseChildSocialData>> blockFriend,
+            Func<string, bool, Task<SupabaseChildSocialData>> toggleFriendWorldCollaboration,
+            Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> placeSharedDecoration,
+            Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> updateSharedDecoration,
+            Func<string, string, long, Task<SupabaseChildFriendWorldData>> removeSharedDecoration,
             Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld,
             Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat,
             Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat,
@@ -62,12 +72,17 @@ namespace HabitHero.App
         {
             Close();
             latestData = data;
+            this.gameData = gameData;
             this.refresh = refresh;
             this.sendRequest = sendRequest;
             this.acceptRequest = acceptRequest;
             this.declineRequest = declineRequest;
             this.removeFriend = removeFriend;
             this.blockFriend = blockFriend;
+            this.toggleFriendWorldCollaboration = toggleFriendWorldCollaboration;
+            this.placeSharedDecoration = placeSharedDecoration;
+            this.updateSharedDecoration = updateSharedDecoration;
+            this.removeSharedDecoration = removeSharedDecoration;
             this.visitFriendWorld = visitFriendWorld;
             this.loadWorldChat = loadWorldChat;
             this.sendWorldChat = sendWorldChat;
@@ -303,12 +318,17 @@ namespace HabitHero.App
         {
             Close();
             latestData = null;
+            gameData = null;
             refresh = null;
             sendRequest = null;
             acceptRequest = null;
             declineRequest = null;
             removeFriend = null;
             blockFriend = null;
+            toggleFriendWorldCollaboration = null;
+            placeSharedDecoration = null;
+            updateSharedDecoration = null;
+            removeSharedDecoration = null;
             visitFriendWorld = null;
             loadWorldChat = null;
             sendWorldChat = null;
@@ -372,6 +392,14 @@ namespace HabitHero.App
                 blockButton.onClick.AddListener(() => BlockFriendAsync(
                     friend.child_profile_id,
                     blockButton));
+                Button collaborationButton = CreateRowButton(
+                    row.transform,
+                    friend.can_collaborate_in_my_world ? "撤銷布置" : "允許布置");
+                collaborationButton.interactable = toggleFriendWorldCollaboration != null;
+                collaborationButton.onClick.AddListener(() => ToggleFriendWorldCollaborationAsync(
+                    friend.child_profile_id,
+                    !friend.can_collaborate_in_my_world,
+                    collaborationButton));
                 count += 1;
             }
 
@@ -493,6 +521,28 @@ namespace HabitHero.App
                 "已封鎖這位好友。");
         }
 
+        private async void ToggleFriendWorldCollaborationAsync(
+            string childProfileId,
+            bool enabled,
+            Button button)
+        {
+            if (toggleFriendWorldCollaboration == null) return;
+            if (button != null) button.interactable = false;
+            SetStatus("正在更新共享裝飾權限…", false);
+            try
+            {
+                ApplyMutationData(
+                    await toggleFriendWorldCollaboration(childProfileId, enabled),
+                    enabled ? "已允許好友一起布置你的世界。" : "已撤銷好友的布置權限。",
+                    button);
+            }
+            catch (Exception exception)
+            {
+                SetStatus(exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
         private async void VisitFriendWorldAsync(string childProfileId, Button button)
         {
             if (visitFriendWorld == null) return;
@@ -515,7 +565,33 @@ namespace HabitHero.App
                         font);
                 }
 
-                friendWorldView.Show(data, CloseFriendWorld);
+                friendWorldView.Show(
+                    data,
+                    gameData,
+                    placeSharedDecoration == null
+                        ? null
+                        : (sourceInventoryItemId, expectedRevision, transform) =>
+                            placeSharedDecoration(
+                                childProfileId,
+                                sourceInventoryItemId,
+                                expectedRevision,
+                                transform),
+                    updateSharedDecoration == null
+                        ? null
+                        : (sharedEntityId, expectedRevision, transform) =>
+                            updateSharedDecoration(
+                                childProfileId,
+                                sharedEntityId,
+                                expectedRevision,
+                                transform),
+                    removeSharedDecoration == null
+                        ? null
+                        : (sharedEntityId, expectedRevision) =>
+                            removeSharedDecoration(
+                                childProfileId,
+                                sharedEntityId,
+                                expectedRevision),
+                    CloseFriendWorld);
                 friendWorldView.Open();
                 friendWorldView.SetRealtime(
                     friendWorldRealtimeConnectionId,

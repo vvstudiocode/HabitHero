@@ -172,6 +172,32 @@ namespace HabitHero.App
                         snapshot.child.id,
                         friendChildProfileId,
                         cancellationToken),
+                    (friendChildProfileId, canCollaborate) =>
+                        SetFriendWorldCollaborationAndRefreshAsync(
+                            snapshot.child.id,
+                            friendChildProfileId,
+                            canCollaborate,
+                            cancellationToken),
+                    (worldOwnerChildProfileId, sourceInventoryItemId, expectedRevision, transform) =>
+                        PlaceSharedDecorationAndRefreshAsync(
+                            worldOwnerChildProfileId,
+                            sourceInventoryItemId,
+                            expectedRevision,
+                            transform,
+                            cancellationToken),
+                    (worldOwnerChildProfileId, sharedEntityId, expectedRevision, transform) =>
+                        UpdateSharedDecorationAndRefreshAsync(
+                            worldOwnerChildProfileId,
+                            sharedEntityId,
+                            expectedRevision,
+                            transform,
+                            cancellationToken),
+                    (worldOwnerChildProfileId, sharedEntityId, expectedRevision) =>
+                        RemoveSharedDecorationAndRefreshAsync(
+                            worldOwnerChildProfileId,
+                            sharedEntityId,
+                            expectedRevision,
+                            cancellationToken),
                     (friendChildProfileId) => LoadFriendWorldAsync(
                         snapshot.child.id,
                         snapshot.child.character_id,
@@ -381,6 +407,72 @@ namespace HabitHero.App
         {
             await socialClient.BlockFriendAsync(friendChildProfileId, cancellationToken);
             return await RefreshSocialAsync(childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildSocialData> SetFriendWorldCollaborationAndRefreshAsync(
+            string childProfileId,
+            string friendChildProfileId,
+            bool canCollaborate,
+            CancellationToken cancellationToken)
+        {
+            await friendWorldClient.SetDecorationCollaborationAsync(
+                childProfileId,
+                friendChildProfileId,
+                canCollaborate,
+                cancellationToken);
+            return await RefreshSocialAsync(childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildFriendWorldData> PlaceSharedDecorationAndRefreshAsync(
+            string worldOwnerChildProfileId,
+            string sourceInventoryItemId,
+            long expectedRevision,
+            SupabaseFriendWorldTransform transform,
+            CancellationToken cancellationToken)
+        {
+            await friendWorldClient.PlaceSharedDecorationAsync(
+                worldOwnerChildProfileId,
+                sourceInventoryItemId,
+                expectedRevision,
+                transform,
+                cancellationToken);
+            return await friendWorldClient.LoadAsync(
+                worldOwnerChildProfileId,
+                cancellationToken);
+        }
+
+        private async Task<SupabaseChildFriendWorldData> UpdateSharedDecorationAndRefreshAsync(
+            string worldOwnerChildProfileId,
+            string sharedEntityId,
+            long expectedRevision,
+            SupabaseFriendWorldTransform transform,
+            CancellationToken cancellationToken)
+        {
+            await friendWorldClient.UpdateSharedDecorationTransformAsync(
+                worldOwnerChildProfileId,
+                sharedEntityId,
+                expectedRevision,
+                transform,
+                cancellationToken);
+            return await friendWorldClient.LoadAsync(
+                worldOwnerChildProfileId,
+                cancellationToken);
+        }
+
+        private async Task<SupabaseChildFriendWorldData> RemoveSharedDecorationAndRefreshAsync(
+            string worldOwnerChildProfileId,
+            string sharedEntityId,
+            long expectedRevision,
+            CancellationToken cancellationToken)
+        {
+            await friendWorldClient.RemoveSharedDecorationAsync(
+                worldOwnerChildProfileId,
+                sharedEntityId,
+                expectedRevision,
+                cancellationToken);
+            return await friendWorldClient.LoadAsync(
+                worldOwnerChildProfileId,
+                cancellationToken);
         }
 
         private async Task<SupabaseChildFriendWorldData> LoadFriendWorldAsync(

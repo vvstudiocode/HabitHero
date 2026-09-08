@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 using HabitHero.Platform;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,6 +21,10 @@ namespace HabitHero.App
         private Text statusText;
         private Text liveStatusText;
         private SupabaseChildFriendWorldData latestData;
+        private SupabaseChildGameData gameData;
+        private Func<string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> placeSharedDecoration;
+        private Func<string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> updateSharedDecoration;
+        private Func<string, long, Task<SupabaseChildFriendWorldData>> removeSharedDecoration;
         private Action onClose;
         private readonly Dictionary<string, GameObject> remoteAvatars =
             new Dictionary<string, GameObject>();
@@ -43,11 +48,21 @@ namespace HabitHero.App
             this.font = font;
         }
 
-        public void Show(SupabaseChildFriendWorldData data, Action onClose)
+        public void Show(
+            SupabaseChildFriendWorldData data,
+            SupabaseChildGameData gameData,
+            Func<string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> placeSharedDecoration,
+            Func<string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> updateSharedDecoration,
+            Func<string, long, Task<SupabaseChildFriendWorldData>> removeSharedDecoration,
+            Action onClose)
         {
             ClearRealtime();
             CloseInternal(false);
             latestData = data;
+            this.gameData = gameData;
+            this.placeSharedDecoration = placeSharedDecoration;
+            this.updateSharedDecoration = updateSharedDecoration;
+            this.removeSharedDecoration = removeSharedDecoration;
             this.onClose = onClose;
         }
 
@@ -103,6 +118,10 @@ namespace HabitHero.App
         {
             CloseInternal(false);
             latestData = null;
+            gameData = null;
+            placeSharedDecoration = null;
+            updateSharedDecoration = null;
+            removeSharedDecoration = null;
             onClose = null;
             ClearRealtime();
         }
@@ -481,7 +500,8 @@ namespace HabitHero.App
             HabitHeroUiFactory.CreateText(
                 hud.transform,
                 font,
-                latestData.displayName + " 的好友世界　唯讀",
+                latestData.displayName + " 的好友世界　"
+                    + (latestData.canShareDecorations ? "可共同布置" : "唯讀"),
                 25,
                 TextAnchor.MiddleCenter,
                 HabitHeroUiFactory.AccentColor,
@@ -503,6 +523,22 @@ namespace HabitHero.App
                 new Vector2(0.04f, 0.34f),
                 new Vector2(0.47f, 0.75f));
             RenderEntityList(entityList.transform);
+
+            HabitHeroUiFactory.CreateText(
+                panel.transform,
+                font,
+                "共享裝飾",
+                18,
+                TextAnchor.MiddleLeft,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.5f, 0.75f),
+                new Vector2(0.96f, 0.8f));
+            GameObject decorationList = CreateList(
+                panel.transform,
+                "SharedDecorationList",
+                new Vector2(0.5f, 0.34f),
+                new Vector2(0.96f, 0.75f));
+            RenderSharedDecorationList(decorationList.transform);
 
             GameObject controls = HabitHeroUiFactory.CreatePanel(
                 panel.transform,
@@ -541,7 +577,9 @@ namespace HabitHero.App
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
-                "這是好友世界的安全唯讀投影；目前不會修改對方資料。",
+                latestData.canShareDecorations
+                    ? "你可以把自己的裝飾放入好友世界；所有位置仍由伺服器驗證。"
+                    : "這是好友世界的安全唯讀投影；好友尚未開放共享布置。",
                 14,
                 TextAnchor.MiddleCenter,
                 Color.white,
@@ -575,15 +613,35 @@ namespace HabitHero.App
                 string label = string.IsNullOrWhiteSpace(entity.display_name)
                     ? entity.asset_key
                     : entity.display_name;
-                HabitHeroUiFactory.CreateText(
-                    parent,
+                GameObject row = CreateRow(parent, "FriendWorldEntityRow");
+                Text entityLabel = HabitHeroUiFactory.CreateText(
+                    row.transform,
                     font,
-                    label + "　" + entity.entity_kind,
+                    label + "　" + entity.entity_kind
+                        + (entity.placement_scope == "shared" ? "　共享" : string.Empty),
                     14,
                     TextAnchor.MiddleLeft,
                     Color.white,
                     Vector2.zero,
-                    Vector2.one).gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
+                    Vector2.one);
+                AddFlexibleLayout(entityLabel.gameObject);
+                if (entity.placement_scope == "shared" && entity.can_transform)
+                {
+                    Button moveButton = CreateEntityButton(row.transform, "右移");
+                    moveButton.interactable = updateSharedDecoration != null;
+                    moveButton.onClick.AddListener(() => MoveSharedDecorationAsync(
+                        entity,
+                        0.8f,
+                        moveButton));
+                }
+                if (entity.placement_scope == "shared" && entity.can_remove)
+                {
+                    Button removeButton = CreateEntityButton(row.transform, "移除");
+                    removeButton.interactable = removeSharedDecoration != null;
+                    removeButton.onClick.AddListener(() => RemoveSharedDecorationAsync(
+                        entity,
+                        removeButton));
+                }
                 rendered += 1;
             }
 
@@ -599,6 +657,211 @@ namespace HabitHero.App
                     Vector2.zero,
                     Vector2.one).gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
             }
+        }
+
+        private void RenderSharedDecorationList(Transform parent)
+        {
+            if (!latestData.canShareDecorations)
+            {
+                CreateEmptyRow(parent, "好友尚未允許你共享布置。");
+                return;
+            }
+
+            if (gameData == null || placeSharedDecoration == null)
+            {
+                CreateEmptyRow(parent, "目前沒有可用的裝飾背包資料。");
+                return;
+            }
+
+            int rendered = 0;
+            foreach (SupabaseChildInventoryItemRecord inventory in
+                gameData.inventory ?? new SupabaseChildInventoryItemRecord[0])
+            {
+                if (inventory == null || inventory.quantity <= 0) continue;
+                SupabaseGameCatalogItemRecord item = FindCatalogItem(inventory.catalog_item_id);
+                if (item == null || item.item_type != "decoration") continue;
+                GameObject row = CreateRow(parent, "SharedDecorationInventoryRow");
+                Text label = HabitHeroUiFactory.CreateText(
+                    row.transform,
+                    font,
+                    item.name + " ×" + inventory.quantity,
+                    14,
+                    TextAnchor.MiddleLeft,
+                    Color.white,
+                    Vector2.zero,
+                    Vector2.one);
+                AddFlexibleLayout(label.gameObject);
+                Button placeButton = CreateEntityButton(
+                    row.transform,
+                    "放入");
+                placeButton.onClick.AddListener(() => PlaceSharedDecorationAsync(
+                    inventory.id,
+                    item,
+                    placeButton));
+
+                rendered += 1;
+                if (rendered >= 8) break;
+            }
+
+            if (rendered == 0)
+            {
+                CreateEmptyRow(parent, "背包中沒有可共享的裝飾。");
+            }
+        }
+
+        private async void PlaceSharedDecorationAsync(
+            string sourceInventoryItemId,
+            SupabaseGameCatalogItemRecord item,
+            Button button)
+        {
+            if (placeSharedDecoration == null || item == null) return;
+            if (button != null) button.interactable = false;
+            SetStatus("正在把裝飾放入好友世界…", false);
+            try
+            {
+                SupabaseChildFriendWorldData refreshed = await placeSharedDecoration(
+                    sourceInventoryItemId,
+                    CurrentRevision,
+                    CreateDefaultTransform(item));
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新好友世界資料。");
+                }
+
+                ApplyData(refreshed);
+                SetStatus("共享裝飾已放入好友世界。", false);
+            }
+            catch (Exception exception)
+            {
+                SetStatus("共享裝飾放置失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private async void MoveSharedDecorationAsync(
+            SupabaseFriendWorldEntityRecord entity,
+            float deltaX,
+            Button button)
+        {
+            if (entity == null || updateSharedDecoration == null) return;
+            if (button != null) button.interactable = false;
+            SetStatus("正在更新共享裝飾位置…", false);
+            try
+            {
+                SupabaseFriendWorldTransform transform = CreateTransform(entity);
+                transform.x = Mathf.Clamp(transform.x + deltaX, -13f, 13f);
+                SupabaseChildFriendWorldData refreshed = await updateSharedDecoration(
+                    entity.id,
+                    CurrentRevision,
+                    transform);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新好友世界資料。");
+                }
+
+                ApplyData(refreshed);
+                SetStatus("共享裝飾位置已更新。", false);
+            }
+            catch (Exception exception)
+            {
+                SetStatus("共享裝飾移動失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private async void RemoveSharedDecorationAsync(
+            SupabaseFriendWorldEntityRecord entity,
+            Button button)
+        {
+            if (entity == null || removeSharedDecoration == null) return;
+            if (button != null) button.interactable = false;
+            SetStatus("正在移除共享裝飾…", false);
+            try
+            {
+                SupabaseChildFriendWorldData refreshed = await removeSharedDecoration(
+                    entity.id,
+                    CurrentRevision);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新好友世界資料。");
+                }
+
+                ApplyData(refreshed);
+                SetStatus("共享裝飾已移除。", false);
+            }
+            catch (Exception exception)
+            {
+                SetStatus("共享裝飾移除失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private SupabaseGameCatalogItemRecord FindCatalogItem(string catalogItemId)
+        {
+            foreach (SupabaseGameCatalogItemRecord item in
+                gameData == null
+                    ? new SupabaseGameCatalogItemRecord[0]
+                    : gameData.catalog ?? new SupabaseGameCatalogItemRecord[0])
+            {
+                if (item != null && item.id == catalogItemId) return item;
+            }
+
+            return null;
+        }
+
+        private SupabaseFriendWorldTransform CreateDefaultTransform(
+            SupabaseGameCatalogItemRecord item)
+        {
+            int sharedCount = 0;
+            foreach (SupabaseFriendWorldEntityRecord entity in
+                latestData.entities ?? new SupabaseFriendWorldEntityRecord[0])
+            {
+                if (entity != null && entity.placement_scope == "shared") sharedCount += 1;
+            }
+
+            int column = sharedCount % 3;
+            int row = sharedCount / 3;
+            float minScale = item.min_scale > 0f ? item.min_scale : 0.75f;
+            float maxScale = item.max_scale >= minScale ? item.max_scale : minScale;
+            return new SupabaseFriendWorldTransform
+            {
+                x = -4.5f + column * 2.8f,
+                y = 0f,
+                z = -5.5f + row * 2.8f,
+                rotationX = 0f,
+                rotationY = 0f,
+                rotationZ = 0f,
+                scale = Mathf.Clamp(1f, minScale, maxScale),
+            };
+        }
+
+        private static SupabaseFriendWorldTransform CreateTransform(
+            SupabaseFriendWorldEntityRecord entity)
+        {
+            return new SupabaseFriendWorldTransform
+            {
+                x = entity.position_x,
+                y = entity.position_y,
+                z = entity.position_z,
+                rotationX = entity.rotation_x,
+                rotationY = entity.rotation_y,
+                rotationZ = entity.rotation_z,
+                scale = entity.scale <= 0f ? 1f : entity.scale,
+            };
+        }
+
+        private Button CreateEntityButton(Transform parent, string label)
+        {
+            Button button = HabitHeroUiFactory.CreateButton(
+                parent,
+                font,
+                label,
+                Vector2.zero,
+                Vector2.one);
+            LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = 54f;
+            layout.minWidth = 54f;
+            return button;
         }
 
         private void CreateMovementButton(
@@ -694,6 +957,43 @@ namespace HabitHero.App
             Material material = new Material(shader);
             material.color = color;
             return material;
+        }
+
+        private GameObject CreateRow(Transform parent, string name)
+        {
+            GameObject row = new GameObject(
+                name,
+                typeof(RectTransform),
+                typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(parent, false);
+            row.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 30f);
+            HorizontalLayoutGroup layout = row.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = 4f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = true;
+            return row;
+        }
+
+        private static void AddFlexibleLayout(GameObject target)
+        {
+            target.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        }
+
+        private void CreateEmptyRow(Transform parent, string message)
+        {
+            GameObject row = CreateRow(parent, "FriendWorldEmptyRow");
+            Text text = HabitHeroUiFactory.CreateText(
+                row.transform,
+                font,
+                message,
+                14,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                Vector2.zero,
+                Vector2.one);
+            AddFlexibleLayout(text.gameObject);
         }
 
         private GameObject CreateList(

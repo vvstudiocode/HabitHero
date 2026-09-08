@@ -61,6 +61,7 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseChildSocialData>> declineFriendRequest;
         private Func<string, Task<SupabaseChildSocialData>> removeFriend;
         private Func<string, Task<SupabaseChildSocialData>> blockFriend;
+        private Func<string, bool, Task<SupabaseChildSocialData>> toggleFriendWorldCollaboration;
         private Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld;
         private Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat;
         private Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat;
@@ -91,6 +92,10 @@ namespace HabitHero.App
             Func<string, Task<SupabaseChildSocialData>> declineFriendRequest,
             Func<string, Task<SupabaseChildSocialData>> removeFriend,
             Func<string, Task<SupabaseChildSocialData>> blockFriend,
+            Func<string, bool, Task<SupabaseChildSocialData>> toggleFriendWorldCollaboration,
+            Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> placeSharedDecoration,
+            Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildFriendWorldData>> updateSharedDecoration,
+            Func<string, string, long, Task<SupabaseChildFriendWorldData>> removeSharedDecoration,
             Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld,
             Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat,
             Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat,
@@ -134,6 +139,7 @@ namespace HabitHero.App
             this.declineFriendRequest = declineFriendRequest;
             this.removeFriend = removeFriend;
             this.blockFriend = blockFriend;
+            this.toggleFriendWorldCollaboration = toggleFriendWorldCollaboration;
             this.visitFriendWorld = visitFriendWorld;
             this.loadWorldChat = loadWorldChat;
             this.sendWorldChat = sendWorldChat;
@@ -160,12 +166,17 @@ namespace HabitHero.App
             socialView = new HabitHeroChildSocialView(canvasTransform, font);
             socialView.Show(
                 socialData,
+                gameData,
                 refreshSocial,
                 sendFriendRequest,
                 acceptFriendRequest,
                 declineFriendRequest,
                 removeFriend,
                 blockFriend,
+                toggleFriendWorldCollaboration,
+                placeSharedDecoration,
+                updateSharedDecoration,
+                removeSharedDecoration,
                 visitFriendWorld,
                 loadWorldChat,
                 sendWorldChat,
@@ -297,6 +308,7 @@ namespace HabitHero.App
             declineFriendRequest = null;
             removeFriend = null;
             blockFriend = null;
+            toggleFriendWorldCollaboration = null;
             visitFriendWorld = null;
             loadWorldChat = null;
             sendWorldChat = null;

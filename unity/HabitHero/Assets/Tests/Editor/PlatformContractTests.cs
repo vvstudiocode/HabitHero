@@ -933,7 +933,7 @@ namespace HabitHero.Tests
             FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
                 new SupabaseHttpResponse(
                     200,
-                    "{\"world_owner_child_profile_id\":\"friend-child-1\",\"display_name\":\"小安\",\"character_asset_key\":\"character-fox\",\"revision\":7,\"entities\":[{\"id\":\"entity-1\",\"entity_kind\":\"pet\",\"asset_key\":\"pet-cat\",\"position_x\":1.5,\"position_y\":0,\"position_z\":-2,\"rotation_x\":0,\"rotation_y\":45,\"rotation_z\":0,\"scale\":1.2,\"behavior_mode\":\"wander\",\"display_name\":\"奶油\"}]}",
+                    "{\"world_owner_child_profile_id\":\"friend-child-1\",\"display_name\":\"小安\",\"character_asset_key\":\"character-fox\",\"revision\":7,\"can_share_decorations\":true,\"entities\":[{\"id\":\"entity-1\",\"entity_kind\":\"decoration\",\"asset_key\":\"decor-sofa\",\"position_x\":1.5,\"position_y\":0,\"position_z\":-2,\"rotation_x\":0,\"rotation_y\":45,\"rotation_z\":0,\"scale\":1.2,\"behavior_mode\":\"static\",\"placement_scope\":\"shared\",\"can_transform\":true,\"can_remove\":true,\"shared_by_me\":true,\"shared_source_display_name\":\"小明\"}]}",
                     null));
             SupabaseChildFriendWorldClient client = new SupabaseChildFriendWorldClient(
                 new SupabaseRestClient(settings, authClient, dataTransport));
@@ -946,9 +946,14 @@ namespace HabitHero.Tests
             Assert.AreEqual("小安", world.displayName);
             Assert.AreEqual("character-fox", world.characterAssetKey);
             Assert.AreEqual(7, world.revision);
+            Assert.IsTrue(world.canShareDecorations);
             Assert.AreEqual(1, world.entities.Length);
-            Assert.AreEqual("pet-cat", world.entities[0].asset_key);
-            Assert.AreEqual("奶油", world.entities[0].display_name);
+            Assert.AreEqual("decor-sofa", world.entities[0].asset_key);
+            Assert.AreEqual("shared", world.entities[0].placement_scope);
+            Assert.IsTrue(world.entities[0].can_transform);
+            Assert.IsTrue(world.entities[0].can_remove);
+            Assert.IsTrue(world.entities[0].shared_by_me);
+            Assert.AreEqual("小明", world.entities[0].shared_source_display_name);
             Assert.AreEqual(1, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/rpc/get_friend_world_snapshot",
@@ -956,6 +961,93 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "{\"target_child_profile_id\":\"friend-child-1\"}",
                 dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task FriendWorldDecorationMutationsUseServerRpcContracts()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "{}", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"revision\":8,\"entity\":{\"id\":\"shared-1\",\"entity_kind\":\"decoration\",\"asset_key\":\"decor-sofa\",\"behavior_mode\":\"static\",\"placement_scope\":\"shared\",\"can_transform\":true,\"can_remove\":true,\"shared_by_me\":true}}",
+                    null),
+                new SupabaseHttpResponse(200, "{\"revision\":9}", null),
+                new SupabaseHttpResponse(200, "{\"revision\":10}", null),
+                new SupabaseHttpResponse(200, "{\"revision\":11}", null));
+            SupabaseChildFriendWorldClient client = new SupabaseChildFriendWorldClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+            SupabaseFriendWorldTransform transform = new SupabaseFriendWorldTransform
+            {
+                x = 1.25f,
+                y = 0f,
+                z = -2.5f,
+                rotationX = 0f,
+                rotationY = 1.57f,
+                rotationZ = 0f,
+                scale = 1.2f,
+            };
+
+            await client.SetDecorationCollaborationAsync(
+                "friend-child-1",
+                "child-2",
+                true,
+                CancellationToken.None);
+            SupabaseFriendWorldMutationResult placed =
+                await client.PlaceSharedDecorationAsync(
+                    "friend-child-1",
+                    "inventory-1",
+                    7,
+                    transform,
+                    CancellationToken.None);
+            await client.UpdateSharedDecorationTransformAsync(
+                "friend-child-1",
+                "shared-1",
+                placed.revision,
+                transform,
+                CancellationToken.None);
+            await client.RemoveSharedDecorationAsync(
+                "friend-child-1",
+                "shared-1",
+                9,
+                CancellationToken.None);
+            await client.CollectSharedDecorationsAsync(
+                "friend-child-1",
+                10,
+                CancellationToken.None);
+
+            Assert.AreEqual(8, placed.revision);
+            Assert.AreEqual(5, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "{\"target_world_owner_child_profile_id\":\"friend-child-1\",\"target_collaborator_child_profile_id\":\"child-2\",\"target_can_collaborate\":true}",
+                dataTransport.Requests[0].Body);
+            StringAssert.Contains(
+                "\"source_inventory_item_id\":\"inventory-1\",\"expected_revision\":7,\"position_x\":1.25,\"position_y\":0,\"position_z\":-2.5",
+                dataTransport.Requests[1].Body);
+            StringAssert.Contains(
+                "\"shared_entity_id\":\"shared-1\",\"expected_revision\":8",
+                dataTransport.Requests[2].Body);
+            Assert.AreEqual(
+                "{\"target_world_owner_child_profile_id\":\"friend-child-1\",\"shared_entity_id\":\"shared-1\",\"expected_revision\":9}",
+                dataTransport.Requests[3].Body);
+            Assert.AreEqual(
+                "{\"target_world_owner_child_profile_id\":\"friend-child-1\",\"expected_revision\":10}",
+                dataTransport.Requests[4].Body);
         }
 
         [Test]
