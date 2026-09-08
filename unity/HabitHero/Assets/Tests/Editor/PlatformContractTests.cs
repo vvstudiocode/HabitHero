@@ -934,6 +934,63 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentSessionLoadsAnExplicitChildScopeWithoutUsingChildIdentity()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"parent-access\",\"refresh_token\":\"parent-refresh\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":18}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"todo\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildHomeSnapshot snapshot = await client.LoadForParentAsync(
+                "family-1",
+                "child-1",
+                CancellationToken.None);
+
+            Assert.AreEqual("family-1", snapshot.familyId);
+            Assert.AreEqual("child-1", snapshot.child.id);
+            Assert.AreEqual(18, snapshot.child.points_balance);
+            Assert.AreEqual(1, snapshot.tasks.Length);
+            Assert.AreEqual(8, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_profiles?select=*&family_id=eq.family-1&id=eq.child-1",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/ensure_daily_adventure_occurrences",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[1].Body);
+        }
+
+        [Test]
         public async Task FriendWorldClientLoadsTheServerProjectionThroughRpc()
         {
             SupabaseClientSettings settings = CreateSettings();
