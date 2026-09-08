@@ -48,6 +48,66 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void SafeAreaMappingKeepsFullScreenContentInsideTheUsableViewport()
+        {
+            Vector2 mappedMin;
+            Vector2 mappedMax;
+
+            HabitHeroSafeArea.MapAnchorsToSafeArea(
+                new Rect(0f, 120f, 1080f, 1680f),
+                new Vector2(1080f, 1920f),
+                Vector2.zero,
+                Vector2.one,
+                out mappedMin,
+                out mappedMax);
+
+            Assert.That(mappedMin.x, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(mappedMin.y, Is.EqualTo(0.0625f).Within(0.0001f));
+            Assert.That(mappedMax.x, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(mappedMax.y, Is.EqualTo(0.9375f).Within(0.0001f));
+        }
+
+        [Test]
+        public void SafeAreaMappingPreservesCenteredPanelAnchors()
+        {
+            Vector2 mappedMin;
+            Vector2 mappedMax;
+
+            HabitHeroSafeArea.MapAnchorsToSafeArea(
+                new Rect(0f, 120f, 1080f, 1680f),
+                new Vector2(1080f, 1920f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                out mappedMin,
+                out mappedMax);
+
+            Assert.That(mappedMin.x, Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(mappedMin.y, Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(mappedMax.x, Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(mappedMax.y, Is.EqualTo(0.5f).Within(0.0001f));
+        }
+
+        [Test]
+        public void SafeAreaMappingReturnsOriginalAnchorsForInvalidScreenSize()
+        {
+            Vector2 originalMin = new Vector2(0.2f, 0.3f);
+            Vector2 originalMax = new Vector2(0.8f, 0.7f);
+            Vector2 mappedMin;
+            Vector2 mappedMax;
+
+            HabitHeroSafeArea.MapAnchorsToSafeArea(
+                new Rect(0f, 0f, 0f, 0f),
+                Vector2.zero,
+                originalMin,
+                originalMax,
+                out mappedMin,
+                out mappedMax);
+
+            Assert.AreEqual(originalMin, mappedMin);
+            Assert.AreEqual(originalMax, mappedMax);
+        }
+
+        [Test]
         public void GameAssetCatalogResolvesOnlyAllowListedPublicModels()
         {
             string modelUrl;

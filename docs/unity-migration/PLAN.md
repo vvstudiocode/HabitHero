@@ -81,6 +81,8 @@ Partially completed locally:
 - Local C# smoke test: `npm run test:unity-platform`.
 - Unity Editor contract test: `npm run test:unity-editmode`.
 - Unity PlayMode Bootstrap smoke test: `npm run test:unity-playmode`.
+- Unity top-level UI anchors now map into `Screen.safeArea`; the mapping is
+  covered by the EditMode contract tests while device visual evidence remains.
 - Supabase PostgREST table reads and server-authoritative adventure completion
   RPC payloads with idempotency keys.
 - Child task completion queue with duplicate protection, offline persistence,
@@ -230,8 +232,9 @@ Partially completed locally:
 Remaining migration gates:
 
 - Install the Unity iOS and Android modules, then verify native builds, secure
-  session storage, password recovery/deep links, safe areas, push tokens,
-  notification taps, background audio, and production identifiers on devices.
+  session storage, password recovery/deep links, device safe-area rendering,
+  push tokens, notification taps, background audio, and production identifiers
+  on devices.
 - Verify two-account Realtime, friend-world/co-op reconnect, and offline
   recovery behavior on real devices.
 - Capture mobile visual/performance evidence for authored scenes, pets,
@@ -314,7 +317,7 @@ Current local verification:
   in Web dashboard/world/CSS hotspots; no unrelated Web restructuring was done.
 - Unity platform contract smoke test passed.
 - Unity EditMode `PlatformContractTests` passed, including all current parent
-  Supabase contract checks (`116` tests in the latest run).
+  Supabase contract checks and safe-area mapping (`119` tests in the latest run).
 - Unity PlayMode `BootstrapPlayModeTests` passed: the login shell loaded with
   no runtime errors in the headless Unity Editor run.
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.

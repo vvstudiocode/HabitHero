@@ -17,7 +17,8 @@ namespace HabitHero.App
                 typeof(RectTransform),
                 typeof(Canvas),
                 typeof(CanvasScaler),
-                typeof(GraphicRaycaster));
+                typeof(GraphicRaycaster),
+                typeof(HabitHeroSafeArea));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 10;

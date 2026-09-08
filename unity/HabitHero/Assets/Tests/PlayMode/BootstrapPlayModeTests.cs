@@ -35,6 +35,7 @@ namespace HabitHero.Tests
             try
             {
                 bool hasBootstrap = false;
+                bool hasSafeArea = false;
                 foreach (MonoBehaviour component in Object.FindObjectsByType<MonoBehaviour>(
                     FindObjectsInactive.Include,
                     FindObjectsSortMode.None))
@@ -43,11 +44,17 @@ namespace HabitHero.Tests
                         "HabitHero.App.HabitHeroBootstrap")
                     {
                         hasBootstrap = true;
-                        break;
+                    }
+
+                    if (component != null && component.GetType().FullName ==
+                        "HabitHero.App.HabitHeroSafeArea")
+                    {
+                        hasSafeArea = true;
                     }
                 }
 
                 Assert.IsTrue(hasBootstrap, "Bootstrap component was not created.");
+                Assert.IsTrue(hasSafeArea, "Safe-area component was not created.");
 
                 GameObject canvasObject = GameObject.Find("HabitHeroCanvas");
                 Assert.IsNotNull(canvasObject);

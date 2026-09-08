@@ -44,6 +44,10 @@ authentication callback, and request contracts. With Unity installed locally,
 `npm run test:unity-playmode` runs a headless Bootstrap smoke test that loads
 the login shell, verifies the Canvas/EventSystem/title, and fails on runtime
 errors without requiring a real account or writing to Supabase.
+The Canvas also remaps top-level UI anchors into `Screen.safeArea` when a
+device has a notch or rounded corner; the edge-to-edge background stays
+outside that content inset. The mapping is covered by the Unity EditMode
+contract tests, while device-specific visual evidence remains required.
 The first Bootstrap scene and UGUI login shell now pass the Editor compile and
 scene-entrypoint contract. Device builds now select the native iOS Keychain or
 Android Keystore session plugin by default; the Editor and non-mobile fallback
