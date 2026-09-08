@@ -85,6 +85,9 @@ namespace HabitHero.App
                             tone,
                             revisionNote,
                             cancellationToken),
+                    (taskId) => RevokeTaskApprovalAsync(
+                        taskId,
+                        cancellationToken),
                     (task, name, points, category) => ConfirmChildGoalAsync(
                         task,
                         name,
@@ -237,6 +240,23 @@ namespace HabitHero.App
                     correction,
                     tone,
                     revisionNote,
+                    cancellationToken);
+            if (result.RefreshedSnapshot != null && view != null)
+            {
+                view.ApplySnapshot(result.RefreshedSnapshot);
+            }
+
+            return result;
+        }
+
+        private async Task<SupabaseParentTaskApprovalReversalResult>
+            RevokeTaskApprovalAsync(
+                string taskId,
+                CancellationToken cancellationToken)
+        {
+            SupabaseParentTaskApprovalReversalResult result =
+                await client.RevokeTaskApprovalAndRefreshAsync(
+                    taskId,
                     cancellationToken);
             if (result.RefreshedSnapshot != null && view != null)
             {

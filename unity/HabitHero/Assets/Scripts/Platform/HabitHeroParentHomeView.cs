@@ -28,6 +28,7 @@ namespace HabitHero.App
         private HabitHeroParentCoopAdventureView coopAdventureView;
         private HabitHeroParentGoalReviewView goalReviewView;
         private HabitHeroParentGamePriceView gamePriceView;
+        private HabitHeroParentApprovalReversalView approvalReversalView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -49,8 +50,11 @@ namespace HabitHero.App
             string,
             string,
             string,
+                string,
+                Task<SupabaseParentTaskReviewResult>> reviewTask;
+        private Func<
             string,
-            Task<SupabaseParentTaskReviewResult>> reviewTask;
+            Task<SupabaseParentTaskApprovalReversalResult>> revokeTaskApproval;
         private Func<
             SupabaseChildTaskRecord,
             string,
@@ -155,6 +159,9 @@ namespace HabitHero.App
                 string,
                 Task<SupabaseParentTaskReviewResult>> reviewTask,
             Func<
+                string,
+                Task<SupabaseParentTaskApprovalReversalResult>> revokeTaskApproval,
+            Func<
                 SupabaseChildTaskRecord,
                 string,
                 int,
@@ -235,6 +242,7 @@ namespace HabitHero.App
             Dispose();
             latestSnapshot = snapshot;
             this.reviewTask = reviewTask;
+            this.revokeTaskApproval = revokeTaskApproval;
             this.confirmChildGoal = confirmChildGoal;
             this.returnChildGoal = returnChildGoal;
             this.approveWishlist = approveWishlist;
@@ -427,6 +435,7 @@ namespace HabitHero.App
         public void Dispose()
         {
             reviewTask = null;
+            revokeTaskApproval = null;
             confirmChildGoal = null;
             returnChildGoal = null;
             approveWishlist = null;
@@ -465,6 +474,7 @@ namespace HabitHero.App
             statusText = null;
             CloseReviewPanel();
             CloseGoalReviewPanel();
+            CloseApprovalReversalPanel();
             CloseGamePricePanel();
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
@@ -547,7 +557,8 @@ namespace HabitHero.App
             {
                 if (task == null
                     || (!HabitHeroParentGoalReviewEligibility.NeedsReview(task)
-                        && task.status != "pending")
+                        && task.status != "pending"
+                        && task.status != "completed")
                     || visibleTaskCount >= 8)
                 {
                     continue;
@@ -571,7 +582,7 @@ namespace HabitHero.App
                 HabitHeroUiFactory.CreateText(
                     taskListObject.transform,
                     font,
-                    "目前沒有等待家長確認的任務。",
+                    "目前沒有待確認或可撤銷的任務。",
                     22,
                     TextAnchor.MiddleCenter,
                     new Color(0.84f, 0.89f, 0.96f, 1f),
@@ -1272,6 +1283,11 @@ namespace HabitHero.App
                 OpenGoalReviewPanel(task);
                 return;
             }
+            if (task != null && task.status == "completed")
+            {
+                OpenApprovalReversalPanel(task);
+                return;
+            }
             if (task == null || reviewTask == null) return;
             CloseGoalReviewPanel();
             CloseReviewPanel();
@@ -1406,6 +1422,29 @@ namespace HabitHero.App
                 CloseGoalReviewPanel);
         }
 
+        private void OpenApprovalReversalPanel(SupabaseChildTaskRecord task)
+        {
+            if (task == null || revokeTaskApproval == null)
+            {
+                SetStatus("撤銷核准尚未連線。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseGoalReviewPanel();
+            CloseApprovalReversalPanel();
+            approvalReversalView = new HabitHeroParentApprovalReversalView(
+                canvasTransform,
+                font);
+            approvalReversalView.Show(
+                task,
+                GetChildName(task.child_profile_id),
+                revokeTaskApproval,
+                ApplySnapshot,
+                SetStatus,
+                CloseApprovalReversalPanel);
+        }
+
         private async void HandleReviewDecision(bool approved)
         {
             if (activeReviewTask == null || reviewTask == null) return;
@@ -1481,6 +1520,13 @@ namespace HabitHero.App
             if (goalReviewView == null) return;
             goalReviewView.Dispose();
             goalReviewView = null;
+        }
+
+        private void CloseApprovalReversalPanel()
+        {
+            if (approvalReversalView == null) return;
+            approvalReversalView.Dispose();
+            approvalReversalView = null;
         }
 
         private void CloseGamePricePanel()
@@ -1663,6 +1709,7 @@ namespace HabitHero.App
                     ? "待修改目標"
                     : "待確認目標";
             }
+            if (task != null && task.status == "completed") return "已核准（可撤銷）";
             return "待審完成";
         }
 

@@ -2721,6 +2721,50 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentApprovalReversalUsesServerRpcAndParsesRecoveryResult()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"task_id\":\"task-1\",\"points_reversed\":10,\"scroll_reversed\":1,\"message\":\"已撤銷並收回獎勵\"}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseTaskApprovalReversalRecord result =
+                await client.RevokeTaskApprovalAsync(
+                    "task-1",
+                    CancellationToken.None);
+
+            Assert.AreEqual("task-1", result.task_id);
+            Assert.AreEqual(10, result.points_reversed);
+            Assert.AreEqual(1L, result.scroll_reversed);
+            Assert.AreEqual("已撤銷並收回獎勵", result.message);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/revoke_task_approval",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\"}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
         public async Task ParentGoalReviewUsesDedicatedConfirmationAndReturnRpcs()
         {
             SupabaseClientSettings settings = CreateSettings();

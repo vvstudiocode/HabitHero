@@ -54,6 +54,24 @@ namespace HabitHero.Platform
         public string RefreshError { get; set; }
     }
 
+    [Serializable]
+    public sealed class SupabaseTaskApprovalReversalRecord
+    {
+        public string task_id;
+        public int points_reversed;
+        public long scroll_reversed;
+        public string message;
+    }
+
+    public sealed class SupabaseParentTaskApprovalReversalResult
+    {
+        public SupabaseTaskApprovalReversalRecord Reversal { get; set; }
+
+        public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
     public sealed class SupabaseParentTaskCreateInput
     {
         public string childProfileId;
@@ -551,6 +569,40 @@ namespace HabitHero.Platform
             }
 
             return reviewedTask;
+        }
+
+        public async Task<SupabaseTaskApprovalReversalRecord> RevokeTaskApprovalAsync(
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            string normalizedTaskId = taskId == null ? string.Empty : taskId.Trim();
+            if (normalizedTaskId.Length == 0)
+            {
+                throw new SupabaseDataException("任務 ID 不可為空。");
+            }
+
+            string response = await restClient.CallRpcAsync(
+                "revoke_task_approval",
+                "{\"target_task_id\":"
+                    + SupabaseJson.Quote(normalizedTaskId)
+                    + "}",
+                cancellationToken);
+            SupabaseTaskApprovalReversalRecord reversal;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out reversal,
+                    out error)
+                || reversal == null
+                || string.IsNullOrWhiteSpace(reversal.task_id))
+            {
+                throw new SupabaseDataException(
+                    string.IsNullOrWhiteSpace(error)
+                        ? "Supabase 沒有回傳撤銷核准結果。"
+                        : error);
+            }
+
+            return reversal;
         }
 
         public async Task<SupabaseChildTaskRecord> ConfirmChildGoalAsync(
@@ -2260,6 +2312,34 @@ namespace HabitHero.Platform
                     revisionNote,
                     cancellationToken),
             };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        public async Task<SupabaseParentTaskApprovalReversalResult>
+            RevokeTaskApprovalAndRefreshAsync(
+                string taskId,
+                CancellationToken cancellationToken)
+        {
+            SupabaseParentTaskApprovalReversalResult result =
+                new SupabaseParentTaskApprovalReversalResult
+                {
+                    Reversal = await RevokeTaskApprovalAsync(
+                        taskId,
+                        cancellationToken),
+                };
             try
             {
                 result.RefreshedSnapshot = await LoadAsync(cancellationToken);
