@@ -2652,6 +2652,7 @@ namespace HabitHero.Tests
                     200,
                     "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":20}]",
                     null),
+                new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(
                     200,
                     "[{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"pending\"}]",
@@ -2676,6 +2677,7 @@ namespace HabitHero.Tests
                     200,
                     "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":30}]",
                     null),
+                new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(
                     200,
                     "[{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"completed\",\"approved_points\":10}]",
@@ -2708,16 +2710,16 @@ namespace HabitHero.Tests
             Assert.AreEqual("pending", snapshot.tasks[0].status);
             Assert.AreEqual("completed", result.Task.status);
             Assert.AreEqual(30, result.RefreshedSnapshot.children[0].points_balance);
-            Assert.AreEqual(17, dataTransport.Requests.Count);
+            Assert.AreEqual(19, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/family_members?select=*&profile_id=eq.parent-user-1&role=eq.parent",
                 dataTransport.Requests[0].Url);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/rpc/review_task_completion",
-                dataTransport.Requests[8].Url);
+                dataTransport.Requests[9].Url);
             Assert.AreEqual(
                 "{\"target_task_id\":\"task-1\",\"approved\":true,\"approved_points\":10,\"feedback\":\"做得很好\",\"correction\":null,\"tone\":\"encouraging\",\"revision_note\":null}",
-                dataTransport.Requests[8].Body);
+                dataTransport.Requests[9].Body);
         }
 
         [Test]
@@ -2762,6 +2764,225 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "{\"target_task_id\":\"task-1\"}",
                 dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task ParentConsentUsesScopedReadAndServerRpc()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, string.Empty, null)));
+            SupabaseSession session;
+            string sessionError;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out session,
+                    out sessionError),
+                sessionError);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"consent-1\",\"family_id\":\"family-1\",\"parent_profile_id\":\"parent-user-1\",\"consent_type\":\"parental\",\"consent_version\":\"2026-07-23\"}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseParentConsentRecord existing =
+                await client.LoadParentConsentAsync(
+                    "family-1",
+                    "parent-user-1",
+                    CancellationToken.None);
+            SupabaseParentConsentRecord recorded =
+                await client.RecordParentConsentAsync(
+                    "family-1",
+                    "2026-07-23",
+                    CancellationToken.None);
+
+            Assert.IsNull(existing);
+            Assert.AreEqual("consent-1", recorded.id);
+            Assert.AreEqual(2, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/parent_consents?select=*&family_id=eq.family-1&parent_profile_id=eq.parent-user-1&consent_type=eq.parental",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/record_parent_consent",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "{\"target_family_id\":\"family-1\",\"consent_version\":\"2026-07-23\"}",
+                dataTransport.Requests[1].Body);
+        }
+
+        [Test]
+        public async Task ParentGeneralAdventureTitleUsesServerRpc()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, string.Empty, null)));
+            SupabaseSession session;
+            string sessionError;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out session,
+                    out sessionError),
+                sessionError);
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"group-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"title\":\"我的閱讀旅程\",\"status\":\"active\"}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseParentAdventureGroupRecord group =
+                await client.UpdateGeneralAdventureTitleAsync(
+                    "child-1",
+                    " 我的閱讀旅程 ",
+                    CancellationToken.None);
+
+            Assert.AreEqual("group-1", group.id);
+            Assert.AreEqual("我的閱讀旅程", group.title);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/update_general_adventure_title",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"child-1\",\"new_title\":\"我的閱讀旅程\"}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task ParentBatchDailyReviewPreservesSelectionOrder()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, string.Empty, null)));
+            SupabaseSession session;
+            string sessionError;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out session,
+                    out sessionError),
+                sessionError);
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"results\":[],\"failed_task_ids\":[\"task-2\"]}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseParentBatchReviewRpcResult result =
+                await client.BatchReviewDailyAdventuresAsync(
+                    new[] { " task-1 ", "task-2" },
+                    CancellationToken.None);
+
+            Assert.AreEqual(1, result.failed_task_ids.Length);
+            Assert.AreEqual("task-2", result.failed_task_ids[0]);
+            Assert.AreEqual(
+                "{\"target_task_ids\":[\"task-1\",\"task-2\"]}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task ParentAccountDeletionUsesAuthenticatedEdgeFunction()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, string.Empty, null)));
+            SupabaseSession session;
+            string sessionError;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out session,
+                    out sessionError),
+                sessionError);
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "{\"success\":true}", null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            await client.DeleteParentAccountAsync(CancellationToken.None);
+
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/functions/v1/manage-account",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual("{\"action\":\"delete\"}", dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task ParentChildDisplayNameUpdatesBothProfileBoundaries()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, string.Empty, null)));
+            SupabaseSession session;
+            string sessionError;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out session,
+                    out sessionError),
+                sessionError);
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\"}]",
+                    null),
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildProfileRecord child =
+                await client.UpdateChildDisplayNameAsync(
+                    "family-1",
+                    "child-1",
+                    " 小新 ",
+                    CancellationToken.None);
+
+            Assert.AreEqual("小新", child.display_name);
+            Assert.AreEqual(3, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_profiles?select=*&family_id=eq.family-1&id=eq.child-1",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"display_name\":\"小新\"}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/profiles?id=eq.child-user-1",
+                dataTransport.Requests[2].Url);
         }
 
         [Test]
@@ -2861,11 +3082,13 @@ namespace HabitHero.Tests
                 new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(204, string.Empty, null),
                 new SupabaseHttpResponse(
                     200,
                     "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"parent-user-1\",\"role\":\"parent\"}]",
                     null),
+                new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null),
@@ -2896,7 +3119,7 @@ namespace HabitHero.Tests
             Assert.AreEqual("reward-1", rewardResult.Reward.id);
             Assert.IsNull(rewardResult.RefreshError);
             Assert.IsNull(ticketResult.RefreshError);
-            Assert.AreEqual(18, dataTransport.Requests.Count);
+            Assert.AreEqual(20, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/rpc/approve_wishlist_item",
                 dataTransport.Requests[0].Url);
@@ -2905,8 +3128,8 @@ namespace HabitHero.Tests
                 dataTransport.Requests[0].Body);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/reward_redemptions?id=eq.ticket-1",
-                dataTransport.Requests[9].Url);
-            StringAssert.Contains("\"status\":\"fulfilled\"", dataTransport.Requests[9].Body);
+                dataTransport.Requests[10].Url);
+            StringAssert.Contains("\"status\":\"fulfilled\"", dataTransport.Requests[10].Body);
         }
 
         [Test]
@@ -2941,6 +3164,7 @@ namespace HabitHero.Tests
                     200,
                     "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"display_name\":\"小明\"}]",
                     null),
+                new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(
                     200,
                     "[{\"id\":\"task-2\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"todo\",\"is_daily\":true}]",
@@ -2970,7 +3194,7 @@ namespace HabitHero.Tests
             Assert.IsTrue(result.Created);
             Assert.IsNull(result.RefreshError);
             Assert.AreEqual("整理書包", result.RefreshedSnapshot.tasks[0].name);
-            Assert.AreEqual(9, dataTransport.Requests.Count);
+            Assert.AreEqual(10, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/tasks",
                 dataTransport.Requests[0].Url);

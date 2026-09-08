@@ -29,17 +29,17 @@ authorization into client-only rules.
 
 | Area | Current behavior to preserve | Unity acceptance gate | Status |
 | --- | --- | --- | --- |
-| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started (child account management) |
-| Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Foundation started (read-only preview plus guarded interactive parent-child mode) |
-| Parent workflow | Task creation, task edit/delete, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task CRUD, adventure/schedule creation, review, reward actions) |
-| Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
-| Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
-| Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
+| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Unity contracts and parent recovery/account controls implemented; native/deep-link/device verification pending |
+| Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Unity parent/child hydration, preview, guarded child mode, naming and account controls implemented; two-account/device verification pending |
+| Parent workflow | Task creation, task edit/delete, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Unity task/template/adventure scheduling, review/batch review, general-adventure title management, rewards, ledger, points, child accounts, settings, legal and growth views implemented; device parity pending |
+| Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Unity core loop, timer, completion, offline queue and refresh contracts implemented; device/reconnect evidence pending |
+| Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Unity child wallet/redeem/wishlist plus parent reward, approval, ledger and point controls implemented; device evidence pending |
+| Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Unity timer, completion, abandonment, daily scheduling, review and batch-review contracts implemented; device/reconnect evidence pending |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads, server-gated source rules, child world-entity reads/mutations, and allowlisted authored modules for all five scenes; full visual parity pending) |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Foundation started (loaded GLB clip contract and child Idle/Walk/facing adapter; pet follow/roam and device visual evidence pending) |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating, and world-entity place/update/remove/collect RPCs; authored 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
-| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Foundation started (shared preference/device binding, iOS APNs provider, context-aware registration, and Unity settings UI; Android/taps/device verification pending) |
+| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Shared preference/device binding, iOS APNs provider, context-aware registration and Unity settings UI implemented; Android/taps/device verification pending |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
 | Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Not started |
 
@@ -223,22 +223,18 @@ Partially completed locally:
   sign-out or scope changes. Android push token/delivery, notification taps,
   and real-device verification remain pending.
 
-Still required:
+Remaining migration gates:
 
-- Parent adventure scheduling and general-adventure management parity with the
-  existing Web client.
-- Device build and recovery verification for the iOS Keychain and Android
-  Keystore session plugins.
-- Device build and callback verification for the Unity deep-link replacement;
-  the runtime handler, token-fragment recovery, and PKCE exchange contract are
-  now in place. A code-only callback is rejected because Supabase requires the
-  original PKCE verifier.
-- Unity co-op flows, plus two-account/device reconnect verification. The current
-  live preview intentionally uses bounded placeholder avatars until the
-  character asset contract and visual/device evidence are approved.
-- Native Android push token/delivery, notification tap routing, and iOS/Android
-  device verification; the iOS token/capability and Unity preference UI
-  foundations are now in place.
+- Install the Unity iOS and Android modules, then verify native builds, secure
+  session storage, password recovery/deep links, safe areas, push tokens,
+  notification taps, background audio, and production identifiers on devices.
+- Verify two-account Realtime, friend-world/co-op reconnect, and offline
+  recovery behavior on real devices.
+- Capture mobile visual/performance evidence for authored scenes, pets,
+  collisions, camera, touch controls, and remote avatars.
+- Run TestFlight and Android closed testing as an update of the existing app,
+  then complete store review preparation. The React/Capacitor client remains
+  the rollback path until those gates pass.
 
 ### Phase 2 — child core loop
 
@@ -253,11 +249,12 @@ useful product loop:
 
 The current Unity slice covers items 1–3, timer transport/UI, the child reward
 wallet, wishlist mutations, the first game-economy shop/backpack loop, parent
-task/reward management, parent task review, parent wishlist approval, parent
+task/reward management, task/adventure scheduling, review and batch review,
+growth/ledger/settings/legal surfaces, parent wishlist approval,
 reward-ticket fulfillment, and the transport part of item 5. Cached snapshots
 for cold-start offline use and post-mutation ledger/wallet refreshes are now
-implemented locally. Production mobile release still requires device
-verification of encrypted storage, deep links, and recovery.
+implemented locally. Production mobile release still requires native modules,
+device verification of encrypted storage, deep links, push, and recovery.
 
 ### Phase 3 — world and game systems
 
@@ -306,13 +303,15 @@ The migration is not complete until all of the following are true:
 
 ## Current verification notes
 
-The repository baseline currently has pre-existing failures unrelated to this
-migration: one of 1151 existing tests fails in the child game panel CSS
-contract, and source-size governance reports existing baseline growth in
-dashboard/world/CSS hotspots. These must be handled as a separate baseline
-repair or evidence task; they are not silently changed as part of the Unity
-port.
+Current local verification:
 
-The local machine has Unity Editor `6000.6.0f1`. Editor compilation and the
-platform contract test suite are verified; Unity scene import, mobile export,
-and device behavior are intentionally not claimed as verified yet.
+- Web tests: `1158` passed across `141` suites; lint and security scan passed.
+- Structure governance still reports `12` pre-existing source-size violations
+  in Web dashboard/world/CSS hotspots; no unrelated Web restructuring was done.
+- Unity platform contract smoke test passed.
+- Unity EditMode `PlatformContractTests` passed, including all current parent
+  Supabase contract checks (`116` tests in the latest run).
+- Unity WebGL build passed with Unity Editor `6000.6.0f1`.
+- Native iOS/Android modules are not installed on this machine, so native
+  export, device behavior, and store update evidence are intentionally not
+  claimed yet.

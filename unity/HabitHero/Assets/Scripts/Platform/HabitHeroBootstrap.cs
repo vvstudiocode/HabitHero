@@ -24,21 +24,26 @@ namespace HabitHero.App
         private HabitHeroParentHomeCoordinator parentHomeCoordinator;
         private Canvas canvas;
         private GameObject loginPanel;
+        private GameObject forgotPasswordPanel;
         private GameObject recoveryPanel;
         private Font uiFont;
         private InputField accountInput;
         private InputField passwordInput;
+        private InputField forgotPasswordEmailInput;
         private InputField recoveryPasswordInput;
         private InputField recoveryConfirmationInput;
         private Toggle childModeToggle;
         private Button loginButton;
         private Button signOutButton;
+        private Button forgotPasswordButton;
+        private Button forgotPasswordSubmitButton;
         private Button recoverySubmitButton;
         private GameObject parentUnlockPanel;
         private InputField parentUnlockPasswordInput;
         private Button parentUnlockSubmitButton;
         private Text statusText;
         private Text recoveryStatusText;
+        private Text forgotPasswordStatusText;
         private Text parentUnlockStatusText;
         private Text titleText;
         private Text accountLabel;
@@ -102,13 +107,24 @@ namespace HabitHero.App
                 uiFont,
                 config.GameAssetBaseUrl,
                 OpenNotificationSettings);
+            SupabaseParentHomeClient parentHomeClient =
+                new SupabaseParentHomeClient(restClient);
             parentHomeCoordinator = new HabitHeroParentHomeCoordinator(
-                new SupabaseParentHomeClient(restClient),
+                parentHomeClient,
                 new SupabaseChildGameClient(restClient),
                 new SupabaseChildCoopAdventureClient(restClient),
                 canvas.transform,
                 uiFont,
-                OpenNotificationSettings);
+                config.GameAssetBaseUrl,
+                OpenNotificationSettings,
+                (cancellationToken) => DeleteParentAccountAndSignOutAsync(
+                    parentHomeClient,
+                    cancellationToken),
+                (currentPassword, newPassword, cancellationToken) =>
+                    UpdateParentPasswordAsync(
+                        currentPassword,
+                        newPassword,
+                        cancellationToken));
             authClient.AuthStateChanged += HandleAuthStateChanged;
             SetBusy(true);
             SetStatus("正在恢復登入狀態…", false);
@@ -174,6 +190,7 @@ namespace HabitHero.App
             ClearNotificationContext();
 
             CloseRecoveryPanel();
+            CloseForgotPasswordPanel();
             CloseParentUnlockPanel();
 
             if (lifetimeCancellation != null)
@@ -281,6 +298,13 @@ namespace HabitHero.App
                 new Vector2(0.57f, 0.08f),
                 new Vector2(0.9f, 0.17f));
             signOutButton.onClick.AddListener(HandleSignOutClicked);
+            forgotPasswordButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "忘記密碼",
+                new Vector2(0.57f, 0.08f),
+                new Vector2(0.9f, 0.17f));
+            forgotPasswordButton.onClick.AddListener(ShowForgotPasswordPanel);
 
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
@@ -293,6 +317,151 @@ namespace HabitHero.App
                 new Vector2(0.92f, 0.075f));
             HandleChildModeChanged(false);
             SetSignedInControls(false);
+        }
+
+        private void ShowForgotPasswordPanel()
+        {
+            if (canvas == null || authClient == null) return;
+            if (forgotPasswordPanel != null) CloseForgotPasswordPanel();
+            if (loginPanel != null) loginPanel.SetActive(false);
+
+            forgotPasswordPanel = HabitHeroUiFactory.CreatePanel(
+                canvas.transform,
+                HabitHeroUiFactory.PanelColor,
+                "ForgotPasswordPanel");
+            RectTransform panelRect = forgotPasswordPanel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(680f, 520f);
+            panelRect.anchoredPosition = Vector2.zero;
+
+            HabitHeroUiFactory.CreateText(
+                forgotPasswordPanel.transform,
+                uiFont,
+                "忘記家長密碼",
+                42,
+                TextAnchor.MiddleCenter,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.08f, 0.73f),
+                new Vector2(0.92f, 0.93f));
+            HabitHeroUiFactory.CreateText(
+                forgotPasswordPanel.transform,
+                uiFont,
+                "輸入家長 Email，我們會寄送安全的重設連結。",
+                18,
+                TextAnchor.MiddleCenter,
+                new Color(0.74f, 0.81f, 0.9f, 1f),
+                new Vector2(0.08f, 0.62f),
+                new Vector2(0.92f, 0.73f));
+            forgotPasswordEmailInput = HabitHeroUiFactory.CreateInput(
+                forgotPasswordPanel.transform,
+                uiFont,
+                "家長 Email",
+                false,
+                new Vector2(0.1f, 0.45f),
+                new Vector2(0.9f, 0.59f));
+            forgotPasswordEmailInput.contentType = InputField.ContentType.EmailAddress;
+            forgotPasswordEmailInput.lineType = InputField.LineType.SingleLine;
+            forgotPasswordEmailInput.text = accountInput == null
+                ? string.Empty
+                : accountInput.text.Trim();
+            forgotPasswordSubmitButton = HabitHeroUiFactory.CreateButton(
+                forgotPasswordPanel.transform,
+                uiFont,
+                "寄送重設連結",
+                new Vector2(0.1f, 0.25f),
+                new Vector2(0.43f, 0.36f));
+            forgotPasswordSubmitButton.onClick.AddListener(
+                HandleForgotPasswordSubmitClicked);
+            Button backButton = HabitHeroUiFactory.CreateButton(
+                forgotPasswordPanel.transform,
+                uiFont,
+                "返回登入",
+                new Vector2(0.57f, 0.25f),
+                new Vector2(0.9f, 0.36f));
+            backButton.onClick.AddListener(CloseForgotPasswordPanelAndShowLogin);
+            forgotPasswordStatusText = HabitHeroUiFactory.CreateText(
+                forgotPasswordPanel.transform,
+                uiFont,
+                "為保護帳號，即使 Email 不存在也會顯示相同提示。",
+                16,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.08f),
+                new Vector2(0.92f, 0.2f));
+            SetForgotPasswordStatus(
+                "請確認輸入的是家長帳號 Email。",
+                false);
+            SetBusy(false);
+        }
+
+        private async void HandleForgotPasswordSubmitClicked()
+        {
+            if (authClient == null || isBusy) return;
+            string email = forgotPasswordEmailInput == null
+                ? string.Empty
+                : forgotPasswordEmailInput.text.Trim();
+            if (email.Length < 3 || !email.Contains("@"))
+            {
+                SetForgotPasswordStatus("請輸入有效的家長 Email。", true);
+                return;
+            }
+
+            SetBusy(true);
+            SetForgotPasswordStatus("正在寄送重設連結…", false);
+            try
+            {
+                await authClient.RequestPasswordResetAsync(
+                    email,
+                    AuthCallbackParser.AppUrlScheme + "://reset-password",
+                    lifetimeCancellation.Token);
+                SetForgotPasswordStatus(
+                    "如果這個 Email 有註冊習慣冒險島，重設連結已寄出，請檢查信箱。",
+                    false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Scene shutdown cancels the request.
+            }
+            catch (Exception exception)
+            {
+                SetForgotPasswordStatus("寄送重設連結失敗：" + exception.Message, true);
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private void CloseForgotPasswordPanelAndShowLogin()
+        {
+            CloseForgotPasswordPanel();
+            if (loginPanel != null) loginPanel.SetActive(true);
+            SetSignedInControls(false);
+            SetStatus("請輸入帳號與密碼登入。", false);
+        }
+
+        private void CloseForgotPasswordPanel()
+        {
+            if (forgotPasswordPanel != null)
+            {
+                UnityEngine.Object.Destroy(forgotPasswordPanel);
+                forgotPasswordPanel = null;
+            }
+
+            forgotPasswordEmailInput = null;
+            forgotPasswordSubmitButton = null;
+            forgotPasswordStatusText = null;
+        }
+
+        private void SetForgotPasswordStatus(string message, bool isError)
+        {
+            if (forgotPasswordStatusText == null) return;
+            forgotPasswordStatusText.text = message;
+            forgotPasswordStatusText.color = isError
+                ? new Color(1f, 0.52f, 0.52f, 1f)
+                : new Color(0.84f, 0.89f, 0.96f, 1f);
         }
 
         private void HandleDeepLinkActivated(string rawUrl)
@@ -768,6 +937,10 @@ namespace HabitHero.App
             if (childModeToggle != null) childModeToggle.interactable = !signedIn;
             if (loginButton != null) loginButton.gameObject.SetActive(!signedIn);
             if (signOutButton != null) signOutButton.gameObject.SetActive(signedIn);
+            if (forgotPasswordButton != null)
+            {
+                forgotPasswordButton.gameObject.SetActive(!signedIn);
+            }
             if (titleText != null) titleText.text = signedIn ? "歡迎回來" : "習慣冒險島";
         }
 
@@ -776,6 +949,11 @@ namespace HabitHero.App
             isBusy = busy;
             if (loginButton != null) loginButton.interactable = !busy;
             if (signOutButton != null) signOutButton.interactable = !busy;
+            if (forgotPasswordButton != null) forgotPasswordButton.interactable = !busy;
+            if (forgotPasswordSubmitButton != null)
+            {
+                forgotPasswordSubmitButton.interactable = !busy;
+            }
             if (accountInput != null && authClient != null && authClient.CurrentSession == null)
             {
                 accountInput.interactable = !busy;
@@ -1069,6 +1247,44 @@ namespace HabitHero.App
             }
 
             return shown;
+        }
+
+        private async Task DeleteParentAccountAndSignOutAsync(
+            SupabaseParentHomeClient parentHomeClient,
+            CancellationToken cancellationToken)
+        {
+            await parentHomeClient.DeleteParentAccountAsync(cancellationToken);
+            try
+            {
+                await authClient.SignOutAsync(cancellationToken);
+            }
+            catch (SupabaseAuthException)
+            {
+                // The account is already deleted; SignOutAsync still clears the local session.
+            }
+        }
+
+        private async Task UpdateParentPasswordAsync(
+            string currentPassword,
+            string newPassword,
+            CancellationToken cancellationToken)
+        {
+            SupabaseSession session = authClient.CurrentSession;
+            string email = session == null || session.User == null
+                ? string.Empty
+                : session.User.Email;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new SupabaseAuthException("目前家長登入狀態已失效，請重新登入。");
+            }
+
+            await authClient.SignInWithPasswordAsync(
+                email,
+                currentPassword,
+                cancellationToken);
+            await authClient.UpdatePasswordAsync(
+                newPassword,
+                cancellationToken);
         }
 
         private void OpenNotificationSettings()

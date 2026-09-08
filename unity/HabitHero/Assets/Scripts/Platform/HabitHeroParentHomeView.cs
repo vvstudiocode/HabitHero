@@ -20,6 +20,7 @@ namespace HabitHero.App
         private HabitHeroParentTaskManagementView taskManagementView;
         private HabitHeroParentTaskTemplateView taskTemplateView;
         private HabitHeroParentGeneralAdventureCreateView generalAdventureCreateView;
+        private HabitHeroParentGeneralAdventureManagementView generalAdventureManagementView;
         private HabitHeroParentAdventureScheduleView adventureScheduleView;
         private HabitHeroParentRewardManagementView rewardManagementView;
         private HabitHeroParentPointAdjustmentView pointAdjustmentView;
@@ -29,6 +30,13 @@ namespace HabitHero.App
         private HabitHeroParentGoalReviewView goalReviewView;
         private HabitHeroParentGamePriceView gamePriceView;
         private HabitHeroParentApprovalReversalView approvalReversalView;
+        private HabitHeroParentSettingsView settingsView;
+        private HabitHeroParentBatchReviewView batchReviewView;
+        private HabitHeroParentLedgerView ledgerView;
+        private HabitHeroParentGrowthView growthView;
+        private HabitHeroParentLegalDocumentView legalDocumentView;
+        private readonly string gameAssetBaseUrl;
+        private HabitHeroParentBackgroundMusicPlayer parentBackgroundMusicPlayer;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -52,6 +60,8 @@ namespace HabitHero.App
             string,
                 string,
                 Task<SupabaseParentTaskReviewResult>> reviewTask;
+        private Func<string[], Task<SupabaseParentBatchReviewResult>>
+            batchReviewDailyAdventures;
         private Func<
             string,
             Task<SupabaseParentTaskApprovalReversalResult>> revokeTaskApproval;
@@ -92,6 +102,10 @@ namespace HabitHero.App
             SupabaseParentGeneralAdventureCreateInput,
             Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure;
         private Func<
+            string,
+            string,
+            Task<SupabaseParentAdventureTitleMutationResult>> updateGeneralAdventureTitle;
+        private Func<
             Task<SupabaseParentAdventureScheduleRecord[]>> loadAdventureSchedules;
         private Func<
             SupabaseParentAdventureScheduleCreateInput,
@@ -122,6 +136,10 @@ namespace HabitHero.App
             Task<SupabaseParentChildAccountMutationResult>> resetChildPassword;
         private Func<
             string,
+            string,
+            Task<SupabaseParentChildAccountMutationResult>> updateChildName;
+        private Func<
+            string,
             Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount;
         private Func<Task<SupabaseChildGameData>> loadGameStore;
         private Func<string, int, Task<SupabaseChildGameData>> setGamePrice;
@@ -136,15 +154,26 @@ namespace HabitHero.App
             string,
             SupabaseCoopReviewInput,
             Task<SupabaseCoopMutationResult>> reviewCoopCompletion;
+        private Func<
+            string,
+            Task<SupabaseParentConsentRecord>> recordParentConsent;
+        private Func<string, string, Task> updateParentPassword;
+        private Func<Task> deleteParentAccount;
         private Func<string, Task<bool>> enterChildMode;
         private Action onOpenNotificationSettings;
 
-        public HabitHeroParentHomeView(Transform canvasTransform, Font font)
+        public HabitHeroParentHomeView(
+            Transform canvasTransform,
+            Font font,
+            string gameAssetBaseUrl = null)
         {
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.canvasTransform = canvasTransform;
             this.font = font;
+            this.gameAssetBaseUrl = gameAssetBaseUrl == null
+                ? string.Empty
+                : gameAssetBaseUrl.Trim();
         }
 
         public void Show(
@@ -158,6 +187,7 @@ namespace HabitHero.App
                 string,
                 string,
                 Task<SupabaseParentTaskReviewResult>> reviewTask,
+            Func<string[], Task<SupabaseParentBatchReviewResult>> batchReviewDailyAdventures,
             Func<
                 string,
                 Task<SupabaseParentTaskApprovalReversalResult>> revokeTaskApproval,
@@ -197,6 +227,10 @@ namespace HabitHero.App
             Func<
                 SupabaseParentGeneralAdventureCreateInput,
                 Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure,
+            Func<
+                string,
+                string,
+                Task<SupabaseParentAdventureTitleMutationResult>> updateGeneralAdventureTitle,
             Func<Task<SupabaseParentAdventureScheduleRecord[]>> loadAdventureSchedules,
             Func<SupabaseParentAdventureScheduleCreateInput, Task<string[]>> createAdventureSchedule,
             Func<
@@ -223,6 +257,10 @@ namespace HabitHero.App
                 Task<SupabaseParentChildAccountMutationResult>> resetChildPassword,
             Func<
                 string,
+                string,
+                Task<SupabaseParentChildAccountMutationResult>> updateChildName,
+            Func<
+                string,
                 Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount,
             Func<Task<SupabaseChildGameData>> loadGameStore,
             Func<string, int, Task<SupabaseChildGameData>> setGamePrice,
@@ -233,6 +271,9 @@ namespace HabitHero.App
                 string,
                 SupabaseCoopReviewInput,
                 Task<SupabaseCoopMutationResult>> reviewCoopCompletion,
+            Func<string, Task<SupabaseParentConsentRecord>> recordParentConsent,
+            Func<string, string, Task> updateParentPassword,
+            Func<Task> deleteParentAccount,
             Func<string, Task<bool>> enterChildMode,
             Action onSignOut,
             Action onOpenNotificationSettings)
@@ -242,6 +283,7 @@ namespace HabitHero.App
             Dispose();
             latestSnapshot = snapshot;
             this.reviewTask = reviewTask;
+            this.batchReviewDailyAdventures = batchReviewDailyAdventures;
             this.revokeTaskApproval = revokeTaskApproval;
             this.confirmChildGoal = confirmChildGoal;
             this.returnChildGoal = returnChildGoal;
@@ -254,6 +296,7 @@ namespace HabitHero.App
             this.updateTaskTemplate = updateTaskTemplate;
             this.deleteTaskTemplate = deleteTaskTemplate;
             this.createGeneralAdventure = createGeneralAdventure;
+            this.updateGeneralAdventureTitle = updateGeneralAdventureTitle;
             this.loadAdventureSchedules = loadAdventureSchedules;
             this.createAdventureSchedule = createAdventureSchedule;
             this.updateAdventureSchedule = updateAdventureSchedule;
@@ -264,6 +307,7 @@ namespace HabitHero.App
             this.adjustPoints = adjustPoints;
             this.createChildAccount = createChildAccount;
             this.resetChildPassword = resetChildPassword;
+            this.updateChildName = updateChildName;
             this.deleteChildAccount = deleteChildAccount;
             this.loadGameStore = loadGameStore;
             this.setGamePrice = setGamePrice;
@@ -271,6 +315,9 @@ namespace HabitHero.App
             this.listCoopAdventures = listCoopAdventures;
             this.loadCoopAdventureState = loadCoopAdventureState;
             this.reviewCoopCompletion = reviewCoopCompletion;
+            this.recordParentConsent = recordParentConsent;
+            this.updateParentPassword = updateParentPassword;
+            this.deleteParentAccount = deleteParentAccount;
             this.enterChildMode = enterChildMode;
             this.onOpenNotificationSettings = onOpenNotificationSettings;
             panel = HabitHeroUiFactory.CreatePanel(
@@ -319,10 +366,18 @@ namespace HabitHero.App
                     font,
                     "通知",
                     new Vector2(0.08f, 0.91f),
-                    new Vector2(0.25f, 0.97f));
+                    new Vector2(0.16f, 0.97f));
                 notificationButton.onClick.AddListener(
                     () => onOpenNotificationSettings());
             }
+
+            Button settingsButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "設定",
+                new Vector2(0.17f, 0.91f),
+                new Vector2(0.25f, 0.97f));
+            settingsButton.onClick.AddListener(OpenSettingsPanel);
 
             Button signOutButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
@@ -343,7 +398,7 @@ namespace HabitHero.App
                 font,
                 "任務管理",
                 new Vector2(0.28f, 0.91f),
-                new Vector2(0.49f, 0.97f));
+                new Vector2(0.39f, 0.97f));
             taskManagementButton.onClick.AddListener(OpenTaskManagementPanel);
 
             taskListObject = new GameObject(
@@ -364,6 +419,7 @@ namespace HabitHero.App
             layout.childForceExpandHeight = false;
 
             RenderSnapshot(snapshot);
+            StartParentBackgroundMusic(snapshot.familyId);
             Button createTaskButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
@@ -381,7 +437,7 @@ namespace HabitHero.App
             Button createAdventureButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
-                "建立冒險",
+                "一般冒險",
                 new Vector2(0.65f, 0.63f),
                 new Vector2(0.92f, 0.69f));
             createAdventureButton.onClick.AddListener(OpenGeneralAdventurePanel);
@@ -396,31 +452,48 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "每日排程",
-                new Vector2(0.27f, 0.18f),
-                new Vector2(0.43f, 0.24f));
+                new Vector2(0.24f, 0.18f),
+                new Vector2(0.38f, 0.24f));
             scheduleButton.onClick.AddListener(OpenAdventureSchedulePanel);
             Button childAccountButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "孩子帳號",
                 new Vector2(0.08f, 0.18f),
-                new Vector2(0.25f, 0.24f));
+                new Vector2(0.23f, 0.24f));
             childAccountButton.onClick.AddListener(OpenChildAccountPanel);
             Button coopAdventureButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "合作批改",
-                new Vector2(0.45f, 0.18f),
-                new Vector2(0.61f, 0.24f));
+                new Vector2(0.39f, 0.18f),
+                new Vector2(0.53f, 0.24f));
             coopAdventureButton.onClick.AddListener(OpenCoopAdventurePanel);
             Button gamePriceButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "商店價格",
-                new Vector2(0.63f, 0.18f),
-                new Vector2(0.76f, 0.24f));
+                new Vector2(0.54f, 0.18f),
+                new Vector2(0.66f, 0.24f));
             gamePriceButton.interactable = loadGameStore != null;
             gamePriceButton.onClick.AddListener(OpenGamePricePanel);
+            Button growthButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "成長",
+                new Vector2(0.67f, 0.18f),
+                new Vector2(0.77f, 0.24f));
+            growthButton.interactable = latestSnapshot.children != null
+                && latestSnapshot.children.Length > 0;
+            growthButton.onClick.AddListener(OpenGrowthPanel);
+            Button batchReviewButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "批核",
+                new Vector2(0.4f, 0.91f),
+                new Vector2(0.49f, 0.97f));
+            batchReviewButton.interactable = batchReviewDailyAdventures != null;
+            batchReviewButton.onClick.AddListener(OpenBatchReviewPanel);
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
@@ -435,6 +508,7 @@ namespace HabitHero.App
         public void Dispose()
         {
             reviewTask = null;
+            batchReviewDailyAdventures = null;
             revokeTaskApproval = null;
             confirmChildGoal = null;
             returnChildGoal = null;
@@ -447,6 +521,7 @@ namespace HabitHero.App
             updateTaskTemplate = null;
             deleteTaskTemplate = null;
             createGeneralAdventure = null;
+            updateGeneralAdventureTitle = null;
             loadAdventureSchedules = null;
             createAdventureSchedule = null;
             updateAdventureSchedule = null;
@@ -457,6 +532,7 @@ namespace HabitHero.App
             adjustPoints = null;
             createChildAccount = null;
             resetChildPassword = null;
+            updateChildName = null;
             deleteChildAccount = null;
             loadGameStore = null;
             setGamePrice = null;
@@ -464,6 +540,9 @@ namespace HabitHero.App
             listCoopAdventures = null;
             loadCoopAdventureState = null;
             reviewCoopCompletion = null;
+            recordParentConsent = null;
+            updateParentPassword = null;
+            deleteParentAccount = null;
             enterChildMode = null;
             onOpenNotificationSettings = null;
             latestSnapshot = null;
@@ -475,6 +554,11 @@ namespace HabitHero.App
             CloseReviewPanel();
             CloseGoalReviewPanel();
             CloseApprovalReversalPanel();
+            CloseBatchReviewPanel();
+            CloseLedgerPanel();
+            CloseGrowthPanel();
+            CloseLegalDocumentPanel();
+            CloseSettingsPanel();
             CloseGamePricePanel();
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
@@ -493,6 +577,10 @@ namespace HabitHero.App
                 UnityEngine.Object.Destroy(panel);
                 panel = null;
             }
+            if (parentBackgroundMusicPlayer != null)
+            {
+                parentBackgroundMusicPlayer.Stop();
+            }
         }
 
         public void ApplySnapshot(SupabaseParentHomeSnapshot snapshot)
@@ -508,6 +596,10 @@ namespace HabitHero.App
             {
                 childPreviewView.ApplySnapshot(snapshot);
             }
+            if (generalAdventureManagementView != null)
+            {
+                generalAdventureManagementView.ApplySnapshot(snapshot);
+            }
             if (taskManagementView != null)
             {
                 taskManagementView.ApplySnapshot(snapshot);
@@ -515,6 +607,18 @@ namespace HabitHero.App
             if (taskTemplateView != null)
             {
                 taskTemplateView.ApplySnapshot(snapshot);
+            }
+            if (batchReviewView != null)
+            {
+                batchReviewView.ApplySnapshot(snapshot);
+            }
+            if (ledgerView != null)
+            {
+                ledgerView.ApplySnapshot(snapshot);
+            }
+            if (growthView != null)
+            {
+                growthView.ApplySnapshot(snapshot);
             }
             SetStatus("家庭資料、待審任務與點數已更新。", false);
         }
@@ -630,6 +734,7 @@ namespace HabitHero.App
             }
 
             CloseRewardPanel();
+            CloseLedgerPanel();
             CloseWishlistApprovalPanel();
             rewardPanel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
@@ -667,6 +772,13 @@ namespace HabitHero.App
                 new Vector2(0.08f, 0.84f),
                 new Vector2(0.38f, 0.9f));
             adjustPointsButton.onClick.AddListener(OpenPointAdjustmentPanel);
+            Button ledgerButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "點數紀錄",
+                new Vector2(0.4f, 0.84f),
+                new Vector2(0.6f, 0.9f));
+            ledgerButton.onClick.AddListener(OpenPointLedgerPanel);
             HabitHeroUiFactory.CreateText(
                 card.transform,
                 font,
@@ -863,14 +975,43 @@ namespace HabitHero.App
 
         private void OpenGeneralAdventurePanel()
         {
+            if (latestSnapshot == null
+                || createGeneralAdventure == null
+                || updateGeneralAdventureTitle == null)
+            {
+                SetStatus("一般冒險管理尚未連線。", true);
+                return;
+            }
+
+            CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
+            CloseGeneralAdventureCreatePanel();
+            if (generalAdventureManagementView == null)
+            {
+                generalAdventureManagementView =
+                    new HabitHeroParentGeneralAdventureManagementView(
+                        canvasTransform,
+                        font);
+            }
+
+            generalAdventureManagementView.Show(
+                latestSnapshot,
+                updateGeneralAdventureTitle,
+                ApplySnapshot,
+                SetStatus,
+                OpenGeneralAdventureCreatePanel,
+                CloseGeneralAdventurePanel);
+        }
+
+        private void OpenGeneralAdventureCreatePanel()
+        {
             if (latestSnapshot == null || createGeneralAdventure == null)
             {
                 SetStatus("建立冒險尚未連線。", true);
                 return;
             }
 
-            CloseTaskCreatePanel();
-            CloseTaskManagementPanel();
+            CloseGeneralAdventureManagementPanel();
             if (generalAdventureCreateView == null)
             {
                 generalAdventureCreateView =
@@ -975,11 +1116,86 @@ namespace HabitHero.App
                 ClosePointAdjustmentPanel);
         }
 
+        private void OpenPointLedgerPanel()
+        {
+            if (latestSnapshot == null
+                || latestSnapshot.children == null
+                || latestSnapshot.children.Length == 0)
+            {
+                SetStatus("目前沒有可查看點數紀錄的孩子。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            ClosePointAdjustmentPanel();
+            CloseWishlistApprovalPanel();
+            CloseReviewPanel();
+            CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
+            CloseTaskTemplatePanel();
+            CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
+            CloseRewardManagementPanel();
+            CloseChildAccountPanel();
+            CloseChildPreviewPanel();
+            CloseCoopAdventurePanel();
+            if (ledgerView == null)
+            {
+                ledgerView = new HabitHeroParentLedgerView(canvasTransform, font);
+            }
+
+            ledgerView.Show(
+                latestSnapshot,
+                latestSnapshot.children[0].id,
+                CloseLedgerPanel);
+        }
+
+        private void OpenGrowthPanel()
+        {
+            if (latestSnapshot == null
+                || latestSnapshot.children == null
+                || latestSnapshot.children.Length == 0)
+            {
+                SetStatus("目前沒有可查看成長紀錄的孩子。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseGoalReviewPanel();
+            CloseApprovalReversalPanel();
+            CloseBatchReviewPanel();
+            CloseLedgerPanel();
+            CloseSettingsPanel();
+            CloseGamePricePanel();
+            CloseWishlistApprovalPanel();
+            CloseRewardPanel();
+            CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
+            CloseTaskTemplatePanel();
+            CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            CloseChildPreviewPanel();
+            CloseCoopAdventurePanel();
+            if (growthView == null)
+            {
+                growthView = new HabitHeroParentGrowthView(canvasTransform, font);
+            }
+
+            growthView.Show(
+                latestSnapshot,
+                latestSnapshot.children[0].id,
+                CloseGrowthPanel);
+        }
+
         private void OpenChildAccountPanel()
         {
             if (latestSnapshot == null
                 || createChildAccount == null
                 || resetChildPassword == null
+                || updateChildName == null
                 || deleteChildAccount == null)
             {
                 SetStatus("孩子帳號管理尚未連線。", true);
@@ -998,8 +1214,12 @@ namespace HabitHero.App
 
             childAccountView.Show(
                 latestSnapshot,
+                latestSnapshot.parentConsent != null
+                    && latestSnapshot.parentConsent.consent_version
+                        == HabitHeroLegalVersions.ParentConsent,
                 createChildAccount,
                 resetChildPassword,
+                updateChildName,
                 deleteChildAccount,
                 ApplySnapshot,
                 SetStatus,
@@ -1074,6 +1294,122 @@ namespace HabitHero.App
                 loadCoopAdventureState,
                 reviewCoopCompletion,
                 CloseCoopAdventurePanel);
+        }
+
+        private void OpenSettingsPanel()
+        {
+            if (latestSnapshot == null)
+            {
+                SetStatus("家庭設定尚未載入。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseGoalReviewPanel();
+            CloseApprovalReversalPanel();
+            CloseBatchReviewPanel();
+            CloseGamePricePanel();
+            CloseWishlistApprovalPanel();
+            CloseRewardPanel();
+            CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
+            CloseTaskTemplatePanel();
+            CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            CloseChildPreviewPanel();
+            CloseCoopAdventurePanel();
+            if (settingsView == null)
+            {
+                settingsView = new HabitHeroParentSettingsView(
+                    canvasTransform,
+                    font);
+            }
+
+            settingsView.Show(
+                latestSnapshot,
+                recordParentConsent,
+                updateParentPassword,
+                deleteParentAccount,
+                HabitHeroParentBackgroundMusic.GetEnabled(latestSnapshot.familyId),
+                HandleParentMusicChanged,
+                OpenLegalDocumentPanel,
+                CloseSettingsPanel);
+        }
+
+        private void OpenBatchReviewPanel()
+        {
+            if (latestSnapshot == null || batchReviewDailyAdventures == null)
+            {
+                SetStatus("每日冒險批次核准尚未連線。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseGoalReviewPanel();
+            CloseApprovalReversalPanel();
+            CloseSettingsPanel();
+            CloseGamePricePanel();
+            CloseWishlistApprovalPanel();
+            CloseRewardPanel();
+            CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
+            CloseTaskTemplatePanel();
+            CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            CloseChildPreviewPanel();
+            CloseCoopAdventurePanel();
+            if (batchReviewView == null)
+            {
+                batchReviewView = new HabitHeroParentBatchReviewView(
+                    canvasTransform,
+                    font);
+            }
+
+            batchReviewView.Show(
+                latestSnapshot,
+                batchReviewDailyAdventures,
+                ApplySnapshot,
+                SetStatus,
+                CloseBatchReviewPanel);
+        }
+
+        private void StartParentBackgroundMusic(string familyId)
+        {
+            if (!HabitHeroParentBackgroundMusic.GetEnabled(familyId)) return;
+            if (parentBackgroundMusicPlayer == null)
+            {
+                parentBackgroundMusicPlayer =
+                    new HabitHeroParentBackgroundMusicPlayer(
+                        canvasTransform,
+                        gameAssetBaseUrl);
+            }
+            parentBackgroundMusicPlayer.Start();
+        }
+
+        private void HandleParentMusicChanged(bool enabled)
+        {
+            if (latestSnapshot != null)
+            {
+                HabitHeroParentBackgroundMusic.SetEnabled(
+                    latestSnapshot.familyId,
+                    enabled);
+            }
+
+            if (enabled)
+            {
+                StartParentBackgroundMusic(
+                    latestSnapshot == null ? string.Empty : latestSnapshot.familyId);
+            }
+            else if (parentBackgroundMusicPlayer != null)
+            {
+                parentBackgroundMusicPlayer.Stop();
+            }
         }
 
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
@@ -1584,9 +1920,22 @@ namespace HabitHero.App
 
         private void CloseGeneralAdventurePanel()
         {
+            CloseGeneralAdventureCreatePanel();
+            CloseGeneralAdventureManagementPanel();
+        }
+
+        private void CloseGeneralAdventureCreatePanel()
+        {
             if (generalAdventureCreateView == null) return;
             generalAdventureCreateView.Dispose();
             generalAdventureCreateView = null;
+        }
+
+        private void CloseGeneralAdventureManagementPanel()
+        {
+            if (generalAdventureManagementView == null) return;
+            generalAdventureManagementView.Dispose();
+            generalAdventureManagementView = null;
         }
 
         private void CloseAdventureSchedulePanel()
@@ -1632,6 +1981,54 @@ namespace HabitHero.App
                 coopAdventureView = null;
             }
             SetStatus("已返回家長工作台。", false);
+        }
+
+        private void CloseSettingsPanel()
+        {
+            if (settingsView == null) return;
+            settingsView.Dispose();
+            settingsView = null;
+        }
+
+        private void CloseBatchReviewPanel()
+        {
+            if (batchReviewView == null) return;
+            batchReviewView.Dispose();
+            batchReviewView = null;
+        }
+
+        private void CloseLedgerPanel()
+        {
+            if (ledgerView == null) return;
+            ledgerView.Dispose();
+            ledgerView = null;
+        }
+
+        private void CloseGrowthPanel()
+        {
+            if (growthView == null) return;
+            growthView.Dispose();
+            growthView = null;
+        }
+
+        private void OpenLegalDocumentPanel(string document)
+        {
+            if (string.IsNullOrWhiteSpace(document)) return;
+            if (legalDocumentView == null)
+            {
+                legalDocumentView = new HabitHeroParentLegalDocumentView(
+                    canvasTransform,
+                    font);
+            }
+
+            legalDocumentView.Show(document, CloseLegalDocumentPanel);
+        }
+
+        private void CloseLegalDocumentPanel()
+        {
+            if (legalDocumentView == null) return;
+            legalDocumentView.Dispose();
+            legalDocumentView = null;
         }
 
         private void SetReviewStatus(string message, bool isError)

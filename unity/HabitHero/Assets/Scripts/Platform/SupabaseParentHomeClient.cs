@@ -17,13 +17,38 @@ namespace HabitHero.Platform
     {
         public string familyId;
         public SupabaseFamilyRecord family;
+        public SupabaseParentConsentRecord parentConsent;
         public SupabaseChildProfileRecord[] children;
+        public SupabaseParentAdventureGroupRecord[] adventureGroups;
         public SupabaseParentTaskTemplateRecord[] taskTemplates;
         public SupabaseChildTaskRecord[] tasks;
         public SupabaseChildRewardRecord[] rewards;
         public SupabaseChildWishlistRecord[] wishlist;
         public SupabaseChildTicketRecord[] tickets;
         public SupabaseChildLedgerRecord[] ledger;
+    }
+
+    [Serializable]
+    public sealed class SupabaseParentConsentRecord
+    {
+        public string id;
+        public string family_id;
+        public string parent_profile_id;
+        public string consent_type;
+        public string consent_version;
+        public string consented_at;
+    }
+
+    [Serializable]
+    public sealed class SupabaseParentAdventureGroupRecord
+    {
+        public string id;
+        public string family_id;
+        public string child_profile_id;
+        public string title;
+        public string status;
+        public string created_at;
+        public string updated_at;
     }
 
     [Serializable]
@@ -66,6 +91,31 @@ namespace HabitHero.Platform
     public sealed class SupabaseParentTaskApprovalReversalResult
     {
         public SupabaseTaskApprovalReversalRecord Reversal { get; set; }
+
+        public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
+    [Serializable]
+    public sealed class SupabaseParentBatchReviewEntry
+    {
+        public string task_id;
+        public bool success;
+        public string status;
+        public string error;
+    }
+
+    [Serializable]
+    public sealed class SupabaseParentBatchReviewRpcResult
+    {
+        public SupabaseParentBatchReviewEntry[] results;
+        public string[] failed_task_ids;
+    }
+
+    public sealed class SupabaseParentBatchReviewResult
+    {
+        public string[] FailedTaskIds { get; set; }
 
         public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
 
@@ -242,6 +292,15 @@ namespace HabitHero.Platform
         public string RefreshError { get; set; }
     }
 
+    public sealed class SupabaseParentAdventureTitleMutationResult
+    {
+        public SupabaseParentAdventureGroupRecord Group { get; set; }
+
+        public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
     public sealed class SupabaseParentRewardMutationResult
     {
         public SupabaseChildRewardRecord Reward { get; set; }
@@ -336,7 +395,26 @@ namespace HabitHero.Platform
                     cancellationToken);
             if (members.Length == 0 || string.IsNullOrWhiteSpace(members[0].family_id))
             {
-                throw new SupabaseDataException("此家長帳號尚未加入家庭。");
+                string ensuredFamilyResponse = await restClient.CallRpcAsync(
+                    "ensure_parent_family",
+                    "{}",
+                    cancellationToken);
+                string ensuredFamilyId = ParseRpcString(ensuredFamilyResponse);
+                if (string.IsNullOrWhiteSpace(ensuredFamilyId))
+                {
+                    throw new SupabaseDataException("此家長帳號尚未加入家庭。");
+                }
+
+                members = new[]
+                {
+                    new SupabaseFamilyMemberRecord
+                    {
+                        id = ensuredFamilyId + ":parent",
+                        family_id = ensuredFamilyId,
+                        profile_id = session.User.Id,
+                        role = "parent",
+                    },
+                };
             }
 
             string familyId = members[0].family_id;
@@ -353,6 +431,14 @@ namespace HabitHero.Platform
                     new[] { familyFilter },
                     "*",
                     "display_name.asc",
+                    0,
+                    cancellationToken);
+            Task<SupabaseParentAdventureGroupRecord[]> adventureGroups =
+                restClient.SelectManyAsync<SupabaseParentAdventureGroupRecord>(
+                    "adventure_groups",
+                    new[] { familyFilter },
+                    "*",
+                    "updated_at.desc",
                     0,
                     cancellationToken);
             Task<SupabaseChildTaskRecord[]> tasks =
@@ -396,7 +482,15 @@ namespace HabitHero.Platform
                     100,
                     cancellationToken);
 
-            await Task.WhenAll(family, children, tasks, rewards, wishlist, tickets, ledger);
+            await Task.WhenAll(
+                family,
+                children,
+                adventureGroups,
+                tasks,
+                rewards,
+                wishlist,
+                tickets,
+                ledger);
             return new SupabaseParentHomeSnapshot
             {
                 familyId = familyId,
@@ -406,6 +500,7 @@ namespace HabitHero.Platform
                     name = "我的家庭",
                 },
                 children = children.Result,
+                adventureGroups = adventureGroups.Result,
                 tasks = tasks.Result,
                 rewards = rewards.Result,
                 wishlist = wishlist.Result,
@@ -426,6 +521,153 @@ namespace HabitHero.Platform
                 "sort_order.asc",
                 0,
                 cancellationToken);
+        }
+
+        public async Task<SupabaseParentConsentRecord> LoadParentConsentAsync(
+            string familyId,
+            string parentProfileId,
+            CancellationToken cancellationToken)
+        {
+            ValidateFamilyId(familyId);
+            if (string.IsNullOrWhiteSpace(parentProfileId))
+            {
+                throw new SupabaseDataException("家長帳號 ID 不可為空。");
+            }
+
+            return await restClient.SelectSingleAsync<SupabaseParentConsentRecord>(
+                "parent_consents",
+                new[]
+                {
+                    new SupabaseRestFilter("family_id", "eq", familyId),
+                    new SupabaseRestFilter("parent_profile_id", "eq", parentProfileId),
+                    new SupabaseRestFilter("consent_type", "eq", "parental"),
+                },
+                "*",
+                cancellationToken);
+        }
+
+        public async Task<SupabaseParentConsentRecord> RecordParentConsentAsync(
+            string familyId,
+            string consentVersion,
+            CancellationToken cancellationToken)
+        {
+            ValidateFamilyId(familyId);
+            if (string.IsNullOrWhiteSpace(consentVersion)
+                || consentVersion.Trim().Length > 40)
+            {
+                throw new SupabaseDataException("家長同意版本不可為空或超過 40 個字元。");
+            }
+
+            string response = await restClient.CallRpcAsync(
+                "record_parent_consent",
+                "{\"target_family_id\":"
+                    + SupabaseJson.Quote(familyId.Trim())
+                    + ",\"consent_version\":"
+                    + SupabaseJson.Quote(consentVersion.Trim())
+                    + "}",
+                cancellationToken);
+            SupabaseParentConsentRecord consent;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out consent,
+                    out error)
+                || consent == null
+                || string.IsNullOrWhiteSpace(consent.consent_version))
+            {
+                throw new SupabaseDataException(
+                    string.IsNullOrWhiteSpace(error)
+                        ? "Supabase 沒有回傳家長同意紀錄。"
+                        : error);
+            }
+
+            return consent;
+        }
+
+        public async Task DeleteParentAccountAsync(
+            CancellationToken cancellationToken)
+        {
+            string response = await restClient.InvokeFunctionAsync(
+                "manage-account",
+                "{\"action\":\"delete\"}",
+                cancellationToken);
+            EnsureSuccessfulAccountMutation(response);
+        }
+
+        public async Task<SupabaseChildProfileRecord> UpdateChildDisplayNameAsync(
+            string familyId,
+            string childProfileId,
+            string displayName,
+            CancellationToken cancellationToken)
+        {
+            ValidateChildAccountTarget(familyId, childProfileId);
+            string normalizedName = displayName == null ? string.Empty : displayName.Trim();
+            if (normalizedName.Length < 1 || normalizedName.Length > 80)
+            {
+                throw new SupabaseDataException("孩子名稱長度必須介於 1 到 80 個字元。");
+            }
+
+            SupabaseChildProfileRecord child =
+                await restClient.SelectSingleAsync<SupabaseChildProfileRecord>(
+                    "child_profiles",
+                    new[]
+                    {
+                        new SupabaseRestFilter("family_id", "eq", familyId),
+                        new SupabaseRestFilter("id", "eq", childProfileId),
+                    },
+                    "*",
+                    cancellationToken);
+            if (child == null || string.IsNullOrWhiteSpace(child.id))
+            {
+                throw new SupabaseDataException("找不到要更新的孩子資料。");
+            }
+
+            string body = "{\"display_name\":"
+                + SupabaseJson.Quote(normalizedName) + "}";
+            await restClient.UpdateAsync(
+                "child_profiles",
+                new[]
+                {
+                    new SupabaseRestFilter("family_id", "eq", familyId),
+                    new SupabaseRestFilter("id", "eq", childProfileId),
+                },
+                body,
+                cancellationToken);
+            if (!string.IsNullOrWhiteSpace(child.profile_id))
+            {
+                await restClient.UpdateAsync(
+                    "profiles",
+                    new[]
+                    {
+                        new SupabaseRestFilter("id", "eq", child.profile_id),
+                    },
+                    body,
+                    cancellationToken);
+            }
+
+            child.display_name = normalizedName;
+            return child;
+        }
+
+        public async Task<SupabaseParentChildAccountMutationResult>
+            UpdateChildDisplayNameAndRefreshAsync(
+                string familyId,
+                string childProfileId,
+                string displayName,
+                CancellationToken cancellationToken)
+        {
+            SupabaseParentChildAccountMutationResult result =
+                new SupabaseParentChildAccountMutationResult
+                {
+                    Child = await UpdateChildDisplayNameAsync(
+                        familyId,
+                        childProfileId,
+                        displayName,
+                        cancellationToken),
+                    Succeeded = true,
+                };
+            await RefreshChildAccountMutationAsync(result, cancellationToken);
+            return result;
         }
 
         public async Task CreateTaskTemplateAsync(
@@ -569,6 +811,81 @@ namespace HabitHero.Platform
             }
 
             return reviewedTask;
+        }
+
+        public async Task<SupabaseParentBatchReviewRpcResult>
+            BatchReviewDailyAdventuresAsync(
+                string[] taskIds,
+                CancellationToken cancellationToken)
+        {
+            if (taskIds == null || taskIds.Length == 0)
+            {
+                throw new SupabaseDataException("至少要選擇一個每日冒險。");
+            }
+
+            List<string> normalizedTaskIds = new List<string>();
+            HashSet<string> normalizedIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string taskId in taskIds)
+            {
+                string normalizedTaskId = taskId == null ? string.Empty : taskId.Trim();
+                if (normalizedTaskId.Length == 0 || !normalizedIds.Add(normalizedTaskId))
+                {
+                    throw new SupabaseDataException("每日冒險 ID 不可為空或重複。");
+                }
+
+                normalizedTaskIds.Add(normalizedTaskId);
+            }
+
+            string response = await restClient.CallRpcAsync(
+                "batch_review_daily_adventures",
+                "{\"target_task_ids\":"
+                    + BuildStringArrayJson(normalizedTaskIds.ToArray())
+                    + "}",
+                cancellationToken);
+            SupabaseParentBatchReviewRpcResult rpcResult;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out rpcResult,
+                    out error)
+                || rpcResult == null)
+            {
+                throw new SupabaseDataException(
+                    string.IsNullOrWhiteSpace(error)
+                        ? "Supabase 沒有回傳每日冒險批次審核結果。"
+                        : error);
+            }
+
+            return rpcResult;
+        }
+
+        public async Task<SupabaseParentBatchReviewResult>
+            BatchReviewDailyAdventuresAndRefreshAsync(
+                string[] taskIds,
+                CancellationToken cancellationToken)
+        {
+            SupabaseParentBatchReviewRpcResult rpcResult =
+                await BatchReviewDailyAdventuresAsync(taskIds, cancellationToken);
+            SupabaseParentBatchReviewResult result =
+                new SupabaseParentBatchReviewResult
+                {
+                    FailedTaskIds = rpcResult.failed_task_ids
+                        ?? new string[0],
+                };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
         }
 
         public async Task<SupabaseTaskApprovalReversalRecord> RevokeTaskApprovalAsync(
@@ -880,6 +1197,48 @@ namespace HabitHero.Platform
             return taskIds.ToArray();
         }
 
+        public async Task<SupabaseParentAdventureGroupRecord>
+            UpdateGeneralAdventureTitleAsync(
+                string childProfileId,
+                string title,
+                CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(childProfileId))
+            {
+                throw new SupabaseDataException("孩子 ID 不可為空。");
+            }
+            string normalizedTitle = title == null ? string.Empty : title.Trim();
+            if (normalizedTitle.Length < 1 || normalizedTitle.Length > 120)
+            {
+                throw new SupabaseDataException("冒險標題長度必須介於 1 到 120 個字元。");
+            }
+
+            string response = await restClient.CallRpcAsync(
+                "update_general_adventure_title",
+                "{\"target_child_profile_id\":"
+                    + SupabaseJson.Quote(childProfileId.Trim())
+                    + ",\"new_title\":"
+                    + SupabaseJson.Quote(normalizedTitle)
+                    + "}",
+                cancellationToken);
+            SupabaseParentAdventureGroupRecord group;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out group,
+                    out error)
+                || group == null
+                || string.IsNullOrWhiteSpace(group.id))
+            {
+                throw new SupabaseDataException(
+                    string.IsNullOrWhiteSpace(error)
+                        ? "Supabase 沒有回傳一般冒險群組資料。"
+                        : error);
+            }
+
+            return group;
+        }
+
         public async Task<SupabaseParentAdventureMutationResult>
             CreateGeneralAdventureAndRefreshAsync(
                 string familyId,
@@ -892,6 +1251,38 @@ namespace HabitHero.Platform
                     TaskIds = await CreateGeneralAdventureAsync(
                         familyId,
                         input,
+                        cancellationToken),
+                };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        public async Task<SupabaseParentAdventureTitleMutationResult>
+            UpdateGeneralAdventureTitleAndRefreshAsync(
+                string familyId,
+                string childProfileId,
+                string title,
+                CancellationToken cancellationToken)
+        {
+            ValidateFamilyId(familyId);
+            SupabaseParentAdventureTitleMutationResult result =
+                new SupabaseParentAdventureTitleMutationResult
+                {
+                    Group = await UpdateGeneralAdventureTitleAsync(
+                        childProfileId,
+                        title,
                         cancellationToken),
                 };
             try
@@ -1752,6 +2143,18 @@ namespace HabitHero.Platform
             return json + "]";
         }
 
+        private static string BuildStringArrayJson(string[] values)
+        {
+            string json = "[";
+            for (int index = 0; index < values.Length; index += 1)
+            {
+                if (index > 0) json += ",";
+                json += SupabaseJson.Quote(values[index]);
+            }
+
+            return json + "]";
+        }
+
         private static SupabaseParentAdventureScheduleRecord ParseAdventureSchedule(
             string response)
         {
@@ -2145,6 +2548,19 @@ namespace HabitHero.Platform
         private static string NormalizeOptional(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private static string ParseRpcString(string response)
+        {
+            string value = response == null ? string.Empty : response.Trim();
+            if (value.Length >= 2 && value[0] == '"' && value[value.Length - 1] == '"')
+            {
+                value = value.Substring(1, value.Length - 2)
+                    .Replace("\\\"", "\"")
+                    .Replace("\\\\", "\\");
+            }
+
+            return value.Trim();
         }
 
         private static void ValidateChildAccountCreate(

@@ -56,6 +56,8 @@ namespace HabitHero.Platform
         public string feedback_tone;
         public string revision_note;
         public string adventure_type;
+        public string adventure_group_id;
+        public string occurrence_date;
         public string completion_report_mode;
         public string quick_report;
         public bool requires_timer;

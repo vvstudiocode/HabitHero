@@ -39,10 +39,15 @@ namespace HabitHero.App
             Task<SupabaseParentChildAccountMutationResult>> resetPassword;
         private Func<
             string,
+            string,
+            Task<SupabaseParentChildAccountMutationResult>> updateName;
+        private Func<
+            string,
             Task<SupabaseParentChildAccountMutationResult>> deleteAccount;
         private Action<SupabaseParentHomeSnapshot> applySnapshot;
         private Action<string, bool> setParentStatus;
         private Action onClosed;
+        private bool parentConsentCurrent;
 
         private static readonly string[] CharacterIds =
         {
@@ -62,6 +67,7 @@ namespace HabitHero.App
 
         public void Show(
             SupabaseParentHomeSnapshot snapshot,
+            bool parentConsentCurrent,
             Func<
                 SupabaseParentChildAccountCreateInput,
                 Task<SupabaseParentChildAccountMutationResult>> createAccount,
@@ -69,6 +75,10 @@ namespace HabitHero.App
                 string,
                 string,
                 Task<SupabaseParentChildAccountMutationResult>> resetPassword,
+            Func<
+                string,
+                string,
+                Task<SupabaseParentChildAccountMutationResult>> updateName,
             Func<
                 string,
                 Task<SupabaseParentChildAccountMutationResult>> deleteAccount,
@@ -79,12 +89,15 @@ namespace HabitHero.App
             if (snapshot == null) throw new ArgumentNullException("snapshot");
             if (createAccount == null) throw new ArgumentNullException("createAccount");
             if (resetPassword == null) throw new ArgumentNullException("resetPassword");
+            if (updateName == null) throw new ArgumentNullException("updateName");
             if (deleteAccount == null) throw new ArgumentNullException("deleteAccount");
 
             Dispose();
             this.snapshot = snapshot;
+            this.parentConsentCurrent = parentConsentCurrent;
             this.createAccount = createAccount;
             this.resetPassword = resetPassword;
+            this.updateName = updateName;
             this.deleteAccount = deleteAccount;
             this.applySnapshot = applySnapshot;
             this.setParentStatus = setParentStatus;
@@ -258,10 +271,12 @@ namespace HabitHero.App
             deleteConfirm = false;
             createAccount = null;
             resetPassword = null;
+            updateName = null;
             deleteAccount = null;
             applySnapshot = null;
             setParentStatus = null;
             onClosed = null;
+            parentConsentCurrent = false;
             childListObject = null;
             formTitle = null;
             selectedChildText = null;
@@ -365,7 +380,7 @@ namespace HabitHero.App
                 nameInput.text = creatingNewChild || child == null
                     ? string.Empty
                     : child.display_name;
-                nameInput.interactable = !hasAccount;
+                nameInput.interactable = true;
             }
             if (loginInput != null)
             {
@@ -391,7 +406,7 @@ namespace HabitHero.App
             if (saveButton != null)
             {
                 saveButton.GetComponentInChildren<Text>().text = hasAccount
-                    ? "重設密碼"
+                    ? "儲存名稱／重設密碼"
                     : "建立登入帳號";
             }
             if (deleteButton != null)
@@ -402,7 +417,7 @@ namespace HabitHero.App
             }
             SetStatus(
                 hasAccount
-                    ? "可重設密碼或刪除孩子登入帳號；孩子資料會保留。"
+                    ? "可修改孩子名稱、重設密碼或刪除登入帳號；孩子資料會保留。"
                     : "建立帳號後，孩子即可使用登入名稱與密碼登入。",
                 false);
         }
@@ -420,21 +435,59 @@ namespace HabitHero.App
                 string confirmation = confirmationInput == null
                     ? string.Empty
                     : confirmationInput.text;
-                if (password.Length < 6 || password != confirmation)
-                {
-                    SetStatus("請輸入相同的 6 碼以上英數密碼。", true);
-                    return;
-                }
-
                 SupabaseParentChildAccountMutationResult result;
                 string message;
                 if (hasAccount)
                 {
-                    result = await resetPassword(child.id, password);
-                    message = "「" + GetChildName(child) + "」的登入密碼已重設。";
+                    string name = nameInput == null ? string.Empty : nameInput.text.Trim();
+                    bool nameChanged = name != GetChildName(child);
+                    bool passwordProvided = password.Length > 0 || confirmation.Length > 0;
+                    if (!nameChanged && !passwordProvided)
+                    {
+                        SetStatus("請修改孩子名稱，或輸入要重設的新密碼。", true);
+                        return;
+                    }
+                    if (passwordProvided
+                        && (password.Length < 6 || password != confirmation))
+                    {
+                        SetStatus("請輸入相同的 6 碼以上英數密碼。", true);
+                        return;
+                    }
+                    if (nameChanged)
+                    {
+                        result = await updateName(child.id, name);
+                        message = "「" + name + "」的孩子名稱已更新。";
+                    }
+                    else
+                    {
+                        result = new SupabaseParentChildAccountMutationResult
+                        {
+                            Succeeded = true,
+                        };
+                        message = string.Empty;
+                    }
+
+                    if (passwordProvided)
+                    {
+                        result = await resetPassword(child.id, password);
+                        message = string.IsNullOrWhiteSpace(message)
+                            ? "「" + GetChildName(child) + "」的登入密碼已重設。"
+                            : message + " 登入密碼也已重設。";
+                    }
                 }
                 else
                 {
+                    if (!parentConsentCurrent)
+                    {
+                        SetStatus("請先在家庭設定完成家長同意，再建立孩子帳號。", true);
+                        return;
+                    }
+                    if (password.Length < 6 || password != confirmation)
+                    {
+                        SetStatus("請輸入相同的 6 碼以上英數密碼。", true);
+                        return;
+                    }
+
                     string name = nameInput == null ? string.Empty : nameInput.text.Trim();
                     string login = loginInput == null ? string.Empty : loginInput.text.Trim();
                     result = await createAccount(

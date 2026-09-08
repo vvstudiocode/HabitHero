@@ -13,7 +13,11 @@ namespace HabitHero.App
         private readonly SupabaseChildCoopAdventureClient coopAdventureClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
+        private readonly string gameAssetBaseUrl;
         private readonly Action openNotificationSettings;
+        private readonly Func<CancellationToken, Task> deleteParentAccount;
+        private readonly Func<string, string, CancellationToken, Task>
+            updateParentPassword;
         private HabitHeroParentHomeView view;
         private string activeFamilyId;
         private string priceChildProfileId;
@@ -24,7 +28,10 @@ namespace HabitHero.App
             SupabaseChildCoopAdventureClient coopAdventureClient,
             Transform canvasTransform,
             Font font,
-            Action openNotificationSettings = null)
+            string gameAssetBaseUrl = null,
+            Action openNotificationSettings = null,
+            Func<CancellationToken, Task> deleteParentAccount = null,
+            Func<string, string, CancellationToken, Task> updateParentPassword = null)
         {
             if (client == null) throw new ArgumentNullException("client");
             if (gameClient == null) throw new ArgumentNullException("gameClient");
@@ -39,7 +46,12 @@ namespace HabitHero.App
             this.coopAdventureClient = coopAdventureClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
+            this.gameAssetBaseUrl = gameAssetBaseUrl == null
+                ? string.Empty
+                : gameAssetBaseUrl.Trim();
             this.openNotificationSettings = openNotificationSettings;
+            this.deleteParentAccount = deleteParentAccount;
+            this.updateParentPassword = updateParentPassword;
         }
 
         public string ActiveFamilyId { get { return activeFamilyId; } }
@@ -60,6 +72,10 @@ namespace HabitHero.App
             {
                 SupabaseParentHomeSnapshot snapshot =
                     await client.LoadAsync(cancellationToken);
+                snapshot.parentConsent = await client.LoadParentConsentAsync(
+                    snapshot.familyId,
+                    session.User.Id,
+                    cancellationToken);
                 activeFamilyId = snapshot.familyId;
                 priceChildProfileId = snapshot.children != null && snapshot.children.Length > 0
                     && snapshot.children[0] != null
@@ -70,7 +86,10 @@ namespace HabitHero.App
                     cancellationToken);
                 if (view == null)
                 {
-                    view = new HabitHeroParentHomeView(canvasTransform, font);
+                    view = new HabitHeroParentHomeView(
+                        canvasTransform,
+                        font,
+                        gameAssetBaseUrl);
                 }
 
                 view.Show(
@@ -85,6 +104,9 @@ namespace HabitHero.App
                             tone,
                             revisionNote,
                             cancellationToken),
+                    (taskIds) => client.BatchReviewDailyAdventuresAndRefreshAsync(
+                        taskIds,
+                        cancellationToken),
                     (taskId) => RevokeTaskApprovalAsync(
                         taskId,
                         cancellationToken),
@@ -136,6 +158,12 @@ namespace HabitHero.App
                         snapshot.familyId,
                         input,
                         cancellationToken),
+                    (childProfileId, title) =>
+                        client.UpdateGeneralAdventureTitleAndRefreshAsync(
+                            snapshot.familyId,
+                            childProfileId,
+                            title,
+                            cancellationToken),
                     () => client.LoadAdventureSchedulesAsync(
                         snapshot.familyId,
                         cancellationToken),
@@ -177,6 +205,11 @@ namespace HabitHero.App
                         childProfileId,
                         password,
                         cancellationToken),
+                    (childProfileId, name) => client.UpdateChildDisplayNameAndRefreshAsync(
+                        snapshot.familyId,
+                        childProfileId,
+                        name,
+                        cancellationToken),
                     (childProfileId) => client.DeleteChildAccountAndRefreshAsync(
                         snapshot.familyId,
                         childProfileId,
@@ -199,6 +232,19 @@ namespace HabitHero.App
                         participantId,
                         input,
                         cancellationToken),
+                    (consentVersion) => client.RecordParentConsentAsync(
+                        snapshot.familyId,
+                        consentVersion,
+                        cancellationToken),
+                    updateParentPassword == null
+                        ? null
+                        : (currentPassword, newPassword) => updateParentPassword(
+                            currentPassword,
+                            newPassword,
+                            cancellationToken),
+                    deleteParentAccount == null
+                        ? null
+                        : () => deleteParentAccount(cancellationToken),
                     enterChildMode == null
                         ? null
                         : (childProfileId) => enterChildMode(
