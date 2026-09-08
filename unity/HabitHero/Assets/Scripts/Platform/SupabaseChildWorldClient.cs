@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine.Networking;
 
 namespace HabitHero.Platform
 {
@@ -359,21 +360,7 @@ namespace HabitHero.Platform
         {
             try
             {
-                string response = await restClient.InvokeFunctionAsync(
-                    "get-weather",
-                    "{\"location\":\"taipei\"}",
-                    cancellationToken);
-                SupabaseWorldWeatherRecord weather;
-                string error;
-                if (!SupabaseJsonObjectParser.TryParseObject(
-                        response,
-                        out weather,
-                        out error))
-                {
-                    return HabitHeroWorldWeather.CreateFallback();
-                }
-
-                return HabitHeroWorldWeather.Normalize(weather);
+                return await LoadCwaWeatherAsync(cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -381,7 +368,66 @@ namespace HabitHero.Platform
             }
             catch (Exception)
             {
-                return HabitHeroWorldWeather.CreateFallback();
+                try
+                {
+                    return await LoadOpenMeteoWeatherAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception)
+                {
+                    return HabitHeroWorldWeather.CreateFallback();
+                }
+            }
+        }
+
+        private async Task<SupabaseWorldWeatherRecord> LoadCwaWeatherAsync(
+            CancellationToken cancellationToken)
+        {
+            string response = await restClient.InvokeFunctionAsync(
+                "get-weather",
+                "{\"location\":\"taipei\"}",
+                cancellationToken);
+            SupabaseWorldWeatherRecord weather;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out weather,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            return HabitHeroWorldWeather.Normalize(weather);
+        }
+
+        private async Task<SupabaseWorldWeatherRecord> LoadOpenMeteoWeatherAsync(
+            CancellationToken cancellationToken)
+        {
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(
+                HabitHeroWorldWeather.BuildOpenMeteoUrl()))
+            {
+                UnityWebRequestAsyncOperation operation = webRequest.SendWebRequest();
+                while (!operation.isDone)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await Task.Yield();
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+                if (webRequest.result != UnityWebRequest.Result.Success)
+                {
+                    throw new SupabaseDataException(
+                        "Open-Meteo weather request failed: " + webRequest.error,
+                        (long)webRequest.responseCode);
+                }
+
+                return HabitHeroWorldWeather.ParseOpenMeteoResponse(
+                    webRequest.downloadHandler == null
+                        ? string.Empty
+                        : webRequest.downloadHandler.text);
             }
         }
 

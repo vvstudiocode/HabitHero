@@ -102,11 +102,12 @@ spawn anchors and movement boundaries. Authored collision flags plus existing
 Supabase decoration `collision_radius` and scale now drive conservative Unity
 movement proxies and safe spawn selection. The camera now uses the Web runtime's
 50° perspective framing, follows the child, and supports drag/pinch/scroll
-controls. Exact GLB-bound rectangle precision, full weather-provider parity,
-and device parity remain pending. The world client now optionally reads the existing
+controls. Exact GLB-bound rectangle precision, audio, and device parity remain
+pending. The world client now reads the existing
 `get-weather` Edge Function, falls back to clear weather when unavailable, and
-applies Taipei day/night lighting plus rain particles to the Unity scene;
-direct Open-Meteo fallback, audio, and device parity remain pending.
+uses the same Open-Meteo fallback as the Web client before falling back to
+clear weather. It applies Taipei day/night lighting plus rain particles to the
+Unity scene.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device

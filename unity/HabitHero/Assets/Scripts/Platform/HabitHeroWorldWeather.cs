@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using UnityEngine;
 
 namespace HabitHero.Platform
@@ -98,6 +99,118 @@ namespace HabitHero.Platform
             }
         }
 
+        public static HabitHeroWorldWeatherCondition MapOpenMeteoWeatherCode(
+            int weatherCode,
+            float precipitation = 0f)
+        {
+            switch (weatherCode)
+            {
+                case 95:
+                case 96:
+                case 99:
+                case 65:
+                case 67:
+                case 82:
+                    return HabitHeroWorldWeatherCondition.Storm;
+                case 51:
+                case 53:
+                case 55:
+                case 56:
+                case 57:
+                case 61:
+                case 63:
+                case 66:
+                case 80:
+                case 81:
+                    return HabitHeroWorldWeatherCondition.Rain;
+                case 1:
+                case 2:
+                case 3:
+                case 45:
+                case 48:
+                case 71:
+                case 73:
+                case 75:
+                case 77:
+                case 85:
+                case 86:
+                    return HabitHeroWorldWeatherCondition.Cloudy;
+                default:
+                    return precipitation > 0f
+                        ? HabitHeroWorldWeatherCondition.Rain
+                        : HabitHeroWorldWeatherCondition.Clear;
+            }
+        }
+
+        public static SupabaseWorldWeatherRecord ParseOpenMeteoResponse(
+            string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                throw new FormatException(
+                    "Open-Meteo response was empty.");
+            }
+
+            OpenMeteoPayload payload;
+            try
+            {
+                payload = JsonUtility.FromJson<OpenMeteoPayload>(json);
+            }
+            catch (Exception exception)
+            {
+                throw new FormatException(
+                    "Open-Meteo response was invalid.",
+                    exception);
+            }
+
+            if (payload == null || payload.current == null)
+            {
+                throw new FormatException(
+                    "Open-Meteo response did not contain current weather.");
+            }
+
+            OpenMeteoCurrent current = payload.current;
+            float precipitation = Mathf.Max(0f, current.precipitation);
+            float rain = Mathf.Max(0f, current.rain);
+            float showers = Mathf.Max(0f, current.showers);
+            float cloudCover = Mathf.Clamp(current.cloud_cover, 0f, 100f);
+            HabitHeroWorldWeatherCondition condition = MapOpenMeteoWeatherCode(
+                current.weather_code,
+                precipitation + rain + showers);
+            long observedAt = 0;
+            DateTimeOffset observedTime;
+            if (DateTimeOffset.TryParse(
+                    current.time,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out observedTime))
+            {
+                observedAt = observedTime.ToUnixTimeMilliseconds();
+            }
+
+            return Normalize(new SupabaseWorldWeatherRecord
+            {
+                condition = ConditionToString(condition),
+                intensity = GetWeatherIntensity(
+                    condition,
+                    precipitation + rain,
+                    showers,
+                    cloudCover),
+                cloudCover = cloudCover,
+                windSpeedKmh = Mathf.Max(0f, current.wind_speed_10m),
+                source = "open-meteo",
+                observedAt = observedAt,
+            });
+        }
+
+        public static string BuildOpenMeteoUrl()
+        {
+            return "https://api.open-meteo.com/v1/forecast"
+                + "?latitude=25.033&longitude=121.565"
+                + "&current=weather_code%2Cprecipitation%2Crain%2Cshowers"
+                + "%2Ccloud_cover%2Cwind_speed_10m&timezone=auto";
+        }
+
         public static SupabaseWorldWeatherRecord CreateFallback()
         {
             return new SupabaseWorldWeatherRecord
@@ -149,6 +262,45 @@ namespace HabitHero.Platform
                 default:
                     return "clear";
             }
+        }
+
+        private static float GetWeatherIntensity(
+            HabitHeroWorldWeatherCondition condition,
+            float precipitation,
+            float showers,
+            float cloudCover)
+        {
+            if (condition == HabitHeroWorldWeatherCondition.Clear) return 0f;
+            if (condition == HabitHeroWorldWeatherCondition.Cloudy)
+            {
+                return Mathf.Clamp(cloudCover / 100f, 0.18f, 0.72f);
+            }
+
+            float precipitationIntensity = Mathf.Clamp(
+                Mathf.Max(precipitation, showers) / 4f,
+                0.25f,
+                1f);
+            return condition == HabitHeroWorldWeatherCondition.Storm
+                ? Mathf.Max(0.72f, precipitationIntensity)
+                : precipitationIntensity;
+        }
+
+        [Serializable]
+        private sealed class OpenMeteoPayload
+        {
+            public OpenMeteoCurrent current;
+        }
+
+        [Serializable]
+        private sealed class OpenMeteoCurrent
+        {
+            public int weather_code;
+            public float precipitation;
+            public float rain;
+            public float showers;
+            public float cloud_cover;
+            public float wind_speed_10m;
+            public string time;
         }
 
         private static bool IsFinite(float value)

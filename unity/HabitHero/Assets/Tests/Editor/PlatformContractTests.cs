@@ -288,6 +288,32 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void OpenMeteoWeatherFallbackMatchesWebConditionMapping()
+        {
+            Assert.AreEqual(
+                HabitHeroWorldWeatherCondition.Storm,
+                HabitHeroWorldWeather.MapOpenMeteoWeatherCode(95, 0f));
+            Assert.AreEqual(
+                HabitHeroWorldWeatherCondition.Rain,
+                HabitHeroWorldWeather.MapOpenMeteoWeatherCode(61, 0f));
+            Assert.AreEqual(
+                HabitHeroWorldWeatherCondition.Cloudy,
+                HabitHeroWorldWeather.MapOpenMeteoWeatherCode(3, 0f));
+            Assert.AreEqual(
+                HabitHeroWorldWeatherCondition.Rain,
+                HabitHeroWorldWeather.MapOpenMeteoWeatherCode(0, 1f));
+
+            SupabaseWorldWeatherRecord weather =
+                HabitHeroWorldWeather.ParseOpenMeteoResponse(
+                    "{\"current\":{\"weather_code\":61,\"precipitation\":1.2,\"rain\":0.8,\"showers\":0,\"cloud_cover\":84,\"wind_speed_10m\":12.5,\"time\":\"2026-09-08T12:00\"}}");
+            Assert.AreEqual("rain", weather.condition);
+            Assert.AreEqual("open-meteo", weather.source);
+            Assert.AreEqual(84f, weather.cloudCover, 0.0001f);
+            Assert.AreEqual(12.5f, weather.windSpeedKmh, 0.0001f);
+            Assert.Greater(weather.intensity, 0.25f);
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";
