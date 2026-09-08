@@ -35,6 +35,8 @@ namespace HabitHero.App
         private HabitHeroWorldSceneProfile activeSceneProfile;
         private HabitHeroWorldCollisionProxy[] worldCollisionProxies =
             new HabitHeroWorldCollisionProxy[0];
+        private readonly Dictionary<HabitHeroWorldAssetModule, int> authoredCollisionProxyIndices =
+            new Dictionary<HabitHeroWorldAssetModule, int>();
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue;
         private Action onClose;
         private readonly List<Material> runtimeMaterials = new List<Material>();
@@ -207,6 +209,7 @@ namespace HabitHero.App
         private HabitHeroWorldCollisionProxy[] BuildWorldCollisionProxies(
             string targetSceneId)
         {
+            authoredCollisionProxyIndices.Clear();
             List<HabitHeroWorldCollisionProxy> result =
                 new List<HabitHeroWorldCollisionProxy>();
             HabitHeroWorldCollisionProxy[] authoredProxies;
@@ -214,6 +217,22 @@ namespace HabitHero.App
                 targetSceneId,
                 out authoredProxies))
             {
+                HabitHeroWorldAssetModule[] authoredModules;
+                int authoredProxyIndex = 0;
+                if (HabitHeroWorldAssetCatalog.TryGetModules(
+                    targetSceneId,
+                    out authoredModules))
+                {
+                    foreach (HabitHeroWorldAssetModule module in authoredModules)
+                    {
+                        if (module == null || !module.Collision) continue;
+                        if (authoredProxyIndex < authoredProxies.Length)
+                        {
+                            authoredCollisionProxyIndices[module] = authoredProxyIndex;
+                        }
+                        authoredProxyIndex += 1;
+                    }
+                }
                 result.AddRange(authoredProxies);
             }
 
@@ -256,6 +275,47 @@ namespace HabitHero.App
             return result.ToArray();
         }
 
+        private void UpdateAuthoredCollisionProxy(
+            HabitHeroWorldAssetModule module,
+            Bounds loadedBounds)
+        {
+            if (module == null
+                || !authoredCollisionProxyIndices.TryGetValue(module, out int proxyIndex)
+                || worldCollisionProxies == null
+                || proxyIndex < 0
+                || proxyIndex >= worldCollisionProxies.Length)
+            {
+                return;
+            }
+
+            float footprintScale = module.CollisionFootprintScale > 0f
+                ? module.CollisionFootprintScale
+                : 1f;
+            HabitHeroWorldCollisionProxy proxy = HabitHeroWorldCollision.CreateBoundsProxy(
+                loadedBounds,
+                footprintScale,
+                HabitHeroWorldCollision.AuthoredNavigationInset);
+            if (proxy == null) return;
+            worldCollisionProxies[proxyIndex] = proxy;
+
+            if (player == null || activeSceneProfile == null) return;
+            Vector3 playerPosition = player.transform.position;
+            Vector2 safePosition = HabitHeroWorldCollision.FindClearSpawn(
+                new Vector2(playerPosition.x, playerPosition.z),
+                0.35f,
+                activeSceneProfile.MovementBoundary,
+                worldCollisionProxies);
+            if (Vector2.Distance(
+                    new Vector2(playerPosition.x, playerPosition.z),
+                    safePosition) > 0.001f)
+            {
+                player.transform.position = new Vector3(
+                    safePosition.x,
+                    playerPosition.y,
+                    safePosition.y);
+            }
+        }
+
         private void RenderAuthoredWorldModules(string targetSceneId)
         {
             HabitHeroWorldAssetModule[] modules;
@@ -270,12 +330,16 @@ namespace HabitHero.App
                     module.Position + Vector3.up * 0.05f,
                     Vector3.one * 0.05f,
                     new Color(0.26f, 0.82f, 0.88f, 1f));
+                HabitHeroWorldAssetModule collisionModule = module;
                 StartModelLoad(
                     placeholder,
                     module.AssetKey,
                     module.Position,
                     module.Rotation.eulerAngles,
-                    module.Scale);
+                    module.Scale,
+                    module.Collision
+                        ? (Action<Bounds>)(bounds => UpdateAuthoredCollisionProxy(collisionModule, bounds))
+                        : null);
             }
         }
 
@@ -658,14 +722,16 @@ namespace HabitHero.App
             string assetKey,
             Vector3 groundPosition,
             Vector3 eulerAngles,
-            Vector3 visualScale)
+            Vector3 visualScale,
+            Action<Bounds> onModelLoaded = null)
         {
             StartModelLoadInternal(
                 placeholder,
                 assetKey,
                 groundPosition,
                 eulerAngles,
-                ClampAuthoredModuleScale(visualScale));
+                ClampAuthoredModuleScale(visualScale),
+                onModelLoaded);
         }
 
         private void StartModelLoadInternal(
@@ -673,7 +739,8 @@ namespace HabitHero.App
             string assetKey,
             Vector3 groundPosition,
             Vector3 eulerAngles,
-            Vector3 visualScale)
+            Vector3 visualScale,
+            Action<Bounds> onModelLoaded = null)
         {
             if (placeholder == null
                 || !HabitHeroGameAssetCatalog.TryResolveModelUrl(
@@ -693,7 +760,8 @@ namespace HabitHero.App
                 eulerAngles,
                 visualScale,
                 worldRoot,
-                modelLoadingCancellation.Token);
+                modelLoadingCancellation.Token,
+                onModelLoaded);
         }
 
         private async Task LoadModelAsync(
@@ -703,7 +771,8 @@ namespace HabitHero.App
             Vector3 eulerAngles,
             Vector3 visualScale,
             GameObject expectedWorldRoot,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Action<Bounds> onModelLoaded)
         {
             try
             {
@@ -734,6 +803,11 @@ namespace HabitHero.App
 
                 modelContent.transform.localScale = visualScale;
                 CenterModelOnGround(modelContent, modelRoot, groundPosition, eulerAngles);
+                if (onModelLoaded != null
+                    && TryGetRendererBounds(modelContent, out Bounds loadedBounds))
+                {
+                    onModelLoaded(loadedBounds);
+                }
                 placeholder.SetActive(false);
             }
             catch (OperationCanceledException)
@@ -1364,6 +1438,7 @@ namespace HabitHero.App
             atmosphereRefreshTimer = 0f;
             player = null;
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
+            authoredCollisionProxyIndices.Clear();
             activeSceneProfile = null;
             sceneStatus = null;
             if (notify && onClose != null) onClose();

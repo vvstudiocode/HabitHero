@@ -11,23 +11,55 @@ namespace HabitHero.Platform
             X = x;
             Z = z;
             Radius = radius;
+            IsRectangle = false;
+            HalfWidth = radius;
+            HalfDepth = radius;
+            RotationY = 0f;
+            NavigationInset = 0f;
+        }
+
+        public HabitHeroWorldCollisionProxy(
+            float x,
+            float z,
+            float halfWidth,
+            float halfDepth,
+            float rotationY,
+            float navigationInset)
+        {
+            X = x;
+            Z = z;
+            Radius = Mathf.Max(
+                0.05f,
+                Mathf.Max(Mathf.Abs(halfWidth), Mathf.Abs(halfDepth)));
+            IsRectangle = true;
+            HalfWidth = Mathf.Abs(halfWidth);
+            HalfDepth = Mathf.Abs(halfDepth);
+            RotationY = rotationY;
+            NavigationInset = Mathf.Max(0f, navigationInset);
         }
 
         public float X { get; private set; }
         public float Z { get; private set; }
         public float Radius { get; private set; }
+        public bool IsRectangle { get; private set; }
+        public float HalfWidth { get; private set; }
+        public float HalfDepth { get; private set; }
+        public float RotationY { get; private set; }
+        public float NavigationInset { get; private set; }
     }
 
     /// <summary>
     /// Keeps Unity's authored-world movement contract aligned with the Web
-    /// runtime. The Web derives rectangle proxies from loaded GLB bounds;
-    /// Unity uses the authored horizontal scale as a conservative circular
-    /// proxy until the remote model finishes loading.
+    /// runtime. Unity starts with an axis-aligned rectangle derived from the
+    /// authored transform, then can replace it with the loaded GLB bounds;
+    /// circles remain for Supabase decorations that only publish
+    /// collision_radius.
     /// </summary>
     public static class HabitHeroWorldCollision
     {
         private const float MinimumCharacterRadius = 0.05f;
         private const float MinimumProxyRadius = 0.05f;
+        public const float AuthoredNavigationInset = 0.18f;
         private const float SpawnGridStep = 1.25f;
 
         public static bool TryGetAuthoredProxies(
@@ -43,23 +75,86 @@ namespace HabitHero.Platform
             foreach (HabitHeroWorldAssetModule module in modules)
             {
                 if (module == null || !module.Collision) continue;
-                float horizontalScale = Mathf.Max(
-                    Mathf.Abs(module.Scale.x),
-                    Mathf.Abs(module.Scale.z));
                 float footprintScale = module.CollisionFootprintScale > 0f
                     ? module.CollisionFootprintScale
                     : 1f;
-                float radius = horizontalScale * 0.5f * footprintScale;
-                if (float.IsNaN(radius) || float.IsInfinity(radius)) continue;
-                if (radius < MinimumProxyRadius) radius = MinimumProxyRadius;
-                result.Add(new HabitHeroWorldCollisionProxy(
+                Vector3 halfExtents = GetAuthoredHorizontalHalfExtents(
+                    module.Scale,
+                    module.Rotation,
+                    footprintScale);
+                HabitHeroWorldCollisionProxy proxy = CreateRectangleProxy(
                     module.Position.x,
                     module.Position.z,
-                    radius));
+                    halfExtents.x,
+                    halfExtents.z,
+                    0f,
+                    AuthoredNavigationInset);
+                if (proxy != null) result.Add(proxy);
             }
 
             proxies = result.ToArray();
             return true;
+        }
+
+        public static HabitHeroWorldCollisionProxy CreateRectangleProxy(
+            float x,
+            float z,
+            float halfWidth,
+            float halfDepth,
+            float rotationY,
+            float navigationInset)
+        {
+            if (!IsFinite(x)
+                || !IsFinite(z)
+                || !IsFinite(halfWidth)
+                || !IsFinite(halfDepth)
+                || !IsFinite(rotationY)
+                || !IsFinite(navigationInset)
+                || halfWidth <= 0f
+                || halfDepth <= 0f
+                || navigationInset < 0f)
+            {
+                return null;
+            }
+
+            return new HabitHeroWorldCollisionProxy(
+                x,
+                z,
+                halfWidth,
+                halfDepth,
+                rotationY,
+                navigationInset);
+        }
+
+        public static HabitHeroWorldCollisionProxy CreateBoundsProxy(
+            Bounds bounds,
+            float footprintScale,
+            float navigationInset)
+        {
+            if (!IsFinite(footprintScale)
+                || footprintScale <= 0f
+                || !IsFinite(bounds.center.x)
+                || !IsFinite(bounds.center.z)
+                || !IsFinite(bounds.size.x)
+                || !IsFinite(bounds.size.y)
+                || !IsFinite(bounds.size.z)
+                || bounds.size.x < 0.12f
+                || bounds.size.z < 0.12f
+                || bounds.size.y < 0.22f
+                || (bounds.size.x >= 8f
+                    && bounds.size.z >= 8f
+                    && bounds.size.y <= 2.5f))
+            {
+                return null;
+            }
+
+            return CreateRectangleProxy(
+                bounds.center.x,
+                bounds.center.z,
+                bounds.size.x * 0.5f * footprintScale,
+                bounds.size.z * 0.5f * footprintScale,
+                0f,
+                navigationInset);
         }
 
         public static Vector2 MoveCharacter(
@@ -161,6 +256,11 @@ namespace HabitHero.Platform
             foreach (HabitHeroWorldCollisionProxy obstacle in obstacles)
             {
                 if (obstacle == null) continue;
+                if (obstacle.IsRectangle)
+                {
+                    if (CircleOverlapsRectangle(position, radius, obstacle)) return true;
+                    continue;
+                }
                 float distance = Vector2.Distance(
                     position,
                     new Vector2(obstacle.X, obstacle.Z));
@@ -168,6 +268,58 @@ namespace HabitHero.Platform
             }
 
             return false;
+        }
+
+        private static bool CircleOverlapsRectangle(
+            Vector2 position,
+            float radius,
+            HabitHeroWorldCollisionProxy rectangle)
+        {
+            float deltaX = position.x - rectangle.X;
+            float deltaZ = position.y - rectangle.Z;
+            float cosine = Mathf.Cos(rectangle.RotationY);
+            float sine = Mathf.Sin(rectangle.RotationY);
+            float localX = cosine * deltaX - sine * deltaZ;
+            float localZ = sine * deltaX + cosine * deltaZ;
+            float closestX = Mathf.Clamp(localX, -rectangle.HalfWidth, rectangle.HalfWidth);
+            float closestZ = Mathf.Clamp(localZ, -rectangle.HalfDepth, rectangle.HalfDepth);
+            float navigationRadius = Mathf.Max(
+                MinimumCharacterRadius,
+                radius - rectangle.NavigationInset);
+            return Vector2.Distance(
+                new Vector2(localX, localZ),
+                new Vector2(closestX, closestZ))
+                < navigationRadius + 0.02f;
+        }
+
+        private static Vector3 GetAuthoredHorizontalHalfExtents(
+            Vector3 scale,
+            Quaternion rotation,
+            float footprintScale)
+        {
+            Vector3 localHalfExtents = new Vector3(
+                Mathf.Abs(scale.x) * 0.5f * footprintScale,
+                Mathf.Abs(scale.y) * 0.5f * footprintScale,
+                Mathf.Abs(scale.z) * 0.5f * footprintScale);
+            float halfWidth = 0f;
+            float halfDepth = 0f;
+            for (int xSign = -1; xSign <= 1; xSign += 2)
+            {
+                for (int ySign = -1; ySign <= 1; ySign += 2)
+                {
+                    for (int zSign = -1; zSign <= 1; zSign += 2)
+                    {
+                        Vector3 rotatedCorner = rotation * new Vector3(
+                            localHalfExtents.x * xSign,
+                            localHalfExtents.y * ySign,
+                            localHalfExtents.z * zSign);
+                        halfWidth = Mathf.Max(halfWidth, Mathf.Abs(rotatedCorner.x));
+                        halfDepth = Mathf.Max(halfDepth, Mathf.Abs(rotatedCorner.z));
+                    }
+                }
+            }
+
+            return new Vector3(halfWidth, 0f, halfDepth);
         }
 
         private static float Clamp(float value, float radius, float boundary)

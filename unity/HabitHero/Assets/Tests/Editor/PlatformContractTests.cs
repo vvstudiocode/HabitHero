@@ -238,10 +238,45 @@ namespace HabitHero.Tests
             Assert.IsTrue(
                 HabitHeroWorldCollision.TryGetAuthoredProxies("sunrise-village", out proxies));
             Assert.AreEqual(6, proxies.Length);
+            bool foundRectangle = false;
             foreach (HabitHeroWorldCollisionProxy proxy in proxies)
             {
                 Assert.Greater(proxy.Radius, 0f);
+                if (proxy.IsRectangle)
+                {
+                    foundRectangle = true;
+                    Assert.Greater(proxy.HalfWidth, 0f);
+                    Assert.Greater(proxy.HalfDepth, 0f);
+                    Assert.AreEqual(0.18f, proxy.NavigationInset, 0.0001f);
+                }
             }
+            Assert.IsTrue(foundRectangle);
+
+            HabitHeroWorldCollisionProxy rectangle =
+                HabitHeroWorldCollision.CreateRectangleProxy(
+                    1.5f,
+                    0f,
+                    1f,
+                    0.2f,
+                    0f,
+                    0.15f);
+            Assert.IsNotNull(rectangle);
+            Assert.IsTrue(rectangle.IsRectangle);
+            Assert.AreEqual(1f, rectangle.HalfWidth, 0.0001f);
+            Assert.AreEqual(0.2f, rectangle.HalfDepth, 0.0001f);
+
+            HabitHeroWorldCollisionProxy boundsProxy =
+                HabitHeroWorldCollision.CreateBoundsProxy(
+                    new Bounds(
+                        new Vector3(2f, 0.5f, -1f),
+                        new Vector3(4f, 1f, 2f)),
+                    0.5f,
+                    0.18f);
+            Assert.IsNotNull(boundsProxy);
+            Assert.AreEqual(2f, boundsProxy.X, 0.0001f);
+            Assert.AreEqual(-1f, boundsProxy.Z, 0.0001f);
+            Assert.AreEqual(1f, boundsProxy.HalfWidth, 0.0001f);
+            Assert.AreEqual(0.5f, boundsProxy.HalfDepth, 0.0001f);
 
             HabitHeroWorldCollisionProxy[] obstacle =
             {
@@ -255,6 +290,31 @@ namespace HabitHero.Tests
                 4.8f);
             Assert.AreEqual(0f, blocked.x, 0.0001f);
             Assert.AreEqual(0f, blocked.y, 0.0001f);
+
+            Vector2 blockedByRectangle = HabitHeroWorldCollision.MoveCharacter(
+                new Vector2(0f, 0f),
+                new Vector2(1.7f, 0f),
+                0.35f,
+                new[] { rectangle },
+                4.8f);
+            Assert.AreEqual(0f, blockedByRectangle.x, 0.0001f);
+            Assert.AreEqual(0f, blockedByRectangle.y, 0.0001f);
+
+            HabitHeroWorldCollisionProxy rotatedRectangle =
+                HabitHeroWorldCollision.CreateRectangleProxy(
+                    0f,
+                    0f,
+                    1.4f,
+                    0.2f,
+                    Mathf.PI / 2f,
+                    0f);
+            Vector2 blockedByRotatedRectangle = HabitHeroWorldCollision.MoveCharacter(
+                new Vector2(0f, 2f),
+                new Vector2(0f, 0.1f),
+                0.35f,
+                new[] { rotatedRectangle },
+                4.8f);
+            Assert.AreEqual(2f, blockedByRotatedRectangle.y, 0.0001f);
 
             Vector2 clamped = HabitHeroWorldCollision.MoveCharacter(
                 new Vector2(0f, 0f),

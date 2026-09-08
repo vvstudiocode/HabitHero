@@ -153,20 +153,21 @@ Partially completed locally:
   primitive fallback, server scene gating, NPC data, and world-entity flow
   intact. Unity scene profiles also preserve each authored scene's spawn anchor
   and movement boundary, including the expanded Forest Valley and Cloud
-  Workshop ranges. Unity movement now consumes authored collision flags plus
-  existing Supabase decoration `collision_radius` and scale through
-  conservative proxies and safe spawn selection. Exact GLB-bound rectangle
-  precision remains pending; Unity now uses the Web runtime's 50° perspective
-  camera framing, follows the child, and supports drag/pinch/scroll camera
-  controls. Unity also consumes the existing `get-weather` Edge Function with
+  Workshop ranges. Unity movement now consumes authored collision flags through
+  an authored-transform rectangle fallback, then replaces each proxy with the
+  loaded GLB renderer bounds and the Web runtime's navigation inset. Existing
+  Supabase decoration `collision_radius` and scale remain circle proxies, and
+  safe spawn selection uses the same shape checks. Unity now uses the Web
+  runtime's 50° perspective camera framing, follows the child, and supports
+  drag/pinch/scroll camera controls. Unity also consumes the existing
+  `get-weather` Edge Function with
   a clear-weather fallback, maps the Web Taipei time phases, and applies local
   directional lighting/background and rain particles, with the same
   Open-Meteo fallback used by the Web client. World background music now uses
   the same per-scene Vercel audio assets, default volume, loop behavior, and
   child-scoped on/off preference as the Web client. Running timers now also
   trigger the shared `timer-complete.mp3` alarm until dismissed or submitted.
-  Exact GLB-bound rectangle precision and device visual evidence remain
-  pending.
+  Device visual evidence remains pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

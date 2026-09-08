@@ -98,15 +98,17 @@ for Sunrise Village, Forest Valley, Cloud Workshop, Tideglow Archipelago, and
 Star-Sand Wasteland), with per-scene placement and scale data preserved;
 primitive fallback, server scene gating, and world-entity rendering remain
 available. `HabitHeroWorldSceneProfileCatalog` also preserves the Web scene
-spawn anchors and movement boundaries. Authored collision flags plus existing
-Supabase decoration `collision_radius` and scale now drive conservative Unity
-movement proxies and safe spawn selection. The camera now uses the Web runtime's
+spawn anchors and movement boundaries. Authored collision flags now start with
+an authored-transform rectangle footprint, then replace it with the loaded GLB
+renderer bounds and the same navigation inset used by the Web runtime;
+Supabase decorations retain their `collision_radius` circle proxies. Safe spawn
+selection uses those same shape checks. The camera now uses the Web runtime's
 50° perspective framing, follows the child, and supports drag/pinch/scroll
 controls. World background music now uses the same per-scene Vercel audio
 assets, default volume, loop behavior, and child-scoped on/off preference as
 the Web client. A running timer reaching zero also loops the shared
-`timer-complete.mp3` alarm until it is dismissed or submitted. Exact GLB-bound
-rectangle precision and device parity remain pending. The world client now
+`timer-complete.mp3` alarm until it is dismissed or submitted. Device parity
+and visual evidence remain pending. The world client now
 reads the existing
 `get-weather` Edge Function, falls back to clear weather when unavailable, and
 uses the same Open-Meteo fallback as the Web client before falling back to
