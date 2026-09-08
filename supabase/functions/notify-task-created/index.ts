@@ -7,6 +7,11 @@ const corsHeaders = {
 
 type TaskOrigin = 'child_proposed' | 'parent_suggested' | 'parent_assigned' | 'system_template';
 type TaskNotificationEvent = 'created' | 'submitted' | 'reviewed';
+type TaskNotificationPayload = {
+  taskId?: string;
+  scheduleId?: string;
+  event: TaskNotificationEvent;
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -60,7 +65,12 @@ async function createApnsToken(environment: 'sandbox' | 'production') {
   return `${unsigned}.${base64Url(new Uint8Array(signature))}`;
 }
 
-async function sendApns(token: string, title: string, body: string, notificationId: string) {
+async function sendApns(
+  token: string,
+  title: string,
+  body: string,
+  payload: TaskNotificationPayload,
+) {
   const bundleId = Deno.env.get('APNS_BUNDLE_ID') ?? 'com.vvstudiocode.habithero';
   const environment = Deno.env.get('APNS_ENVIRONMENT') === 'production' ? 'production' : 'sandbox';
   const jwt = await createApnsToken(environment);
@@ -78,7 +88,11 @@ async function sendApns(token: string, title: string, body: string, notification
     },
     body: JSON.stringify({
       aps: { alert: { title, body }, sound: 'default' },
-      taskId: notificationId,
+      // Unity Mobile Notifications reads the string stored under the APNs
+      // `data` key. Keep the individual keys too for Capacitor and older
+      // clients that already consume the flat payload.
+      data: JSON.stringify(payload),
+      ...payload,
     }),
   });
   return { configured: true, status: response.status };
@@ -215,8 +229,16 @@ Deno.serve(async request => {
 
     let sent = 0;
     let configured = false;
+    const notificationPayload: TaskNotificationPayload = hasTaskId
+      ? { taskId: referenceId, event }
+      : { scheduleId: referenceId, event };
     for (const device of devices ?? []) {
-      const result = await sendApns(device.token, title, message, referenceId);
+      const result = await sendApns(
+        device.token,
+        title,
+        message,
+        notificationPayload,
+      );
       configured = result.configured;
       if (result.status >= 200 && result.status < 300) sent += 1;
       if (result.status === 400 || result.status === 410) {

@@ -15,6 +15,8 @@ test('task notification sender supports creation, submission, and review events'
   assert.match(source, /event === 'reviewed'/);
   assert.match(source, /body\.event/);
   assert.match(source, /body\.scheduleId/);
+  assert.match(source, /data: JSON\.stringify\(payload\)/);
+  assert.match(source, /const notificationPayload: TaskNotificationPayload/);
   assert.match(source, /daily adventure/);
 });
 

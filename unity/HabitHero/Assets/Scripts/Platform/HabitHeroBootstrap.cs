@@ -49,6 +49,8 @@ namespace HabitHero.App
         private Text accountLabel;
         private bool isBusy;
         private string pendingDeepLinkUrl;
+        private HabitHeroMobileNotificationBridge mobileNotificationBridge;
+        private HabitHeroNotificationTarget pendingNotificationTarget;
         private readonly HashSet<string> handledDeepLinks = new HashSet<string>();
 
         private void OnEnable()
@@ -68,6 +70,10 @@ namespace HabitHero.App
         {
             lifetimeCancellation = new CancellationTokenSource();
             BuildInterface();
+            mobileNotificationBridge = new HabitHeroMobileNotificationBridge(
+                this,
+                HandleMobileNotificationTarget);
+            mobileNotificationBridge.Start();
             string launchUrl = Application.absoluteURL;
 
             SupabaseRuntimeConfig config = Resources.Load<SupabaseRuntimeConfig>(
@@ -171,6 +177,11 @@ namespace HabitHero.App
         private void OnDestroy()
         {
             Application.deepLinkActivated -= HandleDeepLinkActivated;
+            if (mobileNotificationBridge != null)
+            {
+                mobileNotificationBridge.Dispose();
+                mobileNotificationBridge = null;
+            }
             if (authClient != null)
             {
                 authClient.AuthStateChanged -= HandleAuthStateChanged;
@@ -1010,6 +1021,7 @@ namespace HabitHero.App
                     authClient.CurrentSession,
                     childHomeCoordinator.ActiveFamilyId,
                     childHomeCoordinator.ActiveChildProfileId);
+                ApplyPendingNotificationTarget();
             }
 
             return shown;
@@ -1209,6 +1221,7 @@ namespace HabitHero.App
                     session,
                     childHomeCoordinator.ActiveFamilyId,
                     childHomeCoordinator.ActiveChildProfileId);
+                ApplyPendingNotificationTarget();
             }
 
             return shown;
@@ -1244,6 +1257,7 @@ namespace HabitHero.App
                     session,
                     parentHomeCoordinator.ActiveFamilyId,
                     null);
+                ApplyPendingNotificationTarget();
             }
 
             return shown;
@@ -1400,6 +1414,60 @@ namespace HabitHero.App
             }
 
             notificationContextKey = null;
+        }
+
+        private void HandleMobileNotificationTarget(
+            HabitHeroNotificationTarget target)
+        {
+            if (target == null) return;
+            pendingNotificationTarget = target;
+            if (authClient == null || authClient.CurrentSession == null)
+            {
+                SetStatus("已收到任務通知，登入後會開啟相關內容。", false);
+                return;
+            }
+
+            ApplyPendingNotificationTarget();
+        }
+
+        private void ApplyPendingNotificationTarget()
+        {
+            HabitHeroNotificationTarget target = pendingNotificationTarget;
+            if (target == null) return;
+
+            bool handled = false;
+            if (childHomeCoordinator != null)
+            {
+                handled = childHomeCoordinator.OpenNotificationTarget(target);
+            }
+
+            if (!handled && parentHomeCoordinator != null)
+            {
+                handled = parentHomeCoordinator.OpenNotificationTarget(target);
+            }
+
+            if (!handled && !string.IsNullOrWhiteSpace(target.ScheduleId))
+            {
+                SetStatus(
+                    "已收到每日冒險通知，請從「每日排程」查看。",
+                    false);
+                handled = true;
+            }
+
+            bool hasVisibleHome = (childHomeCoordinator != null
+                    && childHomeCoordinator.IsShowing)
+                || (parentHomeCoordinator != null
+                    && parentHomeCoordinator.IsShowing);
+            if (!handled && hasVisibleHome)
+            {
+                SetStatus("通知中的任務目前不在這個家庭清單。", true);
+                handled = true;
+            }
+
+            if (handled)
+            {
+                pendingNotificationTarget = null;
+            }
         }
 
         private static string GetNotificationPlatform()

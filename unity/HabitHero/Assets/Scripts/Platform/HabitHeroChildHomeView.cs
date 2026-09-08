@@ -49,6 +49,8 @@ namespace HabitHero.App
         private SupabaseChildGameData latestGameData;
         private SupabaseChildWorldData latestWorldData;
         private SupabaseChildSocialData latestSocialData;
+        private readonly Dictionary<string, Button> taskButtons =
+            new Dictionary<string, Button>(StringComparer.Ordinal);
         private CancellationTokenSource timerLoopCancellation;
         private Func<
             SupabaseChildTaskRecord,
@@ -467,6 +469,7 @@ namespace HabitHero.App
             latestSocialData = null;
             pointsText = null;
             taskListObject = null;
+            taskButtons.Clear();
             if (completionAudioPlayer != null)
             {
                 completionAudioPlayer.Dispose();
@@ -859,9 +862,57 @@ namespace HabitHero.App
             SetStatus("點數與任務資料已更新。", false);
         }
 
+        public bool OpenTaskNotification(string taskId, string eventName)
+        {
+            if (latestSnapshot == null || string.IsNullOrWhiteSpace(taskId)) return false;
+
+            SupabaseChildTaskRecord task = null;
+            foreach (SupabaseChildTaskRecord candidate in
+                latestSnapshot.tasks ?? new SupabaseChildTaskRecord[0])
+            {
+                if (candidate != null && candidate.id == taskId)
+                {
+                    task = candidate;
+                    break;
+                }
+            }
+
+            if (task == null) return false;
+            Button taskButton;
+            taskButtons.TryGetValue(taskId, out taskButton);
+            if (task.pendingSync || !IsActionable(task.status))
+            {
+                if (taskButton != null) taskButton.Select();
+                SetStatus("通知中的「" + task.name + "」已更新，請查看目前狀態。", false);
+                return true;
+            }
+
+            if (task.requires_timer && !IsTimerReady(task))
+            {
+                OpenTimerPanel(task, taskButton);
+            }
+            else if (task.completion_report_mode != "none")
+            {
+                OpenReportPanel(task, taskButton);
+            }
+            else
+            {
+                if (taskButton != null) taskButton.Select();
+                SetStatus("已找到「" + task.name + "」，請點擊任務完成。", false);
+            }
+
+            if (eventName == "reviewed" && task.status == "revision_requested")
+            {
+                SetStatus("家長已要求補充「" + task.name + "」，請查看並重新回報。", false);
+            }
+
+            return true;
+        }
+
         private void RenderTaskList(SupabaseChildHomeSnapshot snapshot)
         {
             if (taskListObject == null) return;
+            taskButtons.Clear();
             foreach (Transform child in taskListObject.transform)
             {
                 UnityEngine.Object.Destroy(child.gameObject);
@@ -885,6 +936,7 @@ namespace HabitHero.App
                 {
                     taskButton.onClick.AddListener(() => HandleTaskClicked(task, taskButton));
                 }
+                taskButtons[task.id] = taskButton;
                 visibleTaskCount += 1;
             }
 

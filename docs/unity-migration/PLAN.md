@@ -39,7 +39,7 @@ authorization into client-only rules.
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Foundation started (loaded GLB clip contract and child Idle/Walk/facing adapter; pet follow/roam and device visual evidence pending) |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating, and world-entity place/update/remove/collect RPCs; authored 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
-| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Shared preference/device binding, iOS APNs provider, context-aware registration and Unity settings UI implemented; Android/taps/device verification pending |
+| Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Shared preference/device binding, iOS APNs provider, context-aware registration, Unity settings UI, APNs payload contract, and Unity task-target routing implemented; Android delivery/device verification pending |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
 | Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Contract preflight and native build entrypoints implemented; device/store verification pending |
 
@@ -226,8 +226,12 @@ Partially completed locally:
   Android return an explicit unsupported result. Parent and child Unity home
   screens now expose the same notification preference flow, automatically retry
   registration for the active family/child scope, and clear the context on
-  sign-out or scope changes. Android push token/delivery, notification taps,
-  and real-device verification remain pending.
+  sign-out or scope changes. The Edge Function now includes a stringified
+  `data` payload for Unity while preserving the flat task/schedule fields for
+  Capacitor. Unity parses and deduplicates cold-start, foreground, and
+  background-return targets, then opens the matching parent review or child
+  task surface after authentication. Android push token/delivery and
+  real-device verification remain pending.
 
 Remaining migration gates:
 
@@ -317,7 +321,8 @@ Current local verification:
   in Web dashboard/world/CSS hotspots; no unrelated Web restructuring was done.
 - Unity platform contract smoke test passed.
 - Unity EditMode `PlatformContractTests` passed, including all current parent
-  Supabase contract checks and safe-area mapping (`119` tests in the latest run).
+  Supabase contract checks, notification payload parsing, and safe-area mapping
+  (`123` tests in the latest run).
 - Unity PlayMode `BootstrapPlayModeTests` passed: the login shell loaded with
   no runtime errors in the headless Unity Editor run.
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.

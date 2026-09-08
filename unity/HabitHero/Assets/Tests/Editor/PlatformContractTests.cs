@@ -108,6 +108,66 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void NotificationPayloadParsesTaskTargetsAndNormalizesEvent()
+        {
+            HabitHeroNotificationTarget target;
+
+            bool parsed = HabitHeroNotificationPayload.TryParse(
+                "{\"taskId\":\"550e8400-e29b-41d4-a716-446655440000\",\"event\":\"SUBMITTED\"}",
+                out target);
+
+            Assert.IsTrue(parsed);
+            Assert.IsNotNull(target);
+            Assert.AreEqual("550e8400-e29b-41d4-a716-446655440000", target.TaskId);
+            Assert.IsNull(target.ScheduleId);
+            Assert.AreEqual("submitted", target.Event);
+        }
+
+        [Test]
+        public void NotificationPayloadParsesScheduleTargets()
+        {
+            HabitHeroNotificationTarget target;
+
+            bool parsed = HabitHeroNotificationPayload.TryParse(
+                "{\"scheduleId\":\"550e8400-e29b-41d4-a716-446655440001\"}",
+                out target);
+
+            Assert.IsTrue(parsed);
+            Assert.IsNotNull(target);
+            Assert.IsNull(target.TaskId);
+            Assert.AreEqual("550e8400-e29b-41d4-a716-446655440001", target.ScheduleId);
+            Assert.AreEqual("created", target.Event);
+        }
+
+        [Test]
+        public void NotificationPayloadParsesTheNestedUnityDataValue()
+        {
+            HabitHeroNotificationTarget target;
+
+            bool parsed = HabitHeroNotificationPayload.TryParse(
+                "{\"data\":\"{\\\"taskId\\\":\\\"550e8400-e29b-41d4-a716-446655440002\\\",\\\"event\\\":\\\"reviewed\\\"}\"}",
+                out target);
+
+            Assert.IsTrue(parsed);
+            Assert.IsNotNull(target);
+            Assert.AreEqual("550e8400-e29b-41d4-a716-446655440002", target.TaskId);
+            Assert.AreEqual("reviewed", target.Event);
+        }
+
+        [Test]
+        public void NotificationPayloadRejectsInvalidReferencesAndEvents()
+        {
+            HabitHeroNotificationTarget target;
+
+            Assert.IsFalse(HabitHeroNotificationPayload.TryParse(
+                "{\"taskId\":\"not-a-uuid\"}",
+                out target));
+            Assert.IsFalse(HabitHeroNotificationPayload.TryParse(
+                "{\"taskId\":\"550e8400-e29b-41d4-a716-446655440003\",\"event\":\"deleted\"}",
+                out target));
+        }
+
+        [Test]
         public void GameAssetCatalogResolvesOnlyAllowListedPublicModels()
         {
             string modelUrl;

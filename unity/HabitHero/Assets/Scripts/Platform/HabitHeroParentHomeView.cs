@@ -623,6 +623,26 @@ namespace HabitHero.App
             SetStatus("家庭資料、待審任務與點數已更新。", false);
         }
 
+        public bool OpenTaskNotification(string taskId, string eventName)
+        {
+            if (latestSnapshot == null || string.IsNullOrWhiteSpace(taskId)) return false;
+
+            foreach (SupabaseChildTaskRecord task in
+                latestSnapshot.tasks ?? new SupabaseChildTaskRecord[0])
+            {
+                if (task == null || task.id != taskId) continue;
+                OpenReviewPanel(task);
+                SetStatus(
+                    string.IsNullOrWhiteSpace(eventName)
+                        ? "已從通知開啟任務。"
+                        : "已從通知開啟任務（" + eventName + "）。",
+                    false);
+                return true;
+            }
+
+            return false;
+        }
+
         private void RenderSnapshot(SupabaseParentHomeSnapshot snapshot)
         {
             int childCount = snapshot.children == null ? 0 : snapshot.children.Length;

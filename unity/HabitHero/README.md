@@ -138,8 +138,10 @@ automatically bind the active family/child scope after login or a protected
 parent-to-child switch. Unity Mobile Notifications `2.4.2` is pinned for
 Unity 6.0; iOS builds request permission and obtain the APNs token, while
 Editor/WebGL and Android return an explicit unsupported result. Android push
-token/delivery, notification taps, and real-device verification are still
-pending; the adapter does not claim those capabilities by itself.
+token/delivery and real-device verification are still pending; the Unity
+client now parses the shared APNs payload, deduplicates notification targets,
+and opens the related parent review or child task surface after a cold start,
+background return, or foreground delivery.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

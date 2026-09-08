@@ -101,6 +101,18 @@ namespace HabitHero.App
 
         public string ActiveChildProfileId { get { return activeChildProfileId; } }
 
+        public bool IsShowing { get { return view != null; } }
+
+        public bool OpenNotificationTarget(HabitHeroNotificationTarget target)
+        {
+            if (target == null || view == null || string.IsNullOrWhiteSpace(target.TaskId))
+            {
+                return false;
+            }
+
+            return view.OpenTaskNotification(target.TaskId, target.Event);
+        }
+
         public async Task<bool> TryShowAsync(
             SupabaseSession session,
             CancellationToken cancellationToken,
