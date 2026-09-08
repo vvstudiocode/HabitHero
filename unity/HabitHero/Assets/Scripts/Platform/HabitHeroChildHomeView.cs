@@ -19,6 +19,7 @@ namespace HabitHero.App
         private GameObject timerPanel;
         private GameObject rewardPanel;
         private GameObject wishlistPanel;
+        private HabitHeroChildGoalProposalView goalProposalView;
         private HabitHeroChildGameView gameView;
         private HabitHeroChildWorldView worldView;
         private HabitHeroChildWorldSceneView worldSceneView;
@@ -56,6 +57,9 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer;
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer;
         private Func<string, Task<SupabaseChildHomeSnapshot>> abandonAdventure;
+        private Func<
+            SupabaseChildGoalProposalInput,
+            Task<SupabaseChildGoalProposalResult>> proposeGoal;
         private Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward;
         private Func<string, Task<SupabaseWishlistMutationResult>> addWishlist;
         private Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist;
@@ -122,6 +126,9 @@ namespace HabitHero.App
             Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer,
             Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer,
             Func<string, Task<SupabaseChildHomeSnapshot>> abandonAdventure,
+            Func<
+                SupabaseChildGoalProposalInput,
+                Task<SupabaseChildGoalProposalResult>> proposeGoal,
             Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward,
             Func<string, Task<SupabaseWishlistMutationResult>> addWishlist,
             Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist,
@@ -148,6 +155,7 @@ namespace HabitHero.App
             this.pauseTimer = pauseTimer;
             this.resumeTimer = resumeTimer;
             this.abandonAdventure = abandonAdventure;
+            this.proposeGoal = proposeGoal;
             this.redeemReward = redeemReward;
             this.addWishlist = addWishlist;
             this.deleteWishlist = deleteWishlist;
@@ -288,6 +296,17 @@ namespace HabitHero.App
                     () => onOpenNotificationSettings());
             }
 
+            if (proposeGoal != null)
+            {
+                Button goalButton = HabitHeroUiFactory.CreateButton(
+                    panel.transform,
+                    font,
+                    "建立冒險",
+                    new Vector2(0.27f, 0.91f),
+                    new Vector2(0.48f, 0.97f));
+                goalButton.onClick.AddListener(OpenGoalProposalPanel);
+            }
+
             Button signOutButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
@@ -382,6 +401,7 @@ namespace HabitHero.App
             pauseTimer = null;
             resumeTimer = null;
             abandonAdventure = null;
+            proposeGoal = null;
             redeemReward = null;
             addWishlist = null;
             deleteWishlist = null;
@@ -415,6 +435,7 @@ namespace HabitHero.App
             completionAlarmDismissedTaskIds.Clear();
             CloseReportPanel();
             CloseTimerPanel();
+            CloseGoalProposalPanel();
             CloseRewardPanel();
             CloseWishlistPanel();
             CloseLedgerPanel();
@@ -658,6 +679,41 @@ namespace HabitHero.App
             {
                 completionAudioPlayer.Start(candidateTaskId);
             }
+        }
+
+        private void OpenGoalProposalPanel()
+        {
+            if (latestSnapshot == null || proposeGoal == null)
+            {
+                SetStatus("建立冒險功能尚未連線。", true);
+                return;
+            }
+
+            CloseReportPanel();
+            CloseTimerPanel();
+            CloseRewardPanel();
+            CloseWishlistPanel();
+            CloseLedgerPanel();
+            if (goalProposalView == null)
+            {
+                goalProposalView = new HabitHeroChildGoalProposalView(
+                    canvasTransform,
+                    font);
+            }
+
+            goalProposalView.Show(
+                latestSnapshot,
+                proposeGoal,
+                ApplySnapshot,
+                SetStatus,
+                CloseGoalProposalPanel);
+        }
+
+        private void CloseGoalProposalPanel()
+        {
+            if (goalProposalView == null) return;
+            goalProposalView.Dispose();
+            goalProposalView = null;
         }
 
         private void DismissCompletionAlarm(string taskId)

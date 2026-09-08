@@ -155,12 +155,33 @@ namespace HabitHero.Platform
         public string RefreshError { get; set; }
     }
 
+    public sealed class SupabaseChildGoalProposalResult
+    {
+        public SupabaseChildTaskRecord Task { get; set; }
+
+        public SupabaseChildHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
     public sealed class SupabaseTaskCompletionDraft
     {
         public string quickReport;
         public string reflection;
         public string mood;
         public int? difficulty;
+    }
+
+    public sealed class SupabaseChildGoalProposalInput
+    {
+        public string name;
+        public int points;
+        public string icon;
+        public string category;
+        public int? durationMinutes;
+        public string dueOn;
+        public string dueTime;
+        public string endTime;
     }
 
     public sealed class SupabaseTaskCompletionFlushResult
@@ -700,6 +721,81 @@ namespace HabitHero.Platform
                 cancellationToken);
         }
 
+        public async Task<SupabaseChildTaskRecord> ProposeChildGoalAsync(
+            string familyId,
+            string childProfileId,
+            SupabaseChildGoalProposalInput input,
+            CancellationToken cancellationToken)
+        {
+            ValidateChildGoalProposal(familyId, childProfileId, input);
+            string body = "{\"target_family_id\":" + SupabaseJson.Quote(familyId.Trim())
+                + ",\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId.Trim())
+                + ",\"goal_name\":" + SupabaseJson.Quote(input.name.Trim())
+                + ",\"goal_points\":"
+                + input.points.ToString(CultureInfo.InvariantCulture)
+                + ",\"goal_icon\":" + SupabaseJson.Quote(input.icon.Trim())
+                + ",\"goal_category\":" + SupabaseJson.Quote(input.category.Trim())
+                + ",\"goal_duration_minutes\":"
+                + (input.durationMinutes.HasValue
+                    ? input.durationMinutes.Value.ToString(CultureInfo.InvariantCulture)
+                    : "null")
+                + ",\"goal_due_on\":"
+                + SupabaseJson.NullableString(input.dueOn)
+                + ",\"goal_due_time\":"
+                + SupabaseJson.NullableString(input.dueTime)
+                + ",\"goal_end_time\":"
+                + SupabaseJson.NullableString(input.endTime)
+                + "}";
+            string response = await restClient.CallRpcAsync(
+                "propose_child_goal",
+                body,
+                cancellationToken);
+            SupabaseChildTaskRecord task;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out task,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            return task;
+        }
+
+        public async Task<SupabaseChildGoalProposalResult> ProposeChildGoalAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            SupabaseChildGoalProposalInput input,
+            CancellationToken cancellationToken)
+        {
+            SupabaseChildTaskRecord task = await ProposeChildGoalAsync(
+                familyId,
+                childProfileId,
+                input,
+                cancellationToken);
+            SupabaseChildGoalProposalResult result = new SupabaseChildGoalProposalResult
+            {
+                Task = task,
+                RefreshedSnapshot = null,
+            };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
         public async Task<SupabaseChildHomeSnapshot> AbandonAdventureAndRefreshAsync(
             string taskId,
             CancellationToken cancellationToken)
@@ -1054,6 +1150,95 @@ namespace HabitHero.Platform
                 || statusCode == 408
                 || statusCode == 429
                 || statusCode >= 500;
+        }
+
+        private static void ValidateChildGoalProposal(
+            string familyId,
+            string childProfileId,
+            SupabaseChildGoalProposalInput input)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (string.IsNullOrWhiteSpace(childProfileId))
+            {
+                throw new SupabaseDataException("孩子 ID 不可為空。");
+            }
+            if (input == null)
+            {
+                throw new SupabaseDataException("一般冒險資料不可為空。");
+            }
+
+            string name = input.name == null ? string.Empty : input.name.Trim();
+            if (name.Length < 1 || name.Length > 120)
+            {
+                throw new SupabaseDataException("冒險名稱長度必須介於 1 到 120 個字元。");
+            }
+            if (input.points <= 0)
+            {
+                throw new SupabaseDataException("冒險點數必須大於零。");
+            }
+            if (string.IsNullOrWhiteSpace(input.icon)
+                || input.icon.Trim().Length > 32)
+            {
+                throw new SupabaseDataException("冒險圖示無效。");
+            }
+            if (!IsChildGoalCategory(input.category))
+            {
+                throw new SupabaseDataException("冒險分類無效。");
+            }
+            if (input.durationMinutes.HasValue
+                && (input.durationMinutes.Value < 1
+                    || input.durationMinutes.Value > 1440))
+            {
+                throw new SupabaseDataException("冒險時間必須介於 1 到 1440 分鐘。");
+            }
+            TimeSpan dueTime;
+            TimeSpan endTime;
+            if (!TryParseTime(input.dueTime, out dueTime)
+                || !TryParseTime(input.endTime, out endTime)
+                || endTime <= dueTime)
+            {
+                throw new SupabaseDataException("一般冒險的時間範圍無效。");
+            }
+            if (!string.IsNullOrWhiteSpace(input.dueOn)
+                && !DateTime.TryParseExact(
+                    input.dueOn.Trim(),
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out _))
+            {
+                throw new SupabaseDataException("冒險日期格式無效。");
+            }
+        }
+
+        private static bool IsChildGoalCategory(string category)
+        {
+            switch (category == null ? string.Empty : category.Trim())
+            {
+                case "life_habit":
+                case "learning":
+                case "health":
+                case "relationship":
+                case "family_contribution":
+                case "creativity":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool TryParseTime(string value, out TimeSpan parsed)
+        {
+            return TimeSpan.TryParseExact(
+                value == null ? string.Empty : value.Trim(),
+                new[] { "hh\\:mm", "h\\:mm" },
+                CultureInfo.InvariantCulture,
+                out parsed)
+                && parsed >= TimeSpan.Zero
+                && parsed < TimeSpan.FromDays(1);
         }
 
         private static bool IsNetworkAvailable()

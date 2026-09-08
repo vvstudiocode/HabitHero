@@ -1494,6 +1494,59 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ChildGoalProposalUsesTheServerRpcAndPreservesTheReturnedTask()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"task-2\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"讀完一個章節\",\"points\":15,\"status\":\"todo\",\"icon\":\"Star\",\"duration_minutes\":25,\"due_on\":\"2026-09-09\",\"due_time\":\"18:00\",\"end_time\":\"20:00\",\"category\":\"learning\",\"origin\":\"child_proposed\",\"adventure_type\":\"general\",\"requires_timer\":true}",
+                    null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildTaskRecord task = await client.ProposeChildGoalAsync(
+                "family-1",
+                "child-1",
+                new SupabaseChildGoalProposalInput
+                {
+                    name = "  讀完一個章節  ",
+                    points = 15,
+                    icon = "Star",
+                    category = "learning",
+                    durationMinutes = 25,
+                    dueTime = "18:00",
+                    endTime = "20:00",
+                },
+                CancellationToken.None);
+
+            Assert.AreEqual("task-2", task.id);
+            Assert.AreEqual("child_proposed", task.origin);
+            Assert.AreEqual("general", task.adventure_type);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/propose_child_goal",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_family_id\":\"family-1\",\"target_child_profile_id\":\"child-1\",\"goal_name\":\"讀完一個章節\",\"goal_points\":15,\"goal_icon\":\"Star\",\"goal_category\":\"learning\",\"goal_duration_minutes\":25,\"goal_due_on\":null,\"goal_due_time\":\"18:00\",\"goal_end_time\":\"20:00\"}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
         public async Task ParentSessionLoadsAnExplicitChildScopeWithoutUsingChildIdentity()
         {
             SupabaseClientSettings settings = CreateSettings();

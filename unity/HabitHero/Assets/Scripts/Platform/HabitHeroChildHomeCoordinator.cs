@@ -409,6 +409,11 @@ namespace HabitHero.App
                 (taskId) => AbandonAdventureForActiveScopeAsync(
                     taskId,
                     cancellationToken),
+                (input) => ProposeChildGoalForActiveScopeAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    input,
+                    cancellationToken),
                 (rewardId) => RedeemRewardForActiveScopeAsync(
                     rewardId,
                     cancellationToken),
@@ -564,6 +569,39 @@ namespace HabitHero.App
         {
             await client.AbandonAdventureAsync(taskId, cancellationToken);
             return await RefreshActiveHomeAsync(cancellationToken);
+        }
+
+        private async Task<SupabaseChildGoalProposalResult>
+            ProposeChildGoalForActiveScopeAsync(
+                string familyId,
+                string childProfileId,
+                SupabaseChildGoalProposalInput input,
+                CancellationToken cancellationToken)
+        {
+            SupabaseChildGoalProposalResult result =
+                new SupabaseChildGoalProposalResult
+                {
+                    Task = await client.ProposeChildGoalAsync(
+                        familyId,
+                        childProfileId,
+                        input,
+                        cancellationToken),
+                };
+            try
+            {
+                result.RefreshedSnapshot = await RefreshActiveHomeAsync(
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
         }
 
         private async Task<SupabaseRewardRedemptionResult> RedeemRewardForActiveScopeAsync(
