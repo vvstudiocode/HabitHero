@@ -21,6 +21,7 @@ namespace HabitHero.App
         private HabitHeroChildGameView gameView;
         private HabitHeroChildWorldView worldView;
         private HabitHeroChildWorldSceneView worldSceneView;
+        private HabitHeroChildSocialView socialView;
         private HabitHeroChildLedgerView ledgerView;
         private Text statusText;
         private Text pointsText;
@@ -40,6 +41,7 @@ namespace HabitHero.App
         private GameObject taskListObject;
         private SupabaseChildHomeSnapshot latestSnapshot;
         private SupabaseChildWorldData latestWorldData;
+        private SupabaseChildSocialData latestSocialData;
         private CancellationTokenSource timerLoopCancellation;
         private Func<
             SupabaseChildTaskRecord,
@@ -53,6 +55,12 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseWishlistMutationResult>> addWishlist;
         private Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist;
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogueWorld;
+        private Func<Task<SupabaseChildSocialData>> refreshSocial;
+        private Func<string, Task<SupabaseChildSocialData>> sendFriendRequest;
+        private Func<string, Task<SupabaseChildSocialData>> acceptFriendRequest;
+        private Func<string, Task<SupabaseChildSocialData>> declineFriendRequest;
+        private Func<string, Task<SupabaseChildSocialData>> removeFriend;
+        private Func<string, Task<SupabaseChildSocialData>> blockFriend;
         private string selectedMood;
         private int selectedDifficulty;
         private bool abandonConfirmationPending;
@@ -69,8 +77,15 @@ namespace HabitHero.App
             SupabaseChildHomeSnapshot snapshot,
             SupabaseChildGameData gameData,
             SupabaseChildWorldData worldData,
+            SupabaseChildSocialData socialData,
             Func<string, Task<SupabaseChildWorldData>> unlockWorldScene,
             Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue,
+            Func<Task<SupabaseChildSocialData>> refreshSocial,
+            Func<string, Task<SupabaseChildSocialData>> sendFriendRequest,
+            Func<string, Task<SupabaseChildSocialData>> acceptFriendRequest,
+            Func<string, Task<SupabaseChildSocialData>> declineFriendRequest,
+            Func<string, Task<SupabaseChildSocialData>> removeFriend,
+            Func<string, Task<SupabaseChildSocialData>> blockFriend,
             Func<
                 SupabaseChildTaskRecord,
                 SupabaseTaskCompletionDraft,
@@ -103,8 +118,15 @@ namespace HabitHero.App
             this.addWishlist = addWishlist;
             this.deleteWishlist = deleteWishlist;
             this.completeNpcDialogueWorld = completeNpcDialogue;
+            this.refreshSocial = refreshSocial;
+            this.sendFriendRequest = sendFriendRequest;
+            this.acceptFriendRequest = acceptFriendRequest;
+            this.declineFriendRequest = declineFriendRequest;
+            this.removeFriend = removeFriend;
+            this.blockFriend = blockFriend;
             latestSnapshot = snapshot;
             latestWorldData = worldData;
+            latestSocialData = socialData;
             timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
             gameView = new HabitHeroChildGameView(canvasTransform, font);
             gameView.Show(
@@ -120,6 +142,17 @@ namespace HabitHero.App
                 (sceneId) => UnlockWorldSceneAndApplyAsync(unlockWorldScene, sceneId),
                 (npcId) => CompleteNpcDialogueAndApplyAsync(completeNpcDialogue, npcId),
                 OpenWorldScene);
+            socialView = new HabitHeroChildSocialView(canvasTransform, font);
+            socialView.Show(
+                socialData,
+                refreshSocial,
+                sendFriendRequest,
+                acceptFriendRequest,
+                declineFriendRequest,
+                removeFriend,
+                blockFriend,
+                ApplySocialData,
+                CloseSocialPanel);
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -181,8 +214,8 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "冒險商店",
-                new Vector2(0.3f, 0.14f),
-                new Vector2(0.49f, 0.2f));
+                new Vector2(0.23f, 0.14f),
+                new Vector2(0.4f, 0.2f));
             gameButton.interactable = gameData != null;
             gameButton.onClick.AddListener(() => gameView.Open());
             Button worldButton = HabitHeroUiFactory.CreateButton(
@@ -190,21 +223,29 @@ namespace HabitHero.App
                 font,
                 "世界",
                 new Vector2(0.08f, 0.14f),
-                new Vector2(0.28f, 0.2f));
+                new Vector2(0.22f, 0.2f));
             worldButton.interactable = worldData != null;
             worldButton.onClick.AddListener(() => worldView.Open());
+            Button socialButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "好友",
+                new Vector2(0.41f, 0.14f),
+                new Vector2(0.58f, 0.2f));
+            socialButton.interactable = socialData != null;
+            socialButton.onClick.AddListener(OpenSocialPanel);
             Button rewardsButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "獎勵商店",
-                new Vector2(0.51f, 0.14f),
-                new Vector2(0.7f, 0.2f));
+                new Vector2(0.59f, 0.14f),
+                new Vector2(0.76f, 0.2f));
             rewardsButton.onClick.AddListener(OpenRewardPanel);
             Button ledgerButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "點數紀錄",
-                new Vector2(0.72f, 0.14f),
+                new Vector2(0.77f, 0.14f),
                 new Vector2(0.92f, 0.2f));
             ledgerButton.onClick.AddListener(OpenLedgerPanel);
 
@@ -230,9 +271,16 @@ namespace HabitHero.App
             addWishlist = null;
             deleteWishlist = null;
             completeNpcDialogueWorld = null;
+            refreshSocial = null;
+            sendFriendRequest = null;
+            acceptFriendRequest = null;
+            declineFriendRequest = null;
+            removeFriend = null;
+            blockFriend = null;
             timerSessions = null;
             latestSnapshot = null;
             latestWorldData = null;
+            latestSocialData = null;
             pointsText = null;
             taskListObject = null;
             CloseReportPanel();
@@ -254,6 +302,11 @@ namespace HabitHero.App
             {
                 worldSceneView.Dispose();
                 worldSceneView = null;
+            }
+            if (socialView != null)
+            {
+                socialView.Dispose();
+                socialView = null;
             }
             abandonConfirmationPending = false;
             if (panel != null)
@@ -311,6 +364,33 @@ namespace HabitHero.App
             {
                 worldView.ApplyData(latestWorldData);
             }
+        }
+
+        private void ApplySocialData(SupabaseChildSocialData data)
+        {
+            latestSocialData = data;
+        }
+
+        private void OpenSocialPanel()
+        {
+            if (socialView == null || latestSocialData == null)
+            {
+                SetStatus("好友功能尚未連線。", true);
+                return;
+            }
+
+            CloseReportPanel();
+            CloseTimerPanel();
+            CloseRewardPanel();
+            CloseWishlistPanel();
+            CloseLedgerPanel();
+            socialView.Open();
+        }
+
+        private void CloseSocialPanel()
+        {
+            if (socialView != null) socialView.Close();
+            SetStatus("已返回今日任務。", false);
         }
 
         public void ApplySnapshot(SupabaseChildHomeSnapshot snapshot)
