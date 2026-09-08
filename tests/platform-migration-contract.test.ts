@@ -57,3 +57,29 @@ test('Unity migration shell has an explicit owner document', () => {
   assert.ok(fs.existsSync(unityReadme));
   assert.match(fs.readFileSync(unityReadme, 'utf8'), /Supabase backend remains shared/);
 });
+
+test('Vercel keeps the Vite SPA build and history fallback explicit', () => {
+  const vercelConfigPath = path.join(repositoryRoot, 'vercel.json');
+  assert.ok(fs.existsSync(vercelConfigPath));
+
+  const vercelConfig = JSON.parse(fs.readFileSync(vercelConfigPath, 'utf8')) as {
+    buildCommand?: string;
+    outputDirectory?: string;
+    rewrites?: Array<{ source?: string; destination?: string }>;
+  };
+
+  assert.equal(vercelConfig.buildCommand, 'npm run build');
+  assert.equal(vercelConfig.outputDirectory, 'dist');
+  assert.deepEqual(vercelConfig.rewrites, [{ source: '/(.*)', destination: '/index.html' }]);
+});
+
+test('GitHub platform workflow does not require production secrets in pull requests', () => {
+  const workflowPath = path.join(repositoryRoot, '.github/workflows/platform-contract.yml');
+  assert.ok(fs.existsSync(workflowPath));
+
+  const workflow = fs.readFileSync(workflowPath, 'utf8');
+  assert.match(workflow, /npm run lint/);
+  assert.match(workflow, /npm run security:check/);
+  assert.match(workflow, /tests\/platform-migration-contract\.test\.ts/);
+  assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_DB_PASSWORD/);
+});
