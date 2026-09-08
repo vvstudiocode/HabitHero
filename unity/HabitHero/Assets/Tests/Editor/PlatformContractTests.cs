@@ -1088,6 +1088,43 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ChildAdventureAbandonUsesTheServerRpc()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "{}", null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport),
+                new InMemorySupabaseTaskCompletionQueueStore(),
+                new InMemorySupabaseChildHomeSnapshotStore(),
+                () => true);
+
+            await client.AbandonAdventureAsync("task-1", CancellationToken.None);
+
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/abandon_child_adventure",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\"}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
         public void TaskCompletionQueueDeduplicatesByTaskAndPersistsOwnerScope()
         {
             InMemorySupabaseTaskCompletionQueueStore store =

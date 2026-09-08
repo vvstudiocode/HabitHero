@@ -52,6 +52,9 @@ namespace HabitHero.App
                     (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
                     (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
                     (taskId) => client.ResumeAdventureTimerAsync(taskId, cancellationToken),
+                    (taskId) => client.AbandonAdventureAndRefreshAsync(
+                        taskId,
+                        cancellationToken),
                     (rewardId) => client.RedeemRewardAndRefreshAsync(rewardId, cancellationToken),
                     (name) => client.AddWishlistItemAndRefreshAsync(
                         snapshot.familyId,

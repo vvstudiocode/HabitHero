@@ -34,7 +34,7 @@ authorization into client-only rules.
 | Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task creation/review/reward actions) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
-| Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Not started |
+| Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment) |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Not started |
@@ -84,6 +84,9 @@ Partially completed locally:
   wallet/ledger refresh, and RLS-scoped wishlist add/cancel flows.
 - Child point-ledger history view reads the same server-returned ledger rows
   used by wallet refreshes; it does not calculate or mutate balances locally.
+- Child adventure abandonment calls the server `abandon_child_adventure` RPC
+  and refreshes the same snapshot; the client never mutates adventure status
+  locally.
 - Parent family/child/task hydration plus task approval or revision through the
   existing server-authoritative review RPCs.
 - Parent task creation for a selected child through RLS-scoped PostgREST
@@ -105,6 +108,8 @@ Still required:
 
 - Full parent-to-child mode switching with the same guarded behavior as the
   Web client; the current Unity preview is intentionally read-only.
+- Parent adventure scheduling and general-adventure management parity with the
+  existing Web client.
 - Device build and recovery verification for the iOS Keychain and Android
   Keystore session plugins.
 - Device build and callback verification for the Unity deep-link replacement;

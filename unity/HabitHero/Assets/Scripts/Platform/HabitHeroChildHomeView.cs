@@ -44,11 +44,13 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> startTimer;
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer;
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer;
+        private Func<string, Task<SupabaseChildHomeSnapshot>> abandonAdventure;
         private Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward;
         private Func<string, Task<SupabaseWishlistMutationResult>> addWishlist;
         private Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist;
         private string selectedMood;
         private int selectedDifficulty;
+        private bool abandonConfirmationPending;
 
         public HabitHeroChildHomeView(Transform canvasTransform, Font font)
         {
@@ -67,6 +69,7 @@ namespace HabitHero.App
             Func<string, Task<SupabaseTaskTimerSessionRecord>> startTimer,
             Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer,
             Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer,
+            Func<string, Task<SupabaseChildHomeSnapshot>> abandonAdventure,
             Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward,
             Func<string, Task<SupabaseWishlistMutationResult>> addWishlist,
             Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist,
@@ -82,6 +85,7 @@ namespace HabitHero.App
             this.startTimer = startTimer;
             this.pauseTimer = pauseTimer;
             this.resumeTimer = resumeTimer;
+            this.abandonAdventure = abandonAdventure;
             this.redeemReward = redeemReward;
             this.addWishlist = addWishlist;
             this.deleteWishlist = deleteWishlist;
@@ -176,6 +180,7 @@ namespace HabitHero.App
             startTimer = null;
             pauseTimer = null;
             resumeTimer = null;
+            abandonAdventure = null;
             redeemReward = null;
             addWishlist = null;
             deleteWishlist = null;
@@ -188,6 +193,7 @@ namespace HabitHero.App
             CloseRewardPanel();
             CloseWishlistPanel();
             CloseLedgerPanel();
+            abandonConfirmationPending = false;
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -810,6 +816,17 @@ namespace HabitHero.App
                 new Vector2(0.35f, 0.04f),
                 new Vector2(0.65f, 0.12f));
             closeButton.onClick.AddListener(CloseTimerPanel);
+            if (CanAbandonAdventure(task))
+            {
+                Button abandonButton = HabitHeroUiFactory.CreateButton(
+                    card.transform,
+                    font,
+                    "放棄冒險",
+                    new Vector2(0.68f, 0.04f),
+                    new Vector2(0.92f, 0.12f));
+                abandonButton.onClick.AddListener(() =>
+                    HandleAbandonClicked(task, abandonButton));
+            }
             UpdateTimerDisplay();
             timerLoopCancellation = new CancellationTokenSource();
             _ = RunTimerDisplayLoopAsync(timerLoopCancellation.Token);
@@ -986,6 +1003,17 @@ namespace HabitHero.App
                 new Vector2(0.35f, 0.04f),
                 new Vector2(0.65f, 0.12f));
             cancelButton.onClick.AddListener(CloseReportPanel);
+            if (CanAbandonAdventure(task))
+            {
+                Button abandonButton = HabitHeroUiFactory.CreateButton(
+                    card.transform,
+                    font,
+                    "放棄冒險",
+                    new Vector2(0.68f, 0.04f),
+                    new Vector2(0.92f, 0.12f));
+                abandonButton.onClick.AddListener(() =>
+                    HandleAbandonClicked(task, abandonButton));
+            }
         }
 
         private void BuildQuickReport(
@@ -1211,6 +1239,7 @@ namespace HabitHero.App
             reflectionInput = null;
             reportStatus = null;
             reportSubmitButton = null;
+            abandonConfirmationPending = false;
         }
 
         private void CloseTimerPanel()
@@ -1234,6 +1263,7 @@ namespace HabitHero.App
             activeTimerTask = null;
             activeTimerTaskButton = null;
             activeTimer = null;
+            abandonConfirmationPending = false;
         }
 
         private void SetReportStatus(string message, bool isError)
@@ -1259,6 +1289,52 @@ namespace HabitHero.App
                 : new Color(0.84f, 0.89f, 0.96f, 1f);
         }
 
+        private async void HandleAbandonClicked(
+            SupabaseChildTaskRecord task,
+            Button abandonButton)
+        {
+            if (task == null || abandonAdventure == null) return;
+            if (!abandonConfirmationPending)
+            {
+                abandonConfirmationPending = true;
+                SetAbandonButtonLabel(abandonButton, "再次點擊放棄");
+                SetReportStatus("再次點擊即可放棄這個冒險。", false);
+                return;
+            }
+
+            if (abandonButton != null) abandonButton.interactable = false;
+            SetReportStatus("正在放棄冒險…", false);
+            try
+            {
+                SupabaseChildHomeSnapshot refreshed = await abandonAdventure(task.id);
+                if (refreshed != null)
+                {
+                    ApplySnapshot(refreshed);
+                }
+
+                CloseReportPanel();
+                CloseTimerPanel();
+                SetStatus("冒險已放棄。", false);
+            }
+            catch (Exception exception)
+            {
+                SetReportStatus("放棄冒險失敗：" + exception.Message, true);
+                abandonConfirmationPending = false;
+                if (abandonButton != null)
+                {
+                    abandonButton.interactable = true;
+                    SetAbandonButtonLabel(abandonButton, "放棄冒險");
+                }
+            }
+        }
+
+        private static void SetAbandonButtonLabel(Button button, string label)
+        {
+            if (button == null) return;
+            Text buttonText = button.GetComponentInChildren<Text>();
+            if (buttonText != null) buttonText.text = label;
+        }
+
         private static bool IsDisplayable(SupabaseChildTaskRecord task)
         {
             return task != null
@@ -1272,6 +1348,18 @@ namespace HabitHero.App
                 || status == "revision_requested"
                 || status == "proposed"
                 || status == "proposal_revision_requested";
+        }
+
+        private bool CanAbandonAdventure(SupabaseChildTaskRecord task)
+        {
+            return task != null
+                && task.origin == "child_proposed"
+                && task.adventure_type == "general"
+                && (task.status == "proposed"
+                    || task.status == "proposal_revision_requested"
+                    || task.status == "todo")
+                && string.IsNullOrWhiteSpace(task.submitted_at)
+                && FindTimer(task.id) == null;
         }
 
         private SupabaseTaskTimerSessionRecord FindTimer(string taskId)

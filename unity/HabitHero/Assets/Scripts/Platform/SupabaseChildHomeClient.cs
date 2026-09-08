@@ -512,6 +512,29 @@ namespace HabitHero.Platform
             return CallTimerRpcAsync("resume_adventure_timer", taskId, cancellationToken);
         }
 
+        public async Task AbandonAdventureAsync(
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(taskId))
+            {
+                throw new SupabaseDataException("冒險任務 ID 不可為空。");
+            }
+
+            await restClient.CallRpcAsync(
+                "abandon_child_adventure",
+                "{\"target_task_id\":" + SupabaseJson.Quote(taskId) + "}",
+                cancellationToken);
+        }
+
+        public async Task<SupabaseChildHomeSnapshot> AbandonAdventureAndRefreshAsync(
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            await AbandonAdventureAsync(taskId, cancellationToken);
+            return await LoadAsync(cancellationToken);
+        }
+
         public async Task<SupabaseChildTicketRecord> RedeemRewardAsync(
             string rewardId,
             CancellationToken cancellationToken)

@@ -57,6 +57,9 @@ add/cancel uses RLS-scoped PostgREST mutations followed by a fresh snapshot.
 The child client exposes the loaded point ledger as a history panel so task
 awards, redemptions, and parent adjustments remain auditable without creating
 client-side balance calculations.
+Child-proposed general adventures can also be abandoned through the server
+`abandon_child_adventure` RPC; Unity refreshes the child snapshot after the
+mutation and does not change the task status locally.
 The parent home slice reads the shared family data, creates tasks for a selected
 child through an RLS-scoped insert, reviews pending tasks via the existing
 review RPCs, manages reward records through RLS-scoped mutations, approves
