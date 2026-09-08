@@ -1027,8 +1027,8 @@ namespace HabitHero.App
         {
             if (worldShadowMaterial != null) return;
 
-            Shader shader = Shader.Find("Unlit/Transparent")
-                ?? Shader.Find("Sprites/Default")
+            Shader shader = Shader.Find("Sprites/Default")
+                ?? Shader.Find("Unlit/Transparent")
                 ?? Shader.Find("UI/Default")
                 ?? Shader.Find("Unlit/Color");
             if (shader == null) return;
