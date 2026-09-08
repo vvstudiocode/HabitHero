@@ -156,6 +156,52 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldBackgroundMusicMatchesWebWorldMapping()
+        {
+            HabitHeroWorldBackgroundMusicConfig sunrise =
+                HabitHeroWorldBackgroundMusic.GetConfig("sunrise-village");
+            Assert.AreEqual(
+                "/audio/sunrise-village-music.mp3",
+                sunrise.AssetPath);
+            Assert.AreEqual(0.24f, sunrise.Volume, 0.0001f);
+            Assert.AreEqual(2f, sunrise.FadeDurationSeconds, 0.0001f);
+
+            HabitHeroWorldBackgroundMusicConfig cloud =
+                HabitHeroWorldBackgroundMusic.GetConfig("cloud-workshop");
+            Assert.AreEqual(
+                "/audio/cloud-workshop-music.mp3",
+                cloud.AssetPath);
+            Assert.AreEqual(4f, cloud.FadeDurationSeconds, 0.0001f);
+
+            HabitHeroWorldBackgroundMusicConfig fallback =
+                HabitHeroWorldBackgroundMusic.GetConfig("unknown-world");
+            Assert.AreEqual(
+                "/audio/faespencer-monday-marimba-194523.mp3",
+                fallback.AssetPath);
+            Assert.AreEqual(
+                "https://habit-hero-gilt.vercel.app/audio/faespencer-monday-marimba-194523.mp3",
+                HabitHeroWorldBackgroundMusic.BuildUrl(
+                    "https://habit-hero-gilt.vercel.app/",
+                    "unknown-world"));
+        }
+
+        [Test]
+        public void WorldBackgroundMusicPreferenceDefaultsOnAndIsScopedToChild()
+        {
+            string firstKey = HabitHeroWorldBackgroundMusic.GetPreferenceKey("child-1");
+            string secondKey = HabitHeroWorldBackgroundMusic.GetPreferenceKey("child-2");
+            Assert.AreNotEqual(firstKey, secondKey);
+
+            PlayerPrefs.DeleteKey(firstKey);
+            Assert.IsTrue(HabitHeroWorldBackgroundMusic.GetEnabled("child-1"));
+            HabitHeroWorldBackgroundMusic.SetEnabled("child-1", false);
+            Assert.IsFalse(HabitHeroWorldBackgroundMusic.GetEnabled("child-1"));
+            Assert.IsTrue(HabitHeroWorldBackgroundMusic.GetEnabled("child-2"));
+            HabitHeroWorldBackgroundMusic.SetEnabled("child-1", true);
+            PlayerPrefs.DeleteKey(firstKey);
+        }
+
+        [Test]
         public void WorldCollisionUsesAuthoredProxiesAndBlocksMovement()
         {
             HabitHeroWorldCollisionProxy[] proxies;

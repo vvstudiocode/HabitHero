@@ -102,7 +102,9 @@ spawn anchors and movement boundaries. Authored collision flags plus existing
 Supabase decoration `collision_radius` and scale now drive conservative Unity
 movement proxies and safe spawn selection. The camera now uses the Web runtime's
 50° perspective framing, follows the child, and supports drag/pinch/scroll
-controls. Exact GLB-bound rectangle precision, audio, and device parity remain
+controls. World background music now uses the same per-scene Vercel audio
+assets, default volume, loop behavior, and child-scoped on/off preference as
+the Web client. Exact GLB-bound rectangle precision and device parity remain
 pending. The world client now reads the existing
 `get-weather` Edge Function, falls back to clear weather when unavailable, and
 uses the same Open-Meteo fallback as the Web client before falling back to

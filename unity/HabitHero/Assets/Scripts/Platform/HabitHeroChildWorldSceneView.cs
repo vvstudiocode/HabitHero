@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using HabitHero.Platform;
 using GLTFast;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 
 namespace HabitHero.App
@@ -21,6 +22,9 @@ namespace HabitHero.App
         private Light worldSun;
         private Light worldFill;
         private ParticleSystem rainParticles;
+        private AudioSource worldMusicAudio;
+        private AudioClip worldMusicClip;
+        private Toggle worldMusicToggle;
         private float atmosphereRefreshTimer;
         private RenderTexture renderTexture;
         private GameObject player;
@@ -39,6 +43,7 @@ namespace HabitHero.App
         private readonly Dictionary<string, Task<GltfImport>> modelImportLoads =
             new Dictionary<string, Task<GltfImport>>(StringComparer.Ordinal);
         private CancellationTokenSource modelLoadingCancellation;
+        private CancellationTokenSource worldMusicCancellation;
 
         public HabitHeroChildWorldSceneView(
             Transform canvasTransform,
@@ -130,6 +135,7 @@ namespace HabitHero.App
             worldCamera.farClipPlane = 100f;
             worldCameraState = new HabitHeroWorldCameraState();
             CreateWorldAtmosphere(movementBoundary);
+            StartWorldBackgroundMusic(scene.id);
 
             CreatePrimitive(
                 PrimitiveType.Plane,
@@ -957,7 +963,23 @@ namespace HabitHero.App
                 TextAnchor.MiddleCenter,
                 HabitHeroUiFactory.AccentColor,
                 new Vector2(0.04f, 0.58f),
-                new Vector2(0.96f, 0.96f));
+                new Vector2(0.64f, 0.96f));
+            HabitHeroUiFactory.CreateText(
+                hud.transform,
+                font,
+                "背景音樂",
+                13,
+                TextAnchor.MiddleRight,
+                Color.white,
+                new Vector2(0.64f, 0.58f),
+                new Vector2(0.81f, 0.96f));
+            worldMusicToggle = HabitHeroUiFactory.CreateSwitch(
+                hud.transform,
+                new Vector2(0.83f, 0.62f),
+                new Vector2(0.96f, 0.92f));
+            worldMusicToggle.isOn = HabitHeroWorldBackgroundMusic.GetEnabled(
+                GetChildProfileId());
+            worldMusicToggle.onValueChanged.AddListener(SetWorldMusicEnabled);
             HabitHeroUiFactory.CreateText(
                 hud.transform,
                 font,
@@ -1298,6 +1320,8 @@ namespace HabitHero.App
                 modelLoadingCancellation = null;
             }
 
+            StopWorldBackgroundMusic();
+
             foreach (GltfImport gltf in modelImports.Values)
             {
                 if (gltf != null) gltf.Dispose();
@@ -1336,12 +1360,167 @@ namespace HabitHero.App
             worldSun = null;
             worldFill = null;
             rainParticles = null;
+            worldMusicToggle = null;
             atmosphereRefreshTimer = 0f;
             player = null;
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             activeSceneProfile = null;
             sceneStatus = null;
             if (notify && onClose != null) onClose();
+        }
+
+        private string GetChildProfileId()
+        {
+            if (latestData != null && !string.IsNullOrWhiteSpace(latestData.childProfileId))
+            {
+                return latestData.childProfileId;
+            }
+
+            return latestGameData == null ? string.Empty : latestGameData.childProfileId;
+        }
+
+        private void SetWorldMusicEnabled(bool enabled)
+        {
+            HabitHeroWorldBackgroundMusic.SetEnabled(GetChildProfileId(), enabled);
+            if (enabled)
+            {
+                StartWorldBackgroundMusic(sceneId);
+            }
+            else
+            {
+                StopWorldBackgroundMusic();
+            }
+        }
+
+        private void StartWorldBackgroundMusic(string targetSceneId)
+        {
+            if (worldRoot == null
+                || !HabitHeroWorldBackgroundMusic.GetEnabled(GetChildProfileId()))
+            {
+                return;
+            }
+
+            string musicUrl = HabitHeroWorldBackgroundMusic.BuildUrl(
+                gameAssetBaseUrl,
+                targetSceneId);
+            if (string.IsNullOrWhiteSpace(musicUrl)) return;
+
+            HabitHeroWorldBackgroundMusicConfig config =
+                HabitHeroWorldBackgroundMusic.GetConfig(targetSceneId);
+            if (worldMusicAudio == null)
+            {
+                GameObject audioObject = new GameObject("WorldBackgroundMusic");
+                audioObject.transform.SetParent(worldRoot.transform, false);
+                worldMusicAudio = audioObject.AddComponent<AudioSource>();
+                worldMusicAudio.playOnAwake = false;
+                worldMusicAudio.loop = true;
+                worldMusicAudio.spatialBlend = 0f;
+                worldMusicAudio.volume = config.Volume;
+            }
+
+            if (worldMusicCancellation != null)
+            {
+                worldMusicCancellation.Cancel();
+                worldMusicCancellation.Dispose();
+            }
+
+            worldMusicCancellation = new CancellationTokenSource();
+            AudioSource expectedAudio = worldMusicAudio;
+            GameObject expectedWorldRoot = worldRoot;
+            _ = LoadWorldBackgroundMusicAsync(
+                musicUrl,
+                config,
+                expectedAudio,
+                expectedWorldRoot,
+                worldMusicCancellation.Token);
+        }
+
+        private async Task LoadWorldBackgroundMusicAsync(
+            string musicUrl,
+            HabitHeroWorldBackgroundMusicConfig config,
+            AudioSource expectedAudio,
+            GameObject expectedWorldRoot,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                using (UnityWebRequest webRequest = UnityWebRequestMultimedia.GetAudioClip(
+                    musicUrl,
+                    AudioType.MPEG))
+                {
+                    UnityWebRequestAsyncOperation operation = webRequest.SendWebRequest();
+                    while (!operation.isDone)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await Task.Yield();
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (webRequest.result != UnityWebRequest.Result.Success)
+                    {
+                        Debug.LogWarning(
+                            "HabitHero could not load world background music "
+                            + musicUrl + ": " + webRequest.error);
+                        return;
+                    }
+
+                    AudioClip clip = DownloadHandlerAudioClip.GetContent(webRequest);
+                    if (clip == null
+                        || expectedAudio == null
+                        || worldMusicAudio != expectedAudio
+                        || worldRoot != expectedWorldRoot
+                        || !HabitHeroWorldBackgroundMusic.GetEnabled(GetChildProfileId()))
+                    {
+                        if (clip != null) UnityEngine.Object.Destroy(clip);
+                        return;
+                    }
+
+                    if (worldMusicClip != null)
+                    {
+                        UnityEngine.Object.Destroy(worldMusicClip);
+                    }
+
+                    worldMusicClip = clip;
+                    expectedAudio.clip = clip;
+                    expectedAudio.loop = true;
+                    expectedAudio.volume = config.Volume;
+                    expectedAudio.Play();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Toggling music or closing the world cancels the remote audio load.
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning(
+                    "HabitHero world background music failed: " + exception.Message);
+            }
+        }
+
+        private void StopWorldBackgroundMusic()
+        {
+            if (worldMusicCancellation != null)
+            {
+                worldMusicCancellation.Cancel();
+                worldMusicCancellation.Dispose();
+                worldMusicCancellation = null;
+            }
+
+            if (worldMusicAudio != null)
+            {
+                worldMusicAudio.Stop();
+                worldMusicAudio.clip = null;
+                UnityEngine.Object.Destroy(worldMusicAudio.gameObject);
+            }
+
+            if (worldMusicClip != null)
+            {
+                UnityEngine.Object.Destroy(worldMusicClip);
+                worldMusicClip = null;
+            }
+
+            worldMusicAudio = null;
         }
 
         private static Color GetSceneColor(string targetSceneId)
