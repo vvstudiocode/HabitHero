@@ -508,6 +508,113 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task WorldChatClientLoadsVisibleHistoryAndUnreadCount()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"message-1\",\"world_owner_child_profile_id\":\"friend-child-1\",\"sender_child_profile_id\":\"child-1\",\"sender_display_name\":\"小明\",\"body\":\"一起冒險嗎\",\"status\":\"visible\",\"created_at\":\"2026-09-08T10:00:00Z\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "2", null));
+            SupabaseChildWorldChatClient client = new SupabaseChildWorldChatClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildWorldChatData chat = await client.LoadAsync(
+                "friend-child-1",
+                CancellationToken.None);
+
+            Assert.AreEqual("friend-child-1", chat.worldOwnerChildProfileId);
+            Assert.AreEqual(1, chat.messages.Length);
+            Assert.AreEqual("message-1", chat.messages[0].id);
+            Assert.AreEqual("一起冒險嗎", chat.messages[0].body);
+            Assert.AreEqual(2, chat.unreadCount);
+            Assert.AreEqual(2, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/friend_world_messages?select=*&world_owner_child_profile_id=eq.friend-child-1&status=eq.visible&order=created_at.asc&limit=50",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_world_owner_child_profile_id\":\"friend-child-1\"}",
+                dataTransport.Requests[1].Body);
+        }
+
+        [Test]
+        public async Task WorldChatClientSendsMarksReadAndReportsThroughServerRpcs()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"message-2\",\"world_owner_child_profile_id\":\"friend-child-1\",\"sender_child_profile_id\":\"child-1\",\"sender_display_name\":\"小明\",\"body\":\"收到\",\"status\":\"visible\",\"created_at\":\"2026-09-08T10:01:00Z\"}",
+                    null),
+                new SupabaseHttpResponse(200, "{}", null),
+                new SupabaseHttpResponse(200, "{}", null));
+            SupabaseChildWorldChatClient client = new SupabaseChildWorldChatClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseWorldChatMessageRecord sent = await client.SendAsync(
+                "friend-child-1",
+                "  收到  ",
+                CancellationToken.None);
+            await client.MarkReadAsync(
+                "friend-child-1",
+                "message-2",
+                CancellationToken.None);
+            await client.ReportAsync(
+                "message-2",
+                "不當內容",
+                CancellationToken.None);
+
+            Assert.AreEqual("message-2", sent.id);
+            Assert.AreEqual(3, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "{\"target_world_owner_child_profile_id\":\"friend-child-1\",\"message_text\":\"收到\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "{\"target_world_owner_child_profile_id\":\"friend-child-1\",\"target_message_id\":\"message-2\"}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "{\"target_message_id\":\"message-2\",\"report_reason\":\"不當內容\"}",
+                dataTransport.Requests[2].Body);
+        }
+
+        [Test]
+        public void WorldChatClientRejectsLinksBeforeCallingSupabase()
+        {
+            Assert.IsFalse(SupabaseChildWorldChatClient.IsValidMessage("請看 https://example.com"));
+            Assert.IsFalse(SupabaseChildWorldChatClient.IsValidMessage(""));
+            Assert.IsTrue(SupabaseChildWorldChatClient.IsValidMessage("一起玩吧"));
+        }
+
+        [Test]
         public async Task ChildCompletionRefreshesTheServerAuthoritativeLedger()
         {
             SupabaseClientSettings settings = CreateSettings();

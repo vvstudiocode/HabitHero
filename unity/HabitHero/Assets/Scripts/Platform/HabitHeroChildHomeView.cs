@@ -62,6 +62,10 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseChildSocialData>> removeFriend;
         private Func<string, Task<SupabaseChildSocialData>> blockFriend;
         private Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld;
+        private Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat;
+        private Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat;
+        private Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead;
+        private Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat;
         private string selectedMood;
         private int selectedDifficulty;
         private bool abandonConfirmationPending;
@@ -88,6 +92,10 @@ namespace HabitHero.App
             Func<string, Task<SupabaseChildSocialData>> removeFriend,
             Func<string, Task<SupabaseChildSocialData>> blockFriend,
             Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld,
+            Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat,
+            Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat,
+            Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead,
+            Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat,
             Func<
                 SupabaseChildTaskRecord,
                 SupabaseTaskCompletionDraft,
@@ -127,6 +135,10 @@ namespace HabitHero.App
             this.removeFriend = removeFriend;
             this.blockFriend = blockFriend;
             this.visitFriendWorld = visitFriendWorld;
+            this.loadWorldChat = loadWorldChat;
+            this.sendWorldChat = sendWorldChat;
+            this.markWorldChatRead = markWorldChatRead;
+            this.reportWorldChat = reportWorldChat;
             latestSnapshot = snapshot;
             latestWorldData = worldData;
             latestSocialData = socialData;
@@ -155,6 +167,10 @@ namespace HabitHero.App
                 removeFriend,
                 blockFriend,
                 visitFriendWorld,
+                loadWorldChat,
+                sendWorldChat,
+                markWorldChatRead,
+                reportWorldChat,
                 ApplySocialData,
                 CloseSocialPanel);
             panel = HabitHeroUiFactory.CreatePanel(
@@ -282,6 +298,10 @@ namespace HabitHero.App
             removeFriend = null;
             blockFriend = null;
             visitFriendWorld = null;
+            loadWorldChat = null;
+            sendWorldChat = null;
+            markWorldChatRead = null;
+            reportWorldChat = null;
             timerSessions = null;
             latestSnapshot = null;
             latestWorldData = null;

@@ -15,6 +15,7 @@ namespace HabitHero.App
         private readonly SupabaseChildWorldClient worldClient;
         private readonly SupabaseChildSocialClient socialClient;
         private readonly SupabaseChildFriendWorldClient friendWorldClient;
+        private readonly SupabaseChildWorldChatClient worldChatClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
         private HabitHeroChildHomeView view;
@@ -25,6 +26,7 @@ namespace HabitHero.App
             SupabaseChildWorldClient worldClient,
             SupabaseChildSocialClient socialClient,
             SupabaseChildFriendWorldClient friendWorldClient,
+            SupabaseChildWorldChatClient worldChatClient,
             Transform canvasTransform,
             Font font)
         {
@@ -33,6 +35,7 @@ namespace HabitHero.App
             if (worldClient == null) throw new ArgumentNullException("worldClient");
             if (socialClient == null) throw new ArgumentNullException("socialClient");
             if (friendWorldClient == null) throw new ArgumentNullException("friendWorldClient");
+            if (worldChatClient == null) throw new ArgumentNullException("worldChatClient");
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.client = client;
@@ -40,6 +43,7 @@ namespace HabitHero.App
             this.worldClient = worldClient;
             this.socialClient = socialClient;
             this.friendWorldClient = friendWorldClient;
+            this.worldChatClient = worldChatClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
         }
@@ -150,6 +154,21 @@ namespace HabitHero.App
                         cancellationToken),
                     (friendChildProfileId) => LoadFriendWorldAsync(
                         friendChildProfileId,
+                        cancellationToken),
+                    (friendChildProfileId) => LoadWorldChatAsync(
+                        friendChildProfileId,
+                        cancellationToken),
+                    (friendChildProfileId, body) => SendWorldChatAndRefreshAsync(
+                        friendChildProfileId,
+                        body,
+                        cancellationToken),
+                    (friendChildProfileId, messageId) => MarkWorldChatReadAndRefreshAsync(
+                        friendChildProfileId,
+                        messageId,
+                        cancellationToken),
+                    (friendChildProfileId, messageId) => ReportWorldChatAndRefreshAsync(
+                        friendChildProfileId,
+                        messageId,
                         cancellationToken),
                     (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
                     (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
@@ -349,6 +368,51 @@ namespace HabitHero.App
             return friendWorldClient.LoadAsync(
                 friendChildProfileId,
                 cancellationToken);
+        }
+
+        private Task<SupabaseChildWorldChatData> LoadWorldChatAsync(
+            string friendChildProfileId,
+            CancellationToken cancellationToken)
+        {
+            return worldChatClient.LoadAsync(
+                friendChildProfileId,
+                cancellationToken);
+        }
+
+        private async Task<SupabaseChildWorldChatData> SendWorldChatAndRefreshAsync(
+            string friendChildProfileId,
+            string body,
+            CancellationToken cancellationToken)
+        {
+            await worldChatClient.SendAsync(
+                friendChildProfileId,
+                body,
+                cancellationToken);
+            return await LoadWorldChatAsync(friendChildProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildWorldChatData> MarkWorldChatReadAndRefreshAsync(
+            string friendChildProfileId,
+            string messageId,
+            CancellationToken cancellationToken)
+        {
+            await worldChatClient.MarkReadAsync(
+                friendChildProfileId,
+                messageId,
+                cancellationToken);
+            return await LoadWorldChatAsync(friendChildProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildWorldChatData> ReportWorldChatAndRefreshAsync(
+            string friendChildProfileId,
+            string messageId,
+            CancellationToken cancellationToken)
+        {
+            await worldChatClient.ReportAsync(
+                messageId,
+                "未提供原因",
+                cancellationToken);
+            return await LoadWorldChatAsync(friendChildProfileId, cancellationToken);
         }
 
         private async Task<SupabaseChildGameData> SetFollowingPetsAndRefreshAsync(

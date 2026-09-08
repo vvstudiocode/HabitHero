@@ -14,6 +14,7 @@ namespace HabitHero.App
         private GameObject friendListObject;
         private GameObject requestListObject;
         private HabitHeroChildFriendWorldView friendWorldView;
+        private HabitHeroChildWorldChatView chatView;
         private InputField friendCodeInput;
         private Text statusText;
         private SupabaseChildSocialData latestData;
@@ -24,6 +25,10 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseChildSocialData>> removeFriend;
         private Func<string, Task<SupabaseChildSocialData>> blockFriend;
         private Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld;
+        private Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat;
+        private Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat;
+        private Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead;
+        private Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat;
         private Action<SupabaseChildSocialData> onDataChanged;
         private Action onClose;
 
@@ -44,6 +49,10 @@ namespace HabitHero.App
             Func<string, Task<SupabaseChildSocialData>> removeFriend,
             Func<string, Task<SupabaseChildSocialData>> blockFriend,
             Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld,
+            Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat,
+            Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat,
+            Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead,
+            Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat,
             Action<SupabaseChildSocialData> onDataChanged,
             Action onClose)
         {
@@ -56,11 +65,19 @@ namespace HabitHero.App
             this.removeFriend = removeFriend;
             this.blockFriend = blockFriend;
             this.visitFriendWorld = visitFriendWorld;
+            this.loadWorldChat = loadWorldChat;
+            this.sendWorldChat = sendWorldChat;
+            this.markWorldChatRead = markWorldChatRead;
+            this.reportWorldChat = reportWorldChat;
             this.onDataChanged = onDataChanged;
             this.onClose = onClose;
             if (friendWorldView == null)
             {
                 friendWorldView = new HabitHeroChildFriendWorldView(canvasTransform, font);
+            }
+            if (chatView == null)
+            {
+                chatView = new HabitHeroChildWorldChatView(canvasTransform, font);
             }
         }
 
@@ -202,12 +219,21 @@ namespace HabitHero.App
             removeFriend = null;
             blockFriend = null;
             visitFriendWorld = null;
+            loadWorldChat = null;
+            sendWorldChat = null;
+            markWorldChatRead = null;
+            reportWorldChat = null;
             onDataChanged = null;
             onClose = null;
             if (friendWorldView != null)
             {
                 friendWorldView.Dispose();
                 friendWorldView = null;
+            }
+            if (chatView != null)
+            {
+                chatView.Dispose();
+                chatView = null;
             }
         }
 
@@ -233,6 +259,12 @@ namespace HabitHero.App
                     Vector2.zero,
                     Vector2.one);
                 AddFlexibleLayout(label.gameObject);
+                Button chatButton = CreateRowButton(row.transform, "聊天");
+                chatButton.interactable = loadWorldChat != null;
+                chatButton.onClick.AddListener(() => OpenWorldChatAsync(
+                    friend.child_profile_id,
+                    friend.display_name,
+                    chatButton));
                 Button visitButton = CreateRowButton(row.transform, "造訪");
                 visitButton.interactable = visitFriendWorld != null;
                 visitButton.onClick.AddListener(() => VisitFriendWorldAsync(
@@ -401,9 +433,65 @@ namespace HabitHero.App
             }
         }
 
+        private async void OpenWorldChatAsync(
+            string childProfileId,
+            string displayName,
+            Button button)
+        {
+            if (loadWorldChat == null) return;
+            if (button != null) button.interactable = false;
+            SetStatus("正在載入聊天…", false);
+            try
+            {
+                SupabaseChildWorldChatData data = await loadWorldChat(childProfileId);
+                if (data == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳聊天資料。");
+                }
+
+                Close();
+                if (chatView == null)
+                {
+                    chatView = new HabitHeroChildWorldChatView(
+                        canvasTransform,
+                        font);
+                }
+
+                chatView.Show(
+                    displayName,
+                    data,
+                    () => loadWorldChat(childProfileId),
+                    (body) => sendWorldChat == null
+                        ? Task.FromException<SupabaseChildWorldChatData>(
+                            new SupabaseDataException("聊天服務尚未連線。"))
+                        : sendWorldChat(childProfileId, body),
+                    (messageId) => markWorldChatRead == null
+                        ? Task.FromException<SupabaseChildWorldChatData>(
+                            new SupabaseDataException("聊天已讀服務尚未連線。"))
+                        : markWorldChatRead(childProfileId, messageId),
+                    (messageId) => reportWorldChat == null
+                        ? Task.FromException<SupabaseChildWorldChatData>(
+                            new SupabaseDataException("聊天檢舉服務尚未連線。"))
+                        : reportWorldChat(childProfileId, messageId),
+                    CloseWorldChat);
+                chatView.Open();
+            }
+            catch (Exception exception)
+            {
+                SetStatus(exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
         private void CloseFriendWorld()
         {
             if (friendWorldView != null) friendWorldView.Close();
+            Open();
+        }
+
+        private void CloseWorldChat()
+        {
+            if (chatView != null) chatView.Close();
             Open();
         }
 
@@ -540,6 +628,7 @@ namespace HabitHero.App
             }
 
             if (friendWorldView != null) friendWorldView.Close();
+            if (chatView != null) chatView.Close();
 
             friendListObject = null;
             requestListObject = null;

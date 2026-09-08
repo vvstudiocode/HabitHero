@@ -38,7 +38,7 @@ authorization into client-only rules.
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads and server-gated source rules; 3D scene placement pending) |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating; 3D placement pending) |
-| Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, and read-only friend-world snapshot) |
+| Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, and chat RPC/UI) |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Not started |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
 | Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Not started |
@@ -144,6 +144,11 @@ Partially completed locally:
   `get_friend_world_snapshot` RPC for an accepted friend and displays the
   server-scoped result as a read-only 3D preview with a local visitor avatar;
   world mutation, chat, presence, and Realtime transport remain pending.
+- Unity child social foundation now reads visible friend-world chat history,
+  unread counts, and sends/marks-read/reports messages through the existing
+  server RPCs. The chat panel reloads server data after each mutation; private
+  Realtime subscription, presence, broadcast, and reconnect behavior remain
+  pending.
 
 Still required:
 
