@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -48,9 +49,35 @@ namespace HabitHero.Platform
         public bool requiresReviewBeforeNextTask;
     }
 
+    public sealed class SupabaseParentGeneralAdventureCreateInput
+    {
+        public string[] childProfileIds;
+        public string name;
+        public string description;
+        public int points;
+        public string icon;
+        public string category;
+        public int? durationMinutes;
+        public string dueOn;
+        public string startTime;
+        public string endTime;
+        public string reportMode;
+        public bool requiresTimer;
+        public bool requiresReviewBeforeNextTask;
+    }
+
     public sealed class SupabaseParentTaskMutationResult
     {
         public bool Created { get; set; }
+
+        public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
+    public sealed class SupabaseParentAdventureMutationResult
+    {
+        public string[] TaskIds { get; set; }
 
         public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
 
@@ -342,6 +369,74 @@ namespace HabitHero.Platform
             await CreateTaskAsync(familyId, input, cancellationToken);
             SupabaseParentTaskMutationResult result =
                 new SupabaseParentTaskMutationResult { Created = true };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        public async Task<string[]> CreateGeneralAdventureAsync(
+            string familyId,
+            SupabaseParentGeneralAdventureCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            ValidateGeneralAdventureCreate(familyId, input);
+            List<string> taskIds = new List<string>();
+            foreach (string childProfileId in input.childProfileIds)
+            {
+                string body = BuildGeneralAdventureBody(
+                    familyId,
+                    childProfileId,
+                    input);
+                string response = await restClient.CallRpcAsync(
+                    "create_general_adventure",
+                    body,
+                    cancellationToken);
+                SupabaseChildTaskRecord task;
+                string error;
+                if (!SupabaseJsonObjectParser.TryParseObject(
+                        response,
+                        out task,
+                        out error)
+                    || task == null
+                    || string.IsNullOrWhiteSpace(task.id))
+                {
+                    throw new SupabaseDataException(
+                        string.IsNullOrWhiteSpace(error)
+                            ? "Supabase 沒有回傳一般冒險資料。"
+                            : error);
+                }
+
+                taskIds.Add(task.id);
+            }
+
+            return taskIds.ToArray();
+        }
+
+        public async Task<SupabaseParentAdventureMutationResult>
+            CreateGeneralAdventureAndRefreshAsync(
+                string familyId,
+                SupabaseParentGeneralAdventureCreateInput input,
+                CancellationToken cancellationToken)
+        {
+            SupabaseParentAdventureMutationResult result =
+                new SupabaseParentAdventureMutationResult
+                {
+                    TaskIds = await CreateGeneralAdventureAsync(
+                        familyId,
+                        input,
+                        cancellationToken),
+                };
             try
             {
                 result.RefreshedSnapshot = await LoadAsync(cancellationToken);
@@ -771,6 +866,135 @@ namespace HabitHero.Platform
                 new SupabaseParentRewardMutationResult();
             await RefreshParentMutationAsync(result, cancellationToken);
             return result;
+        }
+
+        private static void ValidateGeneralAdventureCreate(
+            string familyId,
+            SupabaseParentGeneralAdventureCreateInput input)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (input == null || input.childProfileIds == null
+                || input.childProfileIds.Length == 0)
+            {
+                throw new SupabaseDataException("至少要指定一位孩子。");
+            }
+
+            HashSet<string> childIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string childProfileId in input.childProfileIds)
+            {
+                if (string.IsNullOrWhiteSpace(childProfileId)
+                    || !childIds.Add(childProfileId))
+                {
+                    throw new SupabaseDataException("指定的孩子資料不可重複或為空。");
+                }
+            }
+
+            string name = input.name == null ? string.Empty : input.name.Trim();
+            if (name.Length < 1 || name.Length > 120)
+            {
+                throw new SupabaseDataException("冒險名稱長度必須介於 1 到 120 個字元。");
+            }
+
+            string description = string.IsNullOrWhiteSpace(input.description)
+                ? string.Empty
+                : input.description.Trim();
+            if (description.Length > 2000)
+            {
+                throw new SupabaseDataException("冒險說明不可超過 2000 個字元。");
+            }
+            string icon = string.IsNullOrWhiteSpace(input.icon)
+                ? "Target"
+                : input.icon.Trim();
+            if (icon.Length < 1 || icon.Length > 32)
+            {
+                throw new SupabaseDataException("冒險圖示設定無效。");
+            }
+            if (!IsAdventureCategory(input.category))
+            {
+                throw new SupabaseDataException("冒險分類設定無效。");
+            }
+            if (input.points < 0)
+            {
+                throw new SupabaseDataException("冒險點數不可為負數。");
+            }
+            if (input.reportMode != "quick" && input.reportMode != "reflection")
+            {
+                throw new SupabaseDataException("一般冒險必須使用快速或心得回報。");
+            }
+            if (input.durationMinutes.HasValue
+                && (input.durationMinutes.Value < 1
+                    || input.durationMinutes.Value > 1440))
+            {
+                throw new SupabaseDataException("冒險時間必須介於 1 到 1440 分鐘。");
+            }
+            if (input.requiresTimer && !input.durationMinutes.HasValue)
+            {
+                throw new SupabaseDataException("需要計時的冒險必須設定時間。");
+            }
+        }
+
+        private static bool IsAdventureCategory(string category)
+        {
+            return category == "life_habit"
+                || category == "learning"
+                || category == "health"
+                || category == "relationship"
+                || category == "family_contribution"
+                || category == "creativity";
+        }
+
+        private static string BuildGeneralAdventureBody(
+            string familyId,
+            string childProfileId,
+            SupabaseParentGeneralAdventureCreateInput input)
+        {
+            string name = input.name.Trim();
+            string description = string.IsNullOrWhiteSpace(input.description)
+                ? null
+                : input.description.Trim();
+            string icon = string.IsNullOrWhiteSpace(input.icon)
+                ? "Target"
+                : input.icon.Trim();
+            string durationJson = input.durationMinutes.HasValue
+                ? input.durationMinutes.Value.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture)
+                : "null";
+            string dueOn = NormalizeOptional(input.dueOn);
+            string startTime = NormalizeOptional(input.startTime);
+            string endTime = NormalizeOptional(input.endTime);
+            return "{\"target_family_id\":" + SupabaseJson.Quote(familyId)
+                + ",\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId)
+                + ",\"adventure_name\":" + SupabaseJson.Quote(name)
+                + ",\"adventure_description\":"
+                + SupabaseJson.NullableString(description)
+                + ",\"adventure_points\":"
+                + input.points.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                + ",\"adventure_icon\":" + SupabaseJson.Quote(icon)
+                + ",\"adventure_category\":"
+                + SupabaseJson.Quote(input.category)
+                + ",\"adventure_duration_minutes\":" + durationJson
+                + ",\"adventure_due_on\":"
+                + SupabaseJson.NullableString(dueOn)
+                + ",\"adventure_start_time\":"
+                + SupabaseJson.NullableString(startTime)
+                + ",\"adventure_end_time\":"
+                + SupabaseJson.NullableString(endTime)
+                + ",\"adventure_completion_report_mode\":"
+                + SupabaseJson.Quote(input.reportMode)
+                + ",\"adventure_requires_timer\":"
+                + (input.requiresTimer ? "true" : "false")
+                + ",\"adventure_requires_review_before_next_task\":"
+                + (input.requiresReviewBeforeNextTask ? "true" : "false")
+                + "}";
+        }
+
+        private static string NormalizeOptional(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private static void ValidateChildAccountCreate(
