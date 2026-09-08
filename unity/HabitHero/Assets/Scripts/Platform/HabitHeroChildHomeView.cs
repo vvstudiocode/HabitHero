@@ -593,6 +593,7 @@ namespace HabitHero.App
         public void Tick(float deltaSeconds)
         {
             if (socialView != null) socialView.Tick(deltaSeconds);
+            if (worldSceneView != null) worldSceneView.Tick(deltaSeconds);
         }
 
         private void OpenSocialPanel()

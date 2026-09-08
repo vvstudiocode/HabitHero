@@ -127,6 +127,7 @@ namespace HabitHero.Platform
         public SupabaseGameWorldNpcOfferingRecord[] offerings;
         public SupabaseChildWorldSceneUnlockRecord[] sceneUnlocks;
         public SupabaseChildWorldNpcDialogueProgressRecord[] dialogueProgress;
+        public SupabaseWorldWeatherRecord weather;
 
         public SupabaseGamePurchaseGate GetPurchaseGate(
             string catalogItemId,
@@ -332,7 +333,14 @@ namespace HabitHero.Platform
                 null,
                 0,
                 cancellationToken);
-            await Task.WhenAll(scenes, npcs, offerings, sceneUnlocks, dialogueProgress);
+            await Task.WhenAll(
+                scenes,
+                npcs,
+                offerings,
+                sceneUnlocks,
+                dialogueProgress);
+            SupabaseWorldWeatherRecord weather = await LoadWeatherAsync(
+                cancellationToken);
             return new SupabaseChildWorldData
             {
                 familyId = familyId,
@@ -342,7 +350,39 @@ namespace HabitHero.Platform
                 offerings = offerings.Result ?? new SupabaseGameWorldNpcOfferingRecord[0],
                 sceneUnlocks = sceneUnlocks.Result ?? new SupabaseChildWorldSceneUnlockRecord[0],
                 dialogueProgress = dialogueProgress.Result ?? new SupabaseChildWorldNpcDialogueProgressRecord[0],
+                weather = weather ?? HabitHeroWorldWeather.CreateFallback(),
             };
+        }
+
+        private async Task<SupabaseWorldWeatherRecord> LoadWeatherAsync(
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                string response = await restClient.InvokeFunctionAsync(
+                    "get-weather",
+                    "{\"location\":\"taipei\"}",
+                    cancellationToken);
+                SupabaseWorldWeatherRecord weather;
+                string error;
+                if (!SupabaseJsonObjectParser.TryParseObject(
+                        response,
+                        out weather,
+                        out error))
+                {
+                    return HabitHeroWorldWeather.CreateFallback();
+                }
+
+                return HabitHeroWorldWeather.Normalize(weather);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                return HabitHeroWorldWeather.CreateFallback();
+            }
         }
 
         public async Task<SupabaseWorldSceneUnlockResult> UnlockSceneAsync(

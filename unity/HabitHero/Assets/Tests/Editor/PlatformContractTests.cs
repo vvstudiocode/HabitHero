@@ -239,6 +239,55 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldWeatherTimePhasesMatchWebSchedule()
+        {
+            Assert.AreEqual(
+                HabitHeroWorldTimePhase.Night,
+                HabitHeroWorldWeather.GetTimePhase(4, 59));
+            Assert.AreEqual(
+                HabitHeroWorldTimePhase.Dawn,
+                HabitHeroWorldWeather.GetTimePhase(5, 0));
+            Assert.AreEqual(
+                HabitHeroWorldTimePhase.Day,
+                HabitHeroWorldWeather.GetTimePhase(7, 0));
+            Assert.AreEqual(
+                HabitHeroWorldTimePhase.Dusk,
+                HabitHeroWorldWeather.GetTimePhase(17, 0));
+            Assert.AreEqual(
+                HabitHeroWorldTimePhase.Night,
+                HabitHeroWorldWeather.GetTimePhase(18, 30));
+        }
+
+        [Test]
+        public void WorldWeatherConditionsMapToWebLightingRules()
+        {
+            Assert.AreEqual(
+                HabitHeroWorldWeatherCondition.Clear,
+                HabitHeroWorldWeather.ParseCondition("clear"));
+            Assert.AreEqual(
+                HabitHeroWorldWeatherCondition.Storm,
+                HabitHeroWorldWeather.ParseCondition("storm"));
+            Assert.AreEqual(
+                HabitHeroWorldWeatherCondition.Clear,
+                HabitHeroWorldWeather.ParseCondition("hail"));
+            Assert.AreEqual(
+                0.72f,
+                HabitHeroWorldWeather.GetWeatherLightFactor(
+                    HabitHeroWorldWeatherCondition.Cloudy),
+                0.0001f);
+            Assert.AreEqual(
+                0f,
+                HabitHeroWorldWeather.GetRainRate(
+                    HabitHeroWorldWeatherCondition.Clear),
+                0.0001f);
+            Assert.Greater(
+                HabitHeroWorldWeather.GetRainRate(
+                    HabitHeroWorldWeatherCondition.Storm),
+                HabitHeroWorldWeather.GetRainRate(
+                    HabitHeroWorldWeatherCondition.Rain));
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";
@@ -2594,6 +2643,10 @@ namespace HabitHero.Tests
                     null),
                 new SupabaseHttpResponse(
                     200,
+                    "{\"condition\":\"clear\",\"intensity\":0,\"cloudCover\":0,\"windSpeedKmh\":0,\"source\":\"fallback\",\"observedAt\":0}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
                     "{\"scene_id\":\"sunrise-village\",\"unlocked\":true,\"unlock_rule_version\":1,\"unlocked_at\":\"2026-09-08T00:00:00Z\"}",
                     null),
                 new SupabaseHttpResponse(
@@ -2629,7 +2682,7 @@ namespace HabitHero.Tests
             Assert.IsTrue(unlock.unlocked);
             Assert.AreEqual("npc.oum", dialogue.npc_id);
             Assert.AreEqual("catalog-pet", dialogue.offerings[0].catalog_item_id);
-            Assert.AreEqual(7, dataTransport.Requests.Count);
+            Assert.AreEqual(8, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/game_world_scenes?select=*&is_active=eq.true&order=sort_order.asc",
                 dataTransport.Requests[0].Url);
@@ -2638,16 +2691,16 @@ namespace HabitHero.Tests
                 dataTransport.Requests[4].Url);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/rpc/unlock_world_scene_if_eligible",
-                dataTransport.Requests[5].Url);
-            Assert.AreEqual(
-                "{\"target_scene_id\":\"sunrise-village\",\"target_child_profile_id\":\"child-1\"}",
-                dataTransport.Requests[5].Body);
-            Assert.AreEqual(
-                "https://example.supabase.co/rest/v1/rpc/complete_world_npc_dialogue",
                 dataTransport.Requests[6].Url);
             Assert.AreEqual(
-                "{\"target_npc_id\":\"npc.oum\",\"target_child_profile_id\":\"child-1\"}",
+                "{\"target_scene_id\":\"sunrise-village\",\"target_child_profile_id\":\"child-1\"}",
                 dataTransport.Requests[6].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/complete_world_npc_dialogue",
+                dataTransport.Requests[7].Url);
+            Assert.AreEqual(
+                "{\"target_npc_id\":\"npc.oum\",\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[7].Body);
         }
 
         [Test]

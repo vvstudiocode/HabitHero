@@ -18,6 +18,10 @@ namespace HabitHero.App
         private GameObject worldRoot;
         private Camera worldCamera;
         private HabitHeroWorldCameraState worldCameraState;
+        private Light worldSun;
+        private Light worldFill;
+        private ParticleSystem rainParticles;
+        private float atmosphereRefreshTimer;
         private RenderTexture renderTexture;
         private GameObject player;
         private Text sceneStatus;
@@ -81,6 +85,13 @@ namespace HabitHero.App
             Open();
         }
 
+        public void Tick(float deltaSeconds)
+        {
+            if (scenePanel == null) return;
+            atmosphereRefreshTimer -= Mathf.Max(0f, deltaSeconds);
+            UpdateWorldAtmosphere(false);
+        }
+
         public void Open()
         {
             SupabaseGameWorldSceneRecord scene = FindScene(sceneId);
@@ -118,6 +129,7 @@ namespace HabitHero.App
             worldCamera.nearClipPlane = 0.1f;
             worldCamera.farClipPlane = 100f;
             worldCameraState = new HabitHeroWorldCameraState();
+            CreateWorldAtmosphere(movementBoundary);
 
             CreatePrimitive(
                 PrimitiveType.Plane,
@@ -395,6 +407,175 @@ namespace HabitHero.App
                 RadiansToDegrees(rotationY),
                 RadiansToDegrees(rotationZ));
             return worldEntity;
+        }
+
+        private void CreateWorldAtmosphere(float movementBoundary)
+        {
+            GameObject sunObject = new GameObject("WorldSun");
+            sunObject.transform.SetParent(worldRoot.transform, false);
+            worldSun = sunObject.AddComponent<Light>();
+            worldSun.type = LightType.Directional;
+            worldSun.shadows = LightShadows.None;
+            worldSun.transform.localRotation = Quaternion.Euler(42f, -32f, 0f);
+
+            GameObject fillObject = new GameObject("WorldFill");
+            fillObject.transform.SetParent(worldRoot.transform, false);
+            worldFill = fillObject.AddComponent<Light>();
+            worldFill.type = LightType.Directional;
+            worldFill.shadows = LightShadows.None;
+            worldFill.transform.localRotation = Quaternion.Euler(58f, 148f, 0f);
+
+            GameObject rainObject = new GameObject("WorldRain");
+            rainObject.transform.SetParent(worldRoot.transform, false);
+            rainParticles = rainObject.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = rainParticles.main;
+            main.loop = true;
+            main.playOnAwake = true;
+            main.startLifetime = 1.15f;
+            main.startSpeed = 8f;
+            main.startSize = 0.035f;
+            main.startColor = new Color(0.72f, 0.88f, 1f, 0.68f);
+            main.maxParticles = 700;
+            ParticleSystem.EmissionModule emission = rainParticles.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 0f;
+            ParticleSystem.ShapeModule shape = rainParticles.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(
+                movementBoundary * 2f,
+                0.1f,
+                movementBoundary * 2f);
+            shape.position = new Vector3(0f, 8f, 0f);
+            ParticleSystemRenderer renderer = rainObject.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                renderer.renderMode = ParticleSystemRenderMode.Stretch;
+                renderer.lengthScale = 0.75f;
+                renderer.velocityScale = 0.25f;
+                Material material = CreateMaterial(new Color(0.72f, 0.88f, 1f, 0.68f));
+                renderer.sharedMaterial = material;
+                runtimeMaterials.Add(material);
+            }
+
+            UpdateWorldAtmosphere(true);
+        }
+
+        private void UpdateWorldAtmosphere(bool force)
+        {
+            if (worldSun == null || worldFill == null || worldCamera == null) return;
+            if (!force && atmosphereRefreshTimer > 0f) return;
+            atmosphereRefreshTimer = 0.5f;
+
+            DateTime taipeiNow = GetTaipeiNow();
+            HabitHeroWorldTimePhase phase = HabitHeroWorldWeather.GetTimePhase(
+                taipeiNow.Hour,
+                taipeiNow.Minute);
+            SupabaseWorldWeatherRecord weather = HabitHeroWorldWeather.Normalize(
+                latestData == null ? null : latestData.weather);
+            HabitHeroWorldWeatherCondition condition =
+                HabitHeroWorldWeather.ParseCondition(weather.condition);
+            float weatherFactor = HabitHeroWorldWeather.GetWeatherLightFactor(condition);
+
+            float sunIntensity;
+            float fillIntensity;
+            Color sunColor;
+            switch (phase)
+            {
+                case HabitHeroWorldTimePhase.Dawn:
+                    sunIntensity = 1.9f;
+                    fillIntensity = 0.62f;
+                    sunColor = new Color(1f, 0.74f, 0.55f, 1f);
+                    break;
+                case HabitHeroWorldTimePhase.Dusk:
+                    sunIntensity = 1.62f;
+                    fillIntensity = 0.5f;
+                    sunColor = new Color(1f, 0.59f, 0.53f, 1f);
+                    break;
+                case HabitHeroWorldTimePhase.Night:
+                    sunIntensity = 0.22f;
+                    fillIntensity = 0.18f;
+                    sunColor = new Color(0.56f, 0.67f, 0.86f, 1f);
+                    break;
+                default:
+                    sunIntensity = 2.85f;
+                    fillIntensity = 0.86f;
+                    sunColor = new Color(1f, 0.84f, 0.67f, 1f);
+                    break;
+            }
+
+            worldSun.intensity = sunIntensity * weatherFactor;
+            worldSun.color = sunColor;
+            worldFill.intensity = fillIntensity * weatherFactor;
+            worldFill.color = phase == HabitHeroWorldTimePhase.Night
+                ? new Color(0.45f, 0.58f, 0.86f, 1f)
+                : new Color(0.72f, 0.84f, 1f, 1f);
+
+            float rainRate = HabitHeroWorldWeather.GetRainRate(condition) * 300f;
+            if (rainRate > 0f)
+            {
+                rainRate *= Mathf.Clamp(weather.intensity, 0.25f, 1f);
+            }
+
+            if (rainParticles != null)
+            {
+                ParticleSystem.EmissionModule emission = rainParticles.emission;
+                emission.rateOverTime = new ParticleSystem.MinMaxCurve(rainRate);
+                if (rainRate > 0f)
+                {
+                    if (!rainParticles.isPlaying) rainParticles.Play();
+                }
+                else if (rainParticles.isPlaying)
+                {
+                    rainParticles.Stop(
+                        true,
+                        ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+            }
+
+            Color baseColor = GetSceneColor(sceneId);
+            if (phase == HabitHeroWorldTimePhase.Night)
+            {
+                baseColor = Color.Lerp(
+                    baseColor,
+                    new Color(0.03f, 0.05f, 0.13f, 1f),
+                    0.68f);
+            }
+            else if (condition == HabitHeroWorldWeatherCondition.Cloudy
+                || condition == HabitHeroWorldWeatherCondition.Storm)
+            {
+                baseColor = Color.Lerp(
+                    baseColor,
+                    new Color(0.48f, 0.56f, 0.66f, 1f),
+                    0.18f);
+            }
+
+            worldCamera.backgroundColor = baseColor;
+        }
+
+        private static DateTime GetTaipeiNow()
+        {
+            try
+            {
+                TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Taipei");
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                try
+                {
+                    TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById(
+                        "Taipei Standard Time");
+                    return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    return DateTime.Now;
+                }
+            }
+            catch (InvalidTimeZoneException)
+            {
+                return DateTime.Now;
+            }
         }
 
         private SupabaseGameCatalogItemRecord FindCatalogItemForInventory(
@@ -1152,6 +1333,10 @@ namespace HabitHero.App
             runtimeMaterials.Clear();
             worldCamera = null;
             worldCameraState = null;
+            worldSun = null;
+            worldFill = null;
+            rainParticles = null;
+            atmosphereRefreshTimer = 0f;
             player = null;
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             activeSceneProfile = null;
