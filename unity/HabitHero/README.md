@@ -140,8 +140,8 @@ Unity 6.0; iOS builds request permission and obtain the APNs token, while
 Editor/WebGL and Android return an explicit unsupported result. Android push
 token/delivery and real-device verification are still pending; the Unity
 client now parses the shared APNs payload, deduplicates notification targets,
-and opens the related parent review or child task surface after a cold start,
-background return, or foreground delivery.
+and opens the related parent review, parent schedule editor, or child task
+surface after a cold start, background return, or foreground delivery.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

@@ -643,6 +643,18 @@ namespace HabitHero.App
             return false;
         }
 
+        public bool OpenScheduleNotification(string scheduleId)
+        {
+            if (latestSnapshot == null || string.IsNullOrWhiteSpace(scheduleId))
+            {
+                return false;
+            }
+
+            OpenAdventureSchedulePanel();
+            if (adventureScheduleView == null) return false;
+            return adventureScheduleView.OpenScheduleNotification(scheduleId);
+        }
+
         private void RenderSnapshot(SupabaseParentHomeSnapshot snapshot)
         {
             int childCount = snapshot.children == null ? 0 : snapshot.children.Length;

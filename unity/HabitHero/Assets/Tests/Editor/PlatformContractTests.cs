@@ -168,6 +168,19 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void ChildTaskRecordsPreserveScheduleIdsForNotificationRouting()
+        {
+            SupabaseChildTaskRecord task = JsonUtility.FromJson<SupabaseChildTaskRecord>(
+                "{\"id\":\"550e8400-e29b-41d4-a716-446655440004\","
+                    + "\"schedule_id\":\"550e8400-e29b-41d4-a716-446655440005\"}");
+
+            Assert.IsNotNull(task);
+            Assert.AreEqual(
+                "550e8400-e29b-41d4-a716-446655440005",
+                task.schedule_id);
+        }
+
+        [Test]
         public void GameAssetCatalogResolvesOnlyAllowListedPublicModels()
         {
             string modelUrl;

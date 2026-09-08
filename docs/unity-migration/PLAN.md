@@ -229,9 +229,9 @@ Partially completed locally:
   sign-out or scope changes. The Edge Function now includes a stringified
   `data` payload for Unity while preserving the flat task/schedule fields for
   Capacitor. Unity parses and deduplicates cold-start, foreground, and
-  background-return targets, then opens the matching parent review or child
-  task surface after authentication. Android push token/delivery and
-  real-device verification remain pending.
+  background-return targets, then opens the matching parent review, parent
+  schedule editor, or child task surface after authentication. Android push
+  token/delivery and real-device verification remain pending.
 
 Remaining migration gates:
 

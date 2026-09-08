@@ -60,12 +60,17 @@ namespace HabitHero.App
 
         public bool OpenNotificationTarget(HabitHeroNotificationTarget target)
         {
-            if (target == null || view == null || string.IsNullOrWhiteSpace(target.TaskId))
+            if (target == null || view == null)
             {
                 return false;
             }
 
-            return view.OpenTaskNotification(target.TaskId, target.Event);
+            if (!string.IsNullOrWhiteSpace(target.TaskId))
+            {
+                return view.OpenTaskNotification(target.TaskId, target.Event);
+            }
+
+            return view.OpenScheduleNotification(target.ScheduleId);
         }
 
         public async Task<bool> TryShowAsync(

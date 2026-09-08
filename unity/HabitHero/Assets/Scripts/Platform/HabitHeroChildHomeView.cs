@@ -909,6 +909,23 @@ namespace HabitHero.App
             return true;
         }
 
+        public bool OpenScheduleNotification(string scheduleId, string eventName)
+        {
+            if (latestSnapshot == null || string.IsNullOrWhiteSpace(scheduleId))
+            {
+                return false;
+            }
+
+            foreach (SupabaseChildTaskRecord task in
+                latestSnapshot.tasks ?? new SupabaseChildTaskRecord[0])
+            {
+                if (task == null || task.schedule_id != scheduleId) continue;
+                return OpenTaskNotification(task.id, eventName);
+            }
+
+            return false;
+        }
+
         private void RenderTaskList(SupabaseChildHomeSnapshot snapshot)
         {
             if (taskListObject == null) return;

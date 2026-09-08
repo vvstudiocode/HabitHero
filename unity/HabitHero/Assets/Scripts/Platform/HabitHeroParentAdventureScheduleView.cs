@@ -62,6 +62,7 @@ namespace HabitHero.App
         private SupabaseParentAdventureScheduleRecord activeSchedule;
         private int categoryIndex;
         private bool disableConfirm;
+        private string pendingScheduleId;
         private Func<Task<SupabaseParentAdventureScheduleRecord[]>> loadSchedules;
         private Func<
             SupabaseParentAdventureScheduleCreateInput,
@@ -359,6 +360,14 @@ namespace HabitHero.App
             disableButtonLabel = null;
             selectedChildIds.Clear();
             disableConfirm = false;
+            pendingScheduleId = null;
+        }
+
+        public bool OpenScheduleNotification(string scheduleId)
+        {
+            if (panel == null || string.IsNullOrWhiteSpace(scheduleId)) return false;
+            pendingScheduleId = scheduleId.Trim();
+            return TryOpenPendingSchedule() || loadSchedules != null;
         }
 
         private async void RefreshSchedulesAsync()
@@ -372,12 +381,39 @@ namespace HabitHero.App
                 if (panel == null) return;
                 schedules = loaded ?? new SupabaseParentAdventureScheduleRecord[0];
                 RenderScheduleList();
-                SetStatus("選取排程可編輯；停用需要再次確認。", false);
+                if (!TryOpenPendingSchedule())
+                {
+                    if (!string.IsNullOrWhiteSpace(pendingScheduleId))
+                    {
+                        pendingScheduleId = null;
+                        SetStatus("通知中的每日排程目前不存在。", true);
+                    }
+                    else
+                    {
+                        SetStatus("選取排程可編輯；停用需要再次確認。", false);
+                    }
+                }
             }
             catch (Exception exception)
             {
                 SetStatus("載入每日冒險排程失敗：" + exception.Message, true);
             }
+        }
+
+        private bool TryOpenPendingSchedule()
+        {
+            if (string.IsNullOrWhiteSpace(pendingScheduleId)) return false;
+            foreach (SupabaseParentAdventureScheduleRecord schedule in schedules)
+            {
+                if (schedule == null || schedule.id != pendingScheduleId) continue;
+                string scheduleName = schedule.name ?? "每日冒險";
+                pendingScheduleId = null;
+                SelectSchedule(schedule);
+                SetStatus("已從通知開啟「" + scheduleName + "」排程。", false);
+                return true;
+            }
+
+            return false;
         }
 
         private void RenderScheduleList()
@@ -427,6 +463,7 @@ namespace HabitHero.App
         {
             activeSchedule = null;
             selectedChildIds.Clear();
+            pendingScheduleId = null;
             string firstChildId = FindFirstChildId();
             if (!string.IsNullOrWhiteSpace(firstChildId)) selectedChildIds.Add(firstChildId);
             categoryIndex = 0;

@@ -57,6 +57,7 @@ namespace HabitHero.Platform
         public string revision_note;
         public string adventure_type;
         public string adventure_group_id;
+        public string schedule_id;
         public string occurrence_date;
         public string completion_report_mode;
         public string quick_report;
