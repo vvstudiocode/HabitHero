@@ -138,6 +138,30 @@ namespace HabitHero.Platform
             return response.Body;
         }
 
+        public async Task<string> InvokeFunctionAsync(
+            string functionName,
+            string jsonBody,
+            CancellationToken cancellationToken)
+        {
+            SupabaseSession session = await RequireSessionAsync(cancellationToken);
+            SupabaseRequestContract request;
+            string error;
+            if (!SupabaseRequestBuilder.TryBuildFunction(
+                    settings,
+                    functionName,
+                    session.AccessToken,
+                    jsonBody,
+                    out request,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            SupabaseHttpResponse response = await transport.SendAsync(request, cancellationToken);
+            EnsureSuccess(response);
+            return response.Body;
+        }
+
         public async Task InsertAsync(
             string table,
             string jsonBody,

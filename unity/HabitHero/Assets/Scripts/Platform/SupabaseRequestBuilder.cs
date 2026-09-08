@@ -31,6 +31,9 @@ namespace HabitHero.Platform
         private static readonly Regex SafeFunctionName = new Regex(
             "^[a-z][a-z0-9_]*$",
             RegexOptions.CultureInvariant);
+        private static readonly Regex SafeEdgeFunctionName = new Regex(
+            "^[a-z][a-z0-9_-]*$",
+            RegexOptions.CultureInvariant);
 
         public static bool TryBuildRpc(
             SupabaseClientSettings settings,
@@ -70,6 +73,49 @@ namespace HabitHero.Platform
             request = new SupabaseRequestContract(
                 "POST",
                 settings.Url + "/rest/v1/rpc/" + functionName,
+                headers,
+                string.IsNullOrEmpty(jsonBody) ? "{}" : jsonBody);
+            return true;
+        }
+
+        public static bool TryBuildFunction(
+            SupabaseClientSettings settings,
+            string functionName,
+            string accessToken,
+            string jsonBody,
+            out SupabaseRequestContract request,
+            out string error)
+        {
+            request = null;
+            error = null;
+
+            if (settings == null)
+            {
+                error = "Supabase client settings are missing.";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(functionName) || !SafeEdgeFunctionName.IsMatch(functionName))
+            {
+                error = "Supabase Edge Function name is invalid.";
+                return false;
+            }
+
+            Dictionary<string, string> headers = new Dictionary<string, string>
+            {
+                { "apikey", settings.PublishableKey },
+                { "Content-Type", "application/json" },
+                { "Accept", "application/json" },
+            };
+
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                headers["Authorization"] = "Bearer " + accessToken;
+            }
+
+            request = new SupabaseRequestContract(
+                "POST",
+                settings.Url + "/functions/v1/" + functionName,
                 headers,
                 string.IsNullOrEmpty(jsonBody) ? "{}" : jsonBody);
             return true;

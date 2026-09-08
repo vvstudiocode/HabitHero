@@ -19,6 +19,7 @@ namespace HabitHero.App
         private HabitHeroParentTaskCreateView taskCreateView;
         private HabitHeroParentRewardManagementView rewardManagementView;
         private HabitHeroParentPointAdjustmentView pointAdjustmentView;
+        private HabitHeroParentChildAccountView childAccountView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -60,6 +61,16 @@ namespace HabitHero.App
             Task<SupabaseParentRewardMutationResult>> updateReward;
         private Func<string, Task<SupabaseParentRewardMutationResult>> deleteReward;
         private Func<string, int, string, Task<SupabaseParentPointMutationResult>> adjustPoints;
+        private Func<
+            SupabaseParentChildAccountCreateInput,
+            Task<SupabaseParentChildAccountMutationResult>> createChildAccount;
+        private Func<
+            string,
+            string,
+            Task<SupabaseParentChildAccountMutationResult>> resetChildPassword;
+        private Func<
+            string,
+            Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount;
 
         public HabitHeroParentHomeView(Transform canvasTransform, Font font)
         {
@@ -98,6 +109,16 @@ namespace HabitHero.App
                 Task<SupabaseParentRewardMutationResult>> updateReward,
             Func<string, Task<SupabaseParentRewardMutationResult>> deleteReward,
             Func<string, int, string, Task<SupabaseParentPointMutationResult>> adjustPoints,
+            Func<
+                SupabaseParentChildAccountCreateInput,
+                Task<SupabaseParentChildAccountMutationResult>> createChildAccount,
+            Func<
+                string,
+                string,
+                Task<SupabaseParentChildAccountMutationResult>> resetChildPassword,
+            Func<
+                string,
+                Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount,
             Action onSignOut)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
@@ -112,6 +133,9 @@ namespace HabitHero.App
             this.updateReward = updateReward;
             this.deleteReward = deleteReward;
             this.adjustPoints = adjustPoints;
+            this.createChildAccount = createChildAccount;
+            this.resetChildPassword = resetChildPassword;
+            this.deleteChildAccount = deleteChildAccount;
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -188,9 +212,16 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "願望與獎勵券",
-                new Vector2(0.08f, 0.18f),
+                new Vector2(0.54f, 0.18f),
                 new Vector2(0.92f, 0.24f));
             rewardButton.onClick.AddListener(OpenRewardPanel);
+            Button childAccountButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "孩子帳號",
+                new Vector2(0.08f, 0.18f),
+                new Vector2(0.46f, 0.24f));
+            childAccountButton.onClick.AddListener(OpenChildAccountPanel);
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
@@ -212,6 +243,9 @@ namespace HabitHero.App
             updateReward = null;
             deleteReward = null;
             adjustPoints = null;
+            createChildAccount = null;
+            resetChildPassword = null;
+            deleteChildAccount = null;
             latestSnapshot = null;
             activeReviewTask = null;
             activeWishlist = null;
@@ -224,6 +258,7 @@ namespace HabitHero.App
             CloseTaskCreatePanel();
             CloseRewardManagementPanel();
             ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -513,6 +548,37 @@ namespace HabitHero.App
                 ApplySnapshot,
                 SetStatus,
                 ClosePointAdjustmentPanel);
+        }
+
+        private void OpenChildAccountPanel()
+        {
+            if (latestSnapshot == null
+                || createChildAccount == null
+                || resetChildPassword == null
+                || deleteChildAccount == null)
+            {
+                SetStatus("孩子帳號管理尚未連線。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            if (childAccountView == null)
+            {
+                childAccountView = new HabitHeroParentChildAccountView(
+                    canvasTransform,
+                    font);
+            }
+
+            childAccountView.Show(
+                latestSnapshot,
+                createChildAccount,
+                resetChildPassword,
+                deleteChildAccount,
+                ApplySnapshot,
+                SetStatus,
+                CloseChildAccountPanel);
         }
 
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
@@ -943,6 +1009,13 @@ namespace HabitHero.App
             if (pointAdjustmentView == null) return;
             pointAdjustmentView.Dispose();
             pointAdjustmentView = null;
+        }
+
+        private void CloseChildAccountPanel()
+        {
+            if (childAccountView == null) return;
+            childAccountView.Dispose();
+            childAccountView = null;
         }
 
         private void SetReviewStatus(string message, bool isError)

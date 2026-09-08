@@ -60,6 +60,9 @@ review RPCs, manages reward records through RLS-scoped mutations, approves
 wishlist items through the server RPC, and fulfills pending reward tickets
 through an RLS-scoped update. Manual point changes use the server
 `adjust_child_points` RPC; the client never edits balances directly.
+Child login accounts are managed through the authenticated
+`manage-child-account` Edge Function, including creation, password reset, and
+deletion; the Unity client never receives or stores a service-role key.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

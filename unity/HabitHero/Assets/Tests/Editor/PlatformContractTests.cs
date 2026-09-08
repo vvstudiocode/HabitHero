@@ -95,6 +95,34 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void EdgeFunctionBuilderUsesTheAuthenticatedPublicBoundary()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseRequestContract request;
+            string error;
+
+            bool created = SupabaseRequestBuilder.TryBuildFunction(
+                settings,
+                "manage-child-account",
+                "access-token",
+                "{\"action\":\"reset-password\"}",
+                out request,
+                out error);
+
+            Assert.IsTrue(created, error);
+            Assert.AreEqual("POST", request.Method);
+            Assert.AreEqual(
+                "https://example.supabase.co/functions/v1/manage-child-account",
+                request.Url);
+            Assert.AreEqual("sb_publishable_test-key", request.Headers["apikey"]);
+            Assert.AreEqual("Bearer access-token", request.Headers["Authorization"]);
+            Assert.AreEqual("application/json", request.Headers["Content-Type"]);
+            Assert.AreEqual(
+                "{\"action\":\"reset-password\"}",
+                request.Body);
+        }
+
+        [Test]
         public void RestBuilderScopesTableReadsToTheCurrentSession()
         {
             SupabaseClientSettings settings = CreateSettings();
@@ -962,6 +990,70 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "{\"target_child_profile_id\":\"child-1\",\"points_delta\":15,\"adjustment_note\":\"完成額外家事\"}",
                 dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task ParentChildAccountActionsUseTheAuthenticatedEdgeFunction()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"child\":{\"id\":\"child-1\",\"display_name\":\"小明\",\"login_name\":\"kid_1\"}}",
+                    null),
+                new SupabaseHttpResponse(200, "{\"success\":true}", null),
+                new SupabaseHttpResponse(200, "{\"success\":true}", null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildProfileRecord child = await client.CreateChildAccountAsync(
+                "family-1",
+                new SupabaseParentChildAccountCreateInput
+                {
+                    childProfileId = "child-1",
+                    childName = "小明",
+                    loginName = "kid_1",
+                    password = "abc123",
+                },
+                CancellationToken.None);
+            await client.ResetChildPasswordAsync(
+                "family-1",
+                "child-1",
+                "new123",
+                CancellationToken.None);
+            await client.DeleteChildAccountAsync(
+                "family-1",
+                "child-1",
+                CancellationToken.None);
+
+            Assert.AreEqual("child-1", child.id);
+            Assert.AreEqual(3, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/functions/v1/manage-child-account",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"action\":\"create\",\"familyId\":\"family-1\",\"childProfileId\":\"child-1\",\"childName\":\"小明\",\"loginName\":\"kid_1\",\"password\":\"abc123\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "{\"action\":\"reset-password\",\"familyId\":\"family-1\",\"childProfileId\":\"child-1\",\"password\":\"new123\"}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "{\"action\":\"delete\",\"familyId\":\"family-1\",\"childProfileId\":\"child-1\"}",
+                dataTransport.Requests[2].Body);
         }
 
         [Test]

@@ -29,7 +29,7 @@ authorization into client-only rules.
 
 | Area | Current behavior to preserve | Unity acceptance gate | Status |
 | --- | --- | --- | --- |
-| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started |
+| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started (child account management) |
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Not started |
 | Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task creation/review/reward actions) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
@@ -93,6 +93,8 @@ Partially completed locally:
   with the same reward records consumed by the Unity child shop.
 - Parent manual point adjustment through the server-authoritative
   `adjust_child_points` RPC and refreshed point balances.
+- Parent child-account creation, password reset, and deletion through the
+  authenticated `manage-child-account` Edge Function.
 
 Still required:
 

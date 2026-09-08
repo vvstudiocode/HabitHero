@@ -88,6 +88,19 @@ namespace HabitHero.App
                             pointsDelta,
                             note,
                             cancellationToken),
+                    (input) => client.CreateChildAccountAndRefreshAsync(
+                        snapshot.familyId,
+                        input,
+                        cancellationToken),
+                    (childProfileId, password) => client.ResetChildPasswordAndRefreshAsync(
+                        snapshot.familyId,
+                        childProfileId,
+                        password,
+                        cancellationToken),
+                    (childProfileId) => client.DeleteChildAccountAndRefreshAsync(
+                        snapshot.familyId,
+                        childProfileId,
+                        cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;

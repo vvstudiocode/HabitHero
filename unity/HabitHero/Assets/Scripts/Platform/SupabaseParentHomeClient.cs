@@ -83,10 +83,38 @@ namespace HabitHero.Platform
         public string RefreshError { get; set; }
     }
 
+    public sealed class SupabaseParentChildAccountCreateInput
+    {
+        public string childProfileId;
+        public string childName;
+        public string loginName;
+        public string password;
+        public string gender;
+        public string characterId;
+    }
+
+    public sealed class SupabaseParentChildAccountMutationResult
+    {
+        public SupabaseChildProfileRecord Child { get; set; }
+
+        public bool Succeeded { get; set; }
+
+        public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
     [Serializable]
     internal sealed class SupabasePointAdjustmentResponse
     {
         public int points_balance;
+    }
+
+    [Serializable]
+    internal sealed class SupabaseManagedChildAccountResponse
+    {
+        public SupabaseChildProfileRecord child;
+        public bool success;
     }
 
     public sealed class SupabaseParentHomeClient
@@ -448,6 +476,133 @@ namespace HabitHero.Platform
             return result;
         }
 
+        public async Task<SupabaseChildProfileRecord> CreateChildAccountAsync(
+            string familyId,
+            SupabaseParentChildAccountCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            ValidateChildAccountCreate(familyId, input);
+            string body = "{\"action\":\"create\",\"familyId\":"
+                + SupabaseJson.Quote(familyId)
+                + (string.IsNullOrWhiteSpace(input.childProfileId)
+                    ? string.Empty
+                    : ",\"childProfileId\":" + SupabaseJson.Quote(input.childProfileId))
+                + ",\"childName\":" + SupabaseJson.Quote(input.childName.Trim())
+                + ",\"loginName\":" + SupabaseJson.Quote(input.loginName.Trim().ToLowerInvariant())
+                + ",\"password\":" + SupabaseJson.Quote(input.password)
+                + (string.IsNullOrWhiteSpace(input.gender)
+                    ? string.Empty
+                    : ",\"gender\":" + SupabaseJson.Quote(input.gender.Trim()))
+                + (string.IsNullOrWhiteSpace(input.characterId)
+                    ? string.Empty
+                    : ",\"characterId\":" + SupabaseJson.Quote(input.characterId.Trim()))
+                + "}";
+            string response = await restClient.InvokeFunctionAsync(
+                "manage-child-account",
+                body,
+                cancellationToken);
+            SupabaseManagedChildAccountResponse parsed;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out parsed,
+                    out error)
+                || parsed.child == null)
+            {
+                throw new SupabaseDataException(
+                    string.IsNullOrWhiteSpace(error)
+                        ? "Supabase 沒有回傳孩子帳號資料。"
+                        : error);
+            }
+
+            return parsed.child;
+        }
+
+        public async Task ResetChildPasswordAsync(
+            string familyId,
+            string childProfileId,
+            string password,
+            CancellationToken cancellationToken)
+        {
+            ValidateChildAccountTarget(familyId, childProfileId);
+            ValidateChildPassword(password);
+            string body = "{\"action\":\"reset-password\",\"familyId\":"
+                + SupabaseJson.Quote(familyId)
+                + ",\"childProfileId\":" + SupabaseJson.Quote(childProfileId)
+                + ",\"password\":" + SupabaseJson.Quote(password) + "}";
+            string response = await restClient.InvokeFunctionAsync(
+                "manage-child-account",
+                body,
+                cancellationToken);
+            EnsureSuccessfulAccountMutation(response);
+        }
+
+        public async Task DeleteChildAccountAsync(
+            string familyId,
+            string childProfileId,
+            CancellationToken cancellationToken)
+        {
+            ValidateChildAccountTarget(familyId, childProfileId);
+            string body = "{\"action\":\"delete\",\"familyId\":"
+                + SupabaseJson.Quote(familyId)
+                + ",\"childProfileId\":" + SupabaseJson.Quote(childProfileId) + "}";
+            string response = await restClient.InvokeFunctionAsync(
+                "manage-child-account",
+                body,
+                cancellationToken);
+            EnsureSuccessfulAccountMutation(response);
+        }
+
+        public async Task<SupabaseParentChildAccountMutationResult> CreateChildAccountAndRefreshAsync(
+            string familyId,
+            SupabaseParentChildAccountCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            SupabaseParentChildAccountMutationResult result =
+                new SupabaseParentChildAccountMutationResult
+                {
+                    Child = await CreateChildAccountAsync(
+                        familyId,
+                        input,
+                        cancellationToken),
+                    Succeeded = true,
+                };
+            await RefreshChildAccountMutationAsync(result, cancellationToken);
+            return result;
+        }
+
+        public async Task<SupabaseParentChildAccountMutationResult> ResetChildPasswordAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string password,
+            CancellationToken cancellationToken)
+        {
+            await ResetChildPasswordAsync(
+                familyId,
+                childProfileId,
+                password,
+                cancellationToken);
+            SupabaseParentChildAccountMutationResult result =
+                new SupabaseParentChildAccountMutationResult { Succeeded = true };
+            await RefreshChildAccountMutationAsync(result, cancellationToken);
+            return result;
+        }
+
+        public async Task<SupabaseParentChildAccountMutationResult> DeleteChildAccountAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            CancellationToken cancellationToken)
+        {
+            await DeleteChildAccountAsync(
+                familyId,
+                childProfileId,
+                cancellationToken);
+            SupabaseParentChildAccountMutationResult result =
+                new SupabaseParentChildAccountMutationResult { Succeeded = true };
+            await RefreshChildAccountMutationAsync(result, cancellationToken);
+            return result;
+        }
+
         public async Task CreateRewardAsync(
             string familyId,
             SupabaseParentRewardCreateInput input,
@@ -616,6 +771,131 @@ namespace HabitHero.Platform
                 new SupabaseParentRewardMutationResult();
             await RefreshParentMutationAsync(result, cancellationToken);
             return result;
+        }
+
+        private static void ValidateChildAccountCreate(
+            string familyId,
+            SupabaseParentChildAccountCreateInput input)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (input == null)
+            {
+                throw new SupabaseDataException("孩子帳號資料不可為空。");
+            }
+
+            string childName = input.childName == null ? string.Empty : input.childName.Trim();
+            if (childName.Length < 1 || childName.Length > 80)
+            {
+                throw new SupabaseDataException("孩子名稱長度必須介於 1 到 80 個字元。");
+            }
+            ValidateChildLoginName(input.loginName);
+            ValidateChildPassword(input.password);
+            if (!string.IsNullOrWhiteSpace(input.childProfileId)) return;
+
+            if (input.gender != "boy" && input.gender != "girl")
+            {
+                throw new SupabaseDataException("新孩子帳號必須指定性別。");
+            }
+            if (input.characterId != "character.arthur"
+                && input.characterId != "character.elina"
+                && input.characterId != "character.sia"
+                && input.characterId != "character.elio")
+            {
+                throw new SupabaseDataException("新孩子帳號的人物設定無效。");
+            }
+        }
+
+        private static void ValidateChildAccountTarget(
+            string familyId,
+            string childProfileId)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (string.IsNullOrWhiteSpace(childProfileId))
+            {
+                throw new SupabaseDataException("孩子帳號 ID 不可為空。");
+            }
+        }
+
+        private static void ValidateChildLoginName(string loginName)
+        {
+            string value = loginName == null ? string.Empty : loginName.Trim().ToLowerInvariant();
+            if (value.Length < 3 || value.Length > 32)
+            {
+                throw new SupabaseDataException("孩子帳號名稱必須為 3 到 32 碼。");
+            }
+
+            for (int index = 0; index < value.Length; index += 1)
+            {
+                char character = value[index];
+                bool valid = character >= 'a' && character <= 'z'
+                    || character >= '0' && character <= '9'
+                    || character == '_';
+                if (!valid || (index == 0 && character == '_'))
+                {
+                    throw new SupabaseDataException(
+                        "孩子帳號名稱只能使用小寫英文字母、數字與底線，且不可底線開頭。");
+                }
+            }
+        }
+
+        private static void ValidateChildPassword(string password)
+        {
+            if (string.IsNullOrEmpty(password) || password.Length < 6)
+            {
+                throw new SupabaseDataException("孩子密碼至少需要 6 碼英數字。");
+            }
+
+            foreach (char character in password)
+            {
+                bool valid = character >= 'a' && character <= 'z'
+                    || character >= 'A' && character <= 'Z'
+                    || character >= '0' && character <= '9';
+                if (!valid)
+                {
+                    throw new SupabaseDataException("孩子密碼只能使用英文字母與數字。");
+                }
+            }
+        }
+
+        private static void EnsureSuccessfulAccountMutation(string response)
+        {
+            SupabaseManagedChildAccountResponse parsed;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out parsed,
+                    out error)
+                || !parsed.success)
+            {
+                throw new SupabaseDataException(
+                    string.IsNullOrWhiteSpace(error)
+                        ? "Supabase 沒有確認孩子帳號變更。"
+                        : error);
+            }
+        }
+
+        private async Task RefreshChildAccountMutationAsync(
+            SupabaseParentChildAccountMutationResult result,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
         }
 
         private async Task RefreshParentMutationAsync(
