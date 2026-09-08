@@ -41,7 +41,7 @@ authorization into client-only rules.
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Shared preference/device binding, iOS APNs provider, context-aware registration and Unity settings UI implemented; Android/taps/device verification pending |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
-| Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Not started |
+| Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Contract preflight and native build entrypoints implemented; device/store verification pending |
 
 ## Implementation phases
 
@@ -55,6 +55,9 @@ Completed locally:
 - Existing iOS Bundle ID and Android application ID are locked.
 - Client configuration names only the public Supabase URL and publishable key.
 - GitHub has a pull-request platform contract workflow.
+- The Unity release preflight is checked in and runs in GitHub CI with missing
+  native modules reported as warnings; strict local release mode blocks until
+  both `iOSSupport` and `AndroidPlayer` are installed.
 
 ### Phase 1 — Unity platform foundation
 

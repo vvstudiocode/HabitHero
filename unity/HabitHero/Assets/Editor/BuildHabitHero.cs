@@ -22,6 +22,20 @@ namespace HabitHero.Editor
                 ResolveOutputPath("Builds/HabitHero.app"));
         }
 
+        public static void BuildiOS()
+        {
+            Build(
+                BuildTarget.iOS,
+                ResolveOutputPath("Builds/iOS"));
+        }
+
+        public static void BuildAndroid()
+        {
+            Build(
+                BuildTarget.Android,
+                ResolveOutputPath("Builds/Android/HabitHero.apk"));
+        }
+
         private static void Build(BuildTarget target, string outputPath)
         {
             string[] scenes = EditorBuildSettings.scenes

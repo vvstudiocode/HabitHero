@@ -7,6 +7,14 @@
   "unityProjectPath": "unity/HabitHero",
   "iosBundleId": "com.vvstudiocode.habithero",
   "androidApplicationId": "com.vvstudiocode.habithero",
+  "authCallbackScheme": "com.vvstudiocode.habithero",
+  "unityRelease": {
+    "companyName": "vvstudiocode",
+    "productName": "習慣冒險島",
+    "bundleVersion": "1.44",
+    "buildNumber": 49,
+    "bootstrapScene": "Assets/Scenes/Bootstrap.unity"
+  },
   "publicSupabaseEnv": [
     "VITE_SUPABASE_URL",
     "VITE_SUPABASE_PUBLISHABLE_KEY"

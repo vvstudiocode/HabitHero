@@ -150,6 +150,41 @@ writes the ignored output to `unity/HabitHero/Builds/WebGL`. Set
 This verifies the Bootstrap scene and WebGL build pipeline; it is not a
 replacement for iOS/Android module and device verification.
 
+## Native release preflight and builds
+
+Run the release contract check before a store build:
+
+```text
+npm run test:unity-release -- --allow-missing-native
+```
+
+The `--allow-missing-native` flag is for CI and development machines that
+only have the base Unity Editor. A release candidate must run the strict gate
+without that flag:
+
+```text
+npm run test:unity-release
+```
+
+The strict gate requires the Unity `iOSSupport` and `AndroidPlayer` modules,
+checks the existing store identity and version/build number, confirms the
+Bootstrap scene and auth callback scheme, and rejects forbidden client-secret
+names in tracked Unity files. It does not install modules or change Supabase.
+
+After the modules are installed, native exports can be generated with:
+
+```text
+npm run build:unity:ios
+npm run build:unity:android
+```
+
+The iOS command writes an Xcode project to `unity/HabitHero/Builds/iOS`; the
+Android command writes an APK to `unity/HabitHero/Builds/Android/HabitHero.apk`.
+Set `HABITHERO_UNITY_EDITOR_PATH` when the Unity Editor is installed elsewhere.
+These exports still require signing, real-device checks, TestFlight/closed
+testing, and store-review verification before replacing the existing mobile
+client.
+
 ## Local Supabase configuration
 
 The Unity app never reads a service-role key. Before opening the Bootstrap

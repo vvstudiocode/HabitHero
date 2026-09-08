@@ -41,3 +41,6 @@ jobs:
 
       - name: Verify the platform migration contract
         run: node --test tests/platform-migration-contract.test.ts
+
+      - name: Verify the Unity release contract
+        run: npm run test:unity-release -- --allow-missing-native
