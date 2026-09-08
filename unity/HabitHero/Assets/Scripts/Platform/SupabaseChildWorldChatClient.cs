@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -108,6 +109,112 @@ namespace HabitHero.Platform
             }
 
             return message;
+        }
+
+        public async Task<IDisposable> SubscribeAsync(
+            string worldOwnerChildProfileId,
+            Action<SupabaseWorldChatMessageRecord> onMessage,
+            CancellationToken cancellationToken)
+        {
+            RequireTarget(worldOwnerChildProfileId);
+            if (onMessage == null) throw new ArgumentNullException("onMessage");
+            string normalizedOwner = worldOwnerChildProfileId.Trim();
+            SupabaseRealtimeChannel channel = restClient.CreateRealtimeChannel();
+            Action<SupabaseRealtimeEnvelope> messageHandler = (envelope) =>
+            {
+                SupabaseWorldChatMessageRecord message;
+                if (!TryMapRealtimeMessage(envelope, normalizedOwner, out message)) return;
+                onMessage(message);
+            };
+            channel.MessageReceived += messageHandler;
+
+            SupabaseRealtimeChannelOptions options = new SupabaseRealtimeChannelOptions
+            {
+                Private = true,
+                BroadcastSelf = false,
+                BroadcastAck = false,
+                PresenceEnabled = false,
+            };
+            options.PostgresChanges.Add(new SupabaseRealtimePostgresChange
+            {
+                Event = "INSERT",
+                Schema = "public",
+                Table = "friend_world_messages",
+                Filter = "world_owner_child_profile_id=eq." + normalizedOwner,
+            });
+
+            try
+            {
+                await channel.ConnectAsync(
+                    "friend-world:" + normalizedOwner,
+                    options,
+                    cancellationToken);
+                return new RealtimeSubscription(channel, messageHandler);
+            }
+            catch
+            {
+                channel.MessageReceived -= messageHandler;
+                channel.Dispose();
+                throw;
+            }
+        }
+
+        public static bool TryMapRealtimeMessage(
+            SupabaseRealtimeEnvelope envelope,
+            string worldOwnerChildProfileId,
+            out SupabaseWorldChatMessageRecord message)
+        {
+            message = null;
+            if (envelope == null
+                || envelope.Event != "postgres_changes"
+                || string.IsNullOrWhiteSpace(worldOwnerChildProfileId))
+            {
+                return false;
+            }
+
+            Dictionary<string, object> payload =
+                SupabaseRealtimeMessageParser.AsObject(envelope.Payload);
+            Dictionary<string, object> data = payload == null
+                ? null
+                : SupabaseRealtimeMessageParser.AsObject(
+                    payload.ContainsKey("data") ? payload["data"] : null);
+            if (data == null
+                || SupabaseRealtimeMessageParser.GetString(data, "type") != "INSERT"
+                || SupabaseRealtimeMessageParser.GetString(data, "table") != "friend_world_messages")
+            {
+                return false;
+            }
+
+            Dictionary<string, object> record = SupabaseRealtimeMessageParser.AsObject(
+                data.ContainsKey("record") ? data["record"] : null);
+            if (record == null) return false;
+            string owner = SupabaseRealtimeMessageParser.GetString(
+                record,
+                "world_owner_child_profile_id");
+            string status = SupabaseRealtimeMessageParser.GetString(record, "status");
+            string id = SupabaseRealtimeMessageParser.GetString(record, "id");
+            if (owner != worldOwnerChildProfileId.Trim()
+                || status != "visible"
+                || string.IsNullOrWhiteSpace(id))
+            {
+                return false;
+            }
+
+            message = new SupabaseWorldChatMessageRecord
+            {
+                id = id,
+                world_owner_child_profile_id = owner,
+                sender_child_profile_id = SupabaseRealtimeMessageParser.GetString(
+                    record,
+                    "sender_child_profile_id"),
+                sender_display_name = SupabaseRealtimeMessageParser.GetString(
+                    record,
+                    "sender_display_name"),
+                body = SupabaseRealtimeMessageParser.GetString(record, "body"),
+                status = status,
+                created_at = SupabaseRealtimeMessageParser.GetString(record, "created_at"),
+            };
+            return true;
         }
 
         public Task MarkReadAsync(
@@ -240,6 +347,29 @@ namespace HabitHero.Platform
             }
 
             return false;
+        }
+
+        private sealed class RealtimeSubscription : IDisposable
+        {
+            private readonly SupabaseRealtimeChannel channel;
+            private readonly Action<SupabaseRealtimeEnvelope> messageHandler;
+            private bool disposed;
+
+            public RealtimeSubscription(
+                SupabaseRealtimeChannel channel,
+                Action<SupabaseRealtimeEnvelope> messageHandler)
+            {
+                this.channel = channel;
+                this.messageHandler = messageHandler;
+            }
+
+            public void Dispose()
+            {
+                if (disposed) return;
+                disposed = true;
+                channel.MessageReceived -= messageHandler;
+                channel.Dispose();
+            }
         }
     }
 }

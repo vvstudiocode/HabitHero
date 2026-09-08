@@ -138,22 +138,24 @@ Partially completed locally:
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social
-  data before updating the view; chat, friend-world visits, presence, and
-  Realtime transport are still pending.
+  data before updating the view; friend-world visits and chat are now wired as
+  read-only/server-authoritative flows, while presence remains pending.
 - Unity child social foundation now also loads the existing
   `get_friend_world_snapshot` RPC for an accepted friend and displays the
   server-scoped result as a read-only 3D preview with a local visitor avatar;
-  world mutation, chat, presence, and Realtime transport remain pending.
+  world mutation and presence remain pending.
 - Unity child social foundation now reads visible friend-world chat history,
   unread counts, and sends/marks-read/reports messages through the existing
-  server RPCs. The chat panel reloads server data after each mutation; its
-  private Realtime subscription is still not wired into the panel.
+  server RPCs. The chat panel reloads server data after each mutation and opens
+  a private Realtime channel for visible `friend_world_messages` inserts; each
+  event triggers another server-authoritative history refresh.
 - Unity now has a Supabase Realtime protocol layer with private-channel join,
   authenticated session token, heartbeat, token refresh, presence,
   broadcast, leave, and incoming envelope parsing. Native platforms use the
   managed WebSocket transport and WebGL uses a browser WebSocket bridge.
-  Channel reconnect orchestration, chat/presence/avatar feature wiring, and
-  two-account/device verification remain pending.
+  Chat subscription wiring is now started; channel reconnect orchestration,
+  presence/avatar feature wiring, and two-account/device verification remain
+  pending.
 
 Still required:
 
@@ -167,8 +169,8 @@ Still required:
   the runtime handler, token-fragment recovery, and PKCE exchange contract are
   now in place. A code-only callback is rejected because Supabase requires the
   original PKCE verifier.
-- Supabase Realtime reconnect orchestration and feature wiring for chat,
-  presence, avatar broadcast, and co-op flows.
+- Supabase Realtime reconnect orchestration, presence, avatar broadcast, and
+  co-op flows.
 - Native iOS/Android push and app URL plugins.
 
 ### Phase 2 — child core loop

@@ -12,8 +12,10 @@ namespace HabitHero.App
         private readonly Font font;
         private GameObject panel;
         private GameObject messageListObject;
+        private Transform cardTransform;
         private InputField messageInput;
         private Text statusText;
+        private Button markReadButton;
         private string worldOwnerDisplayName;
         private SupabaseChildWorldChatData latestData;
         private Func<Task<SupabaseChildWorldChatData>> refresh;
@@ -28,6 +30,21 @@ namespace HabitHero.App
             if (font == null) throw new ArgumentNullException("font");
             this.canvasTransform = canvasTransform;
             this.font = font;
+        }
+
+        public bool IsOpen
+        {
+            get { return panel != null; }
+        }
+
+        public string WorldOwnerChildProfileId
+        {
+            get
+            {
+                return latestData == null
+                    ? string.Empty
+                    : (latestData.worldOwnerChildProfileId ?? string.Empty).Trim();
+            }
         }
 
         public void Show(
@@ -63,6 +80,7 @@ namespace HabitHero.App
                 panel.transform,
                 HabitHeroUiFactory.PanelColor,
                 "ChildWorldChatCard");
+            cardTransform = card.transform;
             RectTransform cardRect = card.GetComponent<RectTransform>();
             cardRect.anchorMin = new Vector2(0.05f, 0.06f);
             cardRect.anchorMax = new Vector2(0.95f, 0.94f);
@@ -136,7 +154,9 @@ namespace HabitHero.App
                 "標為已讀",
                 new Vector2(0.5f, 0.08f),
                 new Vector2(0.64f, 0.15f));
-            readButton.interactable = markRead != null && latestData.messages.Length > 0;
+            markReadButton = readButton;
+            readButton.interactable = markRead != null
+                && (latestData.messages ?? new SupabaseWorldChatMessageRecord[0]).Length > 0;
             readButton.onClick.AddListener(() => MarkReadAsync(readButton));
             Button refreshButton = HabitHeroUiFactory.CreateButton(
                 card.transform,
@@ -164,6 +184,29 @@ namespace HabitHero.App
             markRead = null;
             report = null;
             onClose = null;
+        }
+
+        public async Task RefreshFromServerAsync()
+        {
+            if (panel == null || refresh == null) return;
+            try
+            {
+                SupabaseChildWorldChatData data = await refresh();
+                if (data == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新聊天資料。");
+                }
+
+                ApplyRealtimeData(data);
+            }
+            catch (OperationCanceledException)
+            {
+                // The child session was closed while refreshing the panel.
+            }
+            catch (Exception exception)
+            {
+                SetStatus(exception.Message, true);
+            }
         }
 
         private void RenderMessages(Transform parent)
@@ -336,6 +379,34 @@ namespace HabitHero.App
             Open();
         }
 
+        private void ApplyRealtimeData(SupabaseChildWorldChatData data)
+        {
+            latestData = data;
+            if (panel == null || cardTransform == null) return;
+            if (messageListObject != null)
+            {
+                UnityEngine.Object.Destroy(messageListObject);
+            }
+
+            messageListObject = CreateList(
+                cardTransform,
+                "WorldChatMessageList",
+                new Vector2(0.08f, 0.27f),
+                new Vector2(0.92f, 0.82f));
+            RenderMessages(messageListObject.transform);
+            if (markReadButton != null)
+            {
+                markReadButton.interactable = markRead != null
+                    && (latestData.messages ?? new SupabaseWorldChatMessageRecord[0]).Length > 0;
+            }
+
+            SetStatus(
+                latestData.unreadCount > 0
+                    ? "未讀訊息：" + latestData.unreadCount
+                    : "目前沒有未讀訊息。",
+                false);
+        }
+
         private GameObject CreateList(
             Transform parent,
             string name,
@@ -386,8 +457,10 @@ namespace HabitHero.App
             }
 
             messageListObject = null;
+            cardTransform = null;
             messageInput = null;
             statusText = null;
+            markReadButton = null;
         }
     }
 }

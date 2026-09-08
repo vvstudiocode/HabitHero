@@ -396,6 +396,14 @@ namespace HabitHero.App
             latestSocialData = data;
         }
 
+        public void NotifyWorldChatChanged(string worldOwnerChildProfileId)
+        {
+            if (socialView != null)
+            {
+                socialView.NotifyWorldChatChanged(worldOwnerChildProfileId);
+            }
+        }
+
         private void OpenSocialPanel()
         {
             if (socialView == null || latestSocialData == null)

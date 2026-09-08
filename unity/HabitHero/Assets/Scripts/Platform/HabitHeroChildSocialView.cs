@@ -89,6 +89,21 @@ namespace HabitHero.App
             Open();
         }
 
+        public void NotifyWorldChatChanged(string worldOwnerChildProfileId)
+        {
+            if (chatView == null
+                || !chatView.IsOpen
+                || !string.Equals(
+                    chatView.WorldOwnerChildProfileId,
+                    (worldOwnerChildProfileId ?? string.Empty).Trim(),
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _ = chatView.RefreshFromServerAsync();
+        }
+
         public void Open()
         {
             if (latestData == null) return;

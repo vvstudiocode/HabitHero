@@ -19,6 +19,10 @@ namespace HabitHero.App
         private readonly Transform canvasTransform;
         private readonly Font font;
         private HabitHeroChildHomeView view;
+        private IDisposable worldChatRealtimeSubscription;
+        private CancellationTokenSource worldChatRealtimeCancellation;
+        private string worldChatRealtimeOwner;
+        private int worldChatRealtimeVersion;
 
         public HabitHeroChildHomeCoordinator(
             SupabaseChildHomeClient client,
@@ -374,9 +378,104 @@ namespace HabitHero.App
             string friendChildProfileId,
             CancellationToken cancellationToken)
         {
-            return worldChatClient.LoadAsync(
+            return LoadWorldChatAndSubscribeAsync(
                 friendChildProfileId,
                 cancellationToken);
+        }
+
+        private async Task<SupabaseChildWorldChatData> LoadWorldChatAndSubscribeAsync(
+            string friendChildProfileId,
+            CancellationToken cancellationToken)
+        {
+            SupabaseChildWorldChatData data = await worldChatClient.LoadAsync(
+                friendChildProfileId,
+                cancellationToken);
+            _ = EnsureWorldChatRealtimeAsync(
+                friendChildProfileId,
+                cancellationToken);
+            return data;
+        }
+
+        private async Task EnsureWorldChatRealtimeAsync(
+            string friendChildProfileId,
+            CancellationToken cancellationToken)
+        {
+            string normalizedOwner = (friendChildProfileId ?? string.Empty).Trim();
+            if (string.Equals(
+                    worldChatRealtimeOwner,
+                    normalizedOwner,
+                    StringComparison.Ordinal)
+                && worldChatRealtimeSubscription != null)
+            {
+                return;
+            }
+
+            StopWorldChatRealtime();
+            int requestVersion = worldChatRealtimeVersion;
+            CancellationTokenSource subscriptionCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            worldChatRealtimeCancellation = subscriptionCancellation;
+            try
+            {
+                IDisposable subscription = await worldChatClient.SubscribeAsync(
+                    normalizedOwner,
+                    HandleWorldChatRealtimeMessage,
+                    subscriptionCancellation.Token);
+                if (subscriptionCancellation.IsCancellationRequested
+                    || requestVersion != worldChatRealtimeVersion
+                    || view == null)
+                {
+                    subscription.Dispose();
+                    return;
+                }
+
+                worldChatRealtimeSubscription = subscription;
+                worldChatRealtimeOwner = normalizedOwner;
+            }
+            catch (OperationCanceledException)
+            {
+                // The current child session or selected world was replaced.
+            }
+            catch (Exception)
+            {
+                // Chat history and RPC mutations remain available if Realtime is unavailable.
+            }
+            finally
+            {
+                if (ReferenceEquals(
+                        worldChatRealtimeCancellation,
+                        subscriptionCancellation))
+                {
+                    worldChatRealtimeCancellation = null;
+                }
+
+                subscriptionCancellation.Dispose();
+            }
+        }
+
+        private void HandleWorldChatRealtimeMessage(
+            SupabaseWorldChatMessageRecord message)
+        {
+            if (message == null || view == null) return;
+            view.NotifyWorldChatChanged(message.world_owner_child_profile_id);
+        }
+
+        private void StopWorldChatRealtime()
+        {
+            worldChatRealtimeVersion += 1;
+            if (worldChatRealtimeCancellation != null)
+            {
+                worldChatRealtimeCancellation.Cancel();
+                worldChatRealtimeCancellation = null;
+            }
+
+            if (worldChatRealtimeSubscription != null)
+            {
+                worldChatRealtimeSubscription.Dispose();
+                worldChatRealtimeSubscription = null;
+            }
+
+            worldChatRealtimeOwner = null;
         }
 
         private async Task<SupabaseChildWorldChatData> SendWorldChatAndRefreshAsync(
@@ -443,6 +542,7 @@ namespace HabitHero.App
 
         public void Dispose()
         {
+            StopWorldChatRealtime();
             if (view == null) return;
             view.Dispose();
             view = null;

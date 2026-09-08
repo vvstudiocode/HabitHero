@@ -754,6 +754,41 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldChatRealtimeAcceptsOnlyVisiblePostgresInsertRowsForTheRequestedWorld()
+        {
+            SupabaseRealtimeEnvelope envelope;
+            string error;
+            Assert.IsTrue(
+                SupabaseRealtimeMessageParser.TryParseEnvelope(
+                    "{\"topic\":\"realtime:friend-world:friend-child-1\",\"event\":\"postgres_changes\",\"payload\":{\"data\":{\"type\":\"INSERT\",\"table\":\"friend_world_messages\",\"record\":{\"id\":\"message-3\",\"world_owner_child_profile_id\":\"friend-child-1\",\"sender_child_profile_id\":\"child-1\",\"sender_display_name\":\"小明\",\"body\":\"即時訊息\",\"status\":\"visible\",\"created_at\":\"2026-09-08T10:02:00Z\"}}},\"ref\":null,\"join_ref\":\"1\"}",
+                    out envelope,
+                    out error),
+                error);
+
+            SupabaseWorldChatMessageRecord message;
+            Assert.IsTrue(
+                SupabaseChildWorldChatClient.TryMapRealtimeMessage(
+                    envelope,
+                    "friend-child-1",
+                    out message));
+            Assert.AreEqual("message-3", message.id);
+            Assert.AreEqual("即時訊息", message.body);
+
+            SupabaseRealtimeEnvelope broadcast;
+            Assert.IsTrue(
+                SupabaseRealtimeMessageParser.TryParseEnvelope(
+                    "{\"topic\":\"realtime:friend-world:friend-child-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"chat_created_v1\",\"payload\":{\"id\":\"message-4\"}}}",
+                    out broadcast,
+                    out error),
+                error);
+            Assert.IsFalse(
+                SupabaseChildWorldChatClient.TryMapRealtimeMessage(
+                    broadcast,
+                    "friend-child-1",
+                    out message));
+        }
+
+        [Test]
         public async Task ChildCompletionRefreshesTheServerAuthoritativeLedger()
         {
             SupabaseClientSettings settings = CreateSettings();

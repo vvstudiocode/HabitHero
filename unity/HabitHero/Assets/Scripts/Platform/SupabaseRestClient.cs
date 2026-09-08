@@ -54,6 +54,12 @@ namespace HabitHero.Platform
             get { return authClient.CurrentSession; }
         }
 
+        public SupabaseRealtimeChannel CreateRealtimeChannel(
+            Func<ISupabaseRealtimeTransport> transportFactory = null)
+        {
+            return new SupabaseRealtimeChannel(settings, authClient, transportFactory);
+        }
+
         public async Task<T[]> SelectManyAsync<T>(
             string table,
             IEnumerable<SupabaseRestFilter> filters,
