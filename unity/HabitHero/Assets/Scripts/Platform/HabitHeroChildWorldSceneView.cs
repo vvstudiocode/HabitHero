@@ -29,6 +29,8 @@ namespace HabitHero.App
         private RenderTexture renderTexture;
         private GameObject player;
         private HabitHeroWorldModelAnimation playerAnimation;
+        private readonly List<HabitHeroWorldPetActor> petActors =
+            new List<HabitHeroWorldPetActor>();
         private Text sceneStatus;
         private SupabaseChildWorldData latestData;
         private SupabaseChildGameData latestGameData;
@@ -47,6 +49,26 @@ namespace HabitHero.App
             new Dictionary<string, Task<GltfImport>>(StringComparer.Ordinal);
         private CancellationTokenSource modelLoadingCancellation;
         private CancellationTokenSource worldMusicCancellation;
+
+        private sealed class HabitHeroWorldPetActor
+        {
+            public string inventoryItemId;
+            public string behaviorMode;
+            public int followIndex;
+            public float radius;
+            public GameObject placeholder;
+            public HabitHeroWorldModelAnimation animation;
+            public HabitHeroPetMotionState motionState;
+
+            public Transform VisualRoot
+            {
+                get
+                {
+                    if (animation != null) return animation.transform;
+                    return placeholder == null ? null : placeholder.transform;
+                }
+            }
+        }
 
         public HabitHeroChildWorldSceneView(
             Transform canvasTransform,
@@ -96,7 +118,9 @@ namespace HabitHero.App
         public void Tick(float deltaSeconds)
         {
             if (scenePanel == null) return;
-            atmosphereRefreshTimer -= Mathf.Max(0f, deltaSeconds);
+            float safeDelta = Mathf.Max(0f, deltaSeconds);
+            UpdatePetActors(safeDelta);
+            atmosphereRefreshTimer -= safeDelta;
             UpdateWorldAtmosphere(false);
         }
 
@@ -315,6 +339,10 @@ namespace HabitHero.App
                     safePosition.x,
                     playerPosition.y,
                     safePosition.y);
+                if (playerAnimation != null)
+                {
+                    playerAnimation.transform.position = player.transform.position;
+                }
             }
         }
 
@@ -384,6 +412,8 @@ namespace HabitHero.App
         {
             if (latestGameData == null) return;
 
+            petActors.Clear();
+
             foreach (SupabaseChildWorldEntityRecord entity in
                 latestGameData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
             {
@@ -403,17 +433,46 @@ namespace HabitHero.App
                     entity.rotation_z,
                     entity.scale,
                     false);
-                StartModelLoad(
-                    placeholder,
-                    assetKey,
-                    new Vector3(entity.position_x, entity.position_y, entity.position_z),
-                    new Vector3(
-                        RadiansToDegrees(entity.rotation_x),
-                        RadiansToDegrees(entity.rotation_y),
-                        RadiansToDegrees(entity.rotation_z)),
-                    GetModelScaleMultiplier(entity.entity_kind, assetKey)
-                        * Mathf.Clamp(entity.scale <= 0f ? 1f : entity.scale, 0.25f, 3f));
+                Vector3 groundPosition = new Vector3(
+                    entity.position_x,
+                    entity.position_y,
+                    entity.position_z);
+                Vector3 eulerAngles = new Vector3(
+                    RadiansToDegrees(entity.rotation_x),
+                    RadiansToDegrees(entity.rotation_y),
+                    RadiansToDegrees(entity.rotation_z));
+                float visualScale = GetModelScaleMultiplier(entity.entity_kind, assetKey)
+                    * Mathf.Clamp(entity.scale <= 0f ? 1f : entity.scale, 0.25f, 3f);
+                if (entity.entity_kind == "pet")
+                {
+                    HabitHeroWorldPetActor actor = CreatePetActor(
+                        entity.inventory_item_id,
+                        entity.behavior_mode,
+                        GetPetFollowingIndex(entity.inventory_item_id),
+                        GetPetRadius(item, entity.scale),
+                        placeholder);
+                    petActors.Add(actor);
+                    StartModelLoad(
+                        placeholder,
+                        assetKey,
+                        groundPosition,
+                        eulerAngles,
+                        Vector3.one * visualScale,
+                        null,
+                        animation => actor.animation = animation);
+                }
+                else
+                {
+                    StartModelLoad(
+                        placeholder,
+                        assetKey,
+                        groundPosition,
+                        eulerAngles,
+                        visualScale);
+                }
             }
+
+            RenderFollowingPetPlaceholders();
 
             foreach (SupabaseChildSharedWorldDecorationRecord shared in
                 latestGameData.sharedWorldDecorations
@@ -443,6 +502,236 @@ namespace HabitHero.App
                     GetModelScaleMultiplier("decoration", shared.asset_key)
                         * Mathf.Clamp(shared.scale <= 0f ? 1f : shared.scale, 0.25f, 3f));
             }
+        }
+
+        private HabitHeroWorldPetActor CreatePetActor(
+            string inventoryItemId,
+            string behaviorMode,
+            int followIndex,
+            float radius,
+            GameObject placeholder)
+        {
+            return new HabitHeroWorldPetActor
+            {
+                inventoryItemId = inventoryItemId,
+                behaviorMode = string.IsNullOrWhiteSpace(behaviorMode)
+                    ? "idle"
+                    : behaviorMode,
+                followIndex = followIndex,
+                radius = radius,
+                placeholder = placeholder,
+                motionState = HabitHeroPetMotion.CreateState(
+                    "pet:" + (inventoryItemId ?? string.Empty) + ":" + followIndex),
+            };
+        }
+
+        private void RenderFollowingPetPlaceholders()
+        {
+            if (player == null || activeSceneProfile == null) return;
+            string[] followingIds = GetFollowingPetInventoryIds();
+            Vector2 playerPosition = new Vector2(
+                player.transform.position.x,
+                player.transform.position.z);
+            for (int index = 0; index < followingIds.Length; index += 1)
+            {
+                string inventoryItemId = followingIds[index];
+                if (string.IsNullOrWhiteSpace(inventoryItemId)
+                    || HasPetActor(inventoryItemId)) continue;
+                SupabaseGameCatalogItemRecord item = FindCatalogItemForInventory(
+                    inventoryItemId);
+                if (item == null || item.item_type != "pet") continue;
+
+                float radius = GetPetRadius(item, 1f);
+                float distance = HabitHeroPetMotion.GetSafeFollowingDistance(
+                    HabitHeroPetMotion.GetFollowingDistance(index),
+                    radius,
+                    0.35f);
+                Vector2 preferred = playerPosition + Vector2.down * distance;
+                Vector2 spawn = HabitHeroWorldCollision.FindClearSpawn(
+                    preferred,
+                    radius,
+                    activeSceneProfile.MovementBoundary,
+                    worldCollisionProxies);
+                float groundY = activeSceneProfile.SpawnPosition.y;
+                GameObject placeholder = CreateWorldEntityPlaceholder(
+                    "FollowingPet_" + inventoryItemId,
+                    "pet",
+                    item.asset_key,
+                    spawn.x,
+                    groundY,
+                    spawn.y,
+                    0f,
+                    0f,
+                    0f,
+                    1f,
+                    false);
+                HabitHeroWorldPetActor actor = CreatePetActor(
+                    inventoryItemId,
+                    "idle",
+                    index,
+                    radius,
+                    placeholder);
+                petActors.Add(actor);
+                StartModelLoad(
+                    placeholder,
+                    item.asset_key,
+                    new Vector3(spawn.x, groundY, spawn.y),
+                    Vector3.zero,
+                    Vector3.one * GetModelScaleMultiplier("pet", item.asset_key),
+                    null,
+                    animation => actor.animation = animation);
+            }
+        }
+
+        private void UpdatePetActors(float deltaSeconds)
+        {
+            if (player == null || activeSceneProfile == null) return;
+            Vector2 playerPosition = new Vector2(
+                player.transform.position.x,
+                player.transform.position.z);
+            foreach (HabitHeroWorldPetActor actor in petActors)
+            {
+                if (actor == null) continue;
+                Transform visualRoot = actor.VisualRoot;
+                if (visualRoot == null) continue;
+
+                Vector2 current = new Vector2(
+                    visualRoot.position.x,
+                    visualRoot.position.z);
+                HabitHeroPetMotionStep step;
+                if (actor.followIndex >= 0)
+                {
+                    HabitHeroWorldPetActor leader = actor.followIndex == 0
+                        ? null
+                        : FindPetActorByFollowIndex(actor.followIndex - 1);
+                    Vector2 leaderPosition = leader == null || leader.VisualRoot == null
+                        ? playerPosition
+                        : new Vector2(
+                            leader.VisualRoot.position.x,
+                            leader.VisualRoot.position.z);
+                    float leaderRadius = leader == null ? 0.35f : leader.radius;
+                    step = HabitHeroPetMotion.GetFollowingStep(
+                        current,
+                        leaderPosition,
+                        actor.followIndex,
+                        actor.radius,
+                        leaderRadius,
+                        deltaSeconds,
+                        worldCollisionProxies,
+                        activeSceneProfile.MovementBoundary);
+                }
+                else if (actor.behaviorMode == "wander")
+                {
+                    step = HabitHeroPetMotion.GetWanderStep(
+                        current,
+                        deltaSeconds,
+                        actor.radius,
+                        HabitHeroPetMotion.WanderSpeed,
+                        worldCollisionProxies,
+                        activeSceneProfile.MovementBoundary,
+                        actor.motionState);
+                }
+                else
+                {
+                    step = new HabitHeroPetMotionStep
+                    {
+                        Position = current,
+                        Facing = actor.motionState == null
+                            ? Vector2.up
+                            : actor.motionState.Facing,
+                        Moving = false,
+                        Blocked = false,
+                    };
+                }
+
+                visualRoot.position = new Vector3(
+                    step.Position.x,
+                    visualRoot.position.y,
+                    step.Position.y);
+                if (actor.animation != null)
+                {
+                    actor.animation.FaceDirection(step.Facing);
+                    actor.animation.SetMoving(step.Moving);
+                }
+                else if (step.Moving)
+                {
+                    visualRoot.eulerAngles = new Vector3(
+                        visualRoot.eulerAngles.x,
+                        Mathf.Atan2(step.Facing.x, step.Facing.y) * Mathf.Rad2Deg,
+                        visualRoot.eulerAngles.z);
+                }
+            }
+        }
+
+        private HabitHeroWorldPetActor FindPetActorByFollowIndex(int followIndex)
+        {
+            foreach (HabitHeroWorldPetActor actor in petActors)
+            {
+                if (actor != null && actor.followIndex == followIndex) return actor;
+            }
+
+            return null;
+        }
+
+        private bool HasPetActor(string inventoryItemId)
+        {
+            foreach (HabitHeroWorldPetActor actor in petActors)
+            {
+                if (actor != null && actor.inventoryItemId == inventoryItemId) return true;
+            }
+
+            return false;
+        }
+
+        private int GetPetFollowingIndex(string inventoryItemId)
+        {
+            string[] followingIds = GetFollowingPetInventoryIds();
+            for (int index = 0; index < followingIds.Length; index += 1)
+            {
+                if (followingIds[index] == inventoryItemId) return index;
+            }
+
+            return -1;
+        }
+
+        private string[] GetFollowingPetInventoryIds()
+        {
+            if (latestGameData == null || latestGameData.loadout == null)
+            {
+                return new string[0];
+            }
+
+            List<string> result = new List<string>();
+            foreach (string inventoryItemId in
+                latestGameData.loadout.following_pet_inventory_ids
+                    ?? new string[0])
+            {
+                if (string.IsNullOrWhiteSpace(inventoryItemId)
+                    || result.Contains(inventoryItemId)) continue;
+                result.Add(inventoryItemId);
+            }
+
+            string legacyId = latestGameData.loadout.following_pet_inventory_id;
+            if (!string.IsNullOrWhiteSpace(legacyId) && !result.Contains(legacyId))
+            {
+                result.Add(legacyId);
+            }
+
+            return result.ToArray();
+        }
+
+        private static float GetPetRadius(
+            SupabaseGameCatalogItemRecord item,
+            float scale)
+        {
+            float radius = item == null || item.collision_radius <= 0f
+                ? 0.28f
+                : item.collision_radius;
+            float effectiveScale = Mathf.Clamp(
+                scale <= 0f ? 1f : scale,
+                0.25f,
+                3f);
+            return Mathf.Max(0.12f, radius * effectiveScale);
         }
 
         private GameObject CreateWorldEntityPlaceholder(
@@ -1243,6 +1532,10 @@ namespace HabitHero.App
             position.x = next.x;
             position.z = next.y;
             player.transform.position = position;
+            if (playerAnimation != null)
+            {
+                playerAnimation.transform.position = position;
+            }
             bool moved = Vector2.Distance(previousPosition, next) > 0.0001f;
             if (playerAnimation != null)
             {
@@ -1458,6 +1751,7 @@ namespace HabitHero.App
             atmosphereRefreshTimer = 0f;
             player = null;
             playerAnimation = null;
+            petActors.Clear();
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             authoredCollisionProxyIndices.Clear();
             activeSceneProfile = null;

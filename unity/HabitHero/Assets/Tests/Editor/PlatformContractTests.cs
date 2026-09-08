@@ -283,6 +283,57 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void PetMotionKeepsFollowingPetsAtOrderedSafeDistances()
+        {
+            Assert.AreEqual(0.12f, HabitHeroPetMotion.GetFollowingDistance(0), 0.0001f);
+            Assert.AreEqual(0.44f, HabitHeroPetMotion.GetFollowingDistance(2), 0.0001f);
+
+            HabitHeroPetMotionStep step = HabitHeroPetMotion.GetFollowingStep(
+                new Vector2(2f, 0f),
+                new Vector2(0f, 0f),
+                0,
+                0.2f,
+                0.35f,
+                1f,
+                new HabitHeroWorldCollisionProxy[0],
+                5f);
+
+            Assert.IsTrue(step.Moving);
+            Assert.Less(step.Position.x, 2f);
+            Assert.Greater(step.Position.x, 0.35f);
+        }
+
+        [Test]
+        public void PetMotionWanderRemainsInsideBoundaryAndUsesDeterministicState()
+        {
+            HabitHeroPetMotionState state = HabitHeroPetMotion.CreateState("pet:test");
+            HabitHeroPetMotionStep first = HabitHeroPetMotion.GetWanderStep(
+                Vector2.zero,
+                0.5f,
+                0.2f,
+                0.5f,
+                new HabitHeroWorldCollisionProxy[0],
+                2f,
+                state);
+            HabitHeroPetMotionState secondState = HabitHeroPetMotion.CreateState("pet:test");
+            HabitHeroPetMotionStep second = HabitHeroPetMotion.GetWanderStep(
+                Vector2.zero,
+                0.5f,
+                0.2f,
+                0.5f,
+                new HabitHeroWorldCollisionProxy[0],
+                2f,
+                secondState);
+
+            Assert.LessOrEqual(Mathf.Abs(first.Position.x), 2f);
+            Assert.LessOrEqual(Mathf.Abs(first.Position.y), 2f);
+            Assert.AreEqual(first.Position.x, second.Position.x, 0.0001f);
+            Assert.AreEqual(first.Position.y, second.Position.y, 0.0001f);
+            Assert.AreEqual(first.Facing.x, second.Facing.x, 0.0001f);
+            Assert.AreEqual(first.Facing.y, second.Facing.y, 0.0001f);
+        }
+
+        [Test]
         public void WorldBackgroundMusicPreferenceDefaultsOnAndIsScopedToChild()
         {
             string firstKey = HabitHeroWorldBackgroundMusic.GetPreferenceKey("child-1");
