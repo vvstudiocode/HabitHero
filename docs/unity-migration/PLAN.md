@@ -163,8 +163,10 @@ Partially completed locally:
   directional lighting/background and rain particles, with the same
   Open-Meteo fallback used by the Web client. World background music now uses
   the same per-scene Vercel audio assets, default volume, loop behavior, and
-  child-scoped on/off preference as the Web client. Exact GLB-bound rectangle
-  precision and device visual evidence remain pending.
+  child-scoped on/off preference as the Web client. Running timers now also
+  trigger the shared `timer-complete.mp3` alarm until dismissed or submitted.
+  Exact GLB-bound rectangle precision and device visual evidence remain
+  pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

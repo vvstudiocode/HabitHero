@@ -202,6 +202,36 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void TimerCompletionAudioMatchesWebAlarmContract()
+        {
+            SupabaseChildTaskRecord task = new SupabaseChildTaskRecord
+            {
+                id = "task-1",
+                status = "todo",
+                requires_timer = true,
+            };
+            SupabaseTaskTimerSessionRecord runningTimer =
+                new SupabaseTaskTimerSessionRecord
+                {
+                    task_id = "task-1",
+                    status = "running",
+                };
+
+            Assert.IsTrue(
+                HabitHeroTaskCompletionAudio.IsCandidate(task, runningTimer, 0));
+            Assert.IsFalse(
+                HabitHeroTaskCompletionAudio.IsCandidate(task, runningTimer, 1));
+            runningTimer.status = "paused";
+            Assert.IsFalse(
+                HabitHeroTaskCompletionAudio.IsCandidate(task, runningTimer, 0));
+            Assert.AreEqual(
+                "https://habit-hero-gilt.vercel.app/audio/timer-complete.mp3",
+                HabitHeroTaskCompletionAudio.BuildUrl(
+                    "https://habit-hero-gilt.vercel.app/",
+                    "timer-complete.mp3"));
+        }
+
+        [Test]
         public void WorldCollisionUsesAuthoredProxiesAndBlocksMovement()
         {
             HabitHeroWorldCollisionProxy[] proxies;

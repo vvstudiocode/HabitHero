@@ -40,6 +40,9 @@ namespace HabitHero.App
         private SupabaseTaskTimerSessionRecord activeTimer;
         private SupabaseTaskTimerSessionRecord[] timerSessions;
         private GameObject taskListObject;
+        private HabitHeroTaskCompletionAudioPlayer completionAudioPlayer;
+        private readonly HashSet<string> completionAlarmDismissedTaskIds =
+            new HashSet<string>(StringComparer.Ordinal);
         private SupabaseChildHomeSnapshot latestSnapshot;
         private SupabaseChildGameData latestGameData;
         private SupabaseChildWorldData latestWorldData;
@@ -404,6 +407,12 @@ namespace HabitHero.App
             latestSocialData = null;
             pointsText = null;
             taskListObject = null;
+            if (completionAudioPlayer != null)
+            {
+                completionAudioPlayer.Dispose();
+                completionAudioPlayer = null;
+            }
+            completionAlarmDismissedTaskIds.Clear();
             CloseReportPanel();
             CloseTimerPanel();
             CloseRewardPanel();
@@ -592,8 +601,74 @@ namespace HabitHero.App
 
         public void Tick(float deltaSeconds)
         {
+            ReconcileCompletionAlarm();
             if (socialView != null) socialView.Tick(deltaSeconds);
             if (worldSceneView != null) worldSceneView.Tick(deltaSeconds);
+        }
+
+        private void ReconcileCompletionAlarm()
+        {
+            if (latestSnapshot == null)
+            {
+                if (completionAudioPlayer != null) completionAudioPlayer.Stop();
+                return;
+            }
+
+            HashSet<string> activeCompletionTaskIds =
+                new HashSet<string>(StringComparer.Ordinal);
+            string candidateTaskId = null;
+            foreach (SupabaseChildTaskRecord task in
+                latestSnapshot.tasks ?? new SupabaseChildTaskRecord[0])
+            {
+                if (task == null) continue;
+                SupabaseTaskTimerSessionRecord timer = FindTimer(task.id);
+                int remainingSeconds = GetRemainingSeconds(task, timer);
+                if (!HabitHeroTaskCompletionAudio.IsCandidate(
+                        task,
+                        timer,
+                        remainingSeconds))
+                {
+                    continue;
+                }
+
+                activeCompletionTaskIds.Add(task.id);
+                if (candidateTaskId == null
+                    && !completionAlarmDismissedTaskIds.Contains(task.id))
+                {
+                    candidateTaskId = task.id;
+                }
+            }
+
+            completionAlarmDismissedTaskIds.RemoveWhere(
+                taskId => !activeCompletionTaskIds.Contains(taskId));
+            if (candidateTaskId == null)
+            {
+                if (completionAudioPlayer != null) completionAudioPlayer.Stop();
+                return;
+            }
+
+            if (completionAudioPlayer == null)
+            {
+                completionAudioPlayer = new HabitHeroTaskCompletionAudioPlayer(
+                    canvasTransform,
+                    gameAssetBaseUrl);
+            }
+
+            if (completionAudioPlayer.ActiveTaskId != candidateTaskId)
+            {
+                completionAudioPlayer.Start(candidateTaskId);
+            }
+        }
+
+        private void DismissCompletionAlarm(string taskId)
+        {
+            if (string.IsNullOrWhiteSpace(taskId)) return;
+            completionAlarmDismissedTaskIds.Add(taskId);
+            if (completionAudioPlayer != null
+                && completionAudioPlayer.ActiveTaskId == taskId)
+            {
+                completionAudioPlayer.Stop();
+            }
         }
 
         private void OpenSocialPanel()
@@ -1144,6 +1219,11 @@ namespace HabitHero.App
                 return;
             }
 
+            if (task.requires_timer && IsTimerReady(task))
+            {
+                DismissCompletionAlarm(task.id);
+            }
+
             if (task.completion_report_mode == "none")
             {
                 SubmitAsync(task, new SupabaseTaskCompletionDraft(), button);
@@ -1253,6 +1333,13 @@ namespace HabitHero.App
             timerActionButton.interactable = false;
             try
             {
+                if (activeTimer != null
+                    && activeTimer.status == "running"
+                    && GetRemainingSeconds(activeTimerTask, activeTimer) == 0)
+                {
+                    DismissCompletionAlarm(activeTimerTask.id);
+                }
+
                 if (activeTimer == null)
                 {
                     activeTimer = await startTimer(activeTimerTask.id);
@@ -1320,9 +1407,17 @@ namespace HabitHero.App
             }
             if (timerActionButton != null)
             {
-                timerActionButton.interactable = !ready;
+                bool canDismiss = ready
+                    && activeTimer != null
+                    && activeTimer.status == "running";
+                timerActionButton.interactable = !ready || canDismiss;
                 Text buttonText = timerActionButton.GetComponentInChildren<Text>();
-                if (buttonText != null) buttonText.text = GetTimerActionLabel();
+                if (buttonText != null)
+                {
+                    buttonText.text = canDismiss
+                        ? "停止提示音"
+                        : GetTimerActionLabel();
+                }
             }
         }
 
@@ -1600,6 +1695,7 @@ namespace HabitHero.App
             Button taskButton)
         {
             if (submitTask == null || task == null) return;
+            DismissCompletionAlarm(task.id);
             if (reportSubmitButton != null) reportSubmitButton.interactable = false;
             if (taskButton != null) taskButton.interactable = false;
             SetStatus("正在送出「" + task.name + "」…", false);
