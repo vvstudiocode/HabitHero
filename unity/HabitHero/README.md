@@ -30,3 +30,9 @@ The Unity editor project files will be added in the next implementation slice
 after the editor version and local build toolchain are available. This README
 is intentionally the first owner document so the migration cannot silently
 overwrite the current mobile project.
+
+The first platform slice is already executable without the Unity editor:
+`npm run test:unity-platform` compiles and runs the pure C# Supabase settings
+and authentication callback contracts. Unity UI, native plugins, and feature
+flows must not be marked complete until they pass their own editor/device
+tests.

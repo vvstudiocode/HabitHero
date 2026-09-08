@@ -31,5 +31,13 @@ jobs:
       - name: Run security checks
         run: npm run security:check
 
+      - name: Install the C# contract test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-mcs mono-runtime
+
+      - name: Run Unity platform contract smoke test
+        run: npm run test:unity-platform
+
       - name: Verify the platform migration contract
         run: node --test tests/platform-migration-contract.test.ts
