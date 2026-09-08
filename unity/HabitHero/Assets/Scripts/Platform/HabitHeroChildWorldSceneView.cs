@@ -112,10 +112,10 @@ namespace HabitHero.App
             worldCamera = cameraObject.AddComponent<Camera>();
             worldCamera.clearFlags = CameraClearFlags.SolidColor;
             worldCamera.backgroundColor = GetSceneColor(scene.id);
-            worldCamera.orthographic = true;
-            worldCamera.orthographicSize = 9f;
-            worldCamera.transform.position = new Vector3(0f, 12f, -14f);
-            worldCamera.transform.LookAt(new Vector3(0f, 0f, 0f));
+            worldCamera.orthographic = false;
+            worldCamera.fieldOfView = 50f;
+            worldCamera.nearClipPlane = 0.1f;
+            worldCamera.farClipPlane = 100f;
 
             CreatePrimitive(
                 PrimitiveType.Plane,
@@ -174,6 +174,7 @@ namespace HabitHero.App
                 spawnPosition,
                 Vector3.zero,
                 1f);
+            UpdateWorldCamera();
             RenderNpcPlaceholders();
             RenderWorldEntityPlaceholders();
 
@@ -886,7 +887,21 @@ namespace HabitHero.App
             position.x = next.x;
             position.z = next.y;
             player.transform.position = position;
+            UpdateWorldCamera();
             SetStatus("孩子角色已移動到 " + position.x.ToString("0.0") + ", " + position.z.ToString("0.0") + "。", false);
+        }
+
+        private void UpdateWorldCamera()
+        {
+            if (worldCamera == null || player == null) return;
+            Vector3 target = player.transform.position;
+            target.y = player.transform.position.y - 1f + 0.38f;
+            Vector3 cameraPosition = target + HabitHeroWorldCameraMath.GetOffset(
+                Mathf.PI / 2f,
+                0.18f,
+                4.1f);
+            worldCamera.transform.position = cameraPosition;
+            worldCamera.transform.LookAt(target);
         }
 
         private async void CompleteNpcDialogueAsync(string npcId, Button button)

@@ -197,6 +197,18 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldCameraOffsetMatchesWebRuntimeDefaults()
+        {
+            Vector3 offset = HabitHeroWorldCameraMath.GetOffset(
+                Mathf.PI / 2f,
+                0.18f,
+                4.1f);
+            Assert.AreEqual(4.0338f, offset.x, 0.0002f);
+            Assert.AreEqual(0.8940f, offset.y, 0.0002f);
+            Assert.AreEqual(0f, offset.z, 0.0002f);
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";

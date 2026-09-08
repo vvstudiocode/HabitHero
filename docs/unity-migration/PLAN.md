@@ -156,8 +156,9 @@ Partially completed locally:
   Workshop ranges. Unity movement now consumes authored collision flags plus
   existing Supabase decoration `collision_radius` and scale through
   conservative proxies and safe spawn selection. Exact GLB-bound rectangle
-  precision, camera/weather/audio parity, and device visual evidence remain
-  pending.
+  precision remains pending; Unity now uses the Web runtime's 50° perspective
+  camera framing and follows the child, while drag/zoom controls,
+  weather/audio parity, and device visual evidence remain pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

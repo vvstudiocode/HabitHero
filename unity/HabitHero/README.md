@@ -100,8 +100,9 @@ primitive fallback, server scene gating, and world-entity rendering remain
 available. `HabitHeroWorldSceneProfileCatalog` also preserves the Web scene
 spawn anchors and movement boundaries. Authored collision flags plus existing
 Supabase decoration `collision_radius` and scale now drive conservative Unity
-movement proxies and safe spawn selection; exact GLB-bound rectangle precision,
-weather, camera, and device parity remain pending.
+movement proxies and safe spawn selection. The camera now uses the Web runtime's
+50° perspective framing and follows the child; drag/zoom controls, exact
+GLB-bound rectangle precision, weather, and device parity remain pending.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device
