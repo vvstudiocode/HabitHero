@@ -9,21 +9,25 @@ namespace HabitHero.App
     public sealed class HabitHeroParentHomeCoordinator
     {
         private readonly SupabaseParentHomeClient client;
+        private readonly SupabaseChildGameClient gameClient;
         private readonly SupabaseChildCoopAdventureClient coopAdventureClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
         private readonly Action openNotificationSettings;
         private HabitHeroParentHomeView view;
         private string activeFamilyId;
+        private string priceChildProfileId;
 
         public HabitHeroParentHomeCoordinator(
             SupabaseParentHomeClient client,
+            SupabaseChildGameClient gameClient,
             SupabaseChildCoopAdventureClient coopAdventureClient,
             Transform canvasTransform,
             Font font,
             Action openNotificationSettings = null)
         {
             if (client == null) throw new ArgumentNullException("client");
+            if (gameClient == null) throw new ArgumentNullException("gameClient");
             if (coopAdventureClient == null)
             {
                 throw new ArgumentNullException("coopAdventureClient");
@@ -31,6 +35,7 @@ namespace HabitHero.App
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.client = client;
+            this.gameClient = gameClient;
             this.coopAdventureClient = coopAdventureClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
@@ -56,6 +61,10 @@ namespace HabitHero.App
                 SupabaseParentHomeSnapshot snapshot =
                     await client.LoadAsync(cancellationToken);
                 activeFamilyId = snapshot.familyId;
+                priceChildProfileId = snapshot.children != null && snapshot.children.Length > 0
+                    && snapshot.children[0] != null
+                    ? snapshot.children[0].id
+                    : null;
                 snapshot.taskTemplates = await client.LoadTaskTemplatesAsync(
                     snapshot.familyId,
                     cancellationToken);
@@ -169,6 +178,14 @@ namespace HabitHero.App
                         snapshot.familyId,
                         childProfileId,
                         cancellationToken),
+                    () => LoadGameStoreAsync(cancellationToken),
+                    (catalogItemId, scrollPrice) => SetGamePriceAndRefreshAsync(
+                        catalogItemId,
+                        scrollPrice,
+                        cancellationToken),
+                    (catalogItemId) => ResetGamePriceAndRefreshAsync(
+                        catalogItemId,
+                        cancellationToken),
                     (worldOwnerChildProfileId) => coopAdventureClient.ListAsync(
                         worldOwnerChildProfileId,
                         cancellationToken),
@@ -270,9 +287,46 @@ namespace HabitHero.App
         public void Dispose()
         {
             activeFamilyId = null;
+            priceChildProfileId = null;
             if (view == null) return;
             view.Dispose();
             view = null;
+        }
+
+        private async Task<SupabaseChildGameData> LoadGameStoreAsync(
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(activeFamilyId)
+                || string.IsNullOrWhiteSpace(priceChildProfileId))
+            {
+                throw new SupabaseDataException("目前沒有可管理商店的孩子資料。");
+            }
+            return await gameClient.LoadAsync(
+                activeFamilyId,
+                priceChildProfileId,
+                cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> SetGamePriceAndRefreshAsync(
+            string catalogItemId,
+            int scrollPrice,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.SetFamilyGameItemPriceAsync(
+                catalogItemId,
+                scrollPrice,
+                cancellationToken);
+            return await LoadGameStoreAsync(cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> ResetGamePriceAndRefreshAsync(
+            string catalogItemId,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.ResetFamilyGameItemPriceAsync(
+                catalogItemId,
+                cancellationToken);
+            return await LoadGameStoreAsync(cancellationToken);
         }
     }
 }

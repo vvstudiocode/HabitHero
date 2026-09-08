@@ -475,6 +475,41 @@ namespace HabitHero.Platform
                 cancellationToken);
         }
 
+        public async Task SetFamilyGameItemPriceAsync(
+            string catalogItemId,
+            int scrollPrice,
+            CancellationToken cancellationToken)
+        {
+            RequireValue(catalogItemId, "商品");
+            if (scrollPrice < 1)
+            {
+                throw new SupabaseDataException("商品價格必須大於零。");
+            }
+
+            string body = "{\"target_catalog_item_id\":"
+                + SupabaseJson.Quote(catalogItemId.Trim())
+                + ",\"target_scroll_price\":"
+                + scrollPrice.ToString(CultureInfo.InvariantCulture)
+                + "}";
+            await restClient.CallRpcAsync(
+                "set_family_game_item_price",
+                body,
+                cancellationToken);
+        }
+
+        public async Task ResetFamilyGameItemPriceAsync(
+            string catalogItemId,
+            CancellationToken cancellationToken)
+        {
+            RequireValue(catalogItemId, "商品");
+            await restClient.CallRpcAsync(
+                "reset_family_game_item_price",
+                "{\"target_catalog_item_id\":"
+                    + SupabaseJson.Quote(catalogItemId.Trim())
+                    + "}",
+                cancellationToken);
+        }
+
         public Task<SupabaseGameMutationResult> SetFollowingPetsAsync(
             string childProfileId,
             string[] inventoryItemIds,

@@ -27,6 +27,7 @@ namespace HabitHero.App
         private HabitHeroParentChildPreviewView childPreviewView;
         private HabitHeroParentCoopAdventureView coopAdventureView;
         private HabitHeroParentGoalReviewView goalReviewView;
+        private HabitHeroParentGamePriceView gamePriceView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -118,6 +119,9 @@ namespace HabitHero.App
         private Func<
             string,
             Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount;
+        private Func<Task<SupabaseChildGameData>> loadGameStore;
+        private Func<string, int, Task<SupabaseChildGameData>> setGamePrice;
+        private Func<string, Task<SupabaseChildGameData>> resetGamePrice;
         private Func<
             string,
             Task<SupabaseCoopAdventureSummary[]>> listCoopAdventures;
@@ -213,6 +217,9 @@ namespace HabitHero.App
             Func<
                 string,
                 Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount,
+            Func<Task<SupabaseChildGameData>> loadGameStore,
+            Func<string, int, Task<SupabaseChildGameData>> setGamePrice,
+            Func<string, Task<SupabaseChildGameData>> resetGamePrice,
             Func<string, Task<SupabaseCoopAdventureSummary[]>> listCoopAdventures,
             Func<string, Task<SupabaseCoopAdventureState>> loadCoopAdventureState,
             Func<
@@ -250,6 +257,9 @@ namespace HabitHero.App
             this.createChildAccount = createChildAccount;
             this.resetChildPassword = resetChildPassword;
             this.deleteChildAccount = deleteChildAccount;
+            this.loadGameStore = loadGameStore;
+            this.setGamePrice = setGamePrice;
+            this.resetGamePrice = resetGamePrice;
             this.listCoopAdventures = listCoopAdventures;
             this.loadCoopAdventureState = loadCoopAdventureState;
             this.reviewCoopCompletion = reviewCoopCompletion;
@@ -371,30 +381,38 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "願望與獎勵券",
-                new Vector2(0.72f, 0.18f),
+                new Vector2(0.78f, 0.18f),
                 new Vector2(0.92f, 0.24f));
             rewardButton.onClick.AddListener(OpenRewardPanel);
             Button scheduleButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "每日排程",
-                new Vector2(0.31f, 0.18f),
-                new Vector2(0.5f, 0.24f));
+                new Vector2(0.27f, 0.18f),
+                new Vector2(0.43f, 0.24f));
             scheduleButton.onClick.AddListener(OpenAdventureSchedulePanel);
             Button childAccountButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "孩子帳號",
                 new Vector2(0.08f, 0.18f),
-                new Vector2(0.29f, 0.24f));
+                new Vector2(0.25f, 0.24f));
             childAccountButton.onClick.AddListener(OpenChildAccountPanel);
             Button coopAdventureButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "合作批改",
-                new Vector2(0.52f, 0.18f),
-                new Vector2(0.7f, 0.24f));
+                new Vector2(0.45f, 0.18f),
+                new Vector2(0.61f, 0.24f));
             coopAdventureButton.onClick.AddListener(OpenCoopAdventurePanel);
+            Button gamePriceButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "商店價格",
+                new Vector2(0.63f, 0.18f),
+                new Vector2(0.76f, 0.24f));
+            gamePriceButton.interactable = loadGameStore != null;
+            gamePriceButton.onClick.AddListener(OpenGamePricePanel);
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
@@ -431,6 +449,9 @@ namespace HabitHero.App
             createChildAccount = null;
             resetChildPassword = null;
             deleteChildAccount = null;
+            loadGameStore = null;
+            setGamePrice = null;
+            resetGamePrice = null;
             listCoopAdventures = null;
             loadCoopAdventureState = null;
             reviewCoopCompletion = null;
@@ -444,6 +465,7 @@ namespace HabitHero.App
             statusText = null;
             CloseReviewPanel();
             CloseGoalReviewPanel();
+            CloseGamePricePanel();
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
             CloseTaskCreatePanel();
@@ -555,6 +577,36 @@ namespace HabitHero.App
                     new Color(0.84f, 0.89f, 0.96f, 1f),
                     Vector2.zero,
                     Vector2.one);
+            }
+        }
+
+        private async void OpenGamePricePanel()
+        {
+            if (loadGameStore == null || setGamePrice == null || resetGamePrice == null)
+            {
+                SetStatus("家庭商店價格尚未連線。", true);
+                return;
+            }
+
+            SetStatus("正在載入家庭商店…", false);
+            try
+            {
+                SupabaseChildGameData data = await loadGameStore();
+                if (data == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳商店資料。");
+                }
+                CloseGamePricePanel();
+                gamePriceView = new HabitHeroParentGamePriceView(canvasTransform, font);
+                gamePriceView.Show(
+                    data,
+                    setGamePrice,
+                    resetGamePrice,
+                    CloseGamePricePanel);
+            }
+            catch (Exception exception)
+            {
+                SetStatus("商店載入失敗：" + exception.Message, true);
             }
         }
 
@@ -1429,6 +1481,13 @@ namespace HabitHero.App
             if (goalReviewView == null) return;
             goalReviewView.Dispose();
             goalReviewView = null;
+        }
+
+        private void CloseGamePricePanel()
+        {
+            if (gamePriceView == null) return;
+            gamePriceView.Dispose();
+            gamePriceView = null;
         }
 
         private void CloseRewardPanel()

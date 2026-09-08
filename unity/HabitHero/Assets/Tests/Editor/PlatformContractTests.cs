@@ -3321,6 +3321,8 @@ namespace HabitHero.Tests
                     null),
                 new SupabaseHttpResponse(200, "{\"revision\":4}", null),
                 new SupabaseHttpResponse(200, "{\"revision\":5}", null),
+                new SupabaseHttpResponse(200, "null", null),
+                new SupabaseHttpResponse(200, "{}", null),
                 new SupabaseHttpResponse(200, "null", null));
             SupabaseChildGameClient client = new SupabaseChildGameClient(
                 new SupabaseRestClient(settings, authClient, dataTransport));
@@ -3349,6 +3351,13 @@ namespace HabitHero.Tests
                 "pet-inventory-3",
                 "小星星",
                 CancellationToken.None);
+            await client.SetFamilyGameItemPriceAsync(
+                "catalog-1",
+                45,
+                CancellationToken.None);
+            await client.ResetFamilyGameItemPriceAsync(
+                "catalog-1",
+                CancellationToken.None);
 
             Assert.AreEqual("purchase-1", purchase.purchase_id);
             Assert.AreEqual("inventory-1", purchase.inventory_item_id);
@@ -3356,7 +3365,7 @@ namespace HabitHero.Tests
             Assert.AreEqual("character-inventory-1", loadout.equipped_character_inventory_id);
             Assert.AreEqual(4L, following.revision);
             Assert.AreEqual(5L, roaming.revision);
-            Assert.AreEqual(5, dataTransport.Requests.Count);
+            Assert.AreEqual(7, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/rpc/purchase_game_item",
                 dataTransport.Requests[0].Url);
@@ -3378,6 +3387,18 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "{\"target_child_profile_id\":\"child-1\",\"target_inventory_item_id\":\"pet-inventory-3\",\"target_display_name\":\"小星星\"}",
                 dataTransport.Requests[4].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/set_family_game_item_price",
+                dataTransport.Requests[5].Url);
+            Assert.AreEqual(
+                "{\"target_catalog_item_id\":\"catalog-1\",\"target_scroll_price\":45}",
+                dataTransport.Requests[5].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/reset_family_game_item_price",
+                dataTransport.Requests[6].Url);
+            Assert.AreEqual(
+                "{\"target_catalog_item_id\":\"catalog-1\"}",
+                dataTransport.Requests[6].Body);
         }
 
         [Test]
