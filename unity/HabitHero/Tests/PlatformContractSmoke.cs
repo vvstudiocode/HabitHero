@@ -10,6 +10,8 @@ internal static class PlatformContractSmoke
         TestSupabaseSettings();
         TestAuthCallbackParsing();
         TestSupabaseRequestBuilder();
+        TestSupabaseAuthRequestBuilder();
+        TestSupabaseSessionContract();
 
         if (failures > 0)
         {
@@ -115,6 +117,122 @@ internal static class PlatformContractSmoke
                 out request,
                 out error),
             "rejects unsafe RPC function names");
+    }
+
+    private static void TestSupabaseAuthRequestBuilder()
+    {
+        SupabaseClientSettings settings;
+        string error;
+        SupabaseClientSettings.TryCreate(
+            "https://example.supabase.co",
+            "sb_publishable_test-key",
+            out settings,
+            out error);
+
+        SupabaseRequestContract request;
+        Assert(
+            SupabaseAuthRequestBuilder.TryBuildPasswordGrant(
+                settings,
+                "parent@example.com",
+                "secret-password",
+                out request,
+                out error),
+            "builds the password sign-in request");
+        Assert(
+            request != null
+                && request.Url == "https://example.supabase.co/auth/v1/token?grant_type=password"
+                && request.Method == "POST",
+            "uses the Supabase password grant endpoint");
+        Assert(
+            request != null
+                && request.Body == "{\"email\":\"parent@example.com\",\"password\":\"secret-password\"}",
+            "serializes password sign-in credentials as JSON");
+
+        Assert(
+            SupabaseAuthRequestBuilder.TryBuildRefreshGrant(
+                settings,
+                "refresh-token",
+                out request,
+                out error),
+            "builds the refresh-token request");
+        Assert(
+            request != null
+                && request.Url == "https://example.supabase.co/auth/v1/token?grant_type=refresh_token"
+                && request.Body == "{\"refresh_token\":\"refresh-token\"}",
+            "uses the refresh grant endpoint and body");
+
+        Assert(
+            SupabaseAuthRequestBuilder.TryBuildUser(settings, "access-token", out request, out error),
+            "builds the authenticated user request");
+        Assert(
+            request != null
+                && request.Method == "GET"
+                && request.Url == "https://example.supabase.co/auth/v1/user"
+                && request.Headers["Authorization"] == "Bearer access-token",
+            "uses the access token for authenticated user reads");
+
+        Assert(
+            SupabaseAuthRequestBuilder.TryBuildPasswordRecovery(
+                settings,
+                "parent@example.com",
+                "com.vvstudiocode.habithero://reset-password",
+                out request,
+                out error),
+            "builds the password recovery request");
+        Assert(
+            request != null
+                && request.Url == "https://example.supabase.co/auth/v1/recover"
+                && request.Body == "{\"email\":\"parent@example.com\",\"redirect_to\":\"com.vvstudiocode.habithero://reset-password\"}",
+            "preserves the password recovery redirect");
+
+        Assert(
+            SupabaseAuthRequestBuilder.TryBuildLogout(settings, "access-token", out request, out error),
+            "builds the local Supabase logout request");
+        Assert(
+            request != null
+                && request.Method == "POST"
+                && request.Url == "https://example.supabase.co/auth/v1/logout"
+                && request.Headers["Authorization"] == "Bearer access-token",
+            "authenticates the logout request with the current session");
+    }
+
+    private static void TestSupabaseSessionContract()
+    {
+        SupabaseAuthResponse response = new SupabaseAuthResponse
+        {
+            access_token = "access-token",
+            refresh_token = "refresh-token",
+            token_type = "bearer",
+            expires_in = 3600,
+            user = new SupabaseUser
+            {
+                id = "user-1",
+                email = "parent@example.com",
+            },
+        };
+
+        SupabaseSession session;
+        string error;
+        Assert(
+            SupabaseSession.TryCreateFromAuthResponse(response, 1000, out session, out error),
+            "creates a session from the Supabase auth response");
+        Assert(
+            session != null
+                && session.AccessToken == "access-token"
+                && session.RefreshToken == "refresh-token"
+                && session.User.Id == "user-1",
+            "keeps the access, refresh, and user identity fields");
+        Assert(session != null && session.ExpiresAt == 4600, "derives expires_at from expires_in");
+        Assert(session != null && session.ShouldRefresh(4500, 120), "refreshes before the access token expires");
+        Assert(session != null && !session.ShouldRefresh(2000, 120), "does not refresh a healthy session");
+
+        Assert(
+            !SupabaseSession.TryCreateFromAuthResponse(
+                new SupabaseAuthResponse { access_token = "only-access" },
+                1000,
+                out session,
+                out error),
+            "rejects a session response without a refresh token");
     }
 
     private static void Assert(bool condition, string description)

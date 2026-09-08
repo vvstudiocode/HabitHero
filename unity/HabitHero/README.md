@@ -19,6 +19,12 @@ parallel client rewrite.
   existing store identity: product name `習慣冒險島`, iOS Bundle ID
   `com.vvstudiocode.habithero`, and Android application ID
   `com.vvstudiocode.habithero`.
+- The first `Assets/Scenes/Bootstrap.unity` entrypoint is checked into Build
+  Settings. It creates the initial parent/child login screen and restores a
+  Supabase session when a local runtime config is available.
+- `com.unity.ugui` `2.6.0` is pinned in the Unity package manifest for the
+  bootstrap UI. This is a client dependency; it does not change the shared
+  Supabase schema.
 
 ## Implementation order
 
@@ -34,5 +40,24 @@ The pure C# platform slice remains executable without the Unity editor:
 `npm run test:unity-platform` compiles and runs the Supabase settings,
 authentication callback, and request contracts. With Unity installed locally,
 `npm run test:unity-editmode` runs the Editor-side platform contract tests.
-Unity UI, native plugins, and feature flows must not be marked complete until
-they pass their own editor/device tests.
+The first Bootstrap scene and UGUI login shell now pass the Editor compile and
+scene-entrypoint contract. The current local session store is intentionally
+injectable and is suitable for editor/functional verification; a native
+iOS Keychain/Android Keystore store is still required before a production
+mobile release. Unity UI, native plugins, and feature flows must not be marked
+complete until they pass their own editor/device tests.
+
+## Local Supabase configuration
+
+The Unity app never reads a service-role key. Before opening the Bootstrap
+scene locally, expose the same public values used by the web client:
+
+```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+Then run the Unity Editor menu item `HabitHero/Configure Supabase Runtime`.
+It creates the ignored asset
+`Assets/Resources/SupabaseRuntimeConfig.asset`; do not commit that asset or
+paste its contents into source control.
