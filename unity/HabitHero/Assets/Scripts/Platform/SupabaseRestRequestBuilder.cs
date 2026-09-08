@@ -155,6 +155,54 @@ namespace HabitHero.Platform
             return true;
         }
 
+        public static bool TryBuildTableUpsert(
+            SupabaseClientSettings settings,
+            string table,
+            string jsonBody,
+            string conflictColumns,
+            string accessToken,
+            out SupabaseRequestContract request,
+            out string error)
+        {
+            request = null;
+            error = null;
+            if (!TryValidateTableMutation(settings, table, jsonBody, "upsert", out error))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(conflictColumns))
+            {
+                error = "Supabase upsert conflict columns are missing.";
+                return false;
+            }
+
+            string[] columns = conflictColumns.Split(',');
+            for (int index = 0; index < columns.Length; index += 1)
+            {
+                columns[index] = columns[index].Trim();
+                if (!SafeIdentifier.IsMatch(columns[index]))
+                {
+                    error = "Supabase upsert conflict columns are invalid.";
+                    return false;
+                }
+            }
+
+            Dictionary<string, string> headers = CreateMutationHeaders(
+                settings,
+                accessToken,
+                true);
+            headers["Prefer"] = "resolution=merge-duplicates,return=minimal";
+            request = new SupabaseRequestContract(
+                "POST",
+                settings.Url + "/rest/v1/" + table.Trim()
+                    + "?on_conflict="
+                    + Uri.EscapeDataString(string.Join(",", columns)),
+                headers,
+                jsonBody.Trim());
+            return true;
+        }
+
         public static bool TryBuildTableUpdate(
             SupabaseClientSettings settings,
             string table,
