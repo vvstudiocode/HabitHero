@@ -786,6 +786,79 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentTaskCreationUsesRlsScopedInsertAndRefresh()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(201, string.Empty, null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"parent-user-1\",\"role\":\"parent\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"family-1\",\"name\":\"小小冒險家\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"display_name\":\"小明\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"task-2\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"todo\",\"is_daily\":true}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseParentTaskMutationResult result =
+                await client.CreateTaskAndRefreshAsync(
+                    "family-1",
+                    new SupabaseParentTaskCreateInput
+                    {
+                        childProfileId = "child-1",
+                        name = "整理書包",
+                        points = 10,
+                        icon = "Star",
+                        durationMinutes = 15,
+                        isDaily = true,
+                        category = "life_habit",
+                    },
+                    CancellationToken.None);
+
+            Assert.IsTrue(result.Created);
+            Assert.IsNull(result.RefreshError);
+            Assert.AreEqual("整理書包", result.RefreshedSnapshot.tasks[0].name);
+            Assert.AreEqual(9, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/tasks",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"icon\":\"Star\",\"duration_minutes\":15,\"is_daily\":true,\"due_on\":null,\"due_time\":null,\"end_time\":null,\"requires_review_before_next_task\":false,\"category\":\"life_habit\",\"origin\":\"parent_assigned\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/family_members?select=*&profile_id=eq.parent-user-1&role=eq.parent",
+                dataTransport.Requests[1].Url);
+        }
+
+        [Test]
         public void TaskCompletionQueueDeduplicatesByTaskAndPersistsOwnerScope()
         {
             InMemorySupabaseTaskCompletionQueueStore store =

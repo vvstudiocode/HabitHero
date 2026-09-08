@@ -16,6 +16,7 @@ namespace HabitHero.App
         private GameObject rewardPanel;
         private GameObject wishlistApprovalPanel;
         private GameObject taskListObject;
+        private HabitHeroParentTaskCreateView taskCreateView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -44,6 +45,9 @@ namespace HabitHero.App
             int,
             Task<SupabaseParentRewardMutationResult>> approveWishlist;
         private Func<string, Task<SupabaseParentRewardMutationResult>> fulfillTicket;
+        private Func<
+            SupabaseParentTaskCreateInput,
+            Task<SupabaseParentTaskMutationResult>> createTask;
 
         public HabitHeroParentHomeView(Transform canvasTransform, Font font)
         {
@@ -69,6 +73,9 @@ namespace HabitHero.App
                 int,
                 Task<SupabaseParentRewardMutationResult>> approveWishlist,
             Func<string, Task<SupabaseParentRewardMutationResult>> fulfillTicket,
+            Func<
+                SupabaseParentTaskCreateInput,
+                Task<SupabaseParentTaskMutationResult>> createTask,
             Action onSignOut)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
@@ -78,6 +85,7 @@ namespace HabitHero.App
             this.reviewTask = reviewTask;
             this.approveWishlist = approveWishlist;
             this.fulfillTicket = fulfillTicket;
+            this.createTask = createTask;
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -132,7 +140,7 @@ namespace HabitHero.App
             taskListObject.transform.SetParent(panel.transform, false);
             RectTransform taskListRect = taskListObject.GetComponent<RectTransform>();
             taskListRect.anchorMin = new Vector2(0.08f, 0.25f);
-            taskListRect.anchorMax = new Vector2(0.92f, 0.68f);
+            taskListRect.anchorMax = new Vector2(0.92f, 0.61f);
             taskListRect.offsetMin = Vector2.zero;
             taskListRect.offsetMax = Vector2.zero;
             VerticalLayoutGroup layout = taskListObject.GetComponent<VerticalLayoutGroup>();
@@ -143,12 +151,19 @@ namespace HabitHero.App
             layout.childForceExpandHeight = false;
 
             RenderSnapshot(snapshot);
+            Button createTaskButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "建立孩子任務",
+                new Vector2(0.08f, 0.63f),
+                new Vector2(0.92f, 0.69f));
+            createTaskButton.onClick.AddListener(OpenTaskCreatePanel);
             Button rewardButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "願望與獎勵券",
-                new Vector2(0.08f, 0.21f),
-                new Vector2(0.92f, 0.27f));
+                new Vector2(0.08f, 0.18f),
+                new Vector2(0.92f, 0.24f));
             rewardButton.onClick.AddListener(OpenRewardPanel);
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
@@ -166,6 +181,7 @@ namespace HabitHero.App
             reviewTask = null;
             approveWishlist = null;
             fulfillTicket = null;
+            createTask = null;
             latestSnapshot = null;
             activeReviewTask = null;
             activeWishlist = null;
@@ -175,6 +191,7 @@ namespace HabitHero.App
             CloseReviewPanel();
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
+            CloseTaskCreatePanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -376,6 +393,27 @@ namespace HabitHero.App
                 new Vector2(0.35f, 0.04f),
                 new Vector2(0.65f, 0.11f));
             closeButton.onClick.AddListener(CloseRewardPanel);
+        }
+
+        private void OpenTaskCreatePanel()
+        {
+            if (latestSnapshot == null || createTask == null)
+            {
+                SetStatus("建立任務尚未連線。", true);
+                return;
+            }
+
+            if (taskCreateView == null)
+            {
+                taskCreateView = new HabitHeroParentTaskCreateView(canvasTransform, font);
+            }
+
+            taskCreateView.Show(
+                latestSnapshot,
+                createTask,
+                ApplySnapshot,
+                SetStatus,
+                CloseTaskCreatePanel);
         }
 
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
@@ -785,6 +823,13 @@ namespace HabitHero.App
             wishlistPointsInput = null;
             approveWishlistButton = null;
             wishlistApprovalStatus = null;
+        }
+
+        private void CloseTaskCreatePanel()
+        {
+            if (taskCreateView == null) return;
+            taskCreateView.Dispose();
+            taskCreateView = null;
         }
 
         private void SetReviewStatus(string message, bool isError)

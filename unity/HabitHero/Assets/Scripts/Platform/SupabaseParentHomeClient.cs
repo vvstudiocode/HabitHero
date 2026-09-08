@@ -33,6 +33,30 @@ namespace HabitHero.Platform
         public string RefreshError { get; set; }
     }
 
+    public sealed class SupabaseParentTaskCreateInput
+    {
+        public string childProfileId;
+        public string name;
+        public int points;
+        public string icon;
+        public int? durationMinutes;
+        public bool isDaily;
+        public string dueOn;
+        public string dueTime;
+        public string endTime;
+        public string category;
+        public bool requiresReviewBeforeNextTask;
+    }
+
+    public sealed class SupabaseParentTaskMutationResult
+    {
+        public bool Created { get; set; }
+
+        public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
     public sealed class SupabaseParentRewardMutationResult
     {
         public SupabaseChildRewardRecord Reward { get; set; }
@@ -203,6 +227,84 @@ namespace HabitHero.Platform
             }
 
             return reviewedTask;
+        }
+
+        public async Task CreateTaskAsync(
+            string familyId,
+            SupabaseParentTaskCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (input == null || string.IsNullOrWhiteSpace(input.childProfileId))
+            {
+                throw new SupabaseDataException("指定孩子不可為空。");
+            }
+
+            string name = input.name == null ? string.Empty : input.name.Trim();
+            if (name.Length < 1 || name.Length > 120)
+            {
+                throw new SupabaseDataException("任務名稱長度必須介於 1 到 120 個字元。");
+            }
+            if (input.points <= 0)
+            {
+                throw new SupabaseDataException("任務點數必須大於 0。");
+            }
+            if (input.durationMinutes.HasValue
+                && (input.durationMinutes.Value <= 0 || input.durationMinutes.Value > 1440))
+            {
+                throw new SupabaseDataException("任務時間必須介於 1 到 1440 分鐘。");
+            }
+
+            string icon = string.IsNullOrWhiteSpace(input.icon) ? "Star" : input.icon.Trim();
+            string category = string.IsNullOrWhiteSpace(input.category)
+                ? "life_habit"
+                : input.category.Trim();
+            string durationJson = input.durationMinutes.HasValue
+                ? input.durationMinutes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : "null";
+            string body = "{\"family_id\":" + SupabaseJson.Quote(familyId)
+                + ",\"child_profile_id\":" + SupabaseJson.Quote(input.childProfileId)
+                + ",\"name\":" + SupabaseJson.Quote(name)
+                + ",\"points\":"
+                + input.points.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                + ",\"icon\":" + SupabaseJson.Quote(icon)
+                + ",\"duration_minutes\":" + durationJson
+                + ",\"is_daily\":" + (input.isDaily ? "true" : "false")
+                + ",\"due_on\":" + SupabaseJson.NullableString(input.dueOn)
+                + ",\"due_time\":" + SupabaseJson.NullableString(input.dueTime)
+                + ",\"end_time\":" + SupabaseJson.NullableString(input.endTime)
+                + ",\"requires_review_before_next_task\":"
+                + (input.requiresReviewBeforeNextTask ? "true" : "false")
+                + ",\"category\":" + SupabaseJson.Quote(category)
+                + ",\"origin\":\"parent_assigned\"}";
+            await restClient.InsertAsync("tasks", body, cancellationToken);
+        }
+
+        public async Task<SupabaseParentTaskMutationResult> CreateTaskAndRefreshAsync(
+            string familyId,
+            SupabaseParentTaskCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            await CreateTaskAsync(familyId, input, cancellationToken);
+            SupabaseParentTaskMutationResult result =
+                new SupabaseParentTaskMutationResult { Created = true };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
         }
 
         public async Task<SupabaseChildRewardRecord> ApproveWishlistAsync(

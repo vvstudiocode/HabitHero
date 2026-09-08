@@ -66,6 +66,10 @@ namespace HabitHero.App
                     (ticketId) => client.FulfillTicketAndRefreshAsync(
                         ticketId,
                         cancellationToken),
+                    (input) => client.CreateTaskAndRefreshAsync(
+                        snapshot.familyId,
+                        input,
+                        cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;
