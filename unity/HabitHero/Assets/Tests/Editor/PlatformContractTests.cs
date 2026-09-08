@@ -156,6 +156,95 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void ChildHomeSnapshotCacheIsOwnerScopedAndRoundTripsNonSecretData()
+        {
+            InMemorySupabaseChildHomeSnapshotStore store =
+                new InMemorySupabaseChildHomeSnapshotStore();
+            SupabaseChildHomeSnapshotCache cache =
+                new SupabaseChildHomeSnapshotCache(store);
+            SupabaseChildHomeSnapshot original = new SupabaseChildHomeSnapshot
+            {
+                familyId = "family-1",
+                child = new SupabaseChildProfileRecord
+                {
+                    id = "child-1",
+                    profile_id = "user-1",
+                    display_name = "小明",
+                    points_balance = 24,
+                },
+                tasks = new[]
+                {
+                    new SupabaseChildTaskRecord
+                    {
+                        id = "task-1",
+                        name = "整理書包",
+                        status = "todo",
+                    },
+                },
+            };
+
+            cache.Save("user-1", original);
+
+            SupabaseChildHomeSnapshot restored;
+            Assert.IsTrue(cache.TryLoad("user-1", out restored));
+            Assert.AreEqual("family-1", restored.familyId);
+            Assert.AreEqual("小明", restored.child.display_name);
+            Assert.AreEqual(24, restored.child.points_balance);
+            Assert.AreEqual(1, restored.tasks.Length);
+            Assert.IsFalse(cache.TryLoad("user-2", out restored));
+        }
+
+        [Test]
+        public async Task ChildHomeClientLoadsTheOwnerSnapshotWhenOffline()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            InMemorySupabaseChildHomeSnapshotStore snapshotStore =
+                new InMemorySupabaseChildHomeSnapshotStore();
+            SupabaseChildHomeSnapshotCache cache =
+                new SupabaseChildHomeSnapshotCache(snapshotStore);
+            cache.Save("child-user-1", new SupabaseChildHomeSnapshot
+            {
+                familyId = "family-1",
+                child = new SupabaseChildProfileRecord
+                {
+                    id = "child-1",
+                    profile_id = "child-user-1",
+                    display_name = "小明",
+                    points_balance = 30,
+                },
+                tasks = new SupabaseChildTaskRecord[0],
+            });
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport),
+                new InMemorySupabaseTaskCompletionQueueStore(),
+                snapshotStore,
+                () => false);
+
+            SupabaseChildHomeSnapshot snapshot = await client.LoadAsync(CancellationToken.None);
+
+            Assert.AreEqual("family-1", snapshot.familyId);
+            Assert.AreEqual(30, snapshot.child.points_balance);
+            Assert.AreEqual(0, dataTransport.Requests.Count);
+        }
+
+        [Test]
         public async Task ChildHomeClientLoadsRlsScopedDataAndSubmitsReflection()
         {
             SupabaseClientSettings settings = CreateSettings();
@@ -229,6 +318,73 @@ namespace HabitHero.Tests
                     + reflectionResult.IdempotencyKey
                     + "\",\"quick_report\":null,\"reflection\":\"完成了\",\"mood\":\"happy\",\"difficulty\":3}",
                 dataTransport.Requests[9].Body);
+        }
+
+        [Test]
+        public async Task ChildCompletionRefreshesTheServerAuthoritativeLedger()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "{}", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"role\":\"child\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":42}]",
+                    null),
+                new SupabaseHttpResponse(200, "{}", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"pending\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"ledger-1\",\"child_profile_id\":\"child-1\",\"task_id\":\"task-1\",\"points_delta\":10,\"entry_type\":\"task_submitted\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport),
+                new InMemorySupabaseTaskCompletionQueueStore(),
+                new InMemorySupabaseChildHomeSnapshotStore(),
+                () => true);
+
+            SupabaseTaskCompletionResult result =
+                await client.SubmitTaskCompletionAndRefreshAsync(
+                    "task-1",
+                    "smooth",
+                    null,
+                    null,
+                    null,
+                    CancellationToken.None);
+
+            Assert.IsFalse(result.QueuedForRetry);
+            Assert.IsNull(result.RefreshError);
+            Assert.IsNotNull(result.RefreshedSnapshot);
+            Assert.AreEqual(42, result.RefreshedSnapshot.child.points_balance);
+            Assert.AreEqual(1, result.RefreshedSnapshot.ledger.Length);
+            Assert.AreEqual(10, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/point_ledger?select=*&family_id=eq.family-1&child_profile_id=eq.child-1&order=created_at.desc&limit=100",
+                dataTransport.Requests[8].Url);
         }
 
         [Test]

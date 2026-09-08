@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using HabitHero.Platform;
@@ -16,6 +17,7 @@ namespace HabitHero.App
         private GameObject reportPanel;
         private GameObject timerPanel;
         private Text statusText;
+        private Text pointsText;
         private Text reportStatus;
         private Text timerText;
         private Text timerStatus;
@@ -26,6 +28,7 @@ namespace HabitHero.App
         private Button activeTimerTaskButton;
         private SupabaseTaskTimerSessionRecord activeTimer;
         private SupabaseTaskTimerSessionRecord[] timerSessions;
+        private GameObject taskListObject;
         private CancellationTokenSource timerLoopCancellation;
         private Func<
             SupabaseChildTaskRecord,
@@ -87,7 +90,7 @@ namespace HabitHero.App
                 HabitHeroUiFactory.AccentColor,
                 new Vector2(0.08f, 0.84f),
                 new Vector2(0.92f, 0.95f));
-            HabitHeroUiFactory.CreateText(
+            pointsText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
                 snapshot.child.display_name + "　目前點數：" + snapshot.child.points_balance,
@@ -105,7 +108,7 @@ namespace HabitHero.App
                 new Vector2(0.91f, 0.97f));
             signOutButton.onClick.AddListener(() => onSignOut());
 
-            GameObject taskListObject = new GameObject(
+            taskListObject = new GameObject(
                 "TaskList",
                 typeof(RectTransform),
                 typeof(VerticalLayoutGroup));
@@ -121,6 +124,62 @@ namespace HabitHero.App
             layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
+
+            RenderTaskList(snapshot);
+
+            statusText = HabitHeroUiFactory.CreateText(
+                panel.transform,
+                font,
+                "任務資料已從 Supabase 載入。",
+                17,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.04f),
+                new Vector2(0.92f, 0.13f));
+        }
+
+        public void Dispose()
+        {
+            submitTask = null;
+            startTimer = null;
+            pauseTimer = null;
+            resumeTimer = null;
+            timerSessions = null;
+            pointsText = null;
+            taskListObject = null;
+            CloseReportPanel();
+            CloseTimerPanel();
+            if (panel != null)
+            {
+                UnityEngine.Object.Destroy(panel);
+                panel = null;
+            }
+
+            statusText = null;
+        }
+
+        public void ApplySnapshot(SupabaseChildHomeSnapshot snapshot)
+        {
+            if (snapshot == null || snapshot.child == null || panel == null) return;
+            timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
+            if (pointsText != null)
+            {
+                pointsText.text = snapshot.child.display_name
+                    + "　目前點數："
+                    + snapshot.child.points_balance;
+            }
+
+            RenderTaskList(snapshot);
+            SetStatus("點數與任務資料已更新。", false);
+        }
+
+        private void RenderTaskList(SupabaseChildHomeSnapshot snapshot)
+        {
+            if (taskListObject == null) return;
+            foreach (Transform child in taskListObject.transform)
+            {
+                UnityEngine.Object.Destroy(child.gameObject);
+            }
 
             int visibleTaskCount = 0;
             foreach (SupabaseChildTaskRecord task in snapshot.tasks ?? new SupabaseChildTaskRecord[0])
@@ -155,34 +214,6 @@ namespace HabitHero.App
                     Vector2.zero,
                     Vector2.one);
             }
-
-            statusText = HabitHeroUiFactory.CreateText(
-                panel.transform,
-                font,
-                "任務資料已從 Supabase 載入。",
-                17,
-                TextAnchor.MiddleCenter,
-                new Color(0.84f, 0.89f, 0.96f, 1f),
-                new Vector2(0.08f, 0.04f),
-                new Vector2(0.92f, 0.13f));
-        }
-
-        public void Dispose()
-        {
-            submitTask = null;
-            startTimer = null;
-            pauseTimer = null;
-            resumeTimer = null;
-            timerSessions = null;
-            CloseReportPanel();
-            CloseTimerPanel();
-            if (panel != null)
-            {
-                UnityEngine.Object.Destroy(panel);
-                panel = null;
-            }
-
-            statusText = null;
         }
 
         private void HandleTaskClicked(
@@ -662,11 +693,22 @@ namespace HabitHero.App
                     }
                 }
 
-                SetStatus(
-                    result != null && result.QueuedForRetry
-                        ? "已保存到本機，恢復網路後會自動同步。"
-                        : "任務已送出，等待家長確認點數。",
-                    false);
+                if (result != null && result.QueuedForRetry)
+                {
+                    SetStatus("已保存到本機，恢復網路後會自動同步。", false);
+                }
+                else if (result != null && !string.IsNullOrWhiteSpace(result.RefreshError))
+                {
+                    SetStatus("任務已送出；點數更新稍後會自動重試。", false);
+                }
+                else if (result != null && result.RefreshedSnapshot != null)
+                {
+                    SetStatus("任務已送出，點數與任務資料已更新。", false);
+                }
+                else
+                {
+                    SetStatus("任務已送出，等待家長確認點數。", false);
+                }
             }
             catch (Exception exception)
             {

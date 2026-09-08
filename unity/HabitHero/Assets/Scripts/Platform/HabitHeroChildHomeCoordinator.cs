@@ -68,20 +68,26 @@ namespace HabitHero.App
             }
         }
 
-        private Task<SupabaseTaskCompletionResult> SubmitTaskAsync(
+        private async Task<SupabaseTaskCompletionResult> SubmitTaskAsync(
             SupabaseChildTaskRecord task,
             SupabaseTaskCompletionDraft draft,
             CancellationToken cancellationToken)
         {
             if (task == null) throw new ArgumentNullException("task");
             if (draft == null) draft = new SupabaseTaskCompletionDraft();
-            return client.SubmitTaskCompletionAsync(
+            SupabaseTaskCompletionResult result = await client.SubmitTaskCompletionAndRefreshAsync(
                 task.id,
                 draft.quickReport,
                 draft.reflection,
                 draft.mood,
                 draft.difficulty,
                 cancellationToken);
+            if (result.RefreshedSnapshot != null && view != null)
+            {
+                view.ApplySnapshot(result.RefreshedSnapshot);
+            }
+
+            return result;
         }
 
         public void Dispose()

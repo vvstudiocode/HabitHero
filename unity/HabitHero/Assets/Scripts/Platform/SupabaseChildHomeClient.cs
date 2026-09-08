@@ -125,6 +125,7 @@ namespace HabitHero.Platform
         public string updated_at;
     }
 
+    [Serializable]
     public sealed class SupabaseChildHomeSnapshot
     {
         public string familyId;
@@ -142,6 +143,10 @@ namespace HabitHero.Platform
         public string IdempotencyKey { get; set; }
 
         public bool QueuedForRetry { get; set; }
+
+        public SupabaseChildHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
     }
 
     public sealed class SupabaseTaskCompletionDraft
@@ -167,12 +172,14 @@ namespace HabitHero.Platform
     {
         private readonly SupabaseRestClient restClient;
         private readonly SupabaseTaskCompletionQueue completionQueue;
+        private readonly SupabaseChildHomeSnapshotCache snapshotCache;
         private readonly Func<bool> isNetworkAvailable;
 
         public SupabaseChildHomeClient(SupabaseRestClient restClient)
             : this(
                 restClient,
                 new PlayerPrefsSupabaseTaskCompletionQueueStore(),
+                new PlayerPrefsSupabaseChildHomeSnapshotStore(),
                 IsNetworkAvailable)
         {
         }
@@ -181,11 +188,28 @@ namespace HabitHero.Platform
             SupabaseRestClient restClient,
             ISupabaseTaskCompletionQueueStore completionQueueStore,
             Func<bool> isNetworkAvailable)
+            : this(
+                restClient,
+                completionQueueStore,
+                new PlayerPrefsSupabaseChildHomeSnapshotStore(),
+                isNetworkAvailable)
+        {
+        }
+
+        public SupabaseChildHomeClient(
+            SupabaseRestClient restClient,
+            ISupabaseTaskCompletionQueueStore completionQueueStore,
+            ISupabaseChildHomeSnapshotStore snapshotStore,
+            Func<bool> isNetworkAvailable)
         {
             if (restClient == null) throw new ArgumentNullException("restClient");
             if (completionQueueStore == null)
             {
                 throw new ArgumentNullException("completionQueueStore");
+            }
+            if (snapshotStore == null)
+            {
+                throw new ArgumentNullException("snapshotStore");
             }
             if (isNetworkAvailable == null)
             {
@@ -194,6 +218,7 @@ namespace HabitHero.Platform
 
             this.restClient = restClient;
             completionQueue = new SupabaseTaskCompletionQueue(completionQueueStore);
+            snapshotCache = new SupabaseChildHomeSnapshotCache(snapshotStore);
             this.isNetworkAvailable = isNetworkAvailable;
         }
 
@@ -214,12 +239,84 @@ namespace HabitHero.Platform
         public async Task<SupabaseChildHomeSnapshot> LoadAsync(
             CancellationToken cancellationToken)
         {
-            SupabaseSession session = await restClient.EnsureSessionAsync(cancellationToken);
+            SupabaseSession currentSession = restClient.CurrentSession;
+            if (!isNetworkAvailable())
+            {
+                return LoadCachedSnapshotOrThrow(
+                    currentSession,
+                    new SupabaseDataException("目前沒有網路連線，且無法載入最新孩子資料。"));
+            }
+
+            SupabaseSession session;
+            try
+            {
+                session = await restClient.EnsureSessionAsync(cancellationToken);
+            }
+            catch (SupabaseDataException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedSnapshotOrThrow(currentSession, exception);
+            }
+            catch (SupabaseAuthException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedSnapshotOrThrow(currentSession, exception);
+            }
+
             if (session == null || session.User == null || string.IsNullOrWhiteSpace(session.User.Id))
             {
                 throw new SupabaseDataException("孩子帳號的 Supabase session 缺少使用者 ID。");
             }
 
+            try
+            {
+                return await LoadOnlineAsync(session, cancellationToken);
+            }
+            catch (SupabaseDataException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedSnapshotOrThrow(session, exception);
+            }
+            catch (SupabaseAuthException exception) when (IsRetryable(exception.StatusCode))
+            {
+                return LoadCachedSnapshotOrThrow(session, exception);
+            }
+        }
+
+        public async Task<SupabaseTaskCompletionResult> SubmitTaskCompletionAndRefreshAsync(
+            string taskId,
+            string quickReport,
+            string reflection,
+            string mood,
+            int? difficulty,
+            CancellationToken cancellationToken)
+        {
+            SupabaseTaskCompletionResult result = await SubmitTaskCompletionAsync(
+                taskId,
+                quickReport,
+                reflection,
+                mood,
+                difficulty,
+                cancellationToken);
+            if (result.QueuedForRetry) return result;
+
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        private async Task<SupabaseChildHomeSnapshot> LoadOnlineAsync(
+            SupabaseSession session,
+            CancellationToken cancellationToken)
+        {
             string userId = session.User.Id;
             SupabaseFamilyMemberRecord[] members = await restClient.SelectManyAsync<SupabaseFamilyMemberRecord>(
                 "family_members",
@@ -316,7 +413,7 @@ namespace HabitHero.Platform
                     }
                 }
             }
-            return new SupabaseChildHomeSnapshot
+            SupabaseChildHomeSnapshot snapshot = new SupabaseChildHomeSnapshot
             {
                 familyId = familyId,
                 child = child,
@@ -327,6 +424,49 @@ namespace HabitHero.Platform
                 ledger = ledger.Result,
                 timers = timers.Result,
             };
+            snapshotCache.Save(userId, snapshot);
+            return snapshot;
+        }
+
+        private SupabaseChildHomeSnapshot LoadCachedSnapshotOrThrow(
+            SupabaseSession session,
+            Exception fallbackException)
+        {
+            if (session != null && session.User != null
+                && !string.IsNullOrWhiteSpace(session.User.Id))
+            {
+                SupabaseChildHomeSnapshot snapshot;
+                if (snapshotCache.TryLoad(session.User.Id, out snapshot))
+                {
+                    MarkPendingCompletions(session.User.Id, snapshot);
+                    return snapshot;
+                }
+            }
+
+            if (fallbackException != null) throw fallbackException;
+            throw new SupabaseDataException("找不到可供離線使用的孩子首頁快照。");
+        }
+
+        private void MarkPendingCompletions(
+            string userId,
+            SupabaseChildHomeSnapshot snapshot)
+        {
+            if (snapshot == null || snapshot.tasks == null) return;
+            List<SupabaseTaskCompletionQueueEntry> pendingCompletions =
+                completionQueue.Load(userId);
+            foreach (SupabaseChildTaskRecord task in snapshot.tasks)
+            {
+                if (task == null) continue;
+                task.pendingSync = false;
+                foreach (SupabaseTaskCompletionQueueEntry pending in pendingCompletions)
+                {
+                    if (pending.taskId == task.id)
+                    {
+                        task.pendingSync = true;
+                        break;
+                    }
+                }
+            }
         }
 
         public Task<SupabaseTaskTimerSessionRecord> StartAdventureTimerAsync(
