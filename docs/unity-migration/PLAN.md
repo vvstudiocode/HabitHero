@@ -38,7 +38,7 @@ authorization into client-only rules.
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads and server-gated source rules; 3D scene placement pending) |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating; 3D placement pending) |
-| Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, and chat RPC/UI) |
+| Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Not started |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
 | Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Not started |
@@ -143,7 +143,8 @@ Partially completed locally:
 - Unity child social foundation now also loads the existing
   `get_friend_world_snapshot` RPC for an accepted friend and displays the
   server-scoped result as a read-only 3D preview with a local visitor avatar;
-  world mutation and presence remain pending.
+  world mutation remains pending, while live Presence and avatar broadcast now
+  update the preview with bounded remote-avatar placeholders.
 - Unity child social foundation now reads visible friend-world chat history,
   unread counts, and sends/marks-read/reports messages through the existing
   server RPCs. The chat panel reloads server data after each mutation and opens
@@ -158,8 +159,10 @@ Partially completed locally:
   dedicated `friend-world-live:<owner>` private topic, maps Presence state/diff
   and avatar broadcasts, rejects stale or out-of-bounds avatar state, tracks
   Presence again after reconnect, and exposes avatar state/request callbacks.
-  Unity 3D remote-avatar rendering, capacity admission UI, world-revision
-  reload, and two-account/device verification remain pending.
+  Unity now renders bounded remote-avatar placeholders, broadcasts local visitor
+  movement, requests the latest peer state on join, and keeps Presence visible
+  when the preview opens after the socket handshake. Capacity admission UI,
+  world-revision reload, and two-account/device verification remain pending.
 
 Still required:
 
@@ -173,9 +176,10 @@ Still required:
   the runtime handler, token-fragment recovery, and PKCE exchange contract are
   now in place. A code-only callback is rejected because Supabase requires the
   original PKCE verifier.
-- Unity wiring for Supabase Realtime presence, avatar broadcast, capacity
-  admission, remote-avatar interpolation, world-revision reload, and co-op
-  flows, plus two-account/device reconnect verification.
+- Unity capacity admission, remote-avatar interpolation, world-revision reload,
+  and co-op flows, plus two-account/device reconnect verification. The current
+  live preview intentionally uses bounded placeholder avatars until the
+  character asset contract and visual/device evidence are approved.
 - Native iOS/Android push and app URL plugins.
 
 ### Phase 2 — child core loop

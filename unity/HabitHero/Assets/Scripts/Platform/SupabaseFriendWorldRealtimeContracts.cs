@@ -39,6 +39,39 @@ namespace HabitHero.Platform
         public double sentAt;
     }
 
+    public static class SupabaseFriendWorldAvatarStateFactory
+    {
+        public static SupabaseFriendWorldAvatarState Create(
+            string connectionId,
+            string childProfileId,
+            string characterAssetKey,
+            long sequence,
+            float x,
+            float z,
+            float rotationY,
+            double sentAt)
+        {
+            SupabaseFriendWorldAvatarState state = new SupabaseFriendWorldAvatarState
+            {
+                version = SupabaseFriendWorldRealtimeContracts.ProtocolVersion,
+                connectionId = connectionId,
+                childProfileId = childProfileId,
+                characterAssetKey = string.IsNullOrWhiteSpace(characterAssetKey)
+                    ? null
+                    : characterAssetKey,
+                sequence = sequence,
+                x = x,
+                z = z,
+                rotationY = rotationY,
+                motion = "idle",
+                emote = "none",
+                sentAt = sentAt,
+            };
+            SupabaseFriendWorldRealtimeValidation.ValidateAvatarState(state);
+            return state;
+        }
+    }
+
     public sealed class SupabaseFriendWorldAvatarStateTracker
     {
         private readonly Dictionary<string, long> latestSequenceByConnectionId =

@@ -404,6 +404,55 @@ namespace HabitHero.App
             }
         }
 
+        public void AttachFriendWorldRealtime(
+            string localConnectionId,
+            string localChildProfileId,
+            string localCharacterAssetKey,
+            Action<SupabaseFriendWorldAvatarState> onLocalAvatarStateChanged)
+        {
+            if (socialView != null)
+            {
+                socialView.AttachFriendWorldRealtime(
+                    localConnectionId,
+                    localChildProfileId,
+                    localCharacterAssetKey,
+                    onLocalAvatarStateChanged);
+            }
+        }
+
+        public void ClearFriendWorldRealtime()
+        {
+            if (socialView != null) socialView.ClearFriendWorldRealtime();
+        }
+
+        public void NotifyFriendWorldPresence(
+            SupabaseFriendWorldPresenceMember[] members,
+            string localConnectionId)
+        {
+            if (socialView != null)
+            {
+                socialView.NotifyFriendWorldPresence(members, localConnectionId);
+            }
+        }
+
+        public void NotifyFriendWorldAvatarState(
+            SupabaseFriendWorldAvatarState state,
+            string localConnectionId)
+        {
+            if (socialView != null)
+            {
+                socialView.NotifyFriendWorldAvatarState(state, localConnectionId);
+            }
+        }
+
+        public void NotifyFriendWorldRealtimeStatus(string message, bool isError)
+        {
+            if (socialView != null)
+            {
+                socialView.NotifyFriendWorldRealtimeStatus(message, isError);
+            }
+        }
+
         private void OpenSocialPanel()
         {
             if (socialView == null || latestSocialData == null)

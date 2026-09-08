@@ -516,6 +516,43 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void FriendWorldLocalAvatarStateFactoryCreatesAValidatedState()
+        {
+            SupabaseFriendWorldAvatarState state =
+                SupabaseFriendWorldAvatarStateFactory.Create(
+                    "connection-1",
+                    "child-1",
+                    "character-fox",
+                    4,
+                    1.5f,
+                    -2.25f,
+                    0.75f,
+                    1725789660d);
+
+            Assert.AreEqual(1, state.version);
+            Assert.AreEqual("connection-1", state.connectionId);
+            Assert.AreEqual("child-1", state.childProfileId);
+            Assert.AreEqual(4, state.sequence);
+            Assert.AreEqual("idle", state.motion);
+            Assert.AreEqual("none", state.emote);
+        }
+
+        [Test]
+        public void FriendWorldLocalAvatarStateFactoryRejectsAnOutOfBoundsState()
+        {
+            Assert.Throws<ArgumentException>(() =>
+                SupabaseFriendWorldAvatarStateFactory.Create(
+                    "connection-1",
+                    "child-1",
+                    null,
+                    1,
+                    SupabaseFriendWorldRealtimeContracts.WorldBoundary + 0.1f,
+                    0f,
+                    0f,
+                    1725789660d));
+        }
+
+        [Test]
         public async Task FriendWorldLiveRealtimeClientJoinsPrivateChannelAndTracksPresence()
         {
             SupabaseClientSettings settings = CreateSettings();

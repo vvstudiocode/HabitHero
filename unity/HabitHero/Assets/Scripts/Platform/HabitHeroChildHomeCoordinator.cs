@@ -16,6 +16,7 @@ namespace HabitHero.App
         private readonly SupabaseChildSocialClient socialClient;
         private readonly SupabaseChildFriendWorldClient friendWorldClient;
         private readonly SupabaseChildWorldChatClient worldChatClient;
+        private readonly SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
         private HabitHeroChildHomeView view;
@@ -23,6 +24,13 @@ namespace HabitHero.App
         private CancellationTokenSource worldChatRealtimeCancellation;
         private string worldChatRealtimeOwner;
         private int worldChatRealtimeVersion;
+        private SupabaseChildFriendWorldRealtimeSubscription friendWorldRealtimeSubscription;
+        private CancellationTokenSource friendWorldRealtimeCancellation;
+        private string friendWorldRealtimeOwner;
+        private string friendWorldRealtimeChildProfileId;
+        private readonly string friendWorldRealtimeConnectionId = Guid.NewGuid().ToString("N");
+        private SupabaseFriendWorldAvatarState latestLocalFriendWorldAvatarState;
+        private int friendWorldRealtimeVersion;
 
         public HabitHeroChildHomeCoordinator(
             SupabaseChildHomeClient client,
@@ -31,6 +39,7 @@ namespace HabitHero.App
             SupabaseChildSocialClient socialClient,
             SupabaseChildFriendWorldClient friendWorldClient,
             SupabaseChildWorldChatClient worldChatClient,
+            SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient,
             Transform canvasTransform,
             Font font)
         {
@@ -40,6 +49,10 @@ namespace HabitHero.App
             if (socialClient == null) throw new ArgumentNullException("socialClient");
             if (friendWorldClient == null) throw new ArgumentNullException("friendWorldClient");
             if (worldChatClient == null) throw new ArgumentNullException("worldChatClient");
+            if (friendWorldRealtimeClient == null)
+            {
+                throw new ArgumentNullException("friendWorldRealtimeClient");
+            }
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.client = client;
@@ -48,6 +61,7 @@ namespace HabitHero.App
             this.socialClient = socialClient;
             this.friendWorldClient = friendWorldClient;
             this.worldChatClient = worldChatClient;
+            this.friendWorldRealtimeClient = friendWorldRealtimeClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
         }
@@ -157,6 +171,8 @@ namespace HabitHero.App
                         friendChildProfileId,
                         cancellationToken),
                     (friendChildProfileId) => LoadFriendWorldAsync(
+                        snapshot.child.id,
+                        snapshot.child.character_id,
                         friendChildProfileId,
                         cancellationToken),
                     (friendChildProfileId) => LoadWorldChatAsync(
@@ -365,13 +381,222 @@ namespace HabitHero.App
             return await RefreshSocialAsync(childProfileId, cancellationToken);
         }
 
-        private Task<SupabaseChildFriendWorldData> LoadFriendWorldAsync(
+        private async Task<SupabaseChildFriendWorldData> LoadFriendWorldAsync(
+            string viewerChildProfileId,
+            string viewerCharacterAssetKey,
             string friendChildProfileId,
             CancellationToken cancellationToken)
         {
-            return friendWorldClient.LoadAsync(
+            SupabaseChildFriendWorldData data = await friendWorldClient.LoadAsync(
                 friendChildProfileId,
                 cancellationToken);
+            _ = EnsureFriendWorldRealtimeAsync(
+                viewerChildProfileId,
+                viewerCharacterAssetKey,
+                friendChildProfileId,
+                cancellationToken);
+            return data;
+        }
+
+        private async Task EnsureFriendWorldRealtimeAsync(
+            string viewerChildProfileId,
+            string viewerCharacterAssetKey,
+            string friendChildProfileId,
+            CancellationToken cancellationToken)
+        {
+            string normalizedViewer = (viewerChildProfileId ?? string.Empty).Trim();
+            string normalizedOwner = (friendChildProfileId ?? string.Empty).Trim();
+            if (string.Equals(
+                    friendWorldRealtimeOwner,
+                    normalizedOwner,
+                    StringComparison.Ordinal)
+                && string.Equals(
+                    friendWorldRealtimeChildProfileId,
+                    normalizedViewer,
+                    StringComparison.Ordinal)
+                && friendWorldRealtimeSubscription != null)
+            {
+                return;
+            }
+
+            StopFriendWorldRealtime();
+            int requestVersion = friendWorldRealtimeVersion;
+            CancellationTokenSource subscriptionCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            friendWorldRealtimeCancellation = subscriptionCancellation;
+            try
+            {
+                SupabaseChildFriendWorldRealtimeSubscription subscription =
+                    await friendWorldRealtimeClient.SubscribeAsync(
+                        normalizedOwner,
+                        friendWorldRealtimeConnectionId,
+                        normalizedViewer,
+                        HandleFriendWorldPresence,
+                        HandleFriendWorldAvatarState,
+                        HandleFriendWorldAvatarStateRequest,
+                        HandleFriendWorldRevision,
+                        subscriptionCancellation.Token);
+                if (subscriptionCancellation.IsCancellationRequested
+                    || requestVersion != friendWorldRealtimeVersion
+                    || view == null)
+                {
+                    subscription.Dispose();
+                    return;
+                }
+
+                friendWorldRealtimeSubscription = subscription;
+                friendWorldRealtimeOwner = normalizedOwner;
+                friendWorldRealtimeChildProfileId = normalizedViewer;
+                latestLocalFriendWorldAvatarState = null;
+                view.AttachFriendWorldRealtime(
+                    friendWorldRealtimeConnectionId,
+                    normalizedViewer,
+                    viewerCharacterAssetKey,
+                    HandleLocalFriendWorldAvatarState);
+                view.NotifyFriendWorldPresence(
+                    subscription.GetPresenceSnapshot(),
+                    friendWorldRealtimeConnectionId);
+                view.NotifyFriendWorldRealtimeStatus(
+                    "多人世界已連線；正在同步線上角色。",
+                    false);
+                _ = RequestLatestFriendWorldAvatarStatesAsync(subscription);
+            }
+            catch (OperationCanceledException)
+            {
+                // The current child session or selected world was replaced.
+            }
+            catch (Exception)
+            {
+                if (view != null)
+                {
+                    view.NotifyFriendWorldRealtimeStatus(
+                        "多人世界暫時離線；仍可使用好友世界唯讀預覽。",
+                        true);
+                }
+            }
+            finally
+            {
+                if (ReferenceEquals(
+                        friendWorldRealtimeCancellation,
+                        subscriptionCancellation))
+                {
+                    friendWorldRealtimeCancellation = null;
+                }
+
+                subscriptionCancellation.Dispose();
+            }
+        }
+
+        private void HandleFriendWorldPresence(
+            SupabaseFriendWorldPresenceMember[] members)
+        {
+            if (view == null) return;
+            view.NotifyFriendWorldPresence(
+                members,
+                friendWorldRealtimeConnectionId);
+        }
+
+        private void HandleFriendWorldAvatarState(
+            SupabaseFriendWorldAvatarState state)
+        {
+            if (view == null) return;
+            view.NotifyFriendWorldAvatarState(
+                state,
+                friendWorldRealtimeConnectionId);
+        }
+
+        private void HandleFriendWorldAvatarStateRequest()
+        {
+            SupabaseFriendWorldAvatarState state = latestLocalFriendWorldAvatarState;
+            if (state == null || friendWorldRealtimeSubscription == null) return;
+            _ = BroadcastFriendWorldAvatarStateAsync(
+                friendWorldRealtimeSubscription,
+                state);
+        }
+
+        private void HandleFriendWorldRevision()
+        {
+            if (view != null)
+            {
+                view.NotifyFriendWorldRealtimeStatus(
+                    "好友世界資料有新版本；請返回好友列表後重新造訪。",
+                    false);
+            }
+        }
+
+        private void HandleLocalFriendWorldAvatarState(
+            SupabaseFriendWorldAvatarState state)
+        {
+            if (state == null || friendWorldRealtimeSubscription == null) return;
+            latestLocalFriendWorldAvatarState = state;
+            _ = BroadcastFriendWorldAvatarStateAsync(
+                friendWorldRealtimeSubscription,
+                state);
+        }
+
+        private async Task BroadcastFriendWorldAvatarStateAsync(
+            SupabaseChildFriendWorldRealtimeSubscription subscription,
+            SupabaseFriendWorldAvatarState state)
+        {
+            try
+            {
+                await subscription.BroadcastAvatarStateAsync(
+                    state,
+                    friendWorldRealtimeCancellation == null
+                        ? CancellationToken.None
+                        : friendWorldRealtimeCancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // The selected world or child session was replaced.
+            }
+            catch
+            {
+                if (view != null)
+                {
+                    view.NotifyFriendWorldRealtimeStatus(
+                        "多人角色同步暫時失敗；本機移動仍保留在唯讀預覽。",
+                        true);
+                }
+            }
+        }
+
+        private async Task RequestLatestFriendWorldAvatarStatesAsync(
+            SupabaseChildFriendWorldRealtimeSubscription subscription)
+        {
+            try
+            {
+                await subscription.RequestLatestAvatarStateAsync(CancellationToken.None);
+            }
+            catch (OperationCanceledException)
+            {
+                // The selected world or child session was replaced.
+            }
+            catch
+            {
+                // The initial snapshot remains usable if the live request fails.
+            }
+        }
+
+        private void StopFriendWorldRealtime()
+        {
+            friendWorldRealtimeVersion += 1;
+            if (view != null) view.ClearFriendWorldRealtime();
+            if (friendWorldRealtimeCancellation != null)
+            {
+                friendWorldRealtimeCancellation.Cancel();
+                friendWorldRealtimeCancellation = null;
+            }
+
+            if (friendWorldRealtimeSubscription != null)
+            {
+                friendWorldRealtimeSubscription.Dispose();
+                friendWorldRealtimeSubscription = null;
+            }
+
+            friendWorldRealtimeOwner = null;
+            friendWorldRealtimeChildProfileId = null;
+            latestLocalFriendWorldAvatarState = null;
         }
 
         private Task<SupabaseChildWorldChatData> LoadWorldChatAsync(
@@ -542,6 +767,7 @@ namespace HabitHero.App
 
         public void Dispose()
         {
+            StopFriendWorldRealtime();
             StopWorldChatRealtime();
             if (view == null) return;
             view.Dispose();

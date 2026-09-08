@@ -78,6 +78,11 @@ namespace HabitHero.Platform
                 cancellationToken);
         }
 
+        public SupabaseFriendWorldPresenceMember[] GetPresenceSnapshot()
+        {
+            return BuildPresenceSnapshot();
+        }
+
         private Task TrackAsync(CancellationToken cancellationToken)
         {
             return channel.TrackAsync(
@@ -150,10 +155,15 @@ namespace HabitHero.Platform
         private void NotifyPresence()
         {
             if (onPresence == null) return;
+            onPresence(BuildPresenceSnapshot());
+        }
+
+        private SupabaseFriendWorldPresenceMember[] BuildPresenceSnapshot()
+        {
             List<SupabaseFriendWorldPresenceMember> snapshot =
                 new List<SupabaseFriendWorldPresenceMember>(members.Values);
             snapshot.Sort((left, right) => string.CompareOrdinal(left.connectionId, right.connectionId));
-            onPresence(snapshot.ToArray());
+            return snapshot.ToArray();
         }
 
         private void HandleStateChanged(

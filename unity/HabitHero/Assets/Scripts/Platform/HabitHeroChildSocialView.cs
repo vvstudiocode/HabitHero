@@ -31,6 +31,10 @@ namespace HabitHero.App
         private Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat;
         private Action<SupabaseChildSocialData> onDataChanged;
         private Action onClose;
+        private string friendWorldRealtimeConnectionId;
+        private string friendWorldRealtimeChildProfileId;
+        private string friendWorldRealtimeCharacterAssetKey;
+        private Action<SupabaseFriendWorldAvatarState> onLocalFriendWorldAvatarStateChanged;
 
         public HabitHeroChildSocialView(Transform canvasTransform, Font font)
         {
@@ -102,6 +106,63 @@ namespace HabitHero.App
             }
 
             _ = chatView.RefreshFromServerAsync();
+        }
+
+        public void AttachFriendWorldRealtime(
+            string localConnectionId,
+            string localChildProfileId,
+            string localCharacterAssetKey,
+            Action<SupabaseFriendWorldAvatarState> onLocalAvatarStateChanged)
+        {
+            friendWorldRealtimeConnectionId = localConnectionId;
+            friendWorldRealtimeChildProfileId = localChildProfileId;
+            friendWorldRealtimeCharacterAssetKey = localCharacterAssetKey;
+            onLocalFriendWorldAvatarStateChanged = onLocalAvatarStateChanged;
+            if (friendWorldView != null)
+            {
+                friendWorldView.SetRealtime(
+                    friendWorldRealtimeConnectionId,
+                    friendWorldRealtimeChildProfileId,
+                    friendWorldRealtimeCharacterAssetKey,
+                    onLocalFriendWorldAvatarStateChanged);
+            }
+        }
+
+        public void ClearFriendWorldRealtime()
+        {
+            friendWorldRealtimeConnectionId = null;
+            friendWorldRealtimeChildProfileId = null;
+            friendWorldRealtimeCharacterAssetKey = null;
+            onLocalFriendWorldAvatarStateChanged = null;
+            if (friendWorldView != null) friendWorldView.ClearRealtime();
+        }
+
+        public void NotifyFriendWorldPresence(
+            SupabaseFriendWorldPresenceMember[] members,
+            string localConnectionId)
+        {
+            if (friendWorldView != null)
+            {
+                friendWorldView.ApplyPresence(members, localConnectionId);
+            }
+        }
+
+        public void NotifyFriendWorldAvatarState(
+            SupabaseFriendWorldAvatarState state,
+            string localConnectionId)
+        {
+            if (friendWorldView != null)
+            {
+                friendWorldView.ApplyAvatarState(state, localConnectionId);
+            }
+        }
+
+        public void NotifyFriendWorldRealtimeStatus(string message, bool isError)
+        {
+            if (friendWorldView != null)
+            {
+                friendWorldView.SetRealtimeStatus(message, isError);
+            }
         }
 
         public void Open()
@@ -240,6 +301,7 @@ namespace HabitHero.App
             reportWorldChat = null;
             onDataChanged = null;
             onClose = null;
+            ClearFriendWorldRealtime();
             if (friendWorldView != null)
             {
                 friendWorldView.Dispose();
@@ -440,6 +502,11 @@ namespace HabitHero.App
 
                 friendWorldView.Show(data, CloseFriendWorld);
                 friendWorldView.Open();
+                friendWorldView.SetRealtime(
+                    friendWorldRealtimeConnectionId,
+                    friendWorldRealtimeChildProfileId,
+                    friendWorldRealtimeCharacterAssetKey,
+                    onLocalFriendWorldAvatarStateChanged);
             }
             catch (Exception exception)
             {
