@@ -26,6 +26,7 @@ namespace HabitHero.App
         private HabitHeroParentChildAccountView childAccountView;
         private HabitHeroParentChildPreviewView childPreviewView;
         private HabitHeroParentCoopAdventureView coopAdventureView;
+        private HabitHeroParentGoalReviewView goalReviewView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -49,6 +50,16 @@ namespace HabitHero.App
             string,
             string,
             Task<SupabaseParentTaskReviewResult>> reviewTask;
+        private Func<
+            SupabaseChildTaskRecord,
+            string,
+            int,
+            string,
+            Task<SupabaseParentTaskReviewResult>> confirmChildGoal;
+        private Func<
+            SupabaseChildTaskRecord,
+            string,
+            Task<SupabaseParentTaskReviewResult>> returnChildGoal;
         private Func<
             SupabaseChildWishlistRecord,
             int,
@@ -140,6 +151,16 @@ namespace HabitHero.App
                 string,
                 Task<SupabaseParentTaskReviewResult>> reviewTask,
             Func<
+                SupabaseChildTaskRecord,
+                string,
+                int,
+                string,
+                Task<SupabaseParentTaskReviewResult>> confirmChildGoal,
+            Func<
+                SupabaseChildTaskRecord,
+                string,
+                Task<SupabaseParentTaskReviewResult>> returnChildGoal,
+            Func<
                 SupabaseChildWishlistRecord,
                 int,
                 Task<SupabaseParentRewardMutationResult>> approveWishlist,
@@ -207,6 +228,8 @@ namespace HabitHero.App
             Dispose();
             latestSnapshot = snapshot;
             this.reviewTask = reviewTask;
+            this.confirmChildGoal = confirmChildGoal;
+            this.returnChildGoal = returnChildGoal;
             this.approveWishlist = approveWishlist;
             this.fulfillTicket = fulfillTicket;
             this.createTask = createTask;
@@ -386,6 +409,8 @@ namespace HabitHero.App
         public void Dispose()
         {
             reviewTask = null;
+            confirmChildGoal = null;
+            returnChildGoal = null;
             approveWishlist = null;
             fulfillTicket = null;
             createTask = null;
@@ -418,6 +443,7 @@ namespace HabitHero.App
             summaryText = null;
             statusText = null;
             CloseReviewPanel();
+            CloseGoalReviewPanel();
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
             CloseTaskCreatePanel();
@@ -465,18 +491,24 @@ namespace HabitHero.App
         {
             int childCount = snapshot.children == null ? 0 : snapshot.children.Length;
             int pendingCount = 0;
+            int goalProposalCount = 0;
             foreach (SupabaseChildTaskRecord task in
                 snapshot.tasks ?? new SupabaseChildTaskRecord[0])
             {
                 if (task != null && task.status == "pending") pendingCount += 1;
+                if (HabitHeroParentGoalReviewEligibility.NeedsReview(task))
+                {
+                    goalProposalCount += 1;
+                }
             }
 
             if (summaryText != null)
             {
                 summaryText.text = string.Format(
                     CultureInfo.InvariantCulture,
-                    "{0} 位孩子　．　{1} 件待審任務　．　{2} 張待領獎勵券",
+                    "{0} 位孩子　．　{1} 個待確認目標　．　{2} 件待審任務　．　{3} 張待領獎勵券",
                     childCount,
+                    goalProposalCount,
                     pendingCount,
                     snapshot.tickets == null ? 0 : snapshot.tickets.Length);
             }
@@ -491,7 +523,10 @@ namespace HabitHero.App
             foreach (SupabaseChildTaskRecord task in
                 snapshot.tasks ?? new SupabaseChildTaskRecord[0])
             {
-                if (task == null || task.status != "pending" || visibleTaskCount >= 8)
+                if (task == null
+                    || (!HabitHeroParentGoalReviewEligibility.NeedsReview(task)
+                        && task.status != "pending")
+                    || visibleTaskCount >= 8)
                 {
                     continue;
                 }
@@ -499,7 +534,8 @@ namespace HabitHero.App
                 Button taskButton = HabitHeroUiFactory.CreateButton(
                     taskListObject.transform,
                     font,
-                    GetChildName(task.child_profile_id) + "　" + task.name
+                    GetChildName(task.child_profile_id) + "　"
+                        + GetReviewTaskLabel(task) + "　" + task.name
                         + "　+" + task.points + " 點",
                     Vector2.zero,
                     Vector2.one);
@@ -1179,7 +1215,13 @@ namespace HabitHero.App
 
         private void OpenReviewPanel(SupabaseChildTaskRecord task)
         {
+            if (HabitHeroParentGoalReviewEligibility.NeedsReview(task))
+            {
+                OpenGoalReviewPanel(task);
+                return;
+            }
             if (task == null || reviewTask == null) return;
+            CloseGoalReviewPanel();
             CloseReviewPanel();
             activeReviewTask = task;
             reviewPanel = HabitHeroUiFactory.CreatePanel(
@@ -1291,6 +1333,27 @@ namespace HabitHero.App
             closeButton.onClick.AddListener(CloseReviewPanel);
         }
 
+        private void OpenGoalReviewPanel(SupabaseChildTaskRecord task)
+        {
+            if (task == null || confirmChildGoal == null || returnChildGoal == null)
+            {
+                SetStatus("孩子目標審核尚未連線。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseGoalReviewPanel();
+            goalReviewView = new HabitHeroParentGoalReviewView(canvasTransform, font);
+            goalReviewView.Show(
+                latestSnapshot,
+                task,
+                confirmChildGoal,
+                returnChildGoal,
+                ApplySnapshot,
+                SetStatus,
+                CloseGoalReviewPanel);
+        }
+
         private async void HandleReviewDecision(bool approved)
         {
             if (activeReviewTask == null || reviewTask == null) return;
@@ -1359,6 +1422,13 @@ namespace HabitHero.App
             approveButton = null;
             reviseButton = null;
             reviewStatus = null;
+        }
+
+        private void CloseGoalReviewPanel()
+        {
+            if (goalReviewView == null) return;
+            goalReviewView.Dispose();
+            goalReviewView = null;
         }
 
         private void CloseRewardPanel()
@@ -1524,6 +1594,17 @@ namespace HabitHero.App
             }
 
             return "孩子";
+        }
+
+        private static string GetReviewTaskLabel(SupabaseChildTaskRecord task)
+        {
+            if (HabitHeroParentGoalReviewEligibility.NeedsReview(task))
+            {
+                return task.status == "proposal_revision_requested"
+                    ? "待修改目標"
+                    : "待確認目標";
+            }
+            return "待審完成";
         }
 
         private static string BuildTaskReport(SupabaseChildTaskRecord task)

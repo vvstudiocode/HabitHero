@@ -76,6 +76,16 @@ namespace HabitHero.App
                             tone,
                             revisionNote,
                             cancellationToken),
+                    (task, name, points, category) => ConfirmChildGoalAsync(
+                        task,
+                        name,
+                        points,
+                        category,
+                        cancellationToken),
+                    (task, revisionNote) => ReturnChildGoalAsync(
+                        task,
+                        revisionNote,
+                        cancellationToken),
                     (wishlist, points) => client.ApproveWishlistAndRefreshAsync(
                         snapshot.familyId,
                         wishlist,
@@ -216,6 +226,44 @@ namespace HabitHero.App
                 view.ApplySnapshot(result.RefreshedSnapshot);
             }
 
+            return result;
+        }
+
+        private async Task<SupabaseParentTaskReviewResult> ConfirmChildGoalAsync(
+            SupabaseChildTaskRecord task,
+            string confirmedName,
+            int confirmedPoints,
+            string confirmedCategory,
+            CancellationToken cancellationToken)
+        {
+            SupabaseParentTaskReviewResult result =
+                await client.ConfirmChildGoalAndRefreshAsync(
+                    task,
+                    confirmedName,
+                    confirmedPoints,
+                    confirmedCategory,
+                    cancellationToken);
+            if (result.RefreshedSnapshot != null && view != null)
+            {
+                view.ApplySnapshot(result.RefreshedSnapshot);
+            }
+            return result;
+        }
+
+        private async Task<SupabaseParentTaskReviewResult> ReturnChildGoalAsync(
+            SupabaseChildTaskRecord task,
+            string revisionNote,
+            CancellationToken cancellationToken)
+        {
+            SupabaseParentTaskReviewResult result =
+                await client.ReturnChildGoalAndRefreshAsync(
+                    task,
+                    revisionNote,
+                    cancellationToken);
+            if (result.RefreshedSnapshot != null && view != null)
+            {
+                view.ApplySnapshot(result.RefreshedSnapshot);
+            }
             return result;
         }
 

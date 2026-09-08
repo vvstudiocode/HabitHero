@@ -62,6 +62,8 @@ namespace HabitHero.Platform
         public string description;
         public string submitted_at;
         public string reviewed_at;
+        public string confirmed_at;
+        public string confirmed_by;
         public int approved_points;
         public string created_at;
         public string updated_at;

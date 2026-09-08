@@ -1602,6 +1602,23 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void ParentGoalReviewEligibilityOnlyShowsChildProposals()
+        {
+            Assert.IsTrue(HabitHeroParentGoalReviewEligibility.NeedsReview(
+                new SupabaseChildTaskRecord { status = "proposed" }));
+            Assert.IsTrue(HabitHeroParentGoalReviewEligibility.NeedsReview(
+                new SupabaseChildTaskRecord
+                {
+                    status = "proposal_revision_requested",
+                }));
+            Assert.IsFalse(HabitHeroParentGoalReviewEligibility.NeedsReview(
+                new SupabaseChildTaskRecord { status = "todo" }));
+            Assert.IsFalse(HabitHeroParentGoalReviewEligibility.NeedsReview(
+                new SupabaseChildTaskRecord { status = "pending" }));
+            Assert.IsFalse(HabitHeroParentGoalReviewEligibility.NeedsReview(null));
+        }
+
+        [Test]
         public void CoopRealtimeOnlyAcceptsTheVersionedFriendWorldBroadcast()
         {
             Assert.AreEqual(
@@ -2701,6 +2718,69 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "{\"target_task_id\":\"task-1\",\"approved\":true,\"approved_points\":10,\"feedback\":\"做得很好\",\"correction\":null,\"tone\":\"encouraging\",\"revision_note\":null}",
                 dataTransport.Requests[8].Body);
+        }
+
+        [Test]
+        public async Task ParentGoalReviewUsesDedicatedConfirmationAndReturnRpcs()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"task-1\",\"status\":\"todo\",\"name\":\"每天閱讀\",\"points\":20}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"task-1\",\"status\":\"proposal_revision_requested\",\"revision_note\":\"請縮短成可完成的小步驟\"}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildTaskRecord task = new SupabaseChildTaskRecord
+            {
+                id = "task-1",
+                status = "proposed",
+            };
+            SupabaseChildTaskRecord confirmed = await client.ConfirmChildGoalAsync(
+                "task-1",
+                "每天閱讀",
+                20,
+                "learning",
+                CancellationToken.None);
+            SupabaseChildTaskRecord returned = await client.ReturnChildGoalAsync(
+                task.id,
+                "請縮短成可完成的小步驟",
+                CancellationToken.None);
+
+            Assert.AreEqual("todo", confirmed.status);
+            Assert.AreEqual("proposal_revision_requested", returned.status);
+            Assert.AreEqual(2, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/confirm_child_goal",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\",\"confirmed_name\":\"每天閱讀\",\"confirmed_points\":20,\"confirmed_category\":\"learning\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/return_child_goal",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\",\"target_revision_note\":\"請縮短成可完成的小步驟\"}",
+                dataTransport.Requests[1].Body);
         }
 
         [Test]

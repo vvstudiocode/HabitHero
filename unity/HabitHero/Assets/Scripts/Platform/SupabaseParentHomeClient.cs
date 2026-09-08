@@ -553,6 +553,96 @@ namespace HabitHero.Platform
             return reviewedTask;
         }
 
+        public async Task<SupabaseChildTaskRecord> ConfirmChildGoalAsync(
+            string taskId,
+            string confirmedName,
+            int confirmedPoints,
+            string confirmedCategory,
+            CancellationToken cancellationToken)
+        {
+            string normalizedTaskId = taskId == null ? string.Empty : taskId.Trim();
+            string normalizedName = confirmedName == null
+                ? string.Empty
+                : confirmedName.Trim();
+            string normalizedCategory = confirmedCategory == null
+                ? string.Empty
+                : confirmedCategory.Trim();
+            if (normalizedTaskId.Length == 0)
+            {
+                throw new SupabaseDataException("目標 ID 不可為空。");
+            }
+            if (normalizedName.Length < 1 || normalizedName.Length > 120)
+            {
+                throw new SupabaseDataException("目標名稱長度必須介於 1 到 120 個字元。");
+            }
+            if (confirmedPoints < 0)
+            {
+                throw new SupabaseDataException("目標點數不可為負數。");
+            }
+            if (!IsAdventureCategory(normalizedCategory))
+            {
+                throw new SupabaseDataException("目標分類無效。");
+            }
+
+            string body = "{\"target_task_id\":" + SupabaseJson.Quote(normalizedTaskId)
+                + ",\"confirmed_name\":" + SupabaseJson.Quote(normalizedName)
+                + ",\"confirmed_points\":" + confirmedPoints.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture)
+                + ",\"confirmed_category\":" + SupabaseJson.Quote(normalizedCategory)
+                + "}";
+            string response = await restClient.CallRpcAsync(
+                "confirm_child_goal",
+                body,
+                cancellationToken);
+            SupabaseChildTaskRecord confirmedTask;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out confirmedTask,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            return confirmedTask;
+        }
+
+        public async Task<SupabaseChildTaskRecord> ReturnChildGoalAsync(
+            string taskId,
+            string revisionNote,
+            CancellationToken cancellationToken)
+        {
+            string normalizedTaskId = taskId == null ? string.Empty : taskId.Trim();
+            string normalizedNote = revisionNote == null ? string.Empty : revisionNote.Trim();
+            if (normalizedTaskId.Length == 0)
+            {
+                throw new SupabaseDataException("目標 ID 不可為空。");
+            }
+            if (normalizedNote.Length < 1 || normalizedNote.Length > 1000)
+            {
+                throw new SupabaseDataException("修改說明長度必須介於 1 到 1000 個字元。");
+            }
+
+            string body = "{\"target_task_id\":" + SupabaseJson.Quote(normalizedTaskId)
+                + ",\"target_revision_note\":" + SupabaseJson.Quote(normalizedNote)
+                + "}";
+            string response = await restClient.CallRpcAsync(
+                "return_child_goal",
+                body,
+                cancellationToken);
+            SupabaseChildTaskRecord returnedTask;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out returnedTask,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            return returnedTask;
+        }
+
         public async Task CreateTaskAsync(
             string familyId,
             SupabaseParentTaskCreateInput input,
@@ -2167,6 +2257,66 @@ namespace HabitHero.Platform
                     feedback,
                     correction,
                     tone,
+                    revisionNote,
+                    cancellationToken),
+            };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        public async Task<SupabaseParentTaskReviewResult> ConfirmChildGoalAndRefreshAsync(
+            SupabaseChildTaskRecord task,
+            string confirmedName,
+            int confirmedPoints,
+            string confirmedCategory,
+            CancellationToken cancellationToken)
+        {
+            SupabaseParentTaskReviewResult result = new SupabaseParentTaskReviewResult
+            {
+                Task = await ConfirmChildGoalAsync(
+                    task == null ? null : task.id,
+                    confirmedName,
+                    confirmedPoints,
+                    confirmedCategory,
+                    cancellationToken),
+            };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        public async Task<SupabaseParentTaskReviewResult> ReturnChildGoalAndRefreshAsync(
+            SupabaseChildTaskRecord task,
+            string revisionNote,
+            CancellationToken cancellationToken)
+        {
+            SupabaseParentTaskReviewResult result = new SupabaseParentTaskReviewResult
+            {
+                Task = await ReturnChildGoalAsync(
+                    task == null ? null : task.id,
                     revisionNote,
                     cancellationToken),
             };
