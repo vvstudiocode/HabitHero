@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,6 +60,35 @@ namespace HabitHero.Platform
     }
 
     [Serializable]
+    public sealed class SupabaseChildWorldStateRecord
+    {
+        public string family_id;
+        public string child_profile_id;
+        public long revision;
+    }
+
+    [Serializable]
+    public sealed class SupabaseChildWorldEntityRecord
+    {
+        public string id;
+        public string family_id;
+        public string child_profile_id;
+        public string inventory_item_id;
+        public string entity_kind;
+        public float position_x;
+        public float position_y;
+        public float position_z;
+        public float rotation_x;
+        public float rotation_y;
+        public float rotation_z;
+        public float scale;
+        public string behavior_mode;
+        public int roaming_slot;
+        public int world_layout_version;
+        public bool is_active;
+    }
+
+    [Serializable]
     public sealed class SupabaseChildGameLoadoutRecord
     {
         public string child_profile_id;
@@ -84,6 +114,7 @@ namespace HabitHero.Platform
     public sealed class SupabaseGameMutationResult
     {
         public long revision;
+        public SupabaseChildWorldEntityRecord entity;
     }
 
     public sealed class SupabaseChildGameData
@@ -95,6 +126,8 @@ namespace HabitHero.Platform
         public long walletBalance;
         public SupabaseChildInventoryItemRecord[] inventory;
         public SupabaseChildGameLoadoutRecord loadout;
+        public long worldRevision;
+        public SupabaseChildWorldEntityRecord[] worldEntities;
     }
 
     public sealed class SupabaseChildGameClient
@@ -154,8 +187,29 @@ namespace HabitHero.Platform
                 null,
                 0,
                 cancellationToken);
+            Task<SupabaseChildWorldStateRecord[]> worldStates = restClient.SelectManyAsync<SupabaseChildWorldStateRecord>(
+                "child_world_states",
+                childFilters,
+                "*",
+                null,
+                0,
+                cancellationToken);
+            Task<SupabaseChildWorldEntityRecord[]> worldEntities = restClient.SelectManyAsync<SupabaseChildWorldEntityRecord>(
+                "child_world_entities",
+                childFilters,
+                "*",
+                "updated_at.asc",
+                0,
+                cancellationToken);
 
-            await Task.WhenAll(catalog, prices, wallets, inventory, loadouts);
+            await Task.WhenAll(
+                catalog,
+                prices,
+                wallets,
+                inventory,
+                loadouts,
+                worldStates,
+                worldEntities);
 
             SupabaseChildGameLoadoutRecord loadout = loadouts.Result.Length == 0
                 ? null
@@ -170,7 +224,121 @@ namespace HabitHero.Platform
                 walletBalance = wallets.Result.Length == 0 ? 0 : wallets.Result[0].scroll_balance,
                 inventory = inventory.Result ?? new SupabaseChildInventoryItemRecord[0],
                 loadout = loadout,
+                worldRevision = worldStates.Result.Length == 0 ? 0 : worldStates.Result[0].revision,
+                worldEntities = worldEntities.Result ?? new SupabaseChildWorldEntityRecord[0],
             };
+        }
+
+        public Task<SupabaseGameMutationResult> PlaceWorldEntityAsync(
+            string childProfileId,
+            string inventoryItemId,
+            long expectedRevision,
+            SupabaseFriendWorldTransform transform,
+            string behaviorMode,
+            int? roamingSlot,
+            CancellationToken cancellationToken)
+        {
+            RequireValue(childProfileId, "孩子資料");
+            RequireValue(inventoryItemId, "世界物件");
+            RequireRevision(expectedRevision);
+            ValidateTransform(transform);
+            RequireBehaviorMode(behaviorMode);
+            ValidateRoamingSlot(behaviorMode, roamingSlot);
+            string body = BuildTransformBody(
+                "target_inventory_item_id",
+                inventoryItemId,
+                expectedRevision,
+                transform)
+                + ",\"target_behavior_mode\":"
+                + SupabaseJson.Quote(behaviorMode)
+                + ",\"target_roaming_slot\":"
+                + (roamingSlot.HasValue
+                    ? roamingSlot.Value.ToString(CultureInfo.InvariantCulture)
+                    : "null")
+                + ",\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId)
+                + "}";
+            return CallMutationRpcAsync(
+                "place_world_entity",
+                body,
+                cancellationToken);
+        }
+
+        public Task<SupabaseGameMutationResult> UpdateWorldEntityTransformAsync(
+            string childProfileId,
+            string inventoryItemId,
+            string entityId,
+            long expectedRevision,
+            SupabaseFriendWorldTransform transform,
+            CancellationToken cancellationToken)
+        {
+            RequireValue(childProfileId, "孩子資料");
+            RequireValue(inventoryItemId, "世界物件");
+            RequireRevision(expectedRevision);
+            ValidateTransform(transform);
+            string body = BuildTransformBody(
+                "target_inventory_item_id",
+                inventoryItemId,
+                expectedRevision,
+                transform);
+            if (!string.IsNullOrWhiteSpace(entityId))
+            {
+                body += ",\"target_entity_id\":" + SupabaseJson.Quote(entityId.Trim());
+            }
+
+            body += ",\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId)
+                + "}";
+            return CallMutationRpcAsync(
+                "update_world_entity_transform",
+                body,
+                cancellationToken);
+        }
+
+        public Task<SupabaseGameMutationResult> RemoveWorldEntityAsync(
+            string childProfileId,
+            string inventoryItemId,
+            string entityId,
+            long expectedRevision,
+            CancellationToken cancellationToken)
+        {
+            RequireValue(childProfileId, "孩子資料");
+            RequireValue(inventoryItemId, "世界物件");
+            RequireRevision(expectedRevision);
+            string body = "{\"target_inventory_item_id\":"
+                + SupabaseJson.Quote(inventoryItemId.Trim())
+                + ",\"expected_revision\":"
+                + expectedRevision.ToString(CultureInfo.InvariantCulture);
+            if (!string.IsNullOrWhiteSpace(entityId))
+            {
+                body += ",\"target_entity_id\":" + SupabaseJson.Quote(entityId.Trim());
+            }
+
+            body += ",\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId.Trim())
+                + "}";
+            return CallMutationRpcAsync(
+                "remove_world_entity",
+                body,
+                cancellationToken);
+        }
+
+        public Task<SupabaseGameMutationResult> CollectAllWorldDecorationsAsync(
+            string childProfileId,
+            long expectedRevision,
+            CancellationToken cancellationToken)
+        {
+            RequireValue(childProfileId, "孩子資料");
+            RequireRevision(expectedRevision);
+            string body = "{\"expected_revision\":"
+                + expectedRevision.ToString(CultureInfo.InvariantCulture)
+                + ",\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId.Trim())
+                + "}";
+            return CallMutationRpcAsync(
+                "collect_all_world_decorations",
+                body,
+                cancellationToken);
         }
 
         public async Task<SupabaseGamePurchaseResult> PurchaseGameItemAsync(
@@ -265,6 +433,105 @@ namespace HabitHero.Platform
                 body,
                 cancellationToken);
             return ParseObject<SupabaseGameMutationResult>(response, "寵物配置結果");
+        }
+
+        private async Task<SupabaseGameMutationResult> CallMutationRpcAsync(
+            string functionName,
+            string body,
+            CancellationToken cancellationToken)
+        {
+            string response = await restClient.CallRpcAsync(
+                functionName,
+                body,
+                cancellationToken);
+            return ParseObject<SupabaseGameMutationResult>(response, "世界物件結果");
+        }
+
+        private static string BuildTransformBody(
+            string inventoryParameterName,
+            string inventoryItemId,
+            long expectedRevision,
+            SupabaseFriendWorldTransform transform)
+        {
+            return "{\""
+                + inventoryParameterName
+                + "\":"
+                + SupabaseJson.Quote(inventoryItemId.Trim())
+                + ",\"expected_revision\":"
+                + expectedRevision.ToString(CultureInfo.InvariantCulture)
+                + ",\"position_x\":"
+                + FormatNumber(transform.x)
+                + ",\"position_y\":"
+                + FormatNumber(transform.y)
+                + ",\"position_z\":"
+                + FormatNumber(transform.z)
+                + ",\"rotation_x\":"
+                + FormatNumber(transform.rotationX)
+                + ",\"rotation_y\":"
+                + FormatNumber(transform.rotationY)
+                + ",\"rotation_z\":"
+                + FormatNumber(transform.rotationZ)
+                + ",\"target_scale\":"
+                + FormatNumber(transform.scale);
+        }
+
+        private static string FormatNumber(float value)
+        {
+            return value.ToString("R", CultureInfo.InvariantCulture);
+        }
+
+        private static void ValidateTransform(SupabaseFriendWorldTransform transform)
+        {
+            if (transform == null
+                || !IsFinite(transform.x)
+                || !IsFinite(transform.y)
+                || !IsFinite(transform.z)
+                || !IsFinite(transform.rotationX)
+                || !IsFinite(transform.rotationY)
+                || !IsFinite(transform.rotationZ)
+                || !IsFinite(transform.scale)
+                || transform.scale <= 0f)
+            {
+                throw new SupabaseDataException("世界物件座標無效。");
+            }
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
+        private static void RequireRevision(long revision)
+        {
+            if (revision < 0) throw new SupabaseDataException("世界版本無效。");
+        }
+
+        private static void RequireBehaviorMode(string behaviorMode)
+        {
+            if (behaviorMode != "static"
+                && behaviorMode != "idle"
+                && behaviorMode != "wander")
+            {
+                throw new SupabaseDataException("世界物件行為無效。");
+            }
+        }
+
+        private static void ValidateRoamingSlot(string behaviorMode, int? roamingSlot)
+        {
+            if (behaviorMode == "wander")
+            {
+                if (!roamingSlot.HasValue || roamingSlot.Value < 1 || roamingSlot.Value > 3)
+                {
+                    throw new SupabaseDataException("巡遊位置無效。");
+                }
+
+                return;
+            }
+
+            if (roamingSlot.HasValue)
+            {
+                throw new SupabaseDataException("非巡遊物件不可指定巡遊位置。");
+            }
         }
 
         private static string QuoteStringArray(IEnumerable<string> values)

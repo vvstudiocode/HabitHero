@@ -256,6 +256,38 @@ namespace HabitHero.App
                         snapshot.child.id,
                         inventoryItemIds,
                         cancellationToken),
+                    (inventoryItemId, expectedRevision, transform, behaviorMode, roamingSlot) =>
+                        PlaceWorldEntityAndRefreshAsync(
+                            snapshot.familyId,
+                            snapshot.child.id,
+                            inventoryItemId,
+                            expectedRevision,
+                            transform,
+                            behaviorMode,
+                            roamingSlot,
+                            cancellationToken),
+                    (inventoryItemId, entityId, expectedRevision, transform) =>
+                        UpdateWorldEntityAndRefreshAsync(
+                            snapshot.familyId,
+                            snapshot.child.id,
+                            inventoryItemId,
+                            entityId,
+                            expectedRevision,
+                            transform,
+                            cancellationToken),
+                    (inventoryItemId, entityId, expectedRevision) =>
+                        RemoveWorldEntityAndRefreshAsync(
+                            snapshot.familyId,
+                            snapshot.child.id,
+                            inventoryItemId,
+                            entityId,
+                            expectedRevision,
+                            cancellationToken),
+                    (expectedRevision) => CollectWorldDecorationsAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        expectedRevision,
+                        cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;
@@ -321,6 +353,76 @@ namespace HabitHero.App
             await gameClient.EquipGameCharacterAsync(
                 childProfileId,
                 inventoryItemId,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> PlaceWorldEntityAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string inventoryItemId,
+            long expectedRevision,
+            SupabaseFriendWorldTransform transform,
+            string behaviorMode,
+            int? roamingSlot,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.PlaceWorldEntityAsync(
+                childProfileId,
+                inventoryItemId,
+                expectedRevision,
+                transform,
+                behaviorMode,
+                roamingSlot,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> UpdateWorldEntityAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string inventoryItemId,
+            string entityId,
+            long expectedRevision,
+            SupabaseFriendWorldTransform transform,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.UpdateWorldEntityTransformAsync(
+                childProfileId,
+                inventoryItemId,
+                entityId,
+                expectedRevision,
+                transform,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> RemoveWorldEntityAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            string inventoryItemId,
+            string entityId,
+            long expectedRevision,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.RemoveWorldEntityAsync(
+                childProfileId,
+                inventoryItemId,
+                entityId,
+                expectedRevision,
+                cancellationToken);
+            return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
+        }
+
+        private async Task<SupabaseChildGameData> CollectWorldDecorationsAndRefreshAsync(
+            string familyId,
+            string childProfileId,
+            long expectedRevision,
+            CancellationToken cancellationToken)
+        {
+            await gameClient.CollectAllWorldDecorationsAsync(
+                childProfileId,
+                expectedRevision,
                 cancellationToken);
             return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
         }

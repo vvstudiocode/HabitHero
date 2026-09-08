@@ -1813,6 +1813,14 @@ namespace HabitHero.Tests
                 new SupabaseHttpResponse(
                     200,
                     "[{\"child_profile_id\":\"child-1\",\"family_id\":\"family-1\",\"equipped_character_inventory_id\":\"character-inventory-1\",\"following_pet_inventory_id\":\"inventory-1\",\"following_pet_inventory_ids\":[\"inventory-1\"]}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"revision\":6}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"entity-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"inventory_item_id\":\"inventory-1\",\"entity_kind\":\"decoration\",\"position_x\":1.25,\"position_y\":0,\"position_z\":-2.5,\"rotation_x\":0,\"rotation_y\":15,\"rotation_z\":0,\"scale\":1,\"behavior_mode\":\"static\",\"roaming_slot\":null,\"world_layout_version\":1,\"is_active\":true}]",
                     null));
             SupabaseChildGameClient client = new SupabaseChildGameClient(
                 new SupabaseRestClient(settings, authClient, dataTransport));
@@ -1833,8 +1841,13 @@ namespace HabitHero.Tests
             Assert.AreEqual("character-inventory-1", data.loadout.equipped_character_inventory_id);
             Assert.AreEqual(1, data.loadout.following_pet_inventory_ids.Length);
             Assert.AreEqual("inventory-1", data.loadout.following_pet_inventory_ids[0]);
+            Assert.AreEqual(6L, data.worldRevision);
+            Assert.AreEqual(1, data.worldEntities.Length);
+            Assert.AreEqual("entity-1", data.worldEntities[0].id);
+            Assert.AreEqual("decoration", data.worldEntities[0].entity_kind);
+            Assert.AreEqual(15f, data.worldEntities[0].rotation_y);
 
-            Assert.AreEqual(5, dataTransport.Requests.Count);
+            Assert.AreEqual(7, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/game_catalog_items?select=*&order=sort_order.asc",
                 dataTransport.Requests[0].Url);
@@ -1850,6 +1863,101 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/child_game_loadouts?select=*&family_id=eq.family-1&child_profile_id=eq.child-1",
                 dataTransport.Requests[4].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_world_states?select=*&family_id=eq.family-1&child_profile_id=eq.child-1",
+                dataTransport.Requests[5].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/child_world_entities?select=*&family_id=eq.family-1&child_profile_id=eq.child-1&order=updated_at.asc",
+                dataTransport.Requests[6].Url);
+        }
+
+        [Test]
+        public async Task ChildWorldEntityMutationsUseServerRpcContracts()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"revision\":7,\"entity\":{\"id\":\"entity-1\",\"inventory_item_id\":\"inventory-1\",\"entity_kind\":\"decoration\",\"position_x\":1.25,\"position_y\":0,\"position_z\":-2.5,\"rotation_x\":0,\"rotation_y\":15,\"rotation_z\":0,\"scale\":1,\"behavior_mode\":\"static\",\"is_active\":true}}",
+                    null),
+                new SupabaseHttpResponse(200, "{\"revision\":8}", null),
+                new SupabaseHttpResponse(200, "{\"revision\":9}", null),
+                new SupabaseHttpResponse(200, "{\"revision\":10}", null));
+            SupabaseChildGameClient client = new SupabaseChildGameClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+            SupabaseFriendWorldTransform transform = new SupabaseFriendWorldTransform
+            {
+                x = 1.25f,
+                y = 0f,
+                z = -2.5f,
+                rotationX = 0f,
+                rotationY = 15f,
+                rotationZ = 0f,
+                scale = 1f,
+            };
+
+            SupabaseGameMutationResult placed = await client.PlaceWorldEntityAsync(
+                "child-1",
+                "inventory-1",
+                6,
+                transform,
+                "static",
+                null,
+                CancellationToken.None);
+            SupabaseGameMutationResult updated = await client.UpdateWorldEntityTransformAsync(
+                "child-1",
+                "inventory-1",
+                "entity-1",
+                7,
+                transform,
+                CancellationToken.None);
+            SupabaseGameMutationResult removed = await client.RemoveWorldEntityAsync(
+                "child-1",
+                "inventory-1",
+                "entity-1",
+                8,
+                CancellationToken.None);
+            SupabaseGameMutationResult collected = await client.CollectAllWorldDecorationsAsync(
+                "child-1",
+                9,
+                CancellationToken.None);
+
+            Assert.AreEqual(7L, placed.revision);
+            Assert.AreEqual("entity-1", placed.entity.id);
+            Assert.AreEqual(8L, updated.revision);
+            Assert.AreEqual(9L, removed.revision);
+            Assert.AreEqual(10L, collected.revision);
+            Assert.AreEqual(4, dataTransport.Requests.Count);
+            Assert.AreEqual("POST", dataTransport.Requests[0].Method);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/place_world_entity",
+                dataTransport.Requests[0].Url);
+            StringAssert.Contains(
+                "\"target_inventory_item_id\":\"inventory-1\",\"expected_revision\":6,\"position_x\":1.25,\"position_y\":0,\"position_z\":-2.5,\"rotation_x\":0,\"rotation_y\":15,\"rotation_z\":0,\"target_scale\":1,\"target_behavior_mode\":\"static\",\"target_roaming_slot\":null,\"target_child_profile_id\":\"child-1\"",
+                dataTransport.Requests[0].Body);
+            StringAssert.Contains(
+                "\"target_entity_id\":\"entity-1\"",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "{\"target_inventory_item_id\":\"inventory-1\",\"expected_revision\":8,\"target_entity_id\":\"entity-1\",\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[2].Body);
+            Assert.AreEqual(
+                "{\"expected_revision\":9,\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[3].Body);
         }
 
         [Test]

@@ -116,6 +116,10 @@ namespace HabitHero.App
             Func<string, Task<SupabaseChildGameData>> equipGameCharacter,
             Func<string[], Task<SupabaseChildGameData>> setFollowingPets,
             Func<string[], Task<SupabaseChildGameData>> setRoamingPets,
+            Func<string, long, SupabaseFriendWorldTransform, string, int?, Task<SupabaseChildGameData>> placeWorldEntity,
+            Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildGameData>> updateWorldEntity,
+            Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity,
+            Func<long, Task<SupabaseChildGameData>> collectWorldDecorations,
             Action onSignOut)
         {
             if (snapshot == null || snapshot.child == null)
@@ -156,7 +160,11 @@ namespace HabitHero.App
                 purchaseGameItem,
                 equipGameCharacter,
                 setFollowingPets,
-                setRoamingPets);
+                setRoamingPets,
+                placeWorldEntity,
+                updateWorldEntity,
+                removeWorldEntity,
+                collectWorldDecorations);
             worldView = new HabitHeroChildWorldView(canvasTransform, font);
             worldView.Show(
                 worldData,

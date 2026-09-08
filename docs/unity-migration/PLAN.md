@@ -35,9 +35,9 @@ authorization into client-only rules.
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
-| 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads and server-gated source rules; 3D scene placement pending) |
+| 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads, server-gated source rules, and child world-entity reads/mutations; authored scene placement pending) |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
-| Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating; 3D placement pending) |
+| Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating, and world-entity place/update/remove/collect RPCs; authored 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Not started |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
@@ -135,6 +135,11 @@ Partially completed locally:
   lifecycle evidence only; authored environment assets, canonical
   character/pet models, mobile performance, and device visual verification
   remain pending.
+- The child game snapshot now also reads the server-owned world revision and
+  active world entities. Decoration place, transform, remove, and collect-all
+  actions use the existing revision-checked RPCs and reload the snapshot after
+  each mutation; authored 3D entity rendering and multi-copy placement remain
+  pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

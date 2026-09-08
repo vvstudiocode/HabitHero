@@ -18,6 +18,10 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseChildGameData>> equipGameCharacter;
         private Func<string[], Task<SupabaseChildGameData>> setFollowingPets;
         private Func<string[], Task<SupabaseChildGameData>> setRoamingPets;
+        private Func<string, long, SupabaseFriendWorldTransform, string, int?, Task<SupabaseChildGameData>> placeWorldEntity;
+        private Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildGameData>> updateWorldEntity;
+        private Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity;
+        private Func<long, Task<SupabaseChildGameData>> collectWorldDecorations;
 
         public HabitHeroChildGameView(Transform canvasTransform, Font font)
         {
@@ -33,7 +37,11 @@ namespace HabitHero.App
             Func<string, int, string, Task<SupabaseChildGameData>> purchaseGameItem,
             Func<string, Task<SupabaseChildGameData>> equipGameCharacter,
             Func<string[], Task<SupabaseChildGameData>> setFollowingPets,
-            Func<string[], Task<SupabaseChildGameData>> setRoamingPets)
+            Func<string[], Task<SupabaseChildGameData>> setRoamingPets,
+            Func<string, long, SupabaseFriendWorldTransform, string, int?, Task<SupabaseChildGameData>> placeWorldEntity,
+            Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildGameData>> updateWorldEntity,
+            Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity,
+            Func<long, Task<SupabaseChildGameData>> collectWorldDecorations)
         {
             Close();
             latestData = data;
@@ -42,6 +50,10 @@ namespace HabitHero.App
             this.equipGameCharacter = equipGameCharacter;
             this.setFollowingPets = setFollowingPets;
             this.setRoamingPets = setRoamingPets;
+            this.placeWorldEntity = placeWorldEntity;
+            this.updateWorldEntity = updateWorldEntity;
+            this.removeWorldEntity = removeWorldEntity;
+            this.collectWorldDecorations = collectWorldDecorations;
         }
 
         public void ApplyData(SupabaseChildGameData data)
@@ -129,8 +141,8 @@ namespace HabitHero.App
                 card.transform,
                 font,
                 "清空跟隨",
-                new Vector2(0.46f, 0.42f),
-                new Vector2(0.65f, 0.49f));
+                new Vector2(0.44f, 0.42f),
+                new Vector2(0.59f, 0.49f));
             clearFollowing.onClick.AddListener(() => SetFollowingPetsAsync(
                 new string[0],
                 clearFollowing));
@@ -138,11 +150,20 @@ namespace HabitHero.App
                 card.transform,
                 font,
                 "清空巡遊",
-                new Vector2(0.67f, 0.42f),
-                new Vector2(0.86f, 0.49f));
+                new Vector2(0.61f, 0.42f),
+                new Vector2(0.76f, 0.49f));
             clearRoaming.onClick.AddListener(() => SetRoamingPetsAsync(
                 new string[0],
                 clearRoaming));
+            Button collectDecorations = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "收納裝飾",
+                new Vector2(0.78f, 0.42f),
+                new Vector2(0.92f, 0.49f));
+            collectDecorations.interactable = collectWorldDecorations != null;
+            collectDecorations.onClick.AddListener(() => CollectWorldDecorationsAsync(
+                collectDecorations));
             GameObject inventoryList = CreateList(
                 card.transform,
                 "InventoryList",
@@ -177,6 +198,10 @@ namespace HabitHero.App
             equipGameCharacter = null;
             setFollowingPets = null;
             setRoamingPets = null;
+            placeWorldEntity = null;
+            updateWorldEntity = null;
+            removeWorldEntity = null;
+            collectWorldDecorations = null;
         }
 
         private void RenderCatalog(Transform parent)
@@ -264,6 +289,34 @@ namespace HabitHero.App
                     roamButton.onClick.AddListener(() => SetRoamingPetsAsync(
                         new[] { inventory.id },
                         roamButton));
+                }
+                else if (item != null && item.item_type == "decoration")
+                {
+                    SupabaseChildWorldEntityRecord entity = FindActiveWorldEntity(inventory.id);
+                    if (entity == null)
+                    {
+                        Button placeButton = CreateRowButton(row.transform, "放置");
+                        placeButton.interactable = placeWorldEntity != null;
+                        placeButton.onClick.AddListener(() => PlaceWorldEntityAsync(
+                            inventory.id,
+                            item,
+                            placeButton));
+                    }
+                    else
+                    {
+                        Button moveButton = CreateRowButton(row.transform, "右移");
+                        moveButton.interactable = updateWorldEntity != null;
+                        moveButton.onClick.AddListener(() => MoveWorldEntityAsync(
+                            inventory.id,
+                            entity,
+                            moveButton));
+                        Button removeButton = CreateRowButton(row.transform, "收回");
+                        removeButton.interactable = removeWorldEntity != null;
+                        removeButton.onClick.AddListener(() => RemoveWorldEntityAsync(
+                            inventory.id,
+                            entity,
+                            removeButton));
+                    }
                 }
 
                 visibleCount += 1;
@@ -354,11 +407,188 @@ namespace HabitHero.App
             }
         }
 
+        private async void PlaceWorldEntityAsync(
+            string inventoryItemId,
+            SupabaseGameCatalogItemRecord item,
+            Button button)
+        {
+            if (placeWorldEntity == null || item == null) return;
+            if (button != null) button.interactable = false;
+            SetGameStatus("正在把裝飾放入我的世界…", false);
+            try
+            {
+                SupabaseChildGameData refreshed = await placeWorldEntity(
+                    inventoryItemId,
+                    latestData.worldRevision,
+                    CreateDefaultWorldTransform(item),
+                    "static",
+                    null);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+                }
+
+                ApplyData(refreshed);
+                SetGameStatus("裝飾已放入我的世界。", false);
+            }
+            catch (Exception exception)
+            {
+                SetGameStatus("裝飾放置失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private async void MoveWorldEntityAsync(
+            string inventoryItemId,
+            SupabaseChildWorldEntityRecord entity,
+            Button button)
+        {
+            if (updateWorldEntity == null || entity == null) return;
+            if (button != null) button.interactable = false;
+            SetGameStatus("正在更新裝飾位置…", false);
+            try
+            {
+                SupabaseFriendWorldTransform transform = CreateTransform(entity);
+                transform.x = Mathf.Clamp(transform.x + 0.8f, -13f, 13f);
+                SupabaseChildGameData refreshed = await updateWorldEntity(
+                    inventoryItemId,
+                    entity.id,
+                    latestData.worldRevision,
+                    transform);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+                }
+
+                ApplyData(refreshed);
+                SetGameStatus("裝飾位置已更新。", false);
+            }
+            catch (Exception exception)
+            {
+                SetGameStatus("裝飾移動失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private async void RemoveWorldEntityAsync(
+            string inventoryItemId,
+            SupabaseChildWorldEntityRecord entity,
+            Button button)
+        {
+            if (removeWorldEntity == null || entity == null) return;
+            if (button != null) button.interactable = false;
+            SetGameStatus("正在把裝飾收回背包…", false);
+            try
+            {
+                SupabaseChildGameData refreshed = await removeWorldEntity(
+                    inventoryItemId,
+                    entity.id,
+                    latestData.worldRevision);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+                }
+
+                ApplyData(refreshed);
+                SetGameStatus("裝飾已收回背包。", false);
+            }
+            catch (Exception exception)
+            {
+                SetGameStatus("裝飾收回失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private async void CollectWorldDecorationsAsync(Button button)
+        {
+            if (collectWorldDecorations == null) return;
+            if (button != null) button.interactable = false;
+            SetGameStatus("正在收納我的世界裝飾…", false);
+            try
+            {
+                SupabaseChildGameData refreshed = await collectWorldDecorations(
+                    latestData.worldRevision);
+                if (refreshed == null)
+                {
+                    throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+                }
+
+                ApplyData(refreshed);
+                SetGameStatus("所有自有裝飾已收回背包。", false);
+            }
+            catch (Exception exception)
+            {
+                SetGameStatus("裝飾收納失敗：" + exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
         private async Task ApplyMutationAsync(Task<SupabaseChildGameData> mutation)
         {
             SupabaseChildGameData refreshed = await mutation;
             if (refreshed == null) throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
             ApplyData(refreshed);
+        }
+
+        private SupabaseChildWorldEntityRecord FindActiveWorldEntity(
+            string inventoryItemId)
+        {
+            foreach (SupabaseChildWorldEntityRecord entity in
+                latestData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
+            {
+                if (entity != null
+                    && entity.is_active
+                    && entity.inventory_item_id == inventoryItemId)
+                {
+                    return entity;
+                }
+            }
+
+            return null;
+        }
+
+        private SupabaseFriendWorldTransform CreateDefaultWorldTransform(
+            SupabaseGameCatalogItemRecord item)
+        {
+            int placedCount = 0;
+            foreach (SupabaseChildWorldEntityRecord entity in
+                latestData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
+            {
+                if (entity != null && entity.is_active && entity.entity_kind == "decoration")
+                {
+                    placedCount += 1;
+                }
+            }
+
+            int column = placedCount % 3;
+            int row = placedCount / 3;
+            float minScale = item.min_scale > 0f ? item.min_scale : 0.75f;
+            float maxScale = item.max_scale >= minScale ? item.max_scale : minScale;
+            return new SupabaseFriendWorldTransform
+            {
+                x = -4.5f + column * 2.8f,
+                y = 0f,
+                z = -5.5f + row * 2.8f,
+                rotationX = 0f,
+                rotationY = 0f,
+                rotationZ = 0f,
+                scale = Mathf.Clamp(1f, minScale, maxScale),
+            };
+        }
+
+        private static SupabaseFriendWorldTransform CreateTransform(
+            SupabaseChildWorldEntityRecord entity)
+        {
+            return new SupabaseFriendWorldTransform
+            {
+                x = entity.position_x,
+                y = entity.position_y,
+                z = entity.position_z,
+                rotationX = entity.rotation_x,
+                rotationY = entity.rotation_y,
+                rotationZ = entity.rotation_z,
+                scale = entity.scale <= 0f ? 1f : entity.scale,
+            };
         }
 
         private int GetPrice(SupabaseGameCatalogItemRecord item)
