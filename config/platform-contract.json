@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "productName": "HabitHero",
+  "webHosting": "vercel",
+  "vercelBuildCommand": "npm run build",
+  "vercelOutputDirectory": "dist",
+  "unityProjectPath": "unity/HabitHero",
+  "iosBundleId": "com.vvstudiocode.habithero",
+  "androidApplicationId": "com.vvstudiocode.habithero",
+  "publicSupabaseEnv": [
+    "VITE_SUPABASE_URL",
+    "VITE_SUPABASE_PUBLISHABLE_KEY"
+  ],
+  "forbiddenClientSecrets": [
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
+  "backendPolicy": "reuse-existing-supabase",
+  "migrationMode": "parallel-client-rewrite"
+}
