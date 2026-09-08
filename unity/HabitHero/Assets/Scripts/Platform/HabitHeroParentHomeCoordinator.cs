@@ -70,6 +70,10 @@ namespace HabitHero.App
                         snapshot.familyId,
                         input,
                         cancellationToken),
+                    (input) => client.CreateGeneralAdventureAndRefreshAsync(
+                        snapshot.familyId,
+                        input,
+                        cancellationToken),
                     (input) => client.CreateRewardAndRefreshAsync(
                         snapshot.familyId,
                         input,

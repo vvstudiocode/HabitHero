@@ -17,6 +17,7 @@ namespace HabitHero.App
         private GameObject wishlistApprovalPanel;
         private GameObject taskListObject;
         private HabitHeroParentTaskCreateView taskCreateView;
+        private HabitHeroParentGeneralAdventureCreateView generalAdventureCreateView;
         private HabitHeroParentRewardManagementView rewardManagementView;
         private HabitHeroParentPointAdjustmentView pointAdjustmentView;
         private HabitHeroParentChildAccountView childAccountView;
@@ -52,6 +53,9 @@ namespace HabitHero.App
         private Func<
             SupabaseParentTaskCreateInput,
             Task<SupabaseParentTaskMutationResult>> createTask;
+        private Func<
+            SupabaseParentGeneralAdventureCreateInput,
+            Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure;
         private Func<
             SupabaseParentRewardCreateInput,
             Task<SupabaseParentRewardMutationResult>> createReward;
@@ -101,6 +105,9 @@ namespace HabitHero.App
                 SupabaseParentTaskCreateInput,
                 Task<SupabaseParentTaskMutationResult>> createTask,
             Func<
+                SupabaseParentGeneralAdventureCreateInput,
+                Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure,
+            Func<
                 SupabaseParentRewardCreateInput,
                 Task<SupabaseParentRewardMutationResult>> createReward,
             Func<
@@ -130,6 +137,7 @@ namespace HabitHero.App
             this.approveWishlist = approveWishlist;
             this.fulfillTicket = fulfillTicket;
             this.createTask = createTask;
+            this.createGeneralAdventure = createGeneralAdventure;
             this.createReward = createReward;
             this.updateReward = updateReward;
             this.deleteReward = deleteReward;
@@ -214,8 +222,15 @@ namespace HabitHero.App
                 font,
                 "建立孩子任務",
                 new Vector2(0.08f, 0.63f),
-                new Vector2(0.92f, 0.69f));
+                new Vector2(0.49f, 0.69f));
             createTaskButton.onClick.AddListener(OpenTaskCreatePanel);
+            Button createAdventureButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "建立冒險",
+                new Vector2(0.51f, 0.63f),
+                new Vector2(0.92f, 0.69f));
+            createAdventureButton.onClick.AddListener(OpenGeneralAdventurePanel);
             Button rewardButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
@@ -247,6 +262,7 @@ namespace HabitHero.App
             approveWishlist = null;
             fulfillTicket = null;
             createTask = null;
+            createGeneralAdventure = null;
             createReward = null;
             updateReward = null;
             deleteReward = null;
@@ -264,6 +280,7 @@ namespace HabitHero.App
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
             CloseTaskCreatePanel();
+            CloseGeneralAdventurePanel();
             CloseRewardManagementPanel();
             ClosePointAdjustmentPanel();
             CloseChildAccountPanel();
@@ -508,6 +525,31 @@ namespace HabitHero.App
                 ApplySnapshot,
                 SetStatus,
                 CloseTaskCreatePanel);
+        }
+
+        private void OpenGeneralAdventurePanel()
+        {
+            if (latestSnapshot == null || createGeneralAdventure == null)
+            {
+                SetStatus("建立冒險尚未連線。", true);
+                return;
+            }
+
+            CloseTaskCreatePanel();
+            if (generalAdventureCreateView == null)
+            {
+                generalAdventureCreateView =
+                    new HabitHeroParentGeneralAdventureCreateView(
+                        canvasTransform,
+                        font);
+            }
+
+            generalAdventureCreateView.Show(
+                latestSnapshot,
+                createGeneralAdventure,
+                ApplySnapshot,
+                SetStatus,
+                CloseGeneralAdventurePanel);
         }
 
         private void OpenRewardManagementPanel()
@@ -1038,6 +1080,13 @@ namespace HabitHero.App
             if (taskCreateView == null) return;
             taskCreateView.Dispose();
             taskCreateView = null;
+        }
+
+        private void CloseGeneralAdventurePanel()
+        {
+            if (generalAdventureCreateView == null) return;
+            generalAdventureCreateView.Dispose();
+            generalAdventureCreateView = null;
         }
 
         private void CloseRewardManagementPanel()

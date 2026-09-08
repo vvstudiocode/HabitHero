@@ -66,6 +66,10 @@ review RPCs, manages reward records through RLS-scoped mutations, approves
 wishlist items through the server RPC, and fulfills pending reward tickets
 through an RLS-scoped update. Manual point changes use the server
 `adjust_child_points` RPC; the client never edits balances directly.
+The same parent workbench can create general adventures for selected children
+through the server `create_general_adventure` RPC, including report mode,
+duration, execution window, timer, and review settings; it refreshes the family
+snapshot after creation.
 Child login accounts are managed through the authenticated
 `manage-child-account` Edge Function, including creation, password reset, and
 deletion; the Unity client never receives or stores a service-role key.
