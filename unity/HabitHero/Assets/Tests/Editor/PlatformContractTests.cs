@@ -440,6 +440,74 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task FriendWorldClientLoadsTheServerProjectionThroughRpc()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"world_owner_child_profile_id\":\"friend-child-1\",\"display_name\":\"小安\",\"character_asset_key\":\"character-fox\",\"revision\":7,\"entities\":[{\"id\":\"entity-1\",\"entity_kind\":\"pet\",\"asset_key\":\"pet-cat\",\"position_x\":1.5,\"position_y\":0,\"position_z\":-2,\"rotation_x\":0,\"rotation_y\":45,\"rotation_z\":0,\"scale\":1.2,\"behavior_mode\":\"wander\",\"display_name\":\"奶油\"}]}",
+                    null));
+            SupabaseChildFriendWorldClient client = new SupabaseChildFriendWorldClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseChildFriendWorldData world = await client.LoadAsync(
+                "friend-child-1",
+                CancellationToken.None);
+
+            Assert.AreEqual("friend-child-1", world.worldOwnerChildProfileId);
+            Assert.AreEqual("小安", world.displayName);
+            Assert.AreEqual("character-fox", world.characterAssetKey);
+            Assert.AreEqual(7, world.revision);
+            Assert.AreEqual(1, world.entities.Length);
+            Assert.AreEqual("pet-cat", world.entities[0].asset_key);
+            Assert.AreEqual("奶油", world.entities[0].display_name);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/get_friend_world_snapshot",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"friend-child-1\"}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public void FriendWorldClientRejectsAnEmptyTargetBeforeNetworkAccess()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(500, "{}", "unused")));
+            SupabaseChildFriendWorldClient client = new SupabaseChildFriendWorldClient(
+                new SupabaseRestClient(
+                    settings,
+                    authClient,
+                    new FakeSupabaseTransport(
+                        new SupabaseHttpResponse(500, "{}", "unused"))));
+
+            Assert.ThrowsAsync<ArgumentException>(async delegate
+            {
+                await client.LoadAsync(string.Empty, CancellationToken.None);
+            });
+        }
+
+        [Test]
         public async Task ChildCompletionRefreshesTheServerAuthoritativeLedger()
         {
             SupabaseClientSettings settings = CreateSettings();

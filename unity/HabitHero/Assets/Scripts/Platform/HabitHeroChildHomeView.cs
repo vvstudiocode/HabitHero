@@ -61,6 +61,7 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseChildSocialData>> declineFriendRequest;
         private Func<string, Task<SupabaseChildSocialData>> removeFriend;
         private Func<string, Task<SupabaseChildSocialData>> blockFriend;
+        private Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld;
         private string selectedMood;
         private int selectedDifficulty;
         private bool abandonConfirmationPending;
@@ -86,6 +87,7 @@ namespace HabitHero.App
             Func<string, Task<SupabaseChildSocialData>> declineFriendRequest,
             Func<string, Task<SupabaseChildSocialData>> removeFriend,
             Func<string, Task<SupabaseChildSocialData>> blockFriend,
+            Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld,
             Func<
                 SupabaseChildTaskRecord,
                 SupabaseTaskCompletionDraft,
@@ -124,6 +126,7 @@ namespace HabitHero.App
             this.declineFriendRequest = declineFriendRequest;
             this.removeFriend = removeFriend;
             this.blockFriend = blockFriend;
+            this.visitFriendWorld = visitFriendWorld;
             latestSnapshot = snapshot;
             latestWorldData = worldData;
             latestSocialData = socialData;
@@ -151,6 +154,7 @@ namespace HabitHero.App
                 declineFriendRequest,
                 removeFriend,
                 blockFriend,
+                visitFriendWorld,
                 ApplySocialData,
                 CloseSocialPanel);
             panel = HabitHeroUiFactory.CreatePanel(
@@ -277,6 +281,7 @@ namespace HabitHero.App
             declineFriendRequest = null;
             removeFriend = null;
             blockFriend = null;
+            visitFriendWorld = null;
             timerSessions = null;
             latestSnapshot = null;
             latestWorldData = null;

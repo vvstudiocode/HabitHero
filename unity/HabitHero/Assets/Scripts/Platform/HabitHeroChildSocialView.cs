@@ -13,6 +13,7 @@ namespace HabitHero.App
         private GameObject panel;
         private GameObject friendListObject;
         private GameObject requestListObject;
+        private HabitHeroChildFriendWorldView friendWorldView;
         private InputField friendCodeInput;
         private Text statusText;
         private SupabaseChildSocialData latestData;
@@ -22,6 +23,7 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseChildSocialData>> declineRequest;
         private Func<string, Task<SupabaseChildSocialData>> removeFriend;
         private Func<string, Task<SupabaseChildSocialData>> blockFriend;
+        private Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld;
         private Action<SupabaseChildSocialData> onDataChanged;
         private Action onClose;
 
@@ -41,6 +43,7 @@ namespace HabitHero.App
             Func<string, Task<SupabaseChildSocialData>> declineRequest,
             Func<string, Task<SupabaseChildSocialData>> removeFriend,
             Func<string, Task<SupabaseChildSocialData>> blockFriend,
+            Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld,
             Action<SupabaseChildSocialData> onDataChanged,
             Action onClose)
         {
@@ -52,8 +55,13 @@ namespace HabitHero.App
             this.declineRequest = declineRequest;
             this.removeFriend = removeFriend;
             this.blockFriend = blockFriend;
+            this.visitFriendWorld = visitFriendWorld;
             this.onDataChanged = onDataChanged;
             this.onClose = onClose;
+            if (friendWorldView == null)
+            {
+                friendWorldView = new HabitHeroChildFriendWorldView(canvasTransform, font);
+            }
         }
 
         public void ApplyData(SupabaseChildSocialData data)
@@ -193,8 +201,14 @@ namespace HabitHero.App
             declineRequest = null;
             removeFriend = null;
             blockFriend = null;
+            visitFriendWorld = null;
             onDataChanged = null;
             onClose = null;
+            if (friendWorldView != null)
+            {
+                friendWorldView.Dispose();
+                friendWorldView = null;
+            }
         }
 
         private void RenderFriends(Transform parent)
@@ -219,6 +233,11 @@ namespace HabitHero.App
                     Vector2.zero,
                     Vector2.one);
                 AddFlexibleLayout(label.gameObject);
+                Button visitButton = CreateRowButton(row.transform, "造訪");
+                visitButton.interactable = visitFriendWorld != null;
+                visitButton.onClick.AddListener(() => VisitFriendWorldAsync(
+                    friend.child_profile_id,
+                    visitButton));
                 Button removeButton = CreateRowButton(row.transform, "移除");
                 removeButton.interactable = removeFriend != null;
                 removeButton.onClick.AddListener(() => RemoveFriendAsync(
@@ -348,6 +367,44 @@ namespace HabitHero.App
                 childProfileId,
                 button,
                 "已封鎖這位好友。");
+        }
+
+        private async void VisitFriendWorldAsync(string childProfileId, Button button)
+        {
+            if (visitFriendWorld == null) return;
+            if (button != null) button.interactable = false;
+            SetStatus("正在載入好友世界…", false);
+            try
+            {
+                SupabaseChildFriendWorldData data = await visitFriendWorld(childProfileId);
+                if (data == null)
+                {
+                    throw new SupabaseDataException(
+                        "伺服器沒有回傳好友世界資料。");
+                }
+
+                Close();
+                if (friendWorldView == null)
+                {
+                    friendWorldView = new HabitHeroChildFriendWorldView(
+                        canvasTransform,
+                        font);
+                }
+
+                friendWorldView.Show(data, CloseFriendWorld);
+                friendWorldView.Open();
+            }
+            catch (Exception exception)
+            {
+                SetStatus(exception.Message, true);
+                if (button != null) button.interactable = true;
+            }
+        }
+
+        private void CloseFriendWorld()
+        {
+            if (friendWorldView != null) friendWorldView.Close();
+            Open();
         }
 
         private async Task RunMutationAsync(
@@ -481,6 +538,8 @@ namespace HabitHero.App
                 UnityEngine.Object.Destroy(panel);
                 panel = null;
             }
+
+            if (friendWorldView != null) friendWorldView.Close();
 
             friendListObject = null;
             requestListObject = null;

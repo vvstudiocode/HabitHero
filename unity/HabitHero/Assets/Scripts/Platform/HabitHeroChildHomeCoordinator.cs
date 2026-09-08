@@ -14,6 +14,7 @@ namespace HabitHero.App
         private readonly SupabaseChildGameClient gameClient;
         private readonly SupabaseChildWorldClient worldClient;
         private readonly SupabaseChildSocialClient socialClient;
+        private readonly SupabaseChildFriendWorldClient friendWorldClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
         private HabitHeroChildHomeView view;
@@ -23,6 +24,7 @@ namespace HabitHero.App
             SupabaseChildGameClient gameClient,
             SupabaseChildWorldClient worldClient,
             SupabaseChildSocialClient socialClient,
+            SupabaseChildFriendWorldClient friendWorldClient,
             Transform canvasTransform,
             Font font)
         {
@@ -30,12 +32,14 @@ namespace HabitHero.App
             if (gameClient == null) throw new ArgumentNullException("gameClient");
             if (worldClient == null) throw new ArgumentNullException("worldClient");
             if (socialClient == null) throw new ArgumentNullException("socialClient");
+            if (friendWorldClient == null) throw new ArgumentNullException("friendWorldClient");
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.client = client;
             this.gameClient = gameClient;
             this.worldClient = worldClient;
             this.socialClient = socialClient;
+            this.friendWorldClient = friendWorldClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
         }
@@ -142,6 +146,9 @@ namespace HabitHero.App
                         cancellationToken),
                     (friendChildProfileId) => BlockFriendAndRefreshAsync(
                         snapshot.child.id,
+                        friendChildProfileId,
+                        cancellationToken),
+                    (friendChildProfileId) => LoadFriendWorldAsync(
                         friendChildProfileId,
                         cancellationToken),
                     (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
@@ -333,6 +340,15 @@ namespace HabitHero.App
         {
             await socialClient.BlockFriendAsync(friendChildProfileId, cancellationToken);
             return await RefreshSocialAsync(childProfileId, cancellationToken);
+        }
+
+        private Task<SupabaseChildFriendWorldData> LoadFriendWorldAsync(
+            string friendChildProfileId,
+            CancellationToken cancellationToken)
+        {
+            return friendWorldClient.LoadAsync(
+                friendChildProfileId,
+                cancellationToken);
         }
 
         private async Task<SupabaseChildGameData> SetFollowingPetsAndRefreshAsync(
