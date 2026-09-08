@@ -139,6 +139,16 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldAssetCatalogContainsEveryAuthoredSceneModule()
+        {
+            AssertAuthoredSceneModuleCount("sunrise-village", 10);
+            AssertAuthoredSceneModuleCount("forest-valley", 12);
+            AssertAuthoredSceneModuleCount("cloud-workshop", 23);
+            AssertAuthoredSceneModuleCount("tideglow-archipelago", 11);
+            AssertAuthoredSceneModuleCount("star-sand-wasteland", 12);
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";
@@ -3567,6 +3577,26 @@ namespace HabitHero.Tests
             Assert.AreEqual(expected.x, actual.x, 0.0001f);
             Assert.AreEqual(expected.y, actual.y, 0.0001f);
             Assert.AreEqual(expected.z, actual.z, 0.0001f);
+        }
+
+        private static void AssertAuthoredSceneModuleCount(
+            string sceneId,
+            int expectedCount)
+        {
+            HabitHeroWorldAssetModule[] modules;
+            Assert.IsTrue(
+                HabitHeroWorldAssetCatalog.TryGetModules(sceneId, out modules),
+                "Missing authored scene catalog for " + sceneId);
+            Assert.AreEqual(expectedCount, modules.Length, "Unexpected authored module count for " + sceneId);
+            HashSet<string> assetKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (HabitHeroWorldAssetModule module in modules)
+            {
+                Assert.IsNotNull(module);
+                Assert.IsTrue(assetKeys.Add(module.AssetKey), "Duplicate authored asset key " + module.AssetKey);
+                Assert.IsTrue(
+                    HabitHeroGameAssetCatalog.HasModel(module.AssetKey),
+                    "Missing world asset allow-list entry for " + module.AssetKey);
+            }
         }
 
         private static SupabaseClientSettings CreateSettings()
