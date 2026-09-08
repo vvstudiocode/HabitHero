@@ -326,8 +326,10 @@ Current local verification:
 - Unity EditMode `PlatformContractTests` passed, including all current parent
   Supabase contract checks, notification payload parsing, and safe-area mapping
   (`125` tests in the latest run).
-- Unity PlayMode `BootstrapPlayModeTests` passed: the login shell loaded with
-  no runtime errors in the headless Unity Editor run.
+- Unity PlayMode `BootstrapPlayModeTests` passed: the login shell and an
+  offline child-world fixture (NPC, roaming pet, following pet, decoration,
+  labels, shadows, and runtime cleanup) loaded with no runtime errors in the
+  headless Unity Editor run.
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
 - Native iOS/Android modules are not installed on this machine, so native
   export, device behavior, and store update evidence are intentionally not

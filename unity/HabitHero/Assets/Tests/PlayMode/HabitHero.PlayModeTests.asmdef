@@ -1,7 +1,9 @@
 {
   "name": "HabitHero.PlayModeTests",
   "rootNamespace": "HabitHero.Tests",
-  "references": [],
+  "references": [
+    "HabitHero.Runtime"
+  ],
   "optionalUnityReferences": [
     "TestAssemblies"
   ],
