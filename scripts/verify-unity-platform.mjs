@@ -11,6 +11,8 @@ const sourceFiles = [
   path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/AuthCallbackParser.cs'),
   path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/SupabaseRequestBuilder.cs'),
   path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/SupabaseAuthRequestBuilder.cs'),
+  path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/SupabaseJson.cs'),
+  path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/SupabaseRestRequestBuilder.cs'),
   path.join(repositoryRoot, 'unity/HabitHero/Assets/Scripts/Platform/SupabaseSession.cs'),
   path.join(repositoryRoot, 'unity/HabitHero/Tests/PlatformContractSmoke.cs'),
 ];

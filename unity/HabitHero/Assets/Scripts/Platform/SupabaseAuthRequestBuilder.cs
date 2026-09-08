@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace HabitHero.Platform
 {
@@ -23,8 +22,8 @@ namespace HabitHero.Platform
                 settings,
                 "POST",
                 "/auth/v1/token?grant_type=password",
-                "{\"email\":\"" + EscapeJson(email.Trim())
-                    + "\",\"password\":\"" + EscapeJson(password) + "\"}",
+                "{\"email\":\"" + SupabaseJson.Escape(email.Trim())
+                    + "\",\"password\":\"" + SupabaseJson.Escape(password) + "\"}",
                 null,
                 out request,
                 out error);
@@ -47,8 +46,8 @@ namespace HabitHero.Platform
                 settings,
                 "POST",
                 "/auth/v1/signup",
-                "{\"email\":\"" + EscapeJson(email.Trim())
-                    + "\",\"password\":\"" + EscapeJson(password) + "\"}",
+                "{\"email\":\"" + SupabaseJson.Escape(email.Trim())
+                    + "\",\"password\":\"" + SupabaseJson.Escape(password) + "\"}",
                 null,
                 out request,
                 out error);
@@ -71,7 +70,7 @@ namespace HabitHero.Platform
                 settings,
                 "POST",
                 "/auth/v1/token?grant_type=refresh_token",
-                "{\"refresh_token\":\"" + EscapeJson(refreshToken.Trim()) + "\"}",
+                "{\"refresh_token\":\"" + SupabaseJson.Escape(refreshToken.Trim()) + "\"}",
                 null,
                 out request,
                 out error);
@@ -107,10 +106,10 @@ namespace HabitHero.Platform
                 return false;
             }
 
-            string body = "{\"email\":\"" + EscapeJson(email.Trim()) + "\"";
+            string body = "{\"email\":\"" + SupabaseJson.Escape(email.Trim()) + "\"";
             if (!string.IsNullOrWhiteSpace(redirectTo))
             {
-                body += ",\"redirect_to\":\"" + EscapeJson(redirectTo.Trim()) + "\"";
+                body += ",\"redirect_to\":\"" + SupabaseJson.Escape(redirectTo.Trim()) + "\"";
             }
 
             body += "}";
@@ -142,7 +141,7 @@ namespace HabitHero.Platform
                 settings,
                 "PUT",
                 "/auth/v1/user",
-                "{\"password\":\"" + EscapeJson(password) + "\"}",
+                "{\"password\":\"" + SupabaseJson.Escape(password) + "\"}",
                 accessToken,
                 out request,
                 out error);
@@ -224,28 +223,5 @@ namespace HabitHero.Platform
             return true;
         }
 
-        private static string EscapeJson(string value)
-        {
-            StringBuilder builder = new StringBuilder(value.Length + 8);
-            foreach (char character in value)
-            {
-                switch (character)
-                {
-                    case '\\': builder.Append("\\\\"); break;
-                    case '"': builder.Append("\\\""); break;
-                    case '\b': builder.Append("\\b"); break;
-                    case '\f': builder.Append("\\f"); break;
-                    case '\n': builder.Append("\\n"); break;
-                    case '\r': builder.Append("\\r"); break;
-                    case '\t': builder.Append("\\t"); break;
-                    default:
-                        if (character < 32) builder.Append("\\u").Append(((int)character).ToString("x4"));
-                        else builder.Append(character);
-                        break;
-                }
-            }
-
-            return builder.ToString();
-        }
     }
 }

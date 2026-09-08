@@ -11,6 +11,8 @@ internal static class PlatformContractSmoke
         TestAuthCallbackParsing();
         TestSupabaseRequestBuilder();
         TestSupabaseAuthRequestBuilder();
+        TestSupabaseRestRequestBuilder();
+        TestSupabaseJsonEscaping();
         TestSupabaseSessionContract();
 
         if (failures > 0)
@@ -240,5 +242,60 @@ internal static class PlatformContractSmoke
         if (condition) return;
         failures += 1;
         Console.Error.WriteLine("FAIL: " + description);
+    }
+
+    private static void TestSupabaseRestRequestBuilder()
+    {
+        SupabaseClientSettings settings;
+        string error;
+        SupabaseClientSettings.TryCreate(
+            "https://example.supabase.co",
+            "sb_publishable_test-key",
+            out settings,
+            out error);
+
+        SupabaseRequestContract request;
+        Assert(
+            SupabaseRestRequestBuilder.TryBuildTableSelect(
+                settings,
+                "tasks",
+                new[] { new SupabaseRestFilter("child_profile_id", "eq", "child-1") },
+                "*",
+                "created_at.desc",
+                100,
+                "access-token",
+                out request,
+                out error),
+            "builds an authenticated PostgREST table request");
+        Assert(
+            request != null
+                && request.Method == "GET"
+                && request.Url == "https://example.supabase.co/rest/v1/tasks?select=*&child_profile_id=eq.child-1&order=created_at.desc&limit=100",
+            "builds a constrained table URL with ordering and limit");
+        Assert(
+            request != null
+                && request.Headers["apikey"] == "sb_publishable_test-key"
+                && request.Headers["Authorization"] == "Bearer access-token",
+            "sends the publishable key and session token on table reads");
+        Assert(
+            !SupabaseRestRequestBuilder.TryBuildTableSelect(
+                settings,
+                "tasks;drop_table",
+                null,
+                "*",
+                null,
+                0,
+                "access-token",
+                out request,
+                out error),
+            "rejects unsafe table names");
+    }
+
+    private static void TestSupabaseJsonEscaping()
+    {
+        Assert(
+            SupabaseJson.Quote("a\"b\\c\n") == "\"a\\\"b\\\\c\\n\"",
+            "escapes JSON string boundaries and control characters");
+        Assert(SupabaseJson.NullableString(null) == "null", "preserves JSON null values");
     }
 }

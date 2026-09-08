@@ -93,6 +93,119 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void RestBuilderScopesTableReadsToTheCurrentSession()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseRequestContract request;
+            string error;
+
+            bool created = SupabaseRestRequestBuilder.TryBuildTableSelect(
+                settings,
+                "tasks",
+                new[] { new SupabaseRestFilter("child_profile_id", "eq", "child-1") },
+                "*",
+                "created_at.desc",
+                100,
+                "access-token",
+                out request,
+                out error);
+
+            Assert.IsTrue(created, error);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/tasks?select=*&child_profile_id=eq.child-1&order=created_at.desc&limit=100",
+                request.Url);
+            Assert.AreEqual("Bearer access-token", request.Headers["Authorization"]);
+            Assert.AreEqual("sb_publishable_test-key", request.Headers["apikey"]);
+        }
+
+        [Test]
+        public void JsonArrayParserMapsPostgrestChildTaskRows()
+        {
+            SupabaseChildTaskRecord[] tasks;
+            string error;
+
+            bool parsed = SupabaseJsonArrayParser.TryParseArray(
+                "[{\"id\":\"task-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"todo\"}]",
+                out tasks,
+                out error);
+
+            Assert.IsTrue(parsed, error);
+            Assert.AreEqual(1, tasks.Length);
+            Assert.AreEqual("task-1", tasks[0].id);
+            Assert.AreEqual("整理書包", tasks[0].name);
+            Assert.AreEqual(10, tasks[0].points);
+            Assert.AreEqual("todo", tasks[0].status);
+        }
+
+        [Test]
+        public async Task ChildHomeClientLoadsRlsScopedDataAndSubmitsReflection()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            FakeSupabaseTransport authTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                    null));
+            SupabaseAuthClient authClient = new SupabaseAuthClient(settings, authStore, authTransport);
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"role\":\"child\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":12}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"task-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"整理書包\",\"points\":10,\"status\":\"todo\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseRestClient restClient = new SupabaseRestClient(settings, authClient, dataTransport);
+            SupabaseChildHomeClient childClient = new SupabaseChildHomeClient(restClient);
+
+            SupabaseChildHomeSnapshot snapshot = await childClient.LoadAsync(CancellationToken.None);
+
+            Assert.AreEqual("family-1", snapshot.familyId);
+            Assert.AreEqual("child-1", snapshot.child.id);
+            Assert.AreEqual(12, snapshot.child.points_balance);
+            Assert.AreEqual(1, snapshot.tasks.Length);
+            Assert.AreEqual("task-1", snapshot.tasks[0].id);
+            Assert.AreEqual(8, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/family_members?select=*&profile_id=eq.child-user-1",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/ensure_daily_adventure_occurrences",
+                dataTransport.Requests[2].Url);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[2].Body);
+
+            await childClient.SubmitTaskReflectionAsync(
+                "task-1",
+                "完成了",
+                "happy",
+                3,
+                CancellationToken.None);
+            Assert.AreEqual(9, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\",\"reflection\":\"完成了\",\"mood\":\"happy\",\"difficulty\":3}",
+                dataTransport.Requests[8].Body);
+        }
+
+        [Test]
         public void ProductionStoreIdentityMatchesTheExistingApp()
         {
             Assert.AreEqual(
@@ -322,11 +435,16 @@ namespace HabitHero.Tests
 
         private sealed class FakeSupabaseTransport : ISupabaseTransport
         {
-            private readonly SupabaseHttpResponse response;
+            private readonly Queue<SupabaseHttpResponse> responses;
 
             public FakeSupabaseTransport(SupabaseHttpResponse response)
+                : this(new[] { response })
             {
-                this.response = response;
+            }
+
+            public FakeSupabaseTransport(params SupabaseHttpResponse[] responses)
+            {
+                this.responses = new Queue<SupabaseHttpResponse>(responses);
             }
 
             public List<SupabaseRequestContract> Requests { get; } = new List<SupabaseRequestContract>();
@@ -336,6 +454,9 @@ namespace HabitHero.Tests
                 CancellationToken cancellationToken)
             {
                 Requests.Add(request);
+                SupabaseHttpResponse response = responses.Count > 1
+                    ? responses.Dequeue()
+                    : responses.Peek();
                 return Task.FromResult(response);
             }
         }
