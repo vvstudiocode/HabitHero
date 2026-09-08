@@ -108,6 +108,11 @@ namespace HabitHero.App
             Open();
         }
 
+        public void ApplyGameData(SupabaseChildGameData data)
+        {
+            gameData = data;
+        }
+
         public void NotifyWorldChatChanged(string worldOwnerChildProfileId)
         {
             if (chatView == null

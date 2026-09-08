@@ -429,6 +429,10 @@ namespace HabitHero.App
             }
 
             latestGameData = refreshed;
+            if (socialView != null)
+            {
+                socialView.ApplyGameData(refreshed);
+            }
             if (worldSceneView != null)
             {
                 worldSceneView.ApplyGameData(refreshed);

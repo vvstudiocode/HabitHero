@@ -293,7 +293,8 @@ namespace HabitHero.App
                 else if (item != null && item.item_type == "decoration")
                 {
                     SupabaseChildWorldEntityRecord entity = FindActiveWorldEntity(inventory.id);
-                    if (entity == null)
+                    int activeEntityCount = CountActiveWorldEntities(inventory.id);
+                    if (inventory.quantity > activeEntityCount)
                     {
                         Button placeButton = CreateRowButton(row.transform, "放置");
                         placeButton.interactable = placeWorldEntity != null;
@@ -302,7 +303,7 @@ namespace HabitHero.App
                             item,
                             placeButton));
                     }
-                    else
+                    if (entity != null)
                     {
                         Button moveButton = CreateRowButton(row.transform, "右移");
                         moveButton.interactable = updateWorldEntity != null;
@@ -545,6 +546,24 @@ namespace HabitHero.App
             }
 
             return null;
+        }
+
+        private int CountActiveWorldEntities(string inventoryItemId)
+        {
+            int count = 0;
+            foreach (SupabaseChildWorldEntityRecord entity in
+                latestData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
+            {
+                if (entity != null
+                    && entity.is_active
+                    && entity.entity_kind == "decoration"
+                    && entity.inventory_item_id == inventoryItemId)
+                {
+                    count += 1;
+                }
+            }
+
+            return count;
         }
 
         private SupabaseFriendWorldTransform CreateDefaultWorldTransform(
