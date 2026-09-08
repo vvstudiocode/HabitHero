@@ -99,6 +99,46 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldSceneProfilesPreserveAuthoredSpawnAndMovementBoundaries()
+        {
+            HabitHeroWorldSceneProfile profile;
+
+            Assert.IsTrue(HabitHeroWorldSceneProfileCatalog.TryGetProfile(
+                "sunrise-village",
+                out profile));
+            AssertVector3(new Vector3(-0.18f, 0f, -0.95f), profile.SpawnPosition);
+            Assert.AreEqual(12.4f, profile.MovementBoundary, 0.0001f);
+
+            Assert.IsTrue(HabitHeroWorldSceneProfileCatalog.TryGetProfile(
+                "forest-valley",
+                out profile));
+            AssertVector3(new Vector3(-0.12276f, 0f, 3.69f), profile.SpawnPosition);
+            Assert.AreEqual(18.9f, profile.MovementBoundary, 0.0001f);
+
+            Assert.IsTrue(HabitHeroWorldSceneProfileCatalog.TryGetProfile(
+                "cloud-workshop",
+                out profile));
+            AssertVector3(Vector3.zero, profile.SpawnPosition);
+            Assert.AreEqual(18.9f, profile.MovementBoundary, 0.0001f);
+
+            Assert.IsTrue(HabitHeroWorldSceneProfileCatalog.TryGetProfile(
+                "tideglow-archipelago",
+                out profile));
+            AssertVector3(new Vector3(3.477667f, 0f, 3.35779f), profile.SpawnPosition);
+            Assert.AreEqual(6.25f, profile.MovementBoundary, 0.0001f);
+
+            Assert.IsTrue(HabitHeroWorldSceneProfileCatalog.TryGetProfile(
+                "star-sand-wasteland",
+                out profile));
+            AssertVector3(new Vector3(-0.0610376f, 0f, 4.41796f), profile.SpawnPosition);
+            Assert.AreEqual(7.225f, profile.MovementBoundary, 0.0001f);
+
+            Assert.IsFalse(HabitHeroWorldSceneProfileCatalog.TryGetProfile(
+                "my-world",
+                out profile));
+        }
+
+        [Test]
         public void RecoveryFragmentProducesTheSameIntentAsTheWebClient()
         {
             string callback = "https://habit-hero.vercel.app/#access_token=access-123&refresh_token=refresh-456&type=recovery";
@@ -3520,6 +3560,13 @@ namespace HabitHero.Tests
             StringAssert.Contains("CFBundleURLTypes", postProcess);
             StringAssert.Contains("android.intent.action.VIEW", postProcess);
             StringAssert.Contains("AuthCallbackParser.AppUrlScheme", postProcess);
+        }
+
+        private static void AssertVector3(Vector3 expected, Vector3 actual)
+        {
+            Assert.AreEqual(expected.x, actual.x, 0.0001f);
+            Assert.AreEqual(expected.y, actual.y, 0.0001f);
+            Assert.AreEqual(expected.z, actual.z, 0.0001f);
         }
 
         private static SupabaseClientSettings CreateSettings()
