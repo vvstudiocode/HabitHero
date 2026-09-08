@@ -61,6 +61,7 @@ namespace HabitHero.App
             public GameObject placeholder;
             public HabitHeroWorldModelAnimation animation;
             public HabitHeroPetMotionState motionState;
+            public SupabaseGameWorldRoamBoundsRecord roamBounds;
 
             public Transform VisualRoot
             {
@@ -226,6 +227,7 @@ namespace HabitHero.App
                 1f,
                 animation => playerAnimation = animation);
             UpdateWorldCamera();
+            petActors.Clear();
             RenderNpcPlaceholders();
             RenderWorldEntityPlaceholders();
 
@@ -402,20 +404,40 @@ namespace HabitHero.App
                     position,
                     scale,
                     color);
-                StartModelLoad(
-                    placeholder,
-                    npc.asset_key,
-                    new Vector3(npc.position_x, npc.position_y, npc.position_z),
-                    Vector3.zero,
-                    npc.npc_type == "roaming_pet" ? 1.3f : 1f);
+                if (npc.npc_type == "roaming_pet")
+                {
+                    HabitHeroWorldPetActor actor = CreatePetActor(
+                        npc.id,
+                        "wander",
+                        -1,
+                        0.28f,
+                        placeholder,
+                        npc.roam_bounds);
+                    petActors.Add(actor);
+                    StartModelLoad(
+                        placeholder,
+                        npc.asset_key,
+                        new Vector3(npc.position_x, npc.position_y, npc.position_z),
+                        Vector3.zero,
+                        Vector3.one * 1.3f,
+                        null,
+                        animation => AttachPetAnimation(actor, animation));
+                }
+                else
+                {
+                    StartModelLoad(
+                        placeholder,
+                        npc.asset_key,
+                        new Vector3(npc.position_x, npc.position_y, npc.position_z),
+                        Vector3.zero,
+                        1f);
+                }
             }
         }
 
         private void RenderWorldEntityPlaceholders()
         {
             if (latestGameData == null) return;
-
-            petActors.Clear();
 
             foreach (SupabaseChildWorldEntityRecord entity in
                 latestGameData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
@@ -462,7 +484,7 @@ namespace HabitHero.App
                         eulerAngles,
                         Vector3.one * visualScale,
                         null,
-                        animation => actor.animation = animation);
+                        animation => AttachPetAnimation(actor, animation));
                 }
                 else
                 {
@@ -512,7 +534,8 @@ namespace HabitHero.App
             string behaviorMode,
             int followIndex,
             float radius,
-            GameObject placeholder)
+            GameObject placeholder,
+            SupabaseGameWorldRoamBoundsRecord roamBounds = null)
         {
             return new HabitHeroWorldPetActor
             {
@@ -523,6 +546,7 @@ namespace HabitHero.App
                 followIndex = followIndex,
                 radius = radius,
                 placeholder = placeholder,
+                roamBounds = roamBounds,
                 motionState = HabitHeroPetMotion.CreateState(
                     "pet:" + (inventoryItemId ?? string.Empty) + ":" + followIndex),
             };
@@ -582,8 +606,24 @@ namespace HabitHero.App
                     Vector3.zero,
                     Vector3.one * GetModelScaleMultiplier("pet", item.asset_key),
                     null,
-                    animation => actor.animation = animation);
+                    animation => AttachPetAnimation(actor, animation));
             }
+        }
+
+        private static void AttachPetAnimation(
+            HabitHeroWorldPetActor actor,
+            HabitHeroWorldModelAnimation animation)
+        {
+            if (actor == null || animation == null) return;
+            actor.animation = animation;
+            if (actor.placeholder == null) return;
+            Vector3 loadedPosition = animation.transform.position;
+            Vector3 placeholderPosition = actor.placeholder.transform.position;
+            animation.transform.position = new Vector3(
+                placeholderPosition.x,
+                loadedPosition.y,
+                placeholderPosition.z);
+            animation.transform.rotation = actor.placeholder.transform.rotation;
         }
 
         private void UpdatePetActors(float deltaSeconds)
@@ -645,6 +685,26 @@ namespace HabitHero.App
                         Moving = false,
                         Blocked = false,
                     };
+                }
+
+                if (actor.roamBounds != null && actor.behaviorMode == "wander")
+                {
+                    Vector2 boundedPosition = HabitHeroPetMotion.ClampToBounds(
+                        step.Position,
+                        actor.roamBounds.minX,
+                        actor.roamBounds.maxX,
+                        actor.roamBounds.minZ,
+                        actor.roamBounds.maxZ);
+                    if (Vector2.Distance(step.Position, boundedPosition) > 0.0001f)
+                    {
+                        step.Position = boundedPosition;
+                        step.Moving = false;
+                        step.Blocked = true;
+                        actor.motionState.Facing = new Vector2(
+                            -actor.motionState.Facing.x,
+                            -actor.motionState.Facing.y);
+                        actor.motionState.NextTurnAt = actor.motionState.Clock;
+                    }
                 }
 
                 visualRoot.position = new Vector3(

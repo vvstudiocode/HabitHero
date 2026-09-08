@@ -55,6 +55,26 @@ namespace HabitHero.Platform
                 leaderRadius + Mathf.Max(followerRadius, 0.08f) + FollowClearance);
         }
 
+        public static Vector2 ClampToBounds(
+            Vector2 position,
+            float minX,
+            float maxX,
+            float minZ,
+            float maxZ)
+        {
+            if (float.IsNaN(minX) || float.IsNaN(maxX)
+                || float.IsNaN(minZ) || float.IsNaN(maxZ)
+                || float.IsInfinity(minX) || float.IsInfinity(maxX)
+                || float.IsInfinity(minZ) || float.IsInfinity(maxZ))
+            {
+                return position;
+            }
+
+            return new Vector2(
+                Mathf.Clamp(position.x, Mathf.Min(minX, maxX), Mathf.Max(minX, maxX)),
+                Mathf.Clamp(position.y, Mathf.Min(minZ, maxZ), Mathf.Max(minZ, maxZ)));
+        }
+
         public static HabitHeroPetMotionState CreateState(string seedText)
         {
             uint seed = HashSeed(seedText);

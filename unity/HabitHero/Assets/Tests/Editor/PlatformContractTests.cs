@@ -468,6 +468,28 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void PetMotionClampsRoamingNpcPositionsToServerBounds()
+        {
+            Vector2 bounded = HabitHeroPetMotion.ClampToBounds(
+                new Vector2(12f, -8f),
+                -4f,
+                6f,
+                -3f,
+                5f);
+
+            Assert.AreEqual(6f, bounded.x, 0.0001f);
+            Assert.AreEqual(-3f, bounded.y, 0.0001f);
+            Assert.AreEqual(
+                new Vector2(12f, -8f),
+                HabitHeroPetMotion.ClampToBounds(
+                    new Vector2(12f, -8f),
+                    float.NaN,
+                    6f,
+                    -3f,
+                    5f));
+        }
+
+        [Test]
         public void WorldJoystickClampsAndNormalizesTheMovementVector()
         {
             Vector2 clamped = HabitHeroWorldJoystickMath.GetValue(
