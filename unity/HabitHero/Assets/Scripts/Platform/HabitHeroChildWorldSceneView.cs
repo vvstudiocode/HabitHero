@@ -18,6 +18,7 @@ namespace HabitHero.App
         private GameObject player;
         private Text sceneStatus;
         private SupabaseChildWorldData latestData;
+        private SupabaseChildGameData latestGameData;
         private string sceneId;
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue;
         private Action onClose;
@@ -33,12 +34,14 @@ namespace HabitHero.App
 
         public void Show(
             SupabaseChildWorldData data,
+            SupabaseChildGameData gameData,
             string sceneId,
             Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue,
             Action onClose)
         {
             CloseInternal(false);
             latestData = data;
+            latestGameData = gameData;
             this.sceneId = sceneId;
             this.completeNpcDialogue = completeNpcDialogue;
             this.onClose = onClose;
@@ -47,6 +50,14 @@ namespace HabitHero.App
         public void ApplyData(SupabaseChildWorldData data)
         {
             latestData = data;
+            if (scenePanel == null) return;
+            CloseInternal(false);
+            Open();
+        }
+
+        public void ApplyGameData(SupabaseChildGameData data)
+        {
+            latestGameData = data;
             if (scenePanel == null) return;
             CloseInternal(false);
             Open();
@@ -66,6 +77,7 @@ namespace HabitHero.App
         {
             CloseInternal(false);
             latestData = null;
+            latestGameData = null;
             sceneId = null;
             completeNpcDialogue = null;
             onClose = null;
@@ -122,6 +134,7 @@ namespace HabitHero.App
                 new Vector3(0.75f, 1f, 0.75f),
                 HabitHeroUiFactory.AccentColor);
             RenderNpcPlaceholders();
+            RenderWorldEntityPlaceholders();
 
             renderTexture = new RenderTexture(720, 960, 24, RenderTextureFormat.ARGB32);
             renderTexture.name = "HabitHeroWorldRenderTexture";
@@ -151,6 +164,132 @@ namespace HabitHero.App
                     : new Color(0.52f, 0.68f, 0.95f, 1f);
                 CreatePrimitive(primitive, "Npc_" + npc.id, position, scale, color);
             }
+        }
+
+        private void RenderWorldEntityPlaceholders()
+        {
+            if (latestGameData == null) return;
+
+            foreach (SupabaseChildWorldEntityRecord entity in
+                latestGameData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
+            {
+                if (entity == null || !entity.is_active) continue;
+                SupabaseGameCatalogItemRecord item = FindCatalogItemForInventory(
+                    entity.inventory_item_id);
+                string assetKey = item == null ? entity.entity_kind : item.asset_key;
+                CreateWorldEntityPlaceholder(
+                    "WorldEntity_" + entity.id,
+                    entity.entity_kind,
+                    assetKey,
+                    entity.position_x,
+                    entity.position_y,
+                    entity.position_z,
+                    entity.rotation_x,
+                    entity.rotation_y,
+                    entity.rotation_z,
+                    entity.scale,
+                    false);
+            }
+
+            foreach (SupabaseChildSharedWorldDecorationRecord shared in
+                latestGameData.sharedWorldDecorations
+                    ?? new SupabaseChildSharedWorldDecorationRecord[0])
+            {
+                if (shared == null || !shared.is_active) continue;
+                CreateWorldEntityPlaceholder(
+                    "SharedWorldEntity_" + shared.id,
+                    "decoration",
+                    shared.asset_key,
+                    shared.position_x,
+                    shared.position_y,
+                    shared.position_z,
+                    shared.rotation_x,
+                    shared.rotation_y,
+                    shared.rotation_z,
+                    shared.scale,
+                    true);
+            }
+        }
+
+        private void CreateWorldEntityPlaceholder(
+            string name,
+            string entityKind,
+            string assetKey,
+            float positionX,
+            float positionY,
+            float positionZ,
+            float rotationX,
+            float rotationY,
+            float rotationZ,
+            float scale,
+            bool isShared)
+        {
+            bool isPet = entityKind == "pet";
+            float effectiveScale = Mathf.Clamp(scale <= 0f ? 1f : scale, 0.25f, 3f);
+            PrimitiveType primitiveType = isPet ? PrimitiveType.Sphere : PrimitiveType.Cube;
+            Vector3 baseScale = isPet
+                ? new Vector3(0.9f, 0.75f, 0.9f)
+                : new Vector3(1.35f, 0.7f, 1.1f);
+            float height = isPet ? 0.75f : 0.35f;
+            GameObject worldEntity = CreatePrimitive(
+                primitiveType,
+                name,
+                new Vector3(
+                    positionX,
+                    positionY + height * effectiveScale,
+                    positionZ),
+                baseScale * effectiveScale,
+                GetWorldEntityColor(entityKind, assetKey, isShared));
+            worldEntity.transform.localEulerAngles = new Vector3(
+                RadiansToDegrees(rotationX),
+                RadiansToDegrees(rotationY),
+                RadiansToDegrees(rotationZ));
+        }
+
+        private SupabaseGameCatalogItemRecord FindCatalogItemForInventory(
+            string inventoryItemId)
+        {
+            foreach (SupabaseChildInventoryItemRecord inventory in
+                latestGameData.inventory ?? new SupabaseChildInventoryItemRecord[0])
+            {
+                if (inventory == null || inventory.id != inventoryItemId) continue;
+                foreach (SupabaseGameCatalogItemRecord item in
+                    latestGameData.catalog ?? new SupabaseGameCatalogItemRecord[0])
+                {
+                    if (item != null && item.id == inventory.catalog_item_id) return item;
+                }
+            }
+
+            return null;
+        }
+
+        private static float RadiansToDegrees(float radians)
+        {
+            return radians * Mathf.Rad2Deg;
+        }
+
+        private static Color GetWorldEntityColor(
+            string entityKind,
+            string assetKey,
+            bool isShared)
+        {
+            if (isShared)
+            {
+                return new Color(0.75f, 0.46f, 0.92f, 1f);
+            }
+
+            if (entityKind == "pet")
+            {
+                return new Color(0.95f, 0.68f, 0.38f, 1f);
+            }
+
+            if (!string.IsNullOrWhiteSpace(assetKey)
+                && assetKey.IndexOf("book", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return new Color(0.38f, 0.72f, 0.92f, 1f);
+            }
+
+            return new Color(0.38f, 0.84f, 0.66f, 1f);
         }
 
         private void CreateOverlay(SupabaseGameWorldSceneRecord scene)

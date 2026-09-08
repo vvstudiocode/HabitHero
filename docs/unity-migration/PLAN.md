@@ -138,7 +138,9 @@ Partially completed locally:
 - The child game snapshot now also reads the server-owned world revision and
   active world entities. Decoration place, transform, remove, and collect-all
   actions use the existing revision-checked RPCs and reload the snapshot after
-  each mutation; authored 3D entity rendering and multi-copy placement remain
+  each mutation. It also reads the existing owner projection for shared
+  decorations, and the 3D runtime now renders owned/shared placeholder entities
+  from server transforms; authored assets and multi-copy placement remain
   pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block

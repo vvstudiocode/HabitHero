@@ -89,6 +89,26 @@ namespace HabitHero.Platform
     }
 
     [Serializable]
+    public sealed class SupabaseChildSharedWorldDecorationRecord
+    {
+        public string id;
+        public string source_inventory_item_id;
+        public string catalog_item_id;
+        public string asset_key;
+        public float position_x;
+        public float position_y;
+        public float position_z;
+        public float rotation_x;
+        public float rotation_y;
+        public float rotation_z;
+        public float scale;
+        public string behavior_mode;
+        public bool is_active;
+        public bool shared_by_me;
+        public string shared_source_display_name;
+    }
+
+    [Serializable]
     public sealed class SupabaseChildGameLoadoutRecord
     {
         public string child_profile_id;
@@ -128,6 +148,7 @@ namespace HabitHero.Platform
         public SupabaseChildGameLoadoutRecord loadout;
         public long worldRevision;
         public SupabaseChildWorldEntityRecord[] worldEntities;
+        public SupabaseChildSharedWorldDecorationRecord[] sharedWorldDecorations;
     }
 
     public sealed class SupabaseChildGameClient
@@ -201,6 +222,8 @@ namespace HabitHero.Platform
                 "updated_at.asc",
                 0,
                 cancellationToken);
+            Task<SupabaseChildSharedWorldDecorationRecord[]> sharedWorldDecorations =
+                LoadSharedWorldDecorationsAsync(childProfileId, cancellationToken);
 
             await Task.WhenAll(
                 catalog,
@@ -209,7 +232,8 @@ namespace HabitHero.Platform
                 inventory,
                 loadouts,
                 worldStates,
-                worldEntities);
+                worldEntities,
+                sharedWorldDecorations);
 
             SupabaseChildGameLoadoutRecord loadout = loadouts.Result.Length == 0
                 ? null
@@ -226,7 +250,41 @@ namespace HabitHero.Platform
                 loadout = loadout,
                 worldRevision = worldStates.Result.Length == 0 ? 0 : worldStates.Result[0].revision,
                 worldEntities = worldEntities.Result ?? new SupabaseChildWorldEntityRecord[0],
+                sharedWorldDecorations = sharedWorldDecorations.Result
+                    ?? new SupabaseChildSharedWorldDecorationRecord[0],
             };
+        }
+
+        private async Task<SupabaseChildSharedWorldDecorationRecord[]> LoadSharedWorldDecorationsAsync(
+            string childProfileId,
+            CancellationToken cancellationToken)
+        {
+            string response;
+            try
+            {
+                response = await restClient.CallRpcAsync(
+                    "get_my_shared_world_decorations",
+                    "{\"target_child_profile_id\":"
+                        + SupabaseJson.Quote(childProfileId)
+                        + "}",
+                    cancellationToken);
+            }
+            catch (SupabaseDataException exception) when (exception.StatusCode == 404)
+            {
+                return new SupabaseChildSharedWorldDecorationRecord[0];
+            }
+
+            SupabaseChildSharedWorldDecorationRecord[] rows;
+            string error;
+            if (!SupabaseJsonArrayParser.TryParseArray(
+                    response,
+                    out rows,
+                    out error))
+            {
+                throw new SupabaseDataException("共享世界裝飾無法解析：" + error);
+            }
+
+            return rows ?? new SupabaseChildSharedWorldDecorationRecord[0];
         }
 
         public Task<SupabaseGameMutationResult> PlaceWorldEntityAsync(

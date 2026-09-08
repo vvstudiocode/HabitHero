@@ -40,6 +40,7 @@ namespace HabitHero.App
         private SupabaseTaskTimerSessionRecord[] timerSessions;
         private GameObject taskListObject;
         private SupabaseChildHomeSnapshot latestSnapshot;
+        private SupabaseChildGameData latestGameData;
         private SupabaseChildWorldData latestWorldData;
         private SupabaseChildSocialData latestSocialData;
         private CancellationTokenSource timerLoopCancellation;
@@ -150,9 +151,46 @@ namespace HabitHero.App
             this.markWorldChatRead = markWorldChatRead;
             this.reportWorldChat = reportWorldChat;
             latestSnapshot = snapshot;
+            latestGameData = gameData;
             latestWorldData = worldData;
             latestSocialData = socialData;
             timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
+            Func<string, long, SupabaseFriendWorldTransform, string, int?, Task<SupabaseChildGameData>> placeWorldEntityWithApply = null;
+            if (placeWorldEntity != null)
+            {
+                placeWorldEntityWithApply = (inventoryItemId, expectedRevision, transform, behaviorMode, roamingSlot) =>
+                    ApplyGameDataMutationAsync(() => placeWorldEntity(
+                        inventoryItemId,
+                        expectedRevision,
+                        transform,
+                        behaviorMode,
+                        roamingSlot));
+            }
+            Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildGameData>> updateWorldEntityWithApply = null;
+            if (updateWorldEntity != null)
+            {
+                updateWorldEntityWithApply = (inventoryItemId, entityId, expectedRevision, transform) =>
+                    ApplyGameDataMutationAsync(() => updateWorldEntity(
+                        inventoryItemId,
+                        entityId,
+                        expectedRevision,
+                        transform));
+            }
+            Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntityWithApply = null;
+            if (removeWorldEntity != null)
+            {
+                removeWorldEntityWithApply = (inventoryItemId, entityId, expectedRevision) =>
+                    ApplyGameDataMutationAsync(() => removeWorldEntity(
+                        inventoryItemId,
+                        entityId,
+                        expectedRevision));
+            }
+            Func<long, Task<SupabaseChildGameData>> collectWorldDecorationsWithApply = null;
+            if (collectWorldDecorations != null)
+            {
+                collectWorldDecorationsWithApply = (expectedRevision) =>
+                    ApplyGameDataMutationAsync(() => collectWorldDecorations(expectedRevision));
+            }
             gameView = new HabitHeroChildGameView(canvasTransform, font);
             gameView.Show(
                 gameData,
@@ -161,10 +199,10 @@ namespace HabitHero.App
                 equipGameCharacter,
                 setFollowingPets,
                 setRoamingPets,
-                placeWorldEntity,
-                updateWorldEntity,
-                removeWorldEntity,
-                collectWorldDecorations);
+                placeWorldEntityWithApply,
+                updateWorldEntityWithApply,
+                removeWorldEntityWithApply,
+                collectWorldDecorationsWithApply);
             worldView = new HabitHeroChildWorldView(canvasTransform, font);
             worldView.Show(
                 worldData,
@@ -324,6 +362,7 @@ namespace HabitHero.App
             reportWorldChat = null;
             timerSessions = null;
             latestSnapshot = null;
+            latestGameData = null;
             latestWorldData = null;
             latestSocialData = null;
             pointsText = null;
@@ -375,6 +414,29 @@ namespace HabitHero.App
             return refreshed;
         }
 
+        private async Task<SupabaseChildGameData> ApplyGameDataMutationAsync(
+            Func<Task<SupabaseChildGameData>> mutation)
+        {
+            if (mutation == null)
+            {
+                throw new SupabaseDataException("遊戲資料服務尚未連線。");
+            }
+
+            SupabaseChildGameData refreshed = await mutation();
+            if (refreshed == null)
+            {
+                throw new SupabaseDataException("伺服器沒有回傳最新遊戲資料。");
+            }
+
+            latestGameData = refreshed;
+            if (worldSceneView != null)
+            {
+                worldSceneView.ApplyGameData(refreshed);
+            }
+
+            return refreshed;
+        }
+
         private async Task<SupabaseChildWorldData> CompleteNpcDialogueAndApplyAsync(
             Func<string, Task<SupabaseChildWorldData>> mutation,
             string npcId)
@@ -397,6 +459,7 @@ namespace HabitHero.App
 
             worldSceneView.Show(
                 latestWorldData,
+                latestGameData,
                 sceneId,
                 (npcId) => CompleteNpcDialogueAndApplyAsync(completeNpcDialogueWorld, npcId),
                 CloseWorldScene);

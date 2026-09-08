@@ -1821,6 +1821,10 @@ namespace HabitHero.Tests
                 new SupabaseHttpResponse(
                     200,
                     "[{\"id\":\"entity-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"inventory_item_id\":\"inventory-1\",\"entity_kind\":\"decoration\",\"position_x\":1.25,\"position_y\":0,\"position_z\":-2.5,\"rotation_x\":0,\"rotation_y\":15,\"rotation_z\":0,\"scale\":1,\"behavior_mode\":\"static\",\"roaming_slot\":null,\"world_layout_version\":1,\"is_active\":true}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"shared-1\",\"source_inventory_item_id\":null,\"catalog_item_id\":\"catalog-1\",\"asset_key\":\"decoration.study-desk\",\"position_x\":-2,\"position_y\":0,\"position_z\":2,\"rotation_x\":0,\"rotation_y\":0.5,\"rotation_z\":0,\"scale\":1,\"behavior_mode\":\"static\",\"is_active\":true,\"shared_by_me\":false,\"shared_source_display_name\":\"小明\"}]",
                     null));
             SupabaseChildGameClient client = new SupabaseChildGameClient(
                 new SupabaseRestClient(settings, authClient, dataTransport));
@@ -1846,8 +1850,12 @@ namespace HabitHero.Tests
             Assert.AreEqual("entity-1", data.worldEntities[0].id);
             Assert.AreEqual("decoration", data.worldEntities[0].entity_kind);
             Assert.AreEqual(15f, data.worldEntities[0].rotation_y);
+            Assert.AreEqual(1, data.sharedWorldDecorations.Length);
+            Assert.AreEqual("shared-1", data.sharedWorldDecorations[0].id);
+            Assert.AreEqual("decoration.study-desk", data.sharedWorldDecorations[0].asset_key);
+            Assert.AreEqual("小明", data.sharedWorldDecorations[0].shared_source_display_name);
 
-            Assert.AreEqual(7, dataTransport.Requests.Count);
+            Assert.AreEqual(8, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/game_catalog_items?select=*&order=sort_order.asc",
                 dataTransport.Requests[0].Url);
@@ -1869,6 +1877,12 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/child_world_entities?select=*&family_id=eq.family-1&child_profile_id=eq.child-1&order=updated_at.asc",
                 dataTransport.Requests[6].Url);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/get_my_shared_world_decorations",
+                dataTransport.Requests[7].Url);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"child-1\"}",
+                dataTransport.Requests[7].Body);
         }
 
         [Test]
