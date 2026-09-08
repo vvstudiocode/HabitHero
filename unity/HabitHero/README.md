@@ -54,8 +54,10 @@ Capacitor exports.
 The child home slice also reads rewards, tickets, point ledger, and wishlist
 items; reward redemption uses the server `redeem_reward` RPC, while wishlist
 add/cancel uses RLS-scoped PostgREST mutations followed by a fresh snapshot.
-The parent home slice reads the shared family data and reviews pending tasks via
-the existing review RPCs; it never awards points from client-side state.
+The parent home slice reads the shared family data, reviews pending tasks via
+the existing review RPCs, approves wishlist items through the server RPC, and
+fulfills pending reward tickets through an RLS-scoped update; it never awards
+points from client-side state.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

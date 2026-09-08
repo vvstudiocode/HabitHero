@@ -159,6 +159,22 @@ namespace HabitHero.Tests
                 "https://example.supabase.co/rest/v1/wishlist_items?id=eq.wish-1",
                 deleteRequest.Url);
             Assert.AreEqual("Bearer access-token", deleteRequest.Headers["Authorization"]);
+
+            SupabaseRequestContract updateRequest;
+            bool updateCreated = SupabaseRestRequestBuilder.TryBuildTableUpdate(
+                settings,
+                "reward_redemptions",
+                new[] { new SupabaseRestFilter("id", "eq", "ticket-1") },
+                "{\"status\":\"fulfilled\",\"fulfilled_at\":\"2026-09-08T00:00:00Z\"}",
+                "access-token",
+                out updateRequest,
+                out error);
+            Assert.IsTrue(updateCreated, error);
+            Assert.AreEqual("PATCH", updateRequest.Method);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/reward_redemptions?id=eq.ticket-1",
+                updateRequest.Url);
+            Assert.AreEqual("application/json", updateRequest.Headers["Content-Type"]);
         }
 
         [Test]
@@ -685,6 +701,88 @@ namespace HabitHero.Tests
             Assert.AreEqual(
                 "{\"target_task_id\":\"task-1\",\"approved\":true,\"approved_points\":10,\"feedback\":\"做得很好\",\"correction\":null,\"tone\":\"encouraging\",\"revision_note\":null}",
                 dataTransport.Requests[8].Body);
+        }
+
+        [Test]
+        public async Task ParentRewardActionsUseServerRpcAndRlsScopedTicketUpdate()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"reward-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"新畫筆\",\"points\":30,\"icon\":\"Star\"}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"parent-user-1\",\"role\":\"parent\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"parent-user-1\",\"role\":\"parent\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+            SupabaseChildWishlistRecord wishlist = new SupabaseChildWishlistRecord
+            {
+                id = "wish-1",
+                child_profile_id = "child-1",
+                name = "新畫筆",
+            };
+
+            SupabaseParentRewardMutationResult rewardResult =
+                await client.ApproveWishlistAndRefreshAsync(
+                    "family-1",
+                    wishlist,
+                    30,
+                    CancellationToken.None);
+            SupabaseParentRewardMutationResult ticketResult =
+                await client.FulfillTicketAndRefreshAsync(
+                    "ticket-1",
+                    CancellationToken.None);
+
+            Assert.AreEqual("reward-1", rewardResult.Reward.id);
+            Assert.IsNull(rewardResult.RefreshError);
+            Assert.IsNull(ticketResult.RefreshError);
+            Assert.AreEqual(18, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/approve_wishlist_item",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_family_id\":\"family-1\",\"target_child_profile_id\":\"child-1\",\"target_wishlist_id\":\"wish-1\",\"target_points\":30}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/reward_redemptions?id=eq.ticket-1",
+                dataTransport.Requests[9].Url);
+            StringAssert.Contains("\"status\":\"fulfilled\"", dataTransport.Requests[9].Body);
         }
 
         [Test]

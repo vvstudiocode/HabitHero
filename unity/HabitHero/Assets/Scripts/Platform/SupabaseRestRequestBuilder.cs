@@ -138,7 +138,7 @@ namespace HabitHero.Platform
             request = null;
             error = null;
 
-            if (!TryValidateTableMutation(settings, table, jsonBody, out error))
+            if (!TryValidateTableMutation(settings, table, jsonBody, "insert", out error))
             {
                 return false;
             }
@@ -151,6 +151,44 @@ namespace HabitHero.Platform
                 "POST",
                 settings.Url + "/rest/v1/" + table.Trim(),
                 headers,
+                jsonBody.Trim());
+            return true;
+        }
+
+        public static bool TryBuildTableUpdate(
+            SupabaseClientSettings settings,
+            string table,
+            IEnumerable<SupabaseRestFilter> filters,
+            string jsonBody,
+            string accessToken,
+            out SupabaseRequestContract request,
+            out string error)
+        {
+            request = null;
+            error = null;
+
+            if (!TryValidateTableMutation(settings, table, jsonBody, "update", out error))
+            {
+                return false;
+            }
+
+            StringBuilder query = new StringBuilder("?");
+            bool hasFilter;
+            if (!TryAppendFilters(query, filters, out hasFilter, out error))
+            {
+                return false;
+            }
+
+            if (!hasFilter)
+            {
+                error = "Supabase update requires at least one filter.";
+                return false;
+            }
+
+            request = new SupabaseRequestContract(
+                "PATCH",
+                settings.Url + "/rest/v1/" + table.Trim() + query,
+                CreateMutationHeaders(settings, accessToken, true),
                 jsonBody.Trim());
             return true;
         }
@@ -203,6 +241,7 @@ namespace HabitHero.Platform
             SupabaseClientSettings settings,
             string table,
             string jsonBody,
+            string operation,
             out string error)
         {
             error = null;
@@ -220,7 +259,7 @@ namespace HabitHero.Platform
 
             if (string.IsNullOrWhiteSpace(jsonBody))
             {
-                error = "Supabase insert body is missing.";
+                error = "Supabase " + operation + " body is missing.";
                 return false;
             }
 

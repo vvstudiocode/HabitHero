@@ -13,16 +13,23 @@ namespace HabitHero.App
         private readonly Font font;
         private GameObject panel;
         private GameObject reviewPanel;
+        private GameObject rewardPanel;
+        private GameObject wishlistApprovalPanel;
         private GameObject taskListObject;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
+        private Text rewardStatus;
+        private Text wishlistApprovalStatus;
         private InputField feedbackInput;
         private InputField revisionInput;
+        private InputField wishlistPointsInput;
         private Button approveButton;
         private Button reviseButton;
+        private Button approveWishlistButton;
         private SupabaseParentHomeSnapshot latestSnapshot;
         private SupabaseChildTaskRecord activeReviewTask;
+        private SupabaseChildWishlistRecord activeWishlist;
         private Func<
             SupabaseChildTaskRecord,
             bool,
@@ -32,6 +39,11 @@ namespace HabitHero.App
             string,
             string,
             Task<SupabaseParentTaskReviewResult>> reviewTask;
+        private Func<
+            SupabaseChildWishlistRecord,
+            int,
+            Task<SupabaseParentRewardMutationResult>> approveWishlist;
+        private Func<string, Task<SupabaseParentRewardMutationResult>> fulfillTicket;
 
         public HabitHeroParentHomeView(Transform canvasTransform, Font font)
         {
@@ -52,6 +64,11 @@ namespace HabitHero.App
                 string,
                 string,
                 Task<SupabaseParentTaskReviewResult>> reviewTask,
+            Func<
+                SupabaseChildWishlistRecord,
+                int,
+                Task<SupabaseParentRewardMutationResult>> approveWishlist,
+            Func<string, Task<SupabaseParentRewardMutationResult>> fulfillTicket,
             Action onSignOut)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
@@ -59,6 +76,8 @@ namespace HabitHero.App
             Dispose();
             latestSnapshot = snapshot;
             this.reviewTask = reviewTask;
+            this.approveWishlist = approveWishlist;
+            this.fulfillTicket = fulfillTicket;
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -124,6 +143,13 @@ namespace HabitHero.App
             layout.childForceExpandHeight = false;
 
             RenderSnapshot(snapshot);
+            Button rewardButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "願望與獎勵券",
+                new Vector2(0.08f, 0.21f),
+                new Vector2(0.92f, 0.27f));
+            rewardButton.onClick.AddListener(OpenRewardPanel);
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
@@ -138,12 +164,17 @@ namespace HabitHero.App
         public void Dispose()
         {
             reviewTask = null;
+            approveWishlist = null;
+            fulfillTicket = null;
             latestSnapshot = null;
             activeReviewTask = null;
+            activeWishlist = null;
             taskListObject = null;
             summaryText = null;
             statusText = null;
             CloseReviewPanel();
+            CloseWishlistApprovalPanel();
+            CloseRewardPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -218,6 +249,333 @@ namespace HabitHero.App
                     Vector2.zero,
                     Vector2.one);
             }
+        }
+
+        private void OpenRewardPanel()
+        {
+            if (latestSnapshot == null || approveWishlist == null || fulfillTicket == null)
+            {
+                SetStatus("願望與獎勵券尚未連線。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            CloseWishlistApprovalPanel();
+            rewardPanel = HabitHeroUiFactory.CreatePanel(
+                canvasTransform,
+                new Color(0.02f, 0.035f, 0.06f, 0.86f),
+                "ParentRewardPanel");
+            GameObject card = HabitHeroUiFactory.CreatePanel(
+                rewardPanel.transform,
+                HabitHeroUiFactory.PanelColor,
+                "ParentRewardCard");
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.08f, 0.1f);
+            cardRect.anchorMax = new Vector2(0.92f, 0.9f);
+            cardRect.offsetMin = Vector2.zero;
+            cardRect.offsetMax = Vector2.zero;
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "願望與獎勵券",
+                32,
+                TextAnchor.MiddleCenter,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.08f, 0.9f),
+                new Vector2(0.92f, 0.97f));
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "待核准願望",
+                19,
+                TextAnchor.MiddleLeft,
+                Color.white,
+                new Vector2(0.08f, 0.81f),
+                new Vector2(0.92f, 0.87f));
+            GameObject wishlistList = CreateVerticalList(
+                card.transform,
+                "ParentWishlistList",
+                new Vector2(0.08f, 0.54f),
+                new Vector2(0.92f, 0.8f));
+            int visibleWishlistCount = 0;
+            foreach (SupabaseChildWishlistRecord item in
+                latestSnapshot.wishlist ?? new SupabaseChildWishlistRecord[0])
+            {
+                if (item == null || visibleWishlistCount >= 4) continue;
+                Button wishlistButton = HabitHeroUiFactory.CreateButton(
+                    wishlistList.transform,
+                    font,
+                    GetChildName(item.child_profile_id) + "｜" + item.name + "｜核准",
+                    Vector2.zero,
+                    Vector2.one);
+                wishlistButton.GetComponent<RectTransform>().sizeDelta =
+                    new Vector2(0f, 48f);
+                wishlistButton.onClick.AddListener(() => OpenWishlistApprovalPanel(item));
+                visibleWishlistCount += 1;
+            }
+            if (visibleWishlistCount == 0)
+            {
+                CreateListEmptyMessage(wishlistList.transform, "目前沒有等待核准的願望。");
+            }
+
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "待領取獎勵券",
+                19,
+                TextAnchor.MiddleLeft,
+                Color.white,
+                new Vector2(0.08f, 0.47f),
+                new Vector2(0.92f, 0.53f));
+            GameObject ticketList = CreateVerticalList(
+                card.transform,
+                "ParentTicketList",
+                new Vector2(0.08f, 0.21f),
+                new Vector2(0.92f, 0.46f));
+            int visibleTicketCount = 0;
+            foreach (SupabaseChildTicketRecord ticket in
+                latestSnapshot.tickets ?? new SupabaseChildTicketRecord[0])
+            {
+                if (ticket == null || visibleTicketCount >= 4) continue;
+                bool isPending = ticket.status == "pending";
+                Button ticketButton = HabitHeroUiFactory.CreateButton(
+                    ticketList.transform,
+                    font,
+                    GetChildName(ticket.child_profile_id) + "｜" + ticket.reward_name
+                        + (isPending ? "｜標記已領取" : "｜" + ticket.status),
+                    Vector2.zero,
+                    Vector2.one);
+                ticketButton.GetComponent<RectTransform>().sizeDelta =
+                    new Vector2(0f, 48f);
+                ticketButton.interactable = isPending;
+                if (isPending)
+                {
+                    ticketButton.onClick.AddListener(() =>
+                        FulfillTicketAsync(ticket.id, ticketButton));
+                }
+                visibleTicketCount += 1;
+            }
+            if (visibleTicketCount == 0)
+            {
+                CreateListEmptyMessage(ticketList.transform, "目前沒有待領取的獎勵券。");
+            }
+
+            rewardStatus = HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "點選願望設定點數，或將獎勵券標記為已領取。",
+                15,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.13f),
+                new Vector2(0.92f, 0.2f));
+            Button closeButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "關閉",
+                new Vector2(0.35f, 0.04f),
+                new Vector2(0.65f, 0.11f));
+            closeButton.onClick.AddListener(CloseRewardPanel);
+        }
+
+        private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
+        {
+            if (wishlist == null || approveWishlist == null) return;
+            CloseRewardPanel();
+            CloseWishlistApprovalPanel();
+            activeWishlist = wishlist;
+            wishlistApprovalPanel = HabitHeroUiFactory.CreatePanel(
+                canvasTransform,
+                new Color(0.02f, 0.035f, 0.06f, 0.86f),
+                "WishlistApprovalPanel");
+            GameObject card = HabitHeroUiFactory.CreatePanel(
+                wishlistApprovalPanel.transform,
+                HabitHeroUiFactory.PanelColor,
+                "WishlistApprovalCard");
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.17f, 0.25f);
+            cardRect.anchorMax = new Vector2(0.83f, 0.75f);
+            cardRect.offsetMin = Vector2.zero;
+            cardRect.offsetMax = Vector2.zero;
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "核准願望",
+                32,
+                TextAnchor.MiddleCenter,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.08f, 0.82f),
+                new Vector2(0.92f, 0.95f));
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                GetChildName(wishlist.child_profile_id) + "想要：" + wishlist.name,
+                21,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                new Vector2(0.08f, 0.68f),
+                new Vector2(0.92f, 0.8f));
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "設定要新增到獎勵商店的點數",
+                18,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.57f),
+                new Vector2(0.92f, 0.65f));
+            wishlistPointsInput = HabitHeroUiFactory.CreateInput(
+                card.transform,
+                font,
+                "例如：30",
+                false,
+                new Vector2(0.24f, 0.43f),
+                new Vector2(0.76f, 0.55f));
+            wishlistPointsInput.contentType = InputField.ContentType.IntegerNumber;
+            wishlistPointsInput.lineType = InputField.LineType.SingleLine;
+            wishlistApprovalStatus = HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "核准後願望會變成孩子可兌換的獎勵。",
+                15,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.32f),
+                new Vector2(0.92f, 0.4f));
+            approveWishlistButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "核准並建立獎勵",
+                new Vector2(0.1f, 0.18f),
+                new Vector2(0.9f, 0.28f));
+            approveWishlistButton.onClick.AddListener(HandleWishlistApproval);
+            Button closeButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "先不要",
+                new Vector2(0.35f, 0.06f),
+                new Vector2(0.65f, 0.14f));
+            closeButton.onClick.AddListener(CloseWishlistApprovalPanel);
+        }
+
+        private async void HandleWishlistApproval()
+        {
+            if (activeWishlist == null || approveWishlist == null) return;
+            int points;
+            string pointsText = wishlistPointsInput == null
+                ? string.Empty
+                : wishlistPointsInput.text.Trim();
+            if (!int.TryParse(
+                    pointsText,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out points)
+                || points <= 0)
+            {
+                SetWishlistApprovalStatus("請輸入大於 0 的整數點數。", true);
+                return;
+            }
+
+            if (approveWishlistButton != null)
+            {
+                approveWishlistButton.interactable = false;
+            }
+            SetWishlistApprovalStatus("正在建立獎勵…", false);
+            try
+            {
+                SupabaseParentRewardMutationResult result = await approveWishlist(
+                    activeWishlist,
+                    points);
+                if (result == null || result.Reward == null)
+                {
+                    SetWishlistApprovalStatus("核准回應無效，請稍後再試。", true);
+                    return;
+                }
+                if (result.RefreshedSnapshot != null)
+                {
+                    ApplySnapshot(result.RefreshedSnapshot);
+                }
+
+                CloseWishlistApprovalPanel();
+                SetStatus(
+                    string.IsNullOrWhiteSpace(result.RefreshError)
+                        ? "願望已核准並加入獎勵商店。"
+                        : "願望已核准；最新資料稍後會自動更新。",
+                    false);
+            }
+            catch (Exception exception)
+            {
+                SetWishlistApprovalStatus("核准失敗：" + exception.Message, true);
+                if (approveWishlistButton != null)
+                {
+                    approveWishlistButton.interactable = true;
+                }
+            }
+        }
+
+        private async void FulfillTicketAsync(string ticketId, Button ticketButton)
+        {
+            if (fulfillTicket == null || string.IsNullOrWhiteSpace(ticketId)) return;
+            if (ticketButton != null) ticketButton.interactable = false;
+            SetRewardStatus("正在更新獎勵券…", false);
+            try
+            {
+                SupabaseParentRewardMutationResult result = await fulfillTicket(ticketId);
+                if (result != null && result.RefreshedSnapshot != null)
+                {
+                    ApplySnapshot(result.RefreshedSnapshot);
+                }
+
+                CloseRewardPanel();
+                SetStatus(
+                    result != null && string.IsNullOrWhiteSpace(result.RefreshError)
+                        ? "獎勵券已標記為已領取。"
+                        : "獎勵券已更新；最新資料稍後會自動更新。",
+                    false);
+            }
+            catch (Exception exception)
+            {
+                SetRewardStatus("更新失敗：" + exception.Message, true);
+                if (ticketButton != null) ticketButton.interactable = true;
+            }
+        }
+
+        private GameObject CreateVerticalList(
+            Transform parent,
+            string name,
+            Vector2 anchorMin,
+            Vector2 anchorMax)
+        {
+            GameObject list = new GameObject(
+                name,
+                typeof(RectTransform),
+                typeof(VerticalLayoutGroup));
+            list.transform.SetParent(parent, false);
+            RectTransform rect = list.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            VerticalLayoutGroup layout = list.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            return list;
+        }
+
+        private void CreateListEmptyMessage(Transform parent, string message)
+        {
+            HabitHeroUiFactory.CreateText(
+                parent,
+                font,
+                message,
+                17,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                Vector2.zero,
+                Vector2.one);
         }
 
         private void OpenReviewPanel(SupabaseChildTaskRecord task)
@@ -404,6 +762,31 @@ namespace HabitHero.App
             reviewStatus = null;
         }
 
+        private void CloseRewardPanel()
+        {
+            if (rewardPanel != null)
+            {
+                UnityEngine.Object.Destroy(rewardPanel);
+                rewardPanel = null;
+            }
+
+            rewardStatus = null;
+        }
+
+        private void CloseWishlistApprovalPanel()
+        {
+            if (wishlistApprovalPanel != null)
+            {
+                UnityEngine.Object.Destroy(wishlistApprovalPanel);
+                wishlistApprovalPanel = null;
+            }
+
+            activeWishlist = null;
+            wishlistPointsInput = null;
+            approveWishlistButton = null;
+            wishlistApprovalStatus = null;
+        }
+
         private void SetReviewStatus(string message, bool isError)
         {
             if (reviewStatus == null)
@@ -414,6 +797,34 @@ namespace HabitHero.App
 
             reviewStatus.text = message;
             reviewStatus.color = isError
+                ? new Color(1f, 0.52f, 0.52f, 1f)
+                : new Color(0.84f, 0.89f, 0.96f, 1f);
+        }
+
+        private void SetRewardStatus(string message, bool isError)
+        {
+            if (rewardStatus == null)
+            {
+                SetStatus(message, isError);
+                return;
+            }
+
+            rewardStatus.text = message;
+            rewardStatus.color = isError
+                ? new Color(1f, 0.52f, 0.52f, 1f)
+                : new Color(0.84f, 0.89f, 0.96f, 1f);
+        }
+
+        private void SetWishlistApprovalStatus(string message, bool isError)
+        {
+            if (wishlistApprovalStatus == null)
+            {
+                SetStatus(message, isError);
+                return;
+            }
+
+            wishlistApprovalStatus.text = message;
+            wishlistApprovalStatus.color = isError
                 ? new Color(1f, 0.52f, 0.52f, 1f)
                 : new Color(0.84f, 0.89f, 0.96f, 1f);
         }

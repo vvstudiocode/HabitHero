@@ -184,6 +184,31 @@ namespace HabitHero.Platform
             EnsureSuccess(response);
         }
 
+        public async Task UpdateAsync(
+            string table,
+            IEnumerable<SupabaseRestFilter> filters,
+            string jsonBody,
+            CancellationToken cancellationToken)
+        {
+            SupabaseSession session = await RequireSessionAsync(cancellationToken);
+            SupabaseRequestContract request;
+            string error;
+            if (!SupabaseRestRequestBuilder.TryBuildTableUpdate(
+                    settings,
+                    table,
+                    filters,
+                    jsonBody,
+                    session.AccessToken,
+                    out request,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            SupabaseHttpResponse response = await transport.SendAsync(request, cancellationToken);
+            EnsureSuccess(response);
+        }
+
         private async Task<SupabaseSession> RequireSessionAsync(
             CancellationToken cancellationToken)
         {

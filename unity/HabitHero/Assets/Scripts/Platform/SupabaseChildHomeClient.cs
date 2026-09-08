@@ -73,6 +73,7 @@ namespace HabitHero.Platform
     public sealed class SupabaseChildRewardRecord
     {
         public string id;
+        public string family_id;
         public string child_profile_id;
         public string name;
         public int points;
@@ -83,6 +84,7 @@ namespace HabitHero.Platform
     public sealed class SupabaseChildWishlistRecord
     {
         public string id;
+        public string family_id;
         public string child_profile_id;
         public string name;
     }

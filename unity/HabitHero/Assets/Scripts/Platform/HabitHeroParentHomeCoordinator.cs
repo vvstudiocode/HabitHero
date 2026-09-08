@@ -58,6 +58,14 @@ namespace HabitHero.App
                             tone,
                             revisionNote,
                             cancellationToken),
+                    (wishlist, points) => client.ApproveWishlistAndRefreshAsync(
+                        snapshot.familyId,
+                        wishlist,
+                        points,
+                        cancellationToken),
+                    (ticketId) => client.FulfillTicketAndRefreshAsync(
+                        ticketId,
+                        cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;
