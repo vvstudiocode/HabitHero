@@ -335,10 +335,12 @@ Current local verification:
 - Unity EditMode tests passed, including all current parent Supabase contract
   checks, notification payload parsing, safe-area mapping, and decoration
   placement rules (`131` tests in the latest run).
-- Unity PlayMode `BootstrapPlayModeTests` passed: the login shell and an
-  offline child-world fixture (NPC, roaming pet, following pet, decoration,
-  labels, shadows, decoration editor controls, and runtime cleanup) loaded with
-  no runtime errors in the headless Unity Editor run.
+- Unity PlayMode `BootstrapPlayModeTests` passed: the login shell, an offline
+  child-world fixture (NPC, roaming pet, following pet, decoration, labels,
+  shadows, decoration editor controls, and runtime cleanup), and a child/parent
+  home-surface fixture (major game, world, social, reward, ledger, settings,
+  growth, and parent reward-ledger panels) loaded and cleaned up with no
+  runtime errors in the headless Unity Editor run (`3/3` tests passed).
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
 - A direct Unity Editor smoke run also opened `Bootstrap`, entered Play Mode,
   rendered the login shell, and exited cleanly without a captured runtime
