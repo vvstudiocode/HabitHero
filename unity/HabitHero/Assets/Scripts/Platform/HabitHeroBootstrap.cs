@@ -203,7 +203,7 @@ namespace HabitHero.App
 
         private void BuildInterface()
         {
-            uiFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Font font = uiFont;
             canvas = HabitHeroUiFactory.CreateCanvas();
             HabitHeroUiFactory.CreatePanel(
