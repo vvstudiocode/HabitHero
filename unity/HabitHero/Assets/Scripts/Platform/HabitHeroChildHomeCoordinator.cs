@@ -48,7 +48,10 @@ namespace HabitHero.App
                 if (view == null) view = new HabitHeroChildHomeView(canvasTransform, font);
                 view.Show(
                     snapshot,
-                    (task) => SubmitTaskAsync(task, cancellationToken),
+                    (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
+                    (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
+                    (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
+                    (taskId) => client.ResumeAdventureTimerAsync(taskId, cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;
@@ -65,23 +68,19 @@ namespace HabitHero.App
             }
         }
 
-        private async Task SubmitTaskAsync(
+        private Task<SupabaseTaskCompletionResult> SubmitTaskAsync(
             SupabaseChildTaskRecord task,
+            SupabaseTaskCompletionDraft draft,
             CancellationToken cancellationToken)
         {
             if (task == null) throw new ArgumentNullException("task");
-
-            string reportMode = task.completion_report_mode;
-            string quickReport = reportMode == "quick" ? "smooth" : null;
-            string reflection = reportMode == "reflection" ? "在 Unity 完成任務" : null;
-            string mood = reportMode == "reflection" ? "happy" : null;
-            int? difficulty = reportMode == "reflection" ? 3 : (int?)null;
-            await client.SubmitTaskCompletionAsync(
+            if (draft == null) draft = new SupabaseTaskCompletionDraft();
+            return client.SubmitTaskCompletionAsync(
                 task.id,
-                quickReport,
-                reflection,
-                mood,
-                difficulty,
+                draft.quickReport,
+                draft.reflection,
+                draft.mood,
+                draft.difficulty,
                 cancellationToken);
         }
 

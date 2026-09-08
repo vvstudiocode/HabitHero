@@ -138,6 +138,24 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void JsonObjectParserMapsAdventureTimerRows()
+        {
+            SupabaseTaskTimerSessionRecord timer;
+            string error;
+
+            bool parsed = SupabaseJsonObjectParser.TryParseObject(
+                "{\"id\":\"timer-1\",\"task_id\":\"task-1\",\"status\":\"running\",\"accumulated_seconds\":12}",
+                out timer,
+                out error);
+
+            Assert.IsTrue(parsed, error);
+            Assert.AreEqual("timer-1", timer.id);
+            Assert.AreEqual("task-1", timer.task_id);
+            Assert.AreEqual("running", timer.status);
+            Assert.AreEqual(12, timer.accumulated_seconds);
+        }
+
+        [Test]
         public async Task ChildHomeClientLoadsRlsScopedDataAndSubmitsReflection()
         {
             SupabaseClientSettings settings = CreateSettings();
@@ -171,6 +189,7 @@ namespace HabitHero.Tests
                 new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(200, "[]", null),
                 new SupabaseHttpResponse(200, "[]", null));
             SupabaseRestClient restClient = new SupabaseRestClient(settings, authClient, dataTransport);
             SupabaseChildHomeClient childClient = new SupabaseChildHomeClient(restClient);
@@ -182,7 +201,7 @@ namespace HabitHero.Tests
             Assert.AreEqual(12, snapshot.child.points_balance);
             Assert.AreEqual(1, snapshot.tasks.Length);
             Assert.AreEqual("task-1", snapshot.tasks[0].id);
-            Assert.AreEqual(8, dataTransport.Requests.Count);
+            Assert.AreEqual(9, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/family_members?select=*&profile_id=eq.child-user-1",
                 dataTransport.Requests[0].Url);
@@ -201,15 +220,15 @@ namespace HabitHero.Tests
                 "happy",
                 3,
                 CancellationToken.None);
-            Assert.AreEqual(9, dataTransport.Requests.Count);
+            Assert.AreEqual(10, dataTransport.Requests.Count);
             Assert.AreEqual(
                 "https://example.supabase.co/rest/v1/rpc/submit_adventure_completion",
-                dataTransport.Requests[8].Url);
+                dataTransport.Requests[9].Url);
             StringAssert.Contains(
                 "{\"target_task_id\":\"task-1\",\"idempotency_key\":\""
                     + reflectionResult.IdempotencyKey
                     + "\",\"quick_report\":null,\"reflection\":\"完成了\",\"mood\":\"happy\",\"difficulty\":3}",
-                dataTransport.Requests[8].Body);
+                dataTransport.Requests[9].Body);
         }
 
         [Test]
@@ -327,6 +346,63 @@ namespace HabitHero.Tests
             StringAssert.Contains(
                 "\"idempotency_key\":\"" + queuedResult.IdempotencyKey + "\"",
                 flushTransport.Requests[0].Body);
+        }
+
+        [Test]
+        public async Task ChildTimerUsesServerAuthoritativeStartPauseAndResumeRpcs()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            FakeSupabaseTransport authTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                    null));
+            SupabaseAuthClient authClient = new SupabaseAuthClient(settings, authStore, authTransport);
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport timerTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"timer-1\",\"task_id\":\"task-1\",\"status\":\"running\",\"accumulated_seconds\":0}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"timer-1\",\"task_id\":\"task-1\",\"status\":\"paused\",\"accumulated_seconds\":42}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"timer-1\",\"task_id\":\"task-1\",\"status\":\"running\",\"accumulated_seconds\":42}",
+                    null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, timerTransport),
+                new InMemorySupabaseTaskCompletionQueueStore(),
+                () => true);
+
+            SupabaseTaskTimerSessionRecord started =
+                await client.StartAdventureTimerAsync("task-1", CancellationToken.None);
+            SupabaseTaskTimerSessionRecord paused =
+                await client.PauseAdventureTimerAsync("task-1", CancellationToken.None);
+            SupabaseTaskTimerSessionRecord resumed =
+                await client.ResumeAdventureTimerAsync("task-1", CancellationToken.None);
+
+            Assert.AreEqual("running", started.status);
+            Assert.AreEqual("paused", paused.status);
+            Assert.AreEqual(42, paused.accumulated_seconds);
+            Assert.AreEqual("running", resumed.status);
+            Assert.AreEqual(3, timerTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/start_adventure_timer",
+                timerTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\"}",
+                timerTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/resume_adventure_timer",
+                timerTransport.Requests[2].Url);
         }
 
         [Test]

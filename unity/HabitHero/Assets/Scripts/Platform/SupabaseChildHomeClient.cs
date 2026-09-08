@@ -108,6 +108,23 @@ namespace HabitHero.Platform
         public string created_at;
     }
 
+    [Serializable]
+    public sealed class SupabaseTaskTimerSessionRecord
+    {
+        public string id;
+        public string family_id;
+        public string child_profile_id;
+        public string task_id;
+        public string status;
+        public int accumulated_seconds;
+        public string started_at;
+        public string last_resumed_at;
+        public string paused_at;
+        public string completed_at;
+        public string created_at;
+        public string updated_at;
+    }
+
     public sealed class SupabaseChildHomeSnapshot
     {
         public string familyId;
@@ -117,6 +134,7 @@ namespace HabitHero.Platform
         public SupabaseChildWishlistRecord[] wishlist;
         public SupabaseChildTicketRecord[] tickets;
         public SupabaseChildLedgerRecord[] ledger;
+        public SupabaseTaskTimerSessionRecord[] timers;
     }
 
     public sealed class SupabaseTaskCompletionResult
@@ -124,6 +142,14 @@ namespace HabitHero.Platform
         public string IdempotencyKey { get; set; }
 
         public bool QueuedForRetry { get; set; }
+    }
+
+    public sealed class SupabaseTaskCompletionDraft
+    {
+        public string quickReport;
+        public string reflection;
+        public string mood;
+        public int? difficulty;
     }
 
     public sealed class SupabaseTaskCompletionFlushResult
@@ -268,8 +294,15 @@ namespace HabitHero.Platform
                 "created_at.desc",
                 100,
                 cancellationToken);
+            Task<SupabaseTaskTimerSessionRecord[]> timers = restClient.SelectManyAsync<SupabaseTaskTimerSessionRecord>(
+                "adventure_timer_sessions",
+                childFilters,
+                "*",
+                "updated_at.desc",
+                0,
+                cancellationToken);
 
-            await Task.WhenAll(tasks, rewards, wishlist, tickets, ledger);
+            await Task.WhenAll(tasks, rewards, wishlist, tickets, ledger, timers);
             List<SupabaseTaskCompletionQueueEntry> pendingCompletions =
                 completionQueue.Load(userId);
             foreach (SupabaseChildTaskRecord task in tasks.Result)
@@ -292,7 +325,29 @@ namespace HabitHero.Platform
                 wishlist = wishlist.Result,
                 tickets = tickets.Result,
                 ledger = ledger.Result,
+                timers = timers.Result,
             };
+        }
+
+        public Task<SupabaseTaskTimerSessionRecord> StartAdventureTimerAsync(
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            return CallTimerRpcAsync("start_adventure_timer", taskId, cancellationToken);
+        }
+
+        public Task<SupabaseTaskTimerSessionRecord> PauseAdventureTimerAsync(
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            return CallTimerRpcAsync("pause_adventure_timer", taskId, cancellationToken);
+        }
+
+        public Task<SupabaseTaskTimerSessionRecord> ResumeAdventureTimerAsync(
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            return CallTimerRpcAsync("resume_adventure_timer", taskId, cancellationToken);
         }
 
         public async Task SubmitTaskReflectionAsync(
@@ -451,6 +506,34 @@ namespace HabitHero.Platform
                 "submit_adventure_completion",
                 body,
                 cancellationToken);
+        }
+
+        private async Task<SupabaseTaskTimerSessionRecord> CallTimerRpcAsync(
+            string functionName,
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(taskId))
+            {
+                throw new SupabaseDataException("計時任務 ID 不可為空。");
+            }
+
+            string body = "{\"target_task_id\":" + SupabaseJson.Quote(taskId) + "}";
+            string response = await restClient.CallRpcAsync(
+                functionName,
+                body,
+                cancellationToken);
+            SupabaseTaskTimerSessionRecord session;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out session,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            return session;
         }
 
         private static SupabaseTaskCompletionResult SentResult(string idempotencyKey)
