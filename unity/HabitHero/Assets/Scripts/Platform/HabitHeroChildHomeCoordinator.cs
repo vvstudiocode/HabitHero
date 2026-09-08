@@ -52,6 +52,7 @@ namespace HabitHero.App
                     (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
                     (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
                     (taskId) => client.ResumeAdventureTimerAsync(taskId, cancellationToken),
+                    (rewardId) => client.RedeemRewardAndRefreshAsync(rewardId, cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;

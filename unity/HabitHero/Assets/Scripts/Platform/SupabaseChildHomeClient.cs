@@ -168,6 +168,15 @@ namespace HabitHero.Platform
         public string Error { get; set; }
     }
 
+    public sealed class SupabaseRewardRedemptionResult
+    {
+        public SupabaseChildTicketRecord Ticket { get; set; }
+
+        public SupabaseChildHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
     public sealed class SupabaseChildHomeClient
     {
         private readonly SupabaseRestClient restClient;
@@ -488,6 +497,56 @@ namespace HabitHero.Platform
             CancellationToken cancellationToken)
         {
             return CallTimerRpcAsync("resume_adventure_timer", taskId, cancellationToken);
+        }
+
+        public async Task<SupabaseChildTicketRecord> RedeemRewardAsync(
+            string rewardId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(rewardId))
+            {
+                throw new SupabaseDataException("獎勵 ID 不可為空。");
+            }
+
+            string response = await restClient.CallRpcAsync(
+                "redeem_reward",
+                "{\"target_reward_id\":" + SupabaseJson.Quote(rewardId) + "}",
+                cancellationToken);
+            SupabaseChildTicketRecord ticket;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out ticket,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            return ticket;
+        }
+
+        public async Task<SupabaseRewardRedemptionResult> RedeemRewardAndRefreshAsync(
+            string rewardId,
+            CancellationToken cancellationToken)
+        {
+            SupabaseRewardRedemptionResult result = new SupabaseRewardRedemptionResult
+            {
+                Ticket = await RedeemRewardAsync(rewardId, cancellationToken),
+            };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
         }
 
         public async Task SubmitTaskReflectionAsync(

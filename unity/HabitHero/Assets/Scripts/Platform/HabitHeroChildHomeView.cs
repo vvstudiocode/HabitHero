@@ -16,11 +16,13 @@ namespace HabitHero.App
         private GameObject panel;
         private GameObject reportPanel;
         private GameObject timerPanel;
+        private GameObject rewardPanel;
         private Text statusText;
         private Text pointsText;
         private Text reportStatus;
         private Text timerText;
         private Text timerStatus;
+        private Text rewardStatus;
         private InputField reflectionInput;
         private Button reportSubmitButton;
         private Button timerActionButton;
@@ -29,6 +31,7 @@ namespace HabitHero.App
         private SupabaseTaskTimerSessionRecord activeTimer;
         private SupabaseTaskTimerSessionRecord[] timerSessions;
         private GameObject taskListObject;
+        private SupabaseChildHomeSnapshot latestSnapshot;
         private CancellationTokenSource timerLoopCancellation;
         private Func<
             SupabaseChildTaskRecord,
@@ -37,6 +40,7 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> startTimer;
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer;
         private Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer;
+        private Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward;
         private string selectedMood;
         private int selectedDifficulty;
 
@@ -57,6 +61,7 @@ namespace HabitHero.App
             Func<string, Task<SupabaseTaskTimerSessionRecord>> startTimer,
             Func<string, Task<SupabaseTaskTimerSessionRecord>> pauseTimer,
             Func<string, Task<SupabaseTaskTimerSessionRecord>> resumeTimer,
+            Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward,
             Action onSignOut)
         {
             if (snapshot == null || snapshot.child == null)
@@ -69,6 +74,8 @@ namespace HabitHero.App
             this.startTimer = startTimer;
             this.pauseTimer = pauseTimer;
             this.resumeTimer = resumeTimer;
+            this.redeemReward = redeemReward;
+            latestSnapshot = snapshot;
             timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
@@ -127,6 +134,14 @@ namespace HabitHero.App
 
             RenderTaskList(snapshot);
 
+            Button rewardsButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "獎勵商店",
+                new Vector2(0.08f, 0.14f),
+                new Vector2(0.92f, 0.2f));
+            rewardsButton.onClick.AddListener(OpenRewardPanel);
+
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
@@ -144,11 +159,14 @@ namespace HabitHero.App
             startTimer = null;
             pauseTimer = null;
             resumeTimer = null;
+            redeemReward = null;
             timerSessions = null;
+            latestSnapshot = null;
             pointsText = null;
             taskListObject = null;
             CloseReportPanel();
             CloseTimerPanel();
+            CloseRewardPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -161,6 +179,7 @@ namespace HabitHero.App
         public void ApplySnapshot(SupabaseChildHomeSnapshot snapshot)
         {
             if (snapshot == null || snapshot.child == null || panel == null) return;
+            latestSnapshot = snapshot;
             timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
             if (pointsText != null)
             {
@@ -214,6 +233,172 @@ namespace HabitHero.App
                     Vector2.zero,
                     Vector2.one);
             }
+        }
+
+        private void OpenRewardPanel()
+        {
+            if (latestSnapshot == null || redeemReward == null)
+            {
+                SetStatus("獎勵商店尚未連線。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            rewardPanel = HabitHeroUiFactory.CreatePanel(
+                canvasTransform,
+                new Color(0.02f, 0.035f, 0.06f, 0.86f),
+                "RewardPanel");
+            GameObject card = HabitHeroUiFactory.CreatePanel(
+                rewardPanel.transform,
+                HabitHeroUiFactory.PanelColor,
+                "RewardCard");
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.1f, 0.16f);
+            cardRect.anchorMax = new Vector2(0.9f, 0.84f);
+            cardRect.offsetMin = Vector2.zero;
+            cardRect.offsetMax = Vector2.zero;
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "獎勵商店",
+                34,
+                TextAnchor.MiddleCenter,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.08f, 0.87f),
+                new Vector2(0.92f, 0.97f));
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "目前點數：" + latestSnapshot.child.points_balance,
+                18,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                new Vector2(0.08f, 0.79f),
+                new Vector2(0.92f, 0.87f));
+
+            GameObject rewardList = new GameObject(
+                "RewardList",
+                typeof(RectTransform),
+                typeof(VerticalLayoutGroup));
+            rewardList.transform.SetParent(card.transform, false);
+            RectTransform rewardListRect = rewardList.GetComponent<RectTransform>();
+            rewardListRect.anchorMin = new Vector2(0.08f, 0.22f);
+            rewardListRect.anchorMax = new Vector2(0.92f, 0.77f);
+            rewardListRect.offsetMin = Vector2.zero;
+            rewardListRect.offsetMax = Vector2.zero;
+            VerticalLayoutGroup layout = rewardList.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 10f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            int visibleRewardCount = 0;
+            foreach (SupabaseChildRewardRecord reward in
+                latestSnapshot.rewards ?? new SupabaseChildRewardRecord[0])
+            {
+                if (reward == null || visibleRewardCount >= 8) continue;
+                Button rewardButton = HabitHeroUiFactory.CreateButton(
+                    rewardList.transform,
+                    font,
+                    reward.name + "　" + reward.points + " 點",
+                    Vector2.zero,
+                    Vector2.one);
+                rewardButton.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 52f);
+                bool canAfford = latestSnapshot.child.points_balance >= reward.points;
+                rewardButton.interactable = canAfford;
+                if (canAfford)
+                {
+                    rewardButton.onClick.AddListener(() =>
+                        RedeemRewardAsync(reward, rewardButton));
+                }
+                visibleRewardCount += 1;
+            }
+
+            if (visibleRewardCount == 0)
+            {
+                HabitHeroUiFactory.CreateText(
+                    rewardList.transform,
+                    font,
+                    "目前還沒有可兌換的獎勵。",
+                    21,
+                    TextAnchor.MiddleCenter,
+                    new Color(0.84f, 0.89f, 0.96f, 1f),
+                    Vector2.zero,
+                    Vector2.one);
+            }
+
+            rewardStatus = HabitHeroUiFactory.CreateText(
+                card.transform,
+                font,
+                "點選想兌換的獎勵。",
+                16,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.13f),
+                new Vector2(0.92f, 0.2f));
+            Button closeButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "關閉",
+                new Vector2(0.35f, 0.04f),
+                new Vector2(0.65f, 0.11f));
+            closeButton.onClick.AddListener(CloseRewardPanel);
+        }
+
+        private async void RedeemRewardAsync(
+            SupabaseChildRewardRecord reward,
+            Button rewardButton)
+        {
+            if (reward == null || redeemReward == null) return;
+            if (rewardButton != null) rewardButton.interactable = false;
+            SetRewardStatus("正在兌換「" + reward.name + "」…", false);
+            try
+            {
+                SupabaseRewardRedemptionResult result = await redeemReward(reward.id);
+                if (result == null || result.Ticket == null)
+                {
+                    SetRewardStatus("兌換回應無效，請稍後再試。", true);
+                    return;
+                }
+
+                if (result.RefreshedSnapshot != null)
+                {
+                    ApplySnapshot(result.RefreshedSnapshot);
+                }
+
+                CloseRewardPanel();
+                SetStatus(
+                    string.IsNullOrWhiteSpace(result.RefreshError)
+                        ? "獎勵已兌換，點數與紀錄已更新。"
+                        : "獎勵已兌換；點數更新稍後會自動重試。",
+                    false);
+            }
+            catch (Exception exception)
+            {
+                SetRewardStatus("兌換失敗：" + exception.Message, true);
+                if (rewardButton != null) rewardButton.interactable = true;
+            }
+        }
+
+        private void CloseRewardPanel()
+        {
+            if (rewardPanel != null)
+            {
+                UnityEngine.Object.Destroy(rewardPanel);
+                rewardPanel = null;
+            }
+
+            rewardStatus = null;
+        }
+
+        private void SetRewardStatus(string message, bool isError)
+        {
+            if (rewardStatus == null) return;
+            rewardStatus.text = message;
+            rewardStatus.color = isError
+                ? new Color(1f, 0.52f, 0.52f, 1f)
+                : new Color(0.84f, 0.89f, 0.96f, 1f);
         }
 
         private void HandleTaskClicked(

@@ -390,6 +390,76 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task RewardRedemptionUsesTheServerRpcAndRefreshesTheWallet()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"id\":\"ticket-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"reward_id\":\"reward-1\",\"reward_name\":\"看一集動畫\",\"reward_icon\":\"Gift\",\"points_cost\":20,\"status\":\"pending\"}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"member-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"role\":\"child\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"child-1\",\"family_id\":\"family-1\",\"profile_id\":\"child-user-1\",\"display_name\":\"小明\",\"points_balance\":22}]",
+                    null),
+                new SupabaseHttpResponse(200, "{}", null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"reward-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"看一集動畫\",\"points\":20,\"icon\":\"Gift\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"ticket-1\",\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"reward_id\":\"reward-1\",\"reward_name\":\"看一集動畫\",\"reward_icon\":\"Gift\",\"points_cost\":20,\"status\":\"pending\"}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"ledger-1\",\"child_profile_id\":\"child-1\",\"points_delta\":-20,\"entry_type\":\"reward_redemption\"}]",
+                    null),
+                new SupabaseHttpResponse(200, "[]", null));
+            SupabaseChildHomeClient client = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport),
+                new InMemorySupabaseTaskCompletionQueueStore(),
+                new InMemorySupabaseChildHomeSnapshotStore(),
+                () => true);
+
+            SupabaseRewardRedemptionResult result =
+                await client.RedeemRewardAndRefreshAsync("reward-1", CancellationToken.None);
+
+            Assert.IsNotNull(result.Ticket);
+            Assert.AreEqual("ticket-1", result.Ticket.id);
+            Assert.IsNull(result.RefreshError);
+            Assert.AreEqual(22, result.RefreshedSnapshot.child.points_balance);
+            Assert.AreEqual("reward_redemption", result.RefreshedSnapshot.ledger[0].entry_type);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/redeem_reward",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_reward_id\":\"reward-1\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(10, dataTransport.Requests.Count);
+        }
+
+        [Test]
         public void TaskCompletionQueueDeduplicatesByTaskAndPersistsOwnerScope()
         {
             InMemorySupabaseTaskCompletionQueueStore store =
