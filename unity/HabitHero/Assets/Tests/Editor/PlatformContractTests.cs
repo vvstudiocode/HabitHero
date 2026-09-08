@@ -188,6 +188,12 @@ namespace HabitHero.Tests
                 4.8f);
             Assert.AreEqual(4.45f, clamped.x, 0.0001f);
             Assert.AreEqual(-4.45f, clamped.y, 0.0001f);
+
+            HabitHeroWorldCollisionProxy scaled =
+                HabitHeroWorldCollision.CreateScaledProxy(2f, -1f, 0.4f, 2f);
+            Assert.IsNotNull(scaled);
+            Assert.AreEqual(0.8f, scaled.Radius, 0.0001f);
+            Assert.IsNull(HabitHeroWorldCollision.CreateScaledProxy(0f, 0f, 0f, 1f));
         }
 
         [Test]

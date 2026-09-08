@@ -24,7 +24,7 @@ namespace HabitHero.App
         private SupabaseChildGameData latestGameData;
         private string sceneId;
         private HabitHeroWorldSceneProfile activeSceneProfile;
-        private HabitHeroWorldCollisionProxy[] authoredCollisionProxies =
+        private HabitHeroWorldCollisionProxy[] worldCollisionProxies =
             new HabitHeroWorldCollisionProxy[0];
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue;
         private Action onClose;
@@ -106,12 +106,7 @@ namespace HabitHero.App
             modelLoadingCancellation = new CancellationTokenSource();
             activeSceneProfile = ResolveSceneProfile(scene.id);
             float movementBoundary = activeSceneProfile.MovementBoundary;
-            if (!HabitHeroWorldCollision.TryGetAuthoredProxies(
-                scene.id,
-                out authoredCollisionProxies))
-            {
-                authoredCollisionProxies = new HabitHeroWorldCollisionProxy[0];
-            }
+            worldCollisionProxies = BuildWorldCollisionProxies(scene.id);
             GameObject cameraObject = new GameObject("ChildWorldCamera");
             cameraObject.transform.SetParent(worldRoot.transform, false);
             worldCamera = cameraObject.AddComponent<Camera>();
@@ -162,7 +157,7 @@ namespace HabitHero.App
                     activeSceneProfile.SpawnPosition.z),
                 0.35f,
                 movementBoundary,
-                authoredCollisionProxies);
+                worldCollisionProxies);
             Vector3 spawnPosition = new Vector3(
                 safeSpawn.x,
                 activeSceneProfile.SpawnPosition.y,
@@ -186,6 +181,58 @@ namespace HabitHero.App
             renderTexture.name = "HabitHeroWorldRenderTexture";
             renderTexture.Create();
             worldCamera.targetTexture = renderTexture;
+        }
+
+        private HabitHeroWorldCollisionProxy[] BuildWorldCollisionProxies(
+            string targetSceneId)
+        {
+            List<HabitHeroWorldCollisionProxy> result =
+                new List<HabitHeroWorldCollisionProxy>();
+            HabitHeroWorldCollisionProxy[] authoredProxies;
+            if (HabitHeroWorldCollision.TryGetAuthoredProxies(
+                targetSceneId,
+                out authoredProxies))
+            {
+                result.AddRange(authoredProxies);
+            }
+
+            if (latestGameData == null) return result.ToArray();
+            foreach (SupabaseChildWorldEntityRecord entity in
+                latestGameData.worldEntities ?? new SupabaseChildWorldEntityRecord[0])
+            {
+                if (entity == null
+                    || !entity.is_active
+                    || entity.entity_kind != "decoration") continue;
+                SupabaseGameCatalogItemRecord item = FindCatalogItemForInventory(
+                    entity.inventory_item_id);
+                if (item == null) continue;
+                HabitHeroWorldCollisionProxy proxy =
+                    HabitHeroWorldCollision.CreateScaledProxy(
+                        entity.position_x,
+                        entity.position_z,
+                        item.collision_radius,
+                        entity.scale);
+                if (proxy != null) result.Add(proxy);
+            }
+
+            foreach (SupabaseChildSharedWorldDecorationRecord shared in
+                latestGameData.sharedWorldDecorations
+                    ?? new SupabaseChildSharedWorldDecorationRecord[0])
+            {
+                if (shared == null || !shared.is_active) continue;
+                SupabaseGameCatalogItemRecord item = FindCatalogItem(
+                    shared.catalog_item_id);
+                if (item == null) continue;
+                HabitHeroWorldCollisionProxy proxy =
+                    HabitHeroWorldCollision.CreateScaledProxy(
+                        shared.position_x,
+                        shared.position_z,
+                        item.collision_radius,
+                        shared.scale);
+                if (proxy != null) result.Add(proxy);
+            }
+
+            return result.ToArray();
         }
 
         private void RenderAuthoredWorldModules(string targetSceneId)
@@ -834,7 +881,7 @@ namespace HabitHero.App
                     position.x + direction.x * 0.8f,
                     position.z + direction.y * 0.8f),
                 0.35f,
-                authoredCollisionProxies,
+                worldCollisionProxies,
                 movementBoundary);
             position.x = next.x;
             position.z = next.y;
@@ -1004,7 +1051,7 @@ namespace HabitHero.App
             runtimeMaterials.Clear();
             worldCamera = null;
             player = null;
-            authoredCollisionProxies = new HabitHeroWorldCollisionProxy[0];
+            worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             activeSceneProfile = null;
             sceneStatus = null;
             if (notify && onClose != null) onClose();

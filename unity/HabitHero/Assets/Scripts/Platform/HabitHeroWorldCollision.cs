@@ -88,6 +88,29 @@ namespace HabitHero.Platform
             return next;
         }
 
+        public static HabitHeroWorldCollisionProxy CreateScaledProxy(
+            float x,
+            float z,
+            float collisionRadius,
+            float scale)
+        {
+            if (!IsFinite(x)
+                || !IsFinite(z)
+                || !IsFinite(collisionRadius)
+                || !IsFinite(scale)
+                || collisionRadius <= 0f
+                || scale <= 0f)
+            {
+                return null;
+            }
+
+            float safeScale = Mathf.Clamp(scale, 0.25f, 3f);
+            return new HabitHeroWorldCollisionProxy(
+                x,
+                z,
+                Mathf.Max(MinimumProxyRadius, collisionRadius * safeScale));
+        }
+
         public static Vector2 FindClearSpawn(
             Vector2 preferred,
             float radius,
