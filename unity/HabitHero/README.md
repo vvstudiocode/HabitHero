@@ -114,6 +114,14 @@ reads the existing
 uses the same Open-Meteo fallback as the Web client before falling back to
 clear weather. It applies Taipei day/night lighting plus rain particles to the
 Unity scene.
+Loaded character and pet GLBs attach a runtime animation adapter to glTFast's
+Legacy `Animation` output. It prefers the canonical `Idle` and `Walk_InPlace`
+clips, accepts the existing Web aliases for legacy assets, configures `Sit` as
+hold and `Wave`/`Dance` as looping optional actions, and drives the child
+avatar's idle/walk state and facing direction from world movement. Existing
+five-action assets and their root-motion contract remain read-only; pet
+follow/roam steering, grounding/labels/shadows, and device visual evidence are
+still pending.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device

@@ -28,6 +28,7 @@ namespace HabitHero.App
         private float atmosphereRefreshTimer;
         private RenderTexture renderTexture;
         private GameObject player;
+        private HabitHeroWorldModelAnimation playerAnimation;
         private Text sceneStatus;
         private SupabaseChildWorldData latestData;
         private SupabaseChildGameData latestGameData;
@@ -195,7 +196,8 @@ namespace HabitHero.App
                 FindEquippedCharacterAssetKey(),
                 spawnPosition,
                 Vector3.zero,
-                1f);
+                1f,
+                animation => playerAnimation = animation);
             UpdateWorldCamera();
             RenderNpcPlaceholders();
             RenderWorldEntityPlaceholders();
@@ -707,14 +709,17 @@ namespace HabitHero.App
             string assetKey,
             Vector3 groundPosition,
             Vector3 eulerAngles,
-            float visualScale)
+            float visualScale,
+            Action<HabitHeroWorldModelAnimation> onAnimationLoaded = null)
         {
             StartModelLoadInternal(
                 placeholder,
                 assetKey,
                 groundPosition,
                 eulerAngles,
-                Vector3.one * Mathf.Clamp(visualScale, 0.05f, 8f));
+                Vector3.one * Mathf.Clamp(visualScale, 0.05f, 8f),
+                null,
+                onAnimationLoaded);
         }
 
         private void StartModelLoad(
@@ -723,7 +728,8 @@ namespace HabitHero.App
             Vector3 groundPosition,
             Vector3 eulerAngles,
             Vector3 visualScale,
-            Action<Bounds> onModelLoaded = null)
+            Action<Bounds> onModelLoaded = null,
+            Action<HabitHeroWorldModelAnimation> onAnimationLoaded = null)
         {
             StartModelLoadInternal(
                 placeholder,
@@ -731,7 +737,8 @@ namespace HabitHero.App
                 groundPosition,
                 eulerAngles,
                 ClampAuthoredModuleScale(visualScale),
-                onModelLoaded);
+                onModelLoaded,
+                onAnimationLoaded);
         }
 
         private void StartModelLoadInternal(
@@ -740,7 +747,8 @@ namespace HabitHero.App
             Vector3 groundPosition,
             Vector3 eulerAngles,
             Vector3 visualScale,
-            Action<Bounds> onModelLoaded = null)
+            Action<Bounds> onModelLoaded = null,
+            Action<HabitHeroWorldModelAnimation> onAnimationLoaded = null)
         {
             if (placeholder == null
                 || !HabitHeroGameAssetCatalog.TryResolveModelUrl(
@@ -761,7 +769,8 @@ namespace HabitHero.App
                 visualScale,
                 worldRoot,
                 modelLoadingCancellation.Token,
-                onModelLoaded);
+                onModelLoaded,
+                onAnimationLoaded);
         }
 
         private async Task LoadModelAsync(
@@ -772,7 +781,8 @@ namespace HabitHero.App
             Vector3 visualScale,
             GameObject expectedWorldRoot,
             CancellationToken cancellationToken,
-            Action<Bounds> onModelLoaded)
+            Action<Bounds> onModelLoaded,
+            Action<HabitHeroWorldModelAnimation> onAnimationLoaded)
         {
             try
             {
@@ -803,6 +813,9 @@ namespace HabitHero.App
 
                 modelContent.transform.localScale = visualScale;
                 CenterModelOnGround(modelContent, modelRoot, groundPosition, eulerAngles);
+                HabitHeroWorldModelAnimation modelAnimation =
+                    HabitHeroWorldModelAnimation.Attach(modelRoot, modelContent);
+                if (onAnimationLoaded != null) onAnimationLoaded(modelAnimation);
                 if (onModelLoaded != null
                     && TryGetRendererBounds(modelContent, out Bounds loadedBounds))
                 {
@@ -1215,6 +1228,7 @@ namespace HabitHero.App
         {
             if (player == null) return;
             Vector3 position = player.transform.position;
+            Vector2 previousPosition = new Vector2(position.x, position.z);
             float movementBoundary = activeSceneProfile == null
                 ? 8f
                 : activeSceneProfile.MovementBoundary;
@@ -1229,6 +1243,12 @@ namespace HabitHero.App
             position.x = next.x;
             position.z = next.y;
             player.transform.position = position;
+            bool moved = Vector2.Distance(previousPosition, next) > 0.0001f;
+            if (playerAnimation != null)
+            {
+                if (moved) playerAnimation.FaceDirection(direction);
+                playerAnimation.SetMoving(moved);
+            }
             UpdateWorldCamera();
             SetStatus("孩子角色已移動到 " + position.x.ToString("0.0") + ", " + position.z.ToString("0.0") + "。", false);
         }
@@ -1437,6 +1457,7 @@ namespace HabitHero.App
             worldMusicToggle = null;
             atmosphereRefreshTimer = 0f;
             player = null;
+            playerAnimation = null;
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             authoredCollisionProxyIndices.Clear();
             activeSceneProfile = null;

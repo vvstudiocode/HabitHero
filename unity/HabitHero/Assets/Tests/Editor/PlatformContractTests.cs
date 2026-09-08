@@ -186,6 +186,103 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void WorldModelAnimationContractPrefersCanonicalClipNames()
+        {
+            string clipName = HabitHeroModelAnimationContract.FindClipName(
+                new[] { "Run", "Walk", "Walk_InPlace", "Idle" },
+                HabitHeroModelAnimationAction.Walk);
+
+            Assert.AreEqual("Walk_InPlace", clipName);
+        }
+
+        [Test]
+        public void WorldModelAnimationContractSupportsWebAnimationAliases()
+        {
+            Assert.AreEqual(
+                "rest_pose",
+                HabitHeroModelAnimationContract.FindClipName(
+                    new[] { "rest_pose", "run_cycle", "wave_greeting" },
+                    HabitHeroModelAnimationAction.Idle));
+            Assert.AreEqual(
+                "wave_greeting",
+                HabitHeroModelAnimationContract.FindClipName(
+                    new[] { "rest_pose", "run_cycle", "wave_greeting" },
+                    HabitHeroModelAnimationAction.Wave));
+            Assert.AreEqual(
+                "run_cycle",
+                HabitHeroModelAnimationContract.FindClipName(
+                    new[] { "rest_pose", "run_cycle", "wave_greeting" },
+                    HabitHeroModelAnimationAction.Walk));
+        }
+
+        [Test]
+        public void WorldModelAnimationContractUsesWebPlaybackSemantics()
+        {
+            Assert.AreEqual(
+                HabitHeroModelAnimationPlayback.Loop,
+                HabitHeroModelAnimationContract.GetPlayback(
+                    HabitHeroModelAnimationAction.Idle));
+            Assert.AreEqual(
+                HabitHeroModelAnimationPlayback.Loop,
+                HabitHeroModelAnimationContract.GetPlayback(
+                    HabitHeroModelAnimationAction.Walk));
+            Assert.AreEqual(
+                HabitHeroModelAnimationPlayback.Hold,
+                HabitHeroModelAnimationContract.GetPlayback(
+                    HabitHeroModelAnimationAction.Sit));
+            Assert.AreEqual(
+                HabitHeroModelAnimationPlayback.Loop,
+                HabitHeroModelAnimationContract.GetPlayback(
+                    HabitHeroModelAnimationAction.Wave));
+            Assert.AreEqual(
+                HabitHeroModelAnimationPlayback.Loop,
+                HabitHeroModelAnimationContract.GetPlayback(
+                    HabitHeroModelAnimationAction.Dance));
+        }
+
+        [Test]
+        public void WorldModelAnimationContractDoesNotInventMissingOptionalActions()
+        {
+            Assert.IsNull(
+                HabitHeroModelAnimationContract.FindClipName(
+                    new[] { "Idle", "Walk_InPlace" },
+                    HabitHeroModelAnimationAction.Dance));
+        }
+
+        [Test]
+        public void WorldModelAnimationAdapterStartsIdleAndSwitchesToWalk()
+        {
+            GameObject modelRoot = new GameObject("AnimationModelRoot");
+            GameObject modelContent = new GameObject("AnimationModelContent");
+            modelContent.transform.SetParent(modelRoot.transform, false);
+            Animation legacyAnimation = modelContent.AddComponent<Animation>();
+            AnimationClip idle = new AnimationClip { name = "Idle", legacy = true };
+            AnimationClip walk = new AnimationClip { name = "Walk_InPlace", legacy = true };
+            legacyAnimation.AddClip(idle, idle.name);
+            legacyAnimation.AddClip(walk, walk.name);
+
+            try
+            {
+                HabitHeroWorldModelAnimation adapter =
+                    HabitHeroWorldModelAnimation.Attach(modelRoot, modelContent);
+
+                Assert.IsTrue(adapter.HasAnimation);
+                Assert.AreEqual("Idle", adapter.ActiveClipName);
+                adapter.SetMoving(true);
+                Assert.AreEqual("Walk_InPlace", adapter.ActiveClipName);
+                Assert.AreEqual(
+                    HabitHeroModelAnimationAction.Walk,
+                    adapter.ActiveAction);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(modelRoot);
+                UnityEngine.Object.DestroyImmediate(idle);
+                UnityEngine.Object.DestroyImmediate(walk);
+            }
+        }
+
+        [Test]
         public void WorldBackgroundMusicPreferenceDefaultsOnAndIsScopedToChild()
         {
             string firstKey = HabitHeroWorldBackgroundMusic.GetPreferenceKey("child-1");

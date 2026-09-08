@@ -36,7 +36,7 @@ authorization into client-only rules.
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads, server-gated source rules, child world-entity reads/mutations, and allowlisted authored modules for all five scenes; full visual parity pending) |
-| Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
+| Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Foundation started (loaded GLB clip contract and child Idle/Walk/facing adapter; pet follow/roam and device visual evidence pending) |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating, and world-entity place/update/remove/collect RPCs; authored 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Foundation started (shared preference/device binding, iOS APNs provider, context-aware registration, and Unity settings UI; Android/taps/device verification pending) |
@@ -142,9 +142,8 @@ Partially completed locally:
   decorations, and the 3D runtime now renders owned/shared world entities from
   server transforms. Existing allowlisted Web GLB assets are resolved at
   runtime through Unity glTFast when a public asset origin is configured, with
-  placeholder fallback when loading is unavailable; authored terrain,
-  canonical movement/animation parity, and device visual evidence remain
-  pending.
+  placeholder fallback when loading is unavailable; authored terrain and
+  device visual evidence remain pending.
 - Unity's child world runtime now resolves the same public authored GLB world
   modules used by the Web client through an immutable allow-list. Complete
   authored module catalogs for Sunrise Village, Forest Valley, Cloud Workshop,
@@ -168,6 +167,14 @@ Partially completed locally:
   child-scoped on/off preference as the Web client. Running timers now also
   trigger the shared `timer-complete.mp3` alarm until dismissed or submitted.
   Device visual evidence remains pending.
+- Unity's loaded character and pet GLBs now attach a runtime animation adapter
+  to the glTFast Legacy `Animation` output. It prefers the canonical `Idle` and
+  `Walk_InPlace` clips, accepts the existing Web aliases when a legacy asset
+  uses them, configures `Sit` as hold and `Wave`/`Dance` as looping optional
+  actions, and drives the child avatar's idle/walk state and facing direction
+  from world movement. Existing five-action assets and their root-motion
+  contract remain read-only; pet follow/roam steering, grounding/labels/shadows,
+  and device visual evidence remain pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social
