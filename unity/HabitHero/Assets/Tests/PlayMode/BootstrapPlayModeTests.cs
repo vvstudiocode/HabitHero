@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using HabitHero.App;
 using HabitHero.Platform;
 using NUnit.Framework;
@@ -284,6 +285,288 @@ namespace HabitHero.Tests
             Assert.IsNull(GameObject.Find("ChildWorldRuntime"));
             Assert.IsNull(GameObject.Find("ChildWorldScenePanel"));
             Assert.IsEmpty(errors, "Child world emitted runtime errors: " + string.Join(" | ", errors));
+        }
+
+        [UnityTest]
+        public IEnumerator ChildAndParentHomeViewsOpenMajorPanelsFromFixtureData()
+        {
+            List<string> errors = new List<string>();
+            Application.LogCallback callback = (message, stackTrace, type) =>
+            {
+                if (type == LogType.Error || type == LogType.Exception)
+                {
+                    errors.Add(message);
+                }
+            };
+            Application.logMessageReceived += callback;
+
+            GameObject canvasObject = new GameObject(
+                "HomeSurfaceFixtureCanvas",
+                typeof(RectTransform),
+                typeof(Canvas),
+                typeof(CanvasScaler),
+                typeof(GraphicRaycaster));
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            SupabaseChildProfileRecord child = new SupabaseChildProfileRecord
+            {
+                id = "fixture-child",
+                family_id = "fixture-family",
+                display_name = "小勇者",
+                points_balance = 10,
+            };
+            SupabaseChildHomeSnapshot childSnapshot = new SupabaseChildHomeSnapshot
+            {
+                familyId = "fixture-family",
+                child = child,
+                tasks = new SupabaseChildTaskRecord[0],
+                rewards = new SupabaseChildRewardRecord[0],
+                wishlist = new SupabaseChildWishlistRecord[0],
+                tickets = new SupabaseChildTicketRecord[0],
+                ledger = new SupabaseChildLedgerRecord[0],
+                timers = new SupabaseTaskTimerSessionRecord[0],
+            };
+            SupabaseChildGameData childGameData = new SupabaseChildGameData
+            {
+                familyId = "fixture-family",
+                childProfileId = "fixture-child",
+                walletBalance = 10,
+                catalog = new SupabaseGameCatalogItemRecord[0],
+                prices = new SupabaseGamePriceRecord[0],
+                inventory = new SupabaseChildInventoryItemRecord[0],
+                loadout = new SupabaseChildGameLoadoutRecord(),
+                worldEntities = new SupabaseChildWorldEntityRecord[0],
+                sharedWorldDecorations = new SupabaseChildSharedWorldDecorationRecord[0],
+                worldRevision = 0,
+            };
+            SupabaseChildWorldData childWorldData = new SupabaseChildWorldData
+            {
+                familyId = "fixture-family",
+                childProfileId = "fixture-child",
+                scenes = new[]
+                {
+                    new SupabaseGameWorldSceneRecord
+                    {
+                        id = "sunrise-village",
+                        name = "晨光村",
+                        is_active = true,
+                    },
+                },
+                npcs = new SupabaseGameWorldNpcRecord[0],
+                offerings = new SupabaseGameWorldNpcOfferingRecord[0],
+                sceneUnlocks = new[]
+                {
+                    new SupabaseChildWorldSceneUnlockRecord
+                    {
+                        scene_id = "sunrise-village",
+                    },
+                },
+                dialogueProgress = new SupabaseChildWorldNpcDialogueProgressRecord[0],
+                weather = new SupabaseWorldWeatherRecord
+                {
+                    condition = "clear",
+                    intensity = 0f,
+                },
+            };
+            SupabaseChildSocialData childSocialData = new SupabaseChildSocialData
+            {
+                childProfileId = "fixture-child",
+                friendCode = "FIXTURE",
+                friends = new SupabaseFriendSummaryRecord[0],
+                requests = new SupabaseFriendRequestRecord[0],
+            };
+            SupabaseParentHomeSnapshot parentSnapshot = new SupabaseParentHomeSnapshot
+            {
+                familyId = "fixture-family",
+                family = new SupabaseFamilyRecord
+                {
+                    id = "fixture-family",
+                    name = "測試家庭",
+                },
+                children = new[] { child },
+                tasks = new SupabaseChildTaskRecord[0],
+                rewards = new SupabaseChildRewardRecord[0],
+                wishlist = new SupabaseChildWishlistRecord[0],
+                tickets = new SupabaseChildTicketRecord[0],
+                ledger = new SupabaseChildLedgerRecord[0],
+                taskTemplates = new SupabaseParentTaskTemplateRecord[0],
+                adventureGroups = new SupabaseParentAdventureGroupRecord[0],
+            };
+
+            HabitHeroChildHomeView childView = new HabitHeroChildHomeView(
+                canvas.transform,
+                font,
+                string.Empty);
+            HabitHeroParentHomeView parentView = new HabitHeroParentHomeView(
+                canvas.transform,
+                font,
+                string.Empty);
+
+            try
+            {
+                childView.Show(
+                    snapshot: childSnapshot,
+                    gameData: childGameData,
+                    worldData: childWorldData,
+                    socialData: childSocialData,
+                    unlockWorldScene: null,
+                    completeNpcDialogue: null,
+                    refreshSocial: null,
+                    sendFriendRequest: null,
+                    acceptFriendRequest: null,
+                    declineFriendRequest: null,
+                    removeFriend: null,
+                    blockFriend: null,
+                    toggleFriendWorldCollaboration: null,
+                    placeSharedDecoration: null,
+                    updateSharedDecoration: null,
+                    removeSharedDecoration: null,
+                    visitFriendWorld: null,
+                    loadWorldChat: null,
+                    sendWorldChat: null,
+                    markWorldChatRead: null,
+                    reportWorldChat: null,
+                    listCoopAdventures: null,
+                    loadCoopAdventureState: null,
+                    createCoopAdventure: null,
+                    joinCoopAdventure: null,
+                    submitCoopCompletion: null,
+                    submitTask: null,
+                    startTimer: null,
+                    pauseTimer: null,
+                    resumeTimer: null,
+                    abandonAdventure: null,
+                    proposeGoal: null,
+                    redeemReward: id =>
+                        Task.FromResult<SupabaseRewardRedemptionResult>(null),
+                    addWishlist: null,
+                    deleteWishlist: null,
+                    purchaseGameItem: null,
+                    equipGameCharacter: null,
+                    setPetDisplayName: null,
+                    setFollowingPets: null,
+                    setRoamingPets: null,
+                    placeWorldEntity: null,
+                    updateWorldEntity: null,
+                    removeWorldEntity: null,
+                    collectWorldDecorations: null,
+                    onSignOut: () => { },
+                    onSwitchToParent: () => { },
+                    onOpenNotificationSettings: () => { });
+
+                GameObject childHomePanel = GameObject.Find("ChildHomePanel");
+                Assert.IsNotNull(childHomePanel);
+                OpenPanelFromHome(childHomePanel, "冒險商店", "ChildGamePanel");
+                OpenPanelFromHome(childHomePanel, "世界", "ChildWorldPanel");
+                OpenPanelFromHome(childHomePanel, "好友", "ChildSocialPanel");
+                OpenPanelFromHome(childHomePanel, "獎勵商店", "RewardPanel");
+                OpenPanelFromHome(childHomePanel, "點數紀錄", "ChildLedgerPanel");
+
+                parentView.Show(
+                    snapshot: parentSnapshot,
+                    reviewTask: null,
+                    batchReviewDailyAdventures: null,
+                    revokeTaskApproval: null,
+                    confirmChildGoal: null,
+                    returnChildGoal: null,
+                    approveWishlist: (wishlist, points) =>
+                        Task.FromResult<SupabaseParentRewardMutationResult>(null),
+                    fulfillTicket: ticketId =>
+                        Task.FromResult<SupabaseParentRewardMutationResult>(null),
+                    createTask: null,
+                    updateTask: null,
+                    deleteTask: null,
+                    createTaskTemplate: null,
+                    updateTaskTemplate: null,
+                    deleteTaskTemplate: null,
+                    createGeneralAdventure: null,
+                    updateGeneralAdventureTitle: null,
+                    loadAdventureSchedules: null,
+                    createAdventureSchedule: null,
+                    updateAdventureSchedule: null,
+                    disableAdventureSchedule: null,
+                    createReward: null,
+                    updateReward: null,
+                    deleteReward: null,
+                    adjustPoints: null,
+                    createChildAccount: null,
+                    resetChildPassword: null,
+                    updateChildName: null,
+                    deleteChildAccount: null,
+                    loadGameStore: null,
+                    setGamePrice: null,
+                    resetGamePrice: null,
+                    listCoopAdventures: null,
+                    loadCoopAdventureState: null,
+                    reviewCoopCompletion: null,
+                    recordParentConsent: null,
+                    updateParentPassword: null,
+                    deleteParentAccount: null,
+                    enterChildMode: null,
+                    onSignOut: () => { },
+                    onOpenNotificationSettings: () => { });
+
+                GameObject parentHomePanel = GameObject.Find("ParentHomePanel");
+                Assert.IsNotNull(parentHomePanel);
+                OpenPanelFromHome(parentHomePanel, "設定", "ParentSettingsPanel");
+                OpenPanelFromHome(parentHomePanel, "成長", "ParentGrowthPanel");
+                OpenPanelFromHome(parentHomePanel, "願望與獎勵券", "ParentRewardPanel");
+                GameObject parentRewardPanel = GameObject.Find("ParentRewardPanel");
+                Assert.IsNotNull(parentRewardPanel);
+                Button parentLedgerButton = FindButton(parentRewardPanel, "點數紀錄");
+                Assert.IsNotNull(parentLedgerButton);
+                parentLedgerButton.onClick.Invoke();
+                Assert.IsNotNull(GameObject.Find("ParentLedgerPanel"));
+            }
+            finally
+            {
+                childView.Dispose();
+                parentView.Dispose();
+                Object.Destroy(canvasObject);
+                Application.logMessageReceived -= callback;
+            }
+
+            yield return null;
+            Assert.IsNull(GameObject.Find("ChildHomePanel"));
+            Assert.IsNull(GameObject.Find("ChildGamePanel"));
+            Assert.IsNull(GameObject.Find("ChildWorldPanel"));
+            Assert.IsNull(GameObject.Find("ChildSocialPanel"));
+            Assert.IsNull(GameObject.Find("RewardPanel"));
+            Assert.IsNull(GameObject.Find("ChildLedgerPanel"));
+            Assert.IsNull(GameObject.Find("ParentHomePanel"));
+            Assert.IsNull(GameObject.Find("ParentSettingsPanel"));
+            Assert.IsNull(GameObject.Find("ParentGrowthPanel"));
+            Assert.IsNull(GameObject.Find("ParentRewardPanel"));
+            Assert.IsNull(GameObject.Find("ParentLedgerPanel"));
+            Assert.IsEmpty(errors, "Home views emitted runtime errors: " + string.Join(" | ", errors));
+        }
+
+        private static void OpenPanelFromHome(
+            GameObject homePanel,
+            string buttonLabel,
+            string panelName)
+        {
+            Button button = FindButton(homePanel, buttonLabel);
+            Assert.IsNotNull(button, "Missing home button: " + buttonLabel);
+            Assert.IsTrue(button.interactable, "Home button is disabled: " + buttonLabel);
+            button.onClick.Invoke();
+            Assert.IsNotNull(GameObject.Find(panelName), "Panel did not open: " + panelName);
+        }
+
+        private static Button FindButton(GameObject root, string label)
+        {
+            foreach (Button button in root.GetComponentsInChildren<Button>(true))
+            {
+                Text text = button.GetComponentInChildren<Text>(true);
+                if (text != null && text.text == label)
+                {
+                    return button;
+                }
+            }
+
+            return null;
         }
     }
 }
