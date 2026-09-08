@@ -35,7 +35,7 @@ authorization into client-only rules.
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
-| 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads, server-gated source rules, and child world-entity reads/mutations; authored scene placement pending) |
+| 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Foundation started (scene/NPC/offering reads, server-gated source rules, child world-entity reads/mutations, and allowlisted authored modules for all five scenes; full visual parity pending) |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Foundation started (catalog/wallet/inventory/loadout client, child shop/backpack UI, NPC source gating, and world-entity place/update/remove/collect RPCs; authored 3D placement pending) |
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
@@ -145,6 +145,14 @@ Partially completed locally:
   placeholder fallback when loading is unavailable; authored terrain,
   canonical movement/animation parity, and device visual evidence remain
   pending.
+- Unity's child world runtime now resolves the same public authored GLB world
+  modules used by the Web client through an immutable allow-list. The first
+  authored terrain and landmark modules for Sunrise Village, Forest Valley,
+  Cloud Workshop, Tideglow Archipelago, and Star-Sand Wasteland load through
+  the existing glTFast pipeline while keeping the primitive fallback, server
+  scene gating, NPC data, and world-entity flow intact. Full module coverage,
+  collision parity, camera/weather/audio parity, and device visual evidence
+  remain pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

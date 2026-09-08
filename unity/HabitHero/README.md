@@ -91,6 +91,12 @@ session, with an explicit family/child scope and the existing RLS/RPC
 authorization. Returning to the parent workbench requires re-authenticating
 the parent password; social/friend-world controls stay disabled in this parent
 child mode because those RPCs are child-actor scoped.
+The Unity child world view now resolves the same public authored GLB modules as
+the Web client through `HabitHeroWorldAssetCatalog`. Primary terrain and
+landmark modules are available for all five existing scenes, with per-scene
+placement and scale data preserved; primitive fallback, server scene gating,
+and world-entity rendering remain available while full collision, weather,
+camera, and device parity are completed.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device

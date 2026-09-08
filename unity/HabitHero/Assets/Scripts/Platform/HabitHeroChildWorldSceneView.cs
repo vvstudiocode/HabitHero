@@ -141,6 +141,7 @@ namespace HabitHero.App
                 new Vector3(-9.5f, 0.35f, 0f),
                 new Vector3(0.35f, 0.7f, 20f),
                 new Color(0.08f, 0.14f, 0.2f, 1f));
+            RenderAuthoredWorldModules(scene.id);
 
             player = CreatePrimitive(
                 PrimitiveType.Capsule,
@@ -161,6 +162,29 @@ namespace HabitHero.App
             renderTexture.name = "HabitHeroWorldRenderTexture";
             renderTexture.Create();
             worldCamera.targetTexture = renderTexture;
+        }
+
+        private void RenderAuthoredWorldModules(string targetSceneId)
+        {
+            HabitHeroWorldAssetModule[] modules;
+            if (!HabitHeroWorldAssetCatalog.TryGetModules(targetSceneId, out modules)) return;
+
+            foreach (HabitHeroWorldAssetModule module in modules)
+            {
+                if (module == null) continue;
+                GameObject placeholder = CreatePrimitive(
+                    PrimitiveType.Cube,
+                    "AuthoredModule_" + module.AssetKey,
+                    module.Position + Vector3.up * 0.05f,
+                    Vector3.one * 0.05f,
+                    new Color(0.26f, 0.82f, 0.88f, 1f));
+                StartModelLoad(
+                    placeholder,
+                    module.AssetKey,
+                    module.Position,
+                    module.Rotation.eulerAngles,
+                    module.Scale);
+            }
         }
 
         private void RenderNpcPlaceholders()
@@ -360,6 +384,36 @@ namespace HabitHero.App
             Vector3 eulerAngles,
             float visualScale)
         {
+            StartModelLoadInternal(
+                placeholder,
+                assetKey,
+                groundPosition,
+                eulerAngles,
+                Vector3.one * Mathf.Clamp(visualScale, 0.05f, 8f));
+        }
+
+        private void StartModelLoad(
+            GameObject placeholder,
+            string assetKey,
+            Vector3 groundPosition,
+            Vector3 eulerAngles,
+            Vector3 visualScale)
+        {
+            StartModelLoadInternal(
+                placeholder,
+                assetKey,
+                groundPosition,
+                eulerAngles,
+                ClampAuthoredModuleScale(visualScale));
+        }
+
+        private void StartModelLoadInternal(
+            GameObject placeholder,
+            string assetKey,
+            Vector3 groundPosition,
+            Vector3 eulerAngles,
+            Vector3 visualScale)
+        {
             if (placeholder == null
                 || !HabitHeroGameAssetCatalog.TryResolveModelUrl(
                     assetKey,
@@ -376,7 +430,7 @@ namespace HabitHero.App
                 modelUrl,
                 groundPosition,
                 eulerAngles,
-                Mathf.Clamp(visualScale, 0.05f, 8f),
+                visualScale,
                 worldRoot,
                 modelLoadingCancellation.Token);
         }
@@ -386,7 +440,7 @@ namespace HabitHero.App
             string modelUrl,
             Vector3 groundPosition,
             Vector3 eulerAngles,
-            float visualScale,
+            Vector3 visualScale,
             GameObject expectedWorldRoot,
             CancellationToken cancellationToken)
         {
@@ -417,7 +471,7 @@ namespace HabitHero.App
                     return;
                 }
 
-                modelContent.transform.localScale = Vector3.one * visualScale;
+                modelContent.transform.localScale = visualScale;
                 CenterModelOnGround(modelContent, modelRoot, groundPosition, eulerAngles);
                 placeholder.SetActive(false);
             }
@@ -431,6 +485,20 @@ namespace HabitHero.App
                     "HabitHero could not load world model " + modelUrl + ": "
                     + exception.Message);
             }
+        }
+
+        private static Vector3 ClampAuthoredModuleScale(Vector3 visualScale)
+        {
+            return new Vector3(
+                ClampSignedScale(visualScale.x),
+                ClampSignedScale(visualScale.y),
+                ClampSignedScale(visualScale.z));
+        }
+
+        private static float ClampSignedScale(float value)
+        {
+            if (Mathf.Abs(value) < 0.0001f) return 0.05f;
+            return Mathf.Clamp(value, -64f, 64f);
         }
 
         private async Task<GltfImport> GetOrLoadModelImportAsync(
