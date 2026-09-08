@@ -69,6 +69,7 @@ namespace HabitHero.App
         private Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat;
         private Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead;
         private Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat;
+        private Action onSwitchToParent;
         private string selectedMood;
         private int selectedDifficulty;
         private bool abandonConfirmationPending;
@@ -128,7 +129,8 @@ namespace HabitHero.App
             Func<string, string, long, SupabaseFriendWorldTransform, Task<SupabaseChildGameData>> updateWorldEntity,
             Func<string, string, long, Task<SupabaseChildGameData>> removeWorldEntity,
             Func<long, Task<SupabaseChildGameData>> collectWorldDecorations,
-            Action onSignOut)
+            Action onSignOut,
+            Action onSwitchToParent)
         {
             if (snapshot == null || snapshot.child == null)
             {
@@ -157,6 +159,7 @@ namespace HabitHero.App
             this.sendWorldChat = sendWorldChat;
             this.markWorldChatRead = markWorldChatRead;
             this.reportWorldChat = reportWorldChat;
+            this.onSwitchToParent = onSwitchToParent;
             latestSnapshot = snapshot;
             latestGameData = gameData;
             latestWorldData = worldData;
@@ -274,6 +277,16 @@ namespace HabitHero.App
                 new Vector2(0.72f, 0.91f),
                 new Vector2(0.91f, 0.97f));
             signOutButton.onClick.AddListener(() => onSignOut());
+            if (onSwitchToParent != null)
+            {
+                Button parentModeButton = HabitHeroUiFactory.CreateButton(
+                    panel.transform,
+                    font,
+                    "回到家長模式",
+                    new Vector2(0.5f, 0.91f),
+                    new Vector2(0.69f, 0.97f));
+                parentModeButton.onClick.AddListener(() => onSwitchToParent());
+            }
 
             taskListObject = new GameObject(
                 "TaskList",
@@ -367,6 +380,7 @@ namespace HabitHero.App
             sendWorldChat = null;
             markWorldChatRead = null;
             reportWorldChat = null;
+            onSwitchToParent = null;
             timerSessions = null;
             latestSnapshot = null;
             latestGameData = null;

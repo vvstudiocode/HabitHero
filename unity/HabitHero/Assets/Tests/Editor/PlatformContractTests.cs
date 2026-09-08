@@ -991,6 +991,48 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void ParentScopedHomeCacheCannotBeReadAsAChildOwnedSnapshot()
+        {
+            InMemorySupabaseChildHomeSnapshotStore store =
+                new InMemorySupabaseChildHomeSnapshotStore();
+            SupabaseChildHomeSnapshotCache cache =
+                new SupabaseChildHomeSnapshotCache(store);
+            SupabaseChildHomeSnapshot snapshot = new SupabaseChildHomeSnapshot
+            {
+                familyId = "family-1",
+                child = new SupabaseChildProfileRecord
+                {
+                    id = "child-1",
+                    family_id = "family-1",
+                    profile_id = "child-user-1",
+                    display_name = "小明",
+                },
+            };
+
+            cache.SaveScoped(
+                "parent-user-1:child:child-1",
+                "family-1",
+                "child-1",
+                snapshot);
+
+            SupabaseChildHomeSnapshot loaded;
+            Assert.IsTrue(cache.TryLoadScoped(
+                "parent-user-1:child:child-1",
+                "family-1",
+                "child-1",
+                out loaded));
+            Assert.AreEqual("child-1", loaded.child.id);
+            Assert.IsFalse(cache.TryLoad(
+                "parent-user-1:child:child-1",
+                out loaded));
+            Assert.IsFalse(cache.TryLoadScoped(
+                "parent-user-1:child:child-1",
+                "family-1",
+                "child-2",
+                out loaded));
+        }
+
+        [Test]
         public async Task FriendWorldClientLoadsTheServerProjectionThroughRpc()
         {
             SupabaseClientSettings settings = CreateSettings();

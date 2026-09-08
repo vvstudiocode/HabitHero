@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using HabitHero.Platform;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,9 +16,11 @@ namespace HabitHero.App
         private Text taskText;
         private Text rewardText;
         private Text ledgerText;
+        private Button enterChildModeButton;
         private SupabaseParentHomeSnapshot snapshot;
         private string selectedChildId;
         private Action close;
+        private Func<string, Task<bool>> enterChildMode;
 
         public HabitHeroParentChildPreviewView(Transform canvasTransform, Font font)
         {
@@ -30,7 +33,8 @@ namespace HabitHero.App
         public void Show(
             SupabaseParentHomeSnapshot snapshot,
             string requestedChildId,
-            Action close)
+            Action close,
+            Func<string, Task<bool>> enterChildMode)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
 
@@ -38,6 +42,7 @@ namespace HabitHero.App
             this.snapshot = snapshot;
             this.selectedChildId = GetSelectedChildId(snapshot, requestedChildId);
             this.close = close;
+            this.enterChildMode = enterChildMode;
             BuildPanel();
             Render();
         }
@@ -55,11 +60,13 @@ namespace HabitHero.App
             snapshot = null;
             selectedChildId = null;
             close = null;
+            enterChildMode = null;
             childListObject = null;
             profileText = null;
             taskText = null;
             rewardText = null;
             ledgerText = null;
+            enterChildModeButton = null;
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -174,8 +181,16 @@ namespace HabitHero.App
                 14,
                 TextAnchor.UpperLeft,
                 new Color(0.7f, 0.78f, 0.88f, 1f),
+                new Vector2(0.06f, 0.17f),
+                new Vector2(0.94f, 0.3f));
+            enterChildModeButton = HabitHeroUiFactory.CreateButton(
+                detailCard.transform,
+                font,
+                "進入互動孩子模式",
                 new Vector2(0.06f, 0.04f),
-                new Vector2(0.94f, 0.18f));
+                new Vector2(0.94f, 0.13f));
+            enterChildModeButton.interactable = enterChildMode != null;
+            enterChildModeButton.onClick.AddListener(EnterChildModeAsync);
         }
 
         private void Render()
@@ -275,6 +290,40 @@ namespace HabitHero.App
                 new Color(0.84f, 0.89f, 0.96f, 1f),
                 Vector2.zero,
                 Vector2.one);
+        }
+
+        private async void EnterChildModeAsync()
+        {
+            if (enterChildMode == null || string.IsNullOrWhiteSpace(selectedChildId))
+            {
+                return;
+            }
+
+            if (enterChildModeButton != null)
+            {
+                enterChildModeButton.interactable = false;
+            }
+
+            try
+            {
+                bool entered = await enterChildMode(selectedChildId);
+                if (!entered && enterChildModeButton != null)
+                {
+                    enterChildModeButton.interactable = true;
+                }
+            }
+            catch (Exception exception)
+            {
+                if (enterChildModeButton != null)
+                {
+                    enterChildModeButton.interactable = true;
+                }
+                SetDetails(
+                    "切換孩子模式失敗",
+                    exception.Message,
+                    "請稍後再試。",
+                    "家長資料仍然保留。\n");
+            }
         }
 
         private static string GetSelectedChildId(

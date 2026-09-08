@@ -95,6 +95,7 @@ namespace HabitHero.App
         private Func<
             string,
             Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount;
+        private Func<string, Task<bool>> enterChildMode;
 
         public HabitHeroParentHomeView(Transform canvasTransform, Font font)
         {
@@ -158,6 +159,7 @@ namespace HabitHero.App
             Func<
                 string,
                 Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount,
+            Func<string, Task<bool>> enterChildMode,
             Action onSignOut)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
@@ -182,6 +184,7 @@ namespace HabitHero.App
             this.createChildAccount = createChildAccount;
             this.resetChildPassword = resetChildPassword;
             this.deleteChildAccount = deleteChildAccount;
+            this.enterChildMode = enterChildMode;
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -327,6 +330,7 @@ namespace HabitHero.App
             createChildAccount = null;
             resetChildPassword = null;
             deleteChildAccount = null;
+            enterChildMode = null;
             latestSnapshot = null;
             activeReviewTask = null;
             activeWishlist = null;
@@ -798,7 +802,8 @@ namespace HabitHero.App
             childPreviewView.Show(
                 latestSnapshot,
                 latestSnapshot.children[0].id,
-                CloseChildPreviewPanel);
+                CloseChildPreviewPanel,
+                enterChildMode);
         }
 
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)

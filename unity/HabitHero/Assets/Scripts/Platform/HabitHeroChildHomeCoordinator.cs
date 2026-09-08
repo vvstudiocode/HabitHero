@@ -34,6 +34,9 @@ namespace HabitHero.App
         private bool friendWorldRealtimeCrowded;
         private int friendWorldRevisionRefreshVersion;
         private int friendWorldRealtimeVersion;
+        private string activeFamilyId;
+        private string activeChildProfileId;
+        private bool activeParentChildMode;
 
         public HabitHeroChildHomeCoordinator(
             SupabaseChildHomeClient client,
@@ -140,166 +143,15 @@ namespace HabitHero.App
                     setStatus("任務已載入；好友資料暫時無法同步：" + exception.Message, true);
                 }
 
-                if (view == null)
-                {
-                    view = new HabitHeroChildHomeView(
-                        canvasTransform,
-                        font,
-                        gameAssetBaseUrl);
-                }
-                view.Show(
+                ShowLoadedView(
                     snapshot,
                     gameData,
                     worldData,
                     socialData,
-                    (sceneId) => UnlockWorldSceneAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        sceneId,
-                        cancellationToken),
-                    (npcId) => CompleteNpcDialogueAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        npcId,
-                        cancellationToken),
-                    () => RefreshSocialAsync(snapshot.child.id, cancellationToken),
-                    (friendCode) => SendFriendRequestAndRefreshAsync(
-                        snapshot.child.id,
-                        friendCode,
-                        cancellationToken),
-                    (requestId) => AcceptFriendRequestAndRefreshAsync(
-                        snapshot.child.id,
-                        requestId,
-                        cancellationToken),
-                    (requestId) => DeclineFriendRequestAndRefreshAsync(
-                        snapshot.child.id,
-                        requestId,
-                        cancellationToken),
-                    (friendChildProfileId) => RemoveFriendAndRefreshAsync(
-                        snapshot.child.id,
-                        friendChildProfileId,
-                        cancellationToken),
-                    (friendChildProfileId) => BlockFriendAndRefreshAsync(
-                        snapshot.child.id,
-                        friendChildProfileId,
-                        cancellationToken),
-                    (friendChildProfileId, canCollaborate) =>
-                        SetFriendWorldCollaborationAndRefreshAsync(
-                            snapshot.child.id,
-                            friendChildProfileId,
-                            canCollaborate,
-                            cancellationToken),
-                    (worldOwnerChildProfileId, sourceInventoryItemId, expectedRevision, transform) =>
-                        PlaceSharedDecorationAndRefreshAsync(
-                            worldOwnerChildProfileId,
-                            sourceInventoryItemId,
-                            expectedRevision,
-                            transform,
-                            cancellationToken),
-                    (worldOwnerChildProfileId, sharedEntityId, expectedRevision, transform) =>
-                        UpdateSharedDecorationAndRefreshAsync(
-                            worldOwnerChildProfileId,
-                            sharedEntityId,
-                            expectedRevision,
-                            transform,
-                            cancellationToken),
-                    (worldOwnerChildProfileId, sharedEntityId, expectedRevision) =>
-                        RemoveSharedDecorationAndRefreshAsync(
-                            worldOwnerChildProfileId,
-                            sharedEntityId,
-                            expectedRevision,
-                            cancellationToken),
-                    (friendChildProfileId) => LoadFriendWorldAsync(
-                        snapshot.child.id,
-                        snapshot.child.character_id,
-                        friendChildProfileId,
-                        cancellationToken),
-                    (friendChildProfileId) => LoadWorldChatAsync(
-                        friendChildProfileId,
-                        cancellationToken),
-                    (friendChildProfileId, body) => SendWorldChatAndRefreshAsync(
-                        friendChildProfileId,
-                        body,
-                        cancellationToken),
-                    (friendChildProfileId, messageId) => MarkWorldChatReadAndRefreshAsync(
-                        friendChildProfileId,
-                        messageId,
-                        cancellationToken),
-                    (friendChildProfileId, messageId) => ReportWorldChatAndRefreshAsync(
-                        friendChildProfileId,
-                        messageId,
-                        cancellationToken),
-                    (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
-                    (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
-                    (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
-                    (taskId) => client.ResumeAdventureTimerAsync(taskId, cancellationToken),
-                    (taskId) => client.AbandonAdventureAndRefreshAsync(
-                        taskId,
-                        cancellationToken),
-                    (rewardId) => client.RedeemRewardAndRefreshAsync(rewardId, cancellationToken),
-                    (name) => client.AddWishlistItemAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        name,
-                        cancellationToken),
-                    (wishlistId) => client.DeleteWishlistItemAndRefreshAsync(
-                        wishlistId,
-                        cancellationToken),
-                    (catalogItemId, quantity, sourceNpcId) => PurchaseGameItemAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        catalogItemId,
-                        quantity,
-                        sourceNpcId,
-                        cancellationToken),
-                    (inventoryItemId) => EquipGameCharacterAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        inventoryItemId,
-                        cancellationToken),
-                    (inventoryItemIds) => SetFollowingPetsAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        inventoryItemIds,
-                        cancellationToken),
-                    (inventoryItemIds) => SetRoamingPetsAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        inventoryItemIds,
-                        cancellationToken),
-                    (inventoryItemId, expectedRevision, transform, behaviorMode, roamingSlot) =>
-                        PlaceWorldEntityAndRefreshAsync(
-                            snapshot.familyId,
-                            snapshot.child.id,
-                            inventoryItemId,
-                            expectedRevision,
-                            transform,
-                            behaviorMode,
-                            roamingSlot,
-                            cancellationToken),
-                    (inventoryItemId, entityId, expectedRevision, transform) =>
-                        UpdateWorldEntityAndRefreshAsync(
-                            snapshot.familyId,
-                            snapshot.child.id,
-                            inventoryItemId,
-                            entityId,
-                            expectedRevision,
-                            transform,
-                            cancellationToken),
-                    (inventoryItemId, entityId, expectedRevision) =>
-                        RemoveWorldEntityAndRefreshAsync(
-                            snapshot.familyId,
-                            snapshot.child.id,
-                            inventoryItemId,
-                            entityId,
-                            expectedRevision,
-                            cancellationToken),
-                    (expectedRevision) => CollectWorldDecorationsAndRefreshAsync(
-                        snapshot.familyId,
-                        snapshot.child.id,
-                        expectedRevision,
-                        cancellationToken),
-                    onSignOut);
+                    false,
+                    cancellationToken,
+                    onSignOut,
+                    null);
                 hideLogin();
                 return true;
             }
@@ -315,6 +167,337 @@ namespace HabitHero.App
             }
         }
 
+        public async Task<bool> TryShowParentChildAsync(
+            string familyId,
+            string childProfileId,
+            CancellationToken cancellationToken,
+            Action<string, bool> setStatus,
+            Action onSignOut,
+            Action onSwitchToParent,
+            Action hideLogin,
+            Action showLogin)
+        {
+            if (string.IsNullOrWhiteSpace(familyId)
+                || string.IsNullOrWhiteSpace(childProfileId))
+            {
+                return false;
+            }
+
+            setStatus("正在載入孩子互動模式…", false);
+            try
+            {
+                SupabaseChildHomeSnapshot snapshot = await client.LoadForParentAsync(
+                    familyId,
+                    childProfileId,
+                    cancellationToken);
+                SupabaseChildGameData gameData = null;
+                try
+                {
+                    gameData = await gameClient.LoadAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    setStatus("任務已載入；冒險商店暫時無法連線：" + exception.Message, true);
+                }
+
+                SupabaseChildWorldData worldData = null;
+                try
+                {
+                    worldData = await worldClient.LoadAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    setStatus("任務已載入；NPC 商品來源暫時無法同步：" + exception.Message, true);
+                }
+
+                ShowLoadedView(
+                    snapshot,
+                    gameData,
+                    worldData,
+                    null,
+                    true,
+                    cancellationToken,
+                    onSignOut,
+                    onSwitchToParent);
+                hideLogin();
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                if (showLogin != null) showLogin();
+                setStatus("載入孩子互動模式失敗：" + exception.Message, true);
+                return false;
+            }
+        }
+
+        private void ShowLoadedView(
+            SupabaseChildHomeSnapshot snapshot,
+            SupabaseChildGameData gameData,
+            SupabaseChildWorldData worldData,
+            SupabaseChildSocialData socialData,
+            bool parentChildMode,
+            CancellationToken cancellationToken,
+            Action onSignOut,
+            Action onSwitchToParent)
+        {
+            activeFamilyId = snapshot.familyId;
+            activeChildProfileId = snapshot.child.id;
+            activeParentChildMode = parentChildMode;
+            if (view == null)
+            {
+                view = new HabitHeroChildHomeView(
+                    canvasTransform,
+                    font,
+                    gameAssetBaseUrl);
+            }
+
+            Func<Task<SupabaseChildSocialData>> refreshSocial = null;
+            Func<string, Task<SupabaseChildSocialData>> sendFriendRequest = null;
+            Func<string, Task<SupabaseChildSocialData>> acceptFriendRequest = null;
+            Func<string, Task<SupabaseChildSocialData>> declineFriendRequest = null;
+            Func<string, Task<SupabaseChildSocialData>> removeFriend = null;
+            Func<string, Task<SupabaseChildSocialData>> blockFriend = null;
+            Func<string, bool, Task<SupabaseChildSocialData>> toggleFriendWorldCollaboration = null;
+            Func<
+                string,
+                string,
+                long,
+                SupabaseFriendWorldTransform,
+                Task<SupabaseChildFriendWorldData>> placeSharedDecoration = null;
+            Func<
+                string,
+                string,
+                long,
+                SupabaseFriendWorldTransform,
+                Task<SupabaseChildFriendWorldData>> updateSharedDecoration = null;
+            Func<string, string, long, Task<SupabaseChildFriendWorldData>> removeSharedDecoration = null;
+            Func<string, Task<SupabaseChildFriendWorldData>> visitFriendWorld = null;
+            Func<string, Task<SupabaseChildWorldChatData>> loadWorldChat = null;
+            Func<string, string, Task<SupabaseChildWorldChatData>> sendWorldChat = null;
+            Func<string, string, Task<SupabaseChildWorldChatData>> markWorldChatRead = null;
+            Func<string, string, Task<SupabaseChildWorldChatData>> reportWorldChat = null;
+            if (!parentChildMode)
+            {
+                refreshSocial = () => RefreshSocialAsync(snapshot.child.id, cancellationToken);
+                sendFriendRequest = (friendCode) => SendFriendRequestAndRefreshAsync(
+                    snapshot.child.id,
+                    friendCode,
+                    cancellationToken);
+                acceptFriendRequest = (requestId) => AcceptFriendRequestAndRefreshAsync(
+                    snapshot.child.id,
+                    requestId,
+                    cancellationToken);
+                declineFriendRequest = (requestId) => DeclineFriendRequestAndRefreshAsync(
+                    snapshot.child.id,
+                    requestId,
+                    cancellationToken);
+                removeFriend = (friendChildProfileId) => RemoveFriendAndRefreshAsync(
+                    snapshot.child.id,
+                    friendChildProfileId,
+                    cancellationToken);
+                blockFriend = (friendChildProfileId) => BlockFriendAndRefreshAsync(
+                    snapshot.child.id,
+                    friendChildProfileId,
+                    cancellationToken);
+                toggleFriendWorldCollaboration = (friendChildProfileId, canCollaborate) =>
+                    SetFriendWorldCollaborationAndRefreshAsync(
+                        snapshot.child.id,
+                        friendChildProfileId,
+                        canCollaborate,
+                        cancellationToken);
+                placeSharedDecoration = (worldOwnerChildProfileId, sourceInventoryItemId, expectedRevision, transform) =>
+                    PlaceSharedDecorationAndRefreshAsync(
+                        worldOwnerChildProfileId,
+                        sourceInventoryItemId,
+                        expectedRevision,
+                        transform,
+                        cancellationToken);
+                updateSharedDecoration = (worldOwnerChildProfileId, sharedEntityId, expectedRevision, transform) =>
+                    UpdateSharedDecorationAndRefreshAsync(
+                        worldOwnerChildProfileId,
+                        sharedEntityId,
+                        expectedRevision,
+                        transform,
+                        cancellationToken);
+                removeSharedDecoration = (worldOwnerChildProfileId, sharedEntityId, expectedRevision) =>
+                    RemoveSharedDecorationAndRefreshAsync(
+                        worldOwnerChildProfileId,
+                        sharedEntityId,
+                        expectedRevision,
+                        cancellationToken);
+                visitFriendWorld = (friendChildProfileId) => LoadFriendWorldAsync(
+                    snapshot.child.id,
+                    snapshot.child.character_id,
+                    friendChildProfileId,
+                    cancellationToken);
+                loadWorldChat = (friendChildProfileId) => LoadWorldChatAsync(
+                    friendChildProfileId,
+                    cancellationToken);
+                sendWorldChat = (friendChildProfileId, body) => SendWorldChatAndRefreshAsync(
+                    friendChildProfileId,
+                    body,
+                    cancellationToken);
+                markWorldChatRead = (friendChildProfileId, messageId) => MarkWorldChatReadAndRefreshAsync(
+                    friendChildProfileId,
+                    messageId,
+                    cancellationToken);
+                reportWorldChat = (friendChildProfileId, messageId) => ReportWorldChatAndRefreshAsync(
+                    friendChildProfileId,
+                    messageId,
+                    cancellationToken);
+            }
+
+            view.Show(
+                snapshot,
+                gameData,
+                worldData,
+                socialData,
+                (sceneId) => UnlockWorldSceneAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    sceneId,
+                    cancellationToken),
+                (npcId) => CompleteNpcDialogueAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    npcId,
+                    cancellationToken),
+                refreshSocial,
+                sendFriendRequest,
+                acceptFriendRequest,
+                declineFriendRequest,
+                removeFriend,
+                blockFriend,
+                toggleFriendWorldCollaboration,
+                placeSharedDecoration,
+                updateSharedDecoration,
+                removeSharedDecoration,
+                visitFriendWorld,
+                loadWorldChat,
+                sendWorldChat,
+                markWorldChatRead,
+                reportWorldChat,
+                (task, draft) => SubmitTaskAsync(task, draft, cancellationToken),
+                (taskId) => client.StartAdventureTimerAsync(taskId, cancellationToken),
+                (taskId) => client.PauseAdventureTimerAsync(taskId, cancellationToken),
+                (taskId) => client.ResumeAdventureTimerAsync(taskId, cancellationToken),
+                (taskId) => AbandonAdventureForActiveScopeAsync(
+                    taskId,
+                    cancellationToken),
+                (rewardId) => RedeemRewardForActiveScopeAsync(
+                    rewardId,
+                    cancellationToken),
+                (name) => AddWishlistForActiveScopeAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    name,
+                    cancellationToken),
+                (wishlistId) => DeleteWishlistForActiveScopeAsync(
+                    wishlistId,
+                    cancellationToken),
+                (catalogItemId, quantity, sourceNpcId) => PurchaseGameItemAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    catalogItemId,
+                    quantity,
+                    sourceNpcId,
+                    cancellationToken),
+                (inventoryItemId) => EquipGameCharacterAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    inventoryItemId,
+                    cancellationToken),
+                (inventoryItemIds) => SetFollowingPetsAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    inventoryItemIds,
+                    cancellationToken),
+                (inventoryItemIds) => SetRoamingPetsAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    inventoryItemIds,
+                    cancellationToken),
+                (inventoryItemId, expectedRevision, transform, behaviorMode, roamingSlot) =>
+                    PlaceWorldEntityAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        inventoryItemId,
+                        expectedRevision,
+                        transform,
+                        behaviorMode,
+                        roamingSlot,
+                        cancellationToken),
+                (inventoryItemId, entityId, expectedRevision, transform) =>
+                    UpdateWorldEntityAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        inventoryItemId,
+                        entityId,
+                        expectedRevision,
+                        transform,
+                        cancellationToken),
+                (inventoryItemId, entityId, expectedRevision) =>
+                    RemoveWorldEntityAndRefreshAsync(
+                        snapshot.familyId,
+                        snapshot.child.id,
+                        inventoryItemId,
+                        entityId,
+                        expectedRevision,
+                        cancellationToken),
+                (expectedRevision) => CollectWorldDecorationsAndRefreshAsync(
+                    snapshot.familyId,
+                    snapshot.child.id,
+                    expectedRevision,
+                    cancellationToken),
+                onSignOut,
+                onSwitchToParent);
+        }
+
+        private Task<SupabaseChildHomeSnapshot> LoadActiveHomeAsync(
+            CancellationToken cancellationToken)
+        {
+            if (activeParentChildMode)
+            {
+                return client.LoadForParentAsync(
+                    activeFamilyId,
+                    activeChildProfileId,
+                    cancellationToken);
+            }
+
+            return client.LoadAsync(cancellationToken);
+        }
+
+        private async Task<SupabaseChildHomeSnapshot> RefreshActiveHomeAsync(
+            CancellationToken cancellationToken)
+        {
+            SupabaseChildHomeSnapshot snapshot = await LoadActiveHomeAsync(
+                cancellationToken);
+            if (snapshot != null && view != null)
+            {
+                view.ApplySnapshot(snapshot);
+            }
+
+            return snapshot;
+        }
+
         private async Task<SupabaseTaskCompletionResult> SubmitTaskAsync(
             SupabaseChildTaskRecord task,
             SupabaseTaskCompletionDraft draft,
@@ -322,16 +505,126 @@ namespace HabitHero.App
         {
             if (task == null) throw new ArgumentNullException("task");
             if (draft == null) draft = new SupabaseTaskCompletionDraft();
-            SupabaseTaskCompletionResult result = await client.SubmitTaskCompletionAndRefreshAsync(
-                task.id,
-                draft.quickReport,
-                draft.reflection,
-                draft.mood,
-                draft.difficulty,
-                cancellationToken);
-            if (result.RefreshedSnapshot != null && view != null)
+            SupabaseTaskCompletionResult result;
+            if (activeParentChildMode)
             {
-                view.ApplySnapshot(result.RefreshedSnapshot);
+                result = await client.SubmitTaskCompletionAsync(
+                    task.id,
+                    draft.quickReport,
+                    draft.reflection,
+                    draft.mood,
+                    draft.difficulty,
+                    cancellationToken);
+                if (!result.QueuedForRetry)
+                {
+                    try
+                    {
+                        result.RefreshedSnapshot = await RefreshActiveHomeAsync(
+                            cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        result.RefreshError = exception.Message;
+                    }
+                }
+            }
+            else
+            {
+                result = await client.SubmitTaskCompletionAndRefreshAsync(
+                    task.id,
+                    draft.quickReport,
+                    draft.reflection,
+                    draft.mood,
+                    draft.difficulty,
+                    cancellationToken);
+                if (result.RefreshedSnapshot != null && view != null)
+                {
+                    view.ApplySnapshot(result.RefreshedSnapshot);
+                }
+            }
+
+            return result;
+        }
+
+        private async Task<SupabaseChildHomeSnapshot> AbandonAdventureForActiveScopeAsync(
+            string taskId,
+            CancellationToken cancellationToken)
+        {
+            await client.AbandonAdventureAsync(taskId, cancellationToken);
+            return await RefreshActiveHomeAsync(cancellationToken);
+        }
+
+        private async Task<SupabaseRewardRedemptionResult> RedeemRewardForActiveScopeAsync(
+            string rewardId,
+            CancellationToken cancellationToken)
+        {
+            SupabaseRewardRedemptionResult result =
+                new SupabaseRewardRedemptionResult
+                {
+                    Ticket = await client.RedeemRewardAsync(
+                        rewardId,
+                        cancellationToken),
+                };
+            try
+            {
+                result.RefreshedSnapshot = await RefreshActiveHomeAsync(
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
+        }
+
+        private async Task<SupabaseWishlistMutationResult> AddWishlistForActiveScopeAsync(
+            string familyId,
+            string childProfileId,
+            string name,
+            CancellationToken cancellationToken)
+        {
+            await client.AddWishlistItemAsync(
+                familyId,
+                childProfileId,
+                name,
+                cancellationToken);
+            return await RefreshWishlistForActiveScopeAsync(cancellationToken);
+        }
+
+        private async Task<SupabaseWishlistMutationResult> DeleteWishlistForActiveScopeAsync(
+            string wishlistId,
+            CancellationToken cancellationToken)
+        {
+            await client.DeleteWishlistItemAsync(wishlistId, cancellationToken);
+            return await RefreshWishlistForActiveScopeAsync(cancellationToken);
+        }
+
+        private async Task<SupabaseWishlistMutationResult> RefreshWishlistForActiveScopeAsync(
+            CancellationToken cancellationToken)
+        {
+            SupabaseWishlistMutationResult result =
+                new SupabaseWishlistMutationResult();
+            try
+            {
+                result.RefreshedSnapshot = await RefreshActiveHomeAsync(
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
             }
 
             return result;
@@ -1063,9 +1356,14 @@ namespace HabitHero.App
         {
             StopFriendWorldRealtime();
             StopWorldChatRealtime();
-            if (view == null) return;
-            view.Dispose();
-            view = null;
+            activeFamilyId = null;
+            activeChildProfileId = null;
+            activeParentChildMode = false;
+            if (view != null)
+            {
+                view.Dispose();
+                view = null;
+            }
         }
     }
 }

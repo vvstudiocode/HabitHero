@@ -28,8 +28,12 @@ namespace HabitHero.App
         private Button loginButton;
         private Button signOutButton;
         private Button recoverySubmitButton;
+        private GameObject parentUnlockPanel;
+        private InputField parentUnlockPasswordInput;
+        private Button parentUnlockSubmitButton;
         private Text statusText;
         private Text recoveryStatusText;
+        private Text parentUnlockStatusText;
         private Text titleText;
         private Text accountLabel;
         private bool isBusy;
@@ -154,6 +158,7 @@ namespace HabitHero.App
             }
 
             CloseRecoveryPanel();
+            CloseParentUnlockPanel();
 
             if (lifetimeCancellation != null)
             {
@@ -773,6 +778,201 @@ namespace HabitHero.App
                 : new Color(0.84f, 0.89f, 0.96f, 1f);
         }
 
+        private void HandleSwitchToParentRequested()
+        {
+            if (authClient == null || authClient.CurrentSession == null)
+            {
+                SetStatus("找不到目前的家長 session，請重新登入。", true);
+                return;
+            }
+
+            ShowParentUnlockPanel();
+        }
+
+        private async Task<bool> HandleEnterChildModeAsync(
+            string familyId,
+            string childProfileId)
+        {
+            if (childHomeCoordinator == null) return false;
+            bool shown = await childHomeCoordinator.TryShowParentChildAsync(
+                familyId,
+                childProfileId,
+                lifetimeCancellation.Token,
+                SetStatus,
+                HandleSignOutClicked,
+                HandleSwitchToParentRequested,
+                () => loginPanel.SetActive(false),
+                () => { });
+            if (shown && parentHomeCoordinator != null)
+            {
+                parentHomeCoordinator.Dispose();
+            }
+
+            return shown;
+        }
+
+        private void ShowParentUnlockPanel()
+        {
+            if (canvas == null) return;
+            CloseParentUnlockPanel();
+            parentUnlockPanel = HabitHeroUiFactory.CreatePanel(
+                canvas.transform,
+                new Color(0.02f, 0.035f, 0.06f, 0.9f),
+                "ParentUnlockPanel");
+            GameObject card = HabitHeroUiFactory.CreatePanel(
+                parentUnlockPanel.transform,
+                HabitHeroUiFactory.PanelColor,
+                "ParentUnlockCard");
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRect.pivot = new Vector2(0.5f, 0.5f);
+            cardRect.sizeDelta = new Vector2(620f, 420f);
+            cardRect.anchoredPosition = Vector2.zero;
+
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                uiFont,
+                "回到家長模式",
+                34,
+                TextAnchor.MiddleCenter,
+                HabitHeroUiFactory.AccentColor,
+                new Vector2(0.08f, 0.75f),
+                new Vector2(0.92f, 0.92f));
+            HabitHeroUiFactory.CreateText(
+                card.transform,
+                uiFont,
+                "為保護孩子資料，請重新輸入家長密碼。",
+                17,
+                TextAnchor.MiddleCenter,
+                new Color(0.78f, 0.84f, 0.92f, 1f),
+                new Vector2(0.08f, 0.63f),
+                new Vector2(0.92f, 0.73f));
+            parentUnlockPasswordInput = HabitHeroUiFactory.CreateInput(
+                card.transform,
+                uiFont,
+                "輸入家長密碼",
+                true,
+                new Vector2(0.1f, 0.42f),
+                new Vector2(0.9f, 0.57f));
+            parentUnlockSubmitButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                uiFont,
+                "確認",
+                new Vector2(0.1f, 0.2f),
+                new Vector2(0.43f, 0.32f));
+            parentUnlockSubmitButton.onClick.AddListener(
+                HandleParentUnlockSubmitClicked);
+            Button cancelButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                uiFont,
+                "取消",
+                new Vector2(0.57f, 0.2f),
+                new Vector2(0.9f, 0.32f));
+            cancelButton.onClick.AddListener(CloseParentUnlockPanel);
+            parentUnlockStatusText = HabitHeroUiFactory.CreateText(
+                card.transform,
+                uiFont,
+                "",
+                15,
+                TextAnchor.MiddleCenter,
+                new Color(0.84f, 0.89f, 0.96f, 1f),
+                new Vector2(0.08f, 0.06f),
+                new Vector2(0.92f, 0.17f));
+            SetParentUnlockStatus("家長驗證不會切換成孩子帳號。", false);
+        }
+
+        private async void HandleParentUnlockSubmitClicked()
+        {
+            if (authClient == null || isBusy || parentUnlockPasswordInput == null)
+            {
+                return;
+            }
+
+            SupabaseSession currentSession = authClient.CurrentSession;
+            string email = currentSession == null || currentSession.User == null
+                ? string.Empty
+                : currentSession.User.Email;
+            string password = parentUnlockPasswordInput.text ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(email)
+                || email.EndsWith(ChildEmailDomain, StringComparison.OrdinalIgnoreCase))
+            {
+                SetParentUnlockStatus("目前 session 不是家長帳號，請重新登入。", true);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                SetParentUnlockStatus("請輸入家長密碼。", true);
+                return;
+            }
+
+            SetBusy(true);
+            if (parentUnlockSubmitButton != null)
+            {
+                parentUnlockSubmitButton.interactable = false;
+            }
+            SetParentUnlockStatus("正在驗證家長密碼…", false);
+            try
+            {
+                SupabaseSession session = await authClient.SignInWithPasswordAsync(
+                    email,
+                    password,
+                    lifetimeCancellation.Token);
+                if (childHomeCoordinator != null)
+                {
+                    childHomeCoordinator.Dispose();
+                }
+
+                bool shown = await TryShowParentHomeAsync(session);
+                if (shown)
+                {
+                    CloseParentUnlockPanel();
+                }
+                else
+                {
+                    SetParentUnlockStatus("家長工作台載入失敗，請稍後再試。", true);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Scene shutdown cancels the request.
+            }
+            catch (Exception exception)
+            {
+                SetParentUnlockStatus("家長驗證失敗：" + exception.Message, true);
+            }
+            finally
+            {
+                SetBusy(false);
+                if (parentUnlockSubmitButton != null)
+                {
+                    parentUnlockSubmitButton.interactable = true;
+                }
+            }
+        }
+
+        private void CloseParentUnlockPanel()
+        {
+            if (parentUnlockPanel != null)
+            {
+                UnityEngine.Object.Destroy(parentUnlockPanel);
+                parentUnlockPanel = null;
+            }
+
+            parentUnlockPasswordInput = null;
+            parentUnlockSubmitButton = null;
+            parentUnlockStatusText = null;
+        }
+
+        private void SetParentUnlockStatus(string message, bool isError)
+        {
+            if (parentUnlockStatusText == null) return;
+            parentUnlockStatusText.text = message;
+            parentUnlockStatusText.color = isError
+                ? new Color(1f, 0.52f, 0.52f, 1f)
+                : new Color(0.84f, 0.89f, 0.96f, 1f);
+        }
+
         private static string BuildChildEmail(string username)
         {
             return username.Trim().ToLowerInvariant() + ChildEmailDomain;
@@ -820,6 +1020,9 @@ namespace HabitHero.App
                 lifetimeCancellation.Token,
                 SetStatus,
                 HandleSignOutClicked,
+                (familyId, childProfileId) => HandleEnterChildModeAsync(
+                    familyId,
+                    childProfileId),
                 () => loginPanel.SetActive(false),
                 () => loginPanel.SetActive(true));
         }

@@ -31,6 +31,7 @@ namespace HabitHero.App
             CancellationToken cancellationToken,
             Action<string, bool> setStatus,
             Action onSignOut,
+            Func<string, string, Task<bool>> enterChildMode,
             Action hideLogin,
             Action showLogin)
         {
@@ -128,6 +129,11 @@ namespace HabitHero.App
                         snapshot.familyId,
                         childProfileId,
                         cancellationToken),
+                    enterChildMode == null
+                        ? null
+                        : (childProfileId) => enterChildMode(
+                            snapshot.familyId,
+                            childProfileId),
                     onSignOut);
                 hideLogin();
                 return true;
