@@ -859,6 +859,70 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentRewardCrudUsesRlsScopedPostgrestMutations()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(201, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null),
+                new SupabaseHttpResponse(204, string.Empty, null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            await client.CreateRewardAsync(
+                "family-1",
+                new SupabaseParentRewardCreateInput
+                {
+                    childProfileId = "child-1",
+                    name = "週末看電影",
+                    points = 50,
+                    icon = "Gift",
+                },
+                CancellationToken.None);
+            await client.UpdateRewardAsync(
+                new SupabaseChildRewardRecord
+                {
+                    id = "reward-1",
+                    icon = "Gift",
+                },
+                "週末看電影加長版",
+                60,
+                CancellationToken.None);
+            await client.DeleteRewardAsync("reward-1", CancellationToken.None);
+
+            Assert.AreEqual(3, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rewards",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"family_id\":\"family-1\",\"child_profile_id\":\"child-1\",\"name\":\"週末看電影\",\"points\":50,\"icon\":\"Gift\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rewards?id=eq.reward-1",
+                dataTransport.Requests[1].Url);
+            Assert.AreEqual(
+                "{\"name\":\"週末看電影加長版\",\"points\":60,\"icon\":\"Gift\"}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "DELETE",
+                dataTransport.Requests[2].Method);
+        }
+
+        [Test]
         public void TaskCompletionQueueDeduplicatesByTaskAndPersistsOwnerScope()
         {
             InMemorySupabaseTaskCompletionQueueStore store =

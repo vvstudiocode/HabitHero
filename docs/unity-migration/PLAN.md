@@ -33,7 +33,7 @@ authorization into client-only rules.
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Not started |
 | Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task creation/review/reward actions) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
-| Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist) |
+| Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward CRUD) |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Not started |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
@@ -89,6 +89,8 @@ Partially completed locally:
 - Parent wishlist approval through the server `approve_wishlist_item` RPC and
   reward-ticket fulfillment through an RLS-scoped redemption update, both
   followed by a fresh family snapshot.
+- Parent reward create/update/delete through RLS-scoped PostgREST mutations,
+  with the same reward records consumed by the Unity child shop.
 
 Still required:
 
@@ -111,8 +113,9 @@ useful product loop:
 5. Offline queue and reconnect recovery.
 
 The current Unity slice covers items 1–3, timer transport/UI, the child reward
-wallet, wishlist mutations, parent task review, parent wishlist approval,
-parent reward-ticket fulfillment, and the transport part of item 5. Cached snapshots
+wallet, wishlist mutations, parent task/reward management, parent task review,
+parent wishlist approval, parent reward-ticket fulfillment, and the transport
+part of item 5. Cached snapshots
 for cold-start offline use and post-mutation ledger/wallet refreshes are now
 implemented locally. Production mobile release still requires device
 verification of encrypted storage, deep links, and recovery.

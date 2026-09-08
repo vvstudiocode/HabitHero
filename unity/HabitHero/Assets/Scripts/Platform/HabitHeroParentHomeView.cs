@@ -17,6 +17,7 @@ namespace HabitHero.App
         private GameObject wishlistApprovalPanel;
         private GameObject taskListObject;
         private HabitHeroParentTaskCreateView taskCreateView;
+        private HabitHeroParentRewardManagementView rewardManagementView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -48,6 +49,15 @@ namespace HabitHero.App
         private Func<
             SupabaseParentTaskCreateInput,
             Task<SupabaseParentTaskMutationResult>> createTask;
+        private Func<
+            SupabaseParentRewardCreateInput,
+            Task<SupabaseParentRewardMutationResult>> createReward;
+        private Func<
+            SupabaseChildRewardRecord,
+            string,
+            int,
+            Task<SupabaseParentRewardMutationResult>> updateReward;
+        private Func<string, Task<SupabaseParentRewardMutationResult>> deleteReward;
 
         public HabitHeroParentHomeView(Transform canvasTransform, Font font)
         {
@@ -76,6 +86,15 @@ namespace HabitHero.App
             Func<
                 SupabaseParentTaskCreateInput,
                 Task<SupabaseParentTaskMutationResult>> createTask,
+            Func<
+                SupabaseParentRewardCreateInput,
+                Task<SupabaseParentRewardMutationResult>> createReward,
+            Func<
+                SupabaseChildRewardRecord,
+                string,
+                int,
+                Task<SupabaseParentRewardMutationResult>> updateReward,
+            Func<string, Task<SupabaseParentRewardMutationResult>> deleteReward,
             Action onSignOut)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
@@ -86,6 +105,9 @@ namespace HabitHero.App
             this.approveWishlist = approveWishlist;
             this.fulfillTicket = fulfillTicket;
             this.createTask = createTask;
+            this.createReward = createReward;
+            this.updateReward = updateReward;
+            this.deleteReward = deleteReward;
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -172,8 +194,8 @@ namespace HabitHero.App
                 17,
                 TextAnchor.MiddleCenter,
                 new Color(0.84f, 0.89f, 0.96f, 1f),
-                new Vector2(0.08f, 0.06f),
-                new Vector2(0.92f, 0.2f));
+                new Vector2(0.08f, 0.03f),
+                new Vector2(0.92f, 0.16f));
         }
 
         public void Dispose()
@@ -182,6 +204,9 @@ namespace HabitHero.App
             approveWishlist = null;
             fulfillTicket = null;
             createTask = null;
+            createReward = null;
+            updateReward = null;
+            deleteReward = null;
             latestSnapshot = null;
             activeReviewTask = null;
             activeWishlist = null;
@@ -192,6 +217,7 @@ namespace HabitHero.App
             CloseWishlistApprovalPanel();
             CloseRewardPanel();
             CloseTaskCreatePanel();
+            CloseRewardManagementPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -298,8 +324,15 @@ namespace HabitHero.App
                 32,
                 TextAnchor.MiddleCenter,
                 HabitHeroUiFactory.AccentColor,
-                new Vector2(0.08f, 0.9f),
+                new Vector2(0.08f, 0.91f),
                 new Vector2(0.92f, 0.97f));
+            Button manageRewardButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "管理獎勵",
+                new Vector2(0.62f, 0.84f),
+                new Vector2(0.92f, 0.9f));
+            manageRewardButton.onClick.AddListener(OpenRewardManagementPanel);
             HabitHeroUiFactory.CreateText(
                 card.transform,
                 font,
@@ -307,13 +340,13 @@ namespace HabitHero.App
                 19,
                 TextAnchor.MiddleLeft,
                 Color.white,
-                new Vector2(0.08f, 0.81f),
-                new Vector2(0.92f, 0.87f));
+                new Vector2(0.08f, 0.77f),
+                new Vector2(0.92f, 0.83f));
             GameObject wishlistList = CreateVerticalList(
                 card.transform,
                 "ParentWishlistList",
-                new Vector2(0.08f, 0.54f),
-                new Vector2(0.92f, 0.8f));
+                new Vector2(0.08f, 0.51f),
+                new Vector2(0.92f, 0.76f));
             int visibleWishlistCount = 0;
             foreach (SupabaseChildWishlistRecord item in
                 latestSnapshot.wishlist ?? new SupabaseChildWishlistRecord[0])
@@ -342,13 +375,13 @@ namespace HabitHero.App
                 19,
                 TextAnchor.MiddleLeft,
                 Color.white,
-                new Vector2(0.08f, 0.47f),
-                new Vector2(0.92f, 0.53f));
+                new Vector2(0.08f, 0.44f),
+                new Vector2(0.92f, 0.5f));
             GameObject ticketList = CreateVerticalList(
                 card.transform,
                 "ParentTicketList",
-                new Vector2(0.08f, 0.21f),
-                new Vector2(0.92f, 0.46f));
+                new Vector2(0.08f, 0.2f),
+                new Vector2(0.92f, 0.43f));
             int visibleTicketCount = 0;
             foreach (SupabaseChildTicketRecord ticket in
                 latestSnapshot.tickets ?? new SupabaseChildTicketRecord[0])
@@ -414,6 +447,35 @@ namespace HabitHero.App
                 ApplySnapshot,
                 SetStatus,
                 CloseTaskCreatePanel);
+        }
+
+        private void OpenRewardManagementPanel()
+        {
+            if (latestSnapshot == null
+                || createReward == null
+                || updateReward == null
+                || deleteReward == null)
+            {
+                SetStatus("獎勵管理尚未連線。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            if (rewardManagementView == null)
+            {
+                rewardManagementView = new HabitHeroParentRewardManagementView(
+                    canvasTransform,
+                    font);
+            }
+
+            rewardManagementView.Show(
+                latestSnapshot,
+                createReward,
+                updateReward,
+                deleteReward,
+                ApplySnapshot,
+                SetStatus,
+                CloseRewardManagementPanel);
         }
 
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
@@ -830,6 +892,13 @@ namespace HabitHero.App
             if (taskCreateView == null) return;
             taskCreateView.Dispose();
             taskCreateView = null;
+        }
+
+        private void CloseRewardManagementPanel()
+        {
+            if (rewardManagementView == null) return;
+            rewardManagementView.Dispose();
+            rewardManagementView = null;
         }
 
         private void SetReviewStatus(string message, bool isError)

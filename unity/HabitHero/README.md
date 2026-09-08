@@ -56,9 +56,9 @@ items; reward redemption uses the server `redeem_reward` RPC, while wishlist
 add/cancel uses RLS-scoped PostgREST mutations followed by a fresh snapshot.
 The parent home slice reads the shared family data, creates tasks for a selected
 child through an RLS-scoped insert, reviews pending tasks via the existing
-review RPCs, approves wishlist items through the server RPC, and fulfills
-pending reward tickets through an RLS-scoped update; it never awards points
-from client-side state.
+review RPCs, manages reward records through RLS-scoped mutations, approves
+wishlist items through the server RPC, and fulfills pending reward tickets
+through an RLS-scoped update; it never awards points from client-side state.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

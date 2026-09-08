@@ -66,6 +66,14 @@ namespace HabitHero.Platform
         public string RefreshError { get; set; }
     }
 
+    public sealed class SupabaseParentRewardCreateInput
+    {
+        public string childProfileId;
+        public string name;
+        public int points;
+        public string icon;
+    }
+
     public sealed class SupabaseParentHomeClient
     {
         private readonly SupabaseRestClient restClient;
@@ -349,6 +357,133 @@ namespace HabitHero.Platform
             }
 
             return reward;
+        }
+
+        public async Task CreateRewardAsync(
+            string familyId,
+            SupabaseParentRewardCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(familyId))
+            {
+                throw new SupabaseDataException("家庭 ID 不可為空。");
+            }
+            if (input == null || string.IsNullOrWhiteSpace(input.childProfileId))
+            {
+                throw new SupabaseDataException("指定孩子不可為空。");
+            }
+
+            string name = input.name == null ? string.Empty : input.name.Trim();
+            if (name.Length < 1 || name.Length > 120)
+            {
+                throw new SupabaseDataException("獎勵名稱長度必須介於 1 到 120 個字元。");
+            }
+            if (input.points <= 0)
+            {
+                throw new SupabaseDataException("獎勵點數必須大於 0。");
+            }
+
+            string icon = string.IsNullOrWhiteSpace(input.icon) ? "Gift" : input.icon.Trim();
+            string body = "{\"family_id\":" + SupabaseJson.Quote(familyId)
+                + ",\"child_profile_id\":" + SupabaseJson.Quote(input.childProfileId)
+                + ",\"name\":" + SupabaseJson.Quote(name)
+                + ",\"points\":"
+                + input.points.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                + ",\"icon\":" + SupabaseJson.Quote(icon) + "}";
+            await restClient.InsertAsync("rewards", body, cancellationToken);
+        }
+
+        public async Task UpdateRewardAsync(
+            SupabaseChildRewardRecord reward,
+            string name,
+            int points,
+            CancellationToken cancellationToken)
+        {
+            if (reward == null || string.IsNullOrWhiteSpace(reward.id))
+            {
+                throw new SupabaseDataException("獎勵 ID 不可為空。");
+            }
+            string normalizedName = name == null ? string.Empty : name.Trim();
+            if (normalizedName.Length < 1 || normalizedName.Length > 120)
+            {
+                throw new SupabaseDataException("獎勵名稱長度必須介於 1 到 120 個字元。");
+            }
+            if (points <= 0)
+            {
+                throw new SupabaseDataException("獎勵點數必須大於 0。");
+            }
+
+            await restClient.UpdateAsync(
+                "rewards",
+                new[] { new SupabaseRestFilter("id", "eq", reward.id) },
+                "{\"name\":" + SupabaseJson.Quote(normalizedName)
+                    + ",\"points\":"
+                    + points.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + ",\"icon\":"
+                    + SupabaseJson.Quote(string.IsNullOrWhiteSpace(reward.icon) ? "Gift" : reward.icon)
+                    + "}",
+                cancellationToken);
+        }
+
+        public async Task DeleteRewardAsync(
+            string rewardId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(rewardId))
+            {
+                throw new SupabaseDataException("獎勵 ID 不可為空。");
+            }
+
+            await restClient.DeleteAsync(
+                "rewards",
+                new[] { new SupabaseRestFilter("id", "eq", rewardId) },
+                cancellationToken);
+        }
+
+        public async Task<SupabaseParentRewardMutationResult> CreateRewardAndRefreshAsync(
+            string familyId,
+            SupabaseParentRewardCreateInput input,
+            CancellationToken cancellationToken)
+        {
+            await CreateRewardAsync(familyId, input, cancellationToken);
+            SupabaseParentRewardMutationResult result =
+                new SupabaseParentRewardMutationResult
+                {
+                    Reward = new SupabaseChildRewardRecord
+                    {
+                        family_id = familyId,
+                        child_profile_id = input.childProfileId,
+                        name = input.name,
+                        points = input.points,
+                        icon = input.icon,
+                    },
+                };
+            await RefreshParentMutationAsync(result, cancellationToken);
+            return result;
+        }
+
+        public async Task<SupabaseParentRewardMutationResult> UpdateRewardAndRefreshAsync(
+            SupabaseChildRewardRecord reward,
+            string name,
+            int points,
+            CancellationToken cancellationToken)
+        {
+            await UpdateRewardAsync(reward, name, points, cancellationToken);
+            SupabaseParentRewardMutationResult result =
+                new SupabaseParentRewardMutationResult { Reward = reward };
+            await RefreshParentMutationAsync(result, cancellationToken);
+            return result;
+        }
+
+        public async Task<SupabaseParentRewardMutationResult> DeleteRewardAndRefreshAsync(
+            string rewardId,
+            CancellationToken cancellationToken)
+        {
+            await DeleteRewardAsync(rewardId, cancellationToken);
+            SupabaseParentRewardMutationResult result =
+                new SupabaseParentRewardMutationResult();
+            await RefreshParentMutationAsync(result, cancellationToken);
+            return result;
         }
 
         public async Task<SupabaseParentRewardMutationResult> ApproveWishlistAndRefreshAsync(

@@ -70,6 +70,18 @@ namespace HabitHero.App
                         snapshot.familyId,
                         input,
                         cancellationToken),
+                    (input) => client.CreateRewardAndRefreshAsync(
+                        snapshot.familyId,
+                        input,
+                        cancellationToken),
+                    (reward, name, points) => client.UpdateRewardAndRefreshAsync(
+                        reward,
+                        name,
+                        points,
+                        cancellationToken),
+                    (rewardId) => client.DeleteRewardAndRefreshAsync(
+                        rewardId,
+                        cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;
