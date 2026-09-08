@@ -8,6 +8,7 @@ const unityProjectPath = path.join(repositoryRoot, 'unity/HabitHero');
 const defaultUnityEditorPath =
   '/Applications/Unity/Hub/Editor/6000.6.0f1/Unity.app/Contents/MacOS/Unity';
 const unityEditorPath = process.env.UNITY_EDITOR_PATH || defaultUnityEditorPath;
+const testFilter = process.env.HABITHERO_UNITY_TEST_FILTER || 'HabitHero.Tests';
 const resultDirectory = mkdtempSync(path.join(tmpdir(), 'habithero-unity-editmode-'));
 const resultPath = path.join(resultDirectory, 'test-results.xml');
 
@@ -34,7 +35,7 @@ try {
       '-testPlatform',
       'editmode',
       '-testFilter',
-      'HabitHero.Tests.PlatformContractTests',
+      testFilter,
       '-testResults',
       resultPath,
       '-logFile',

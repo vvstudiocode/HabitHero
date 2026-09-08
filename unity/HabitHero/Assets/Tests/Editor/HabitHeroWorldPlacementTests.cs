@@ -49,6 +49,16 @@ namespace HabitHero.Tests
                 HabitHeroWorldPlacementControl.ScaleUp,
                 0.75f,
                 1.25f);
+            draft = HabitHeroWorldPlacement.ApplyControl(
+                draft,
+                HabitHeroWorldPlacementControl.ScaleUp,
+                0.75f,
+                1.25f);
+            draft = HabitHeroWorldPlacement.ApplyControl(
+                draft,
+                HabitHeroWorldPlacementControl.ScaleUp,
+                0.75f,
+                1.25f);
 
             Assert.That(draft.RotationY, Is.EqualTo(Mathf.PI / 8f).Within(0.0001f));
             Assert.That(draft.Scale, Is.EqualTo(1.25f).Within(0.0001f));
