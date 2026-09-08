@@ -129,6 +129,12 @@ Partially completed locally:
 - The Unity child home exposes a world hub view for scene unlock attempts and
   NPC dialogue completion. Each successful action reloads the child-scoped
   world data and updates the shop gate without mutating progress locally.
+- Unity now has a data-driven 3D world runtime shell: unlocked scenes can open
+  a RenderTexture view with Supabase-positioned NPC placeholders, child
+  movement controls, and NPC dialogue callbacks. This is interaction and
+  lifecycle evidence only; authored environment assets, canonical
+  character/pet models, mobile performance, and device visual verification
+  remain pending.
 
 Still required:
 

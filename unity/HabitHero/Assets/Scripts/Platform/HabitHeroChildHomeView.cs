@@ -20,6 +20,7 @@ namespace HabitHero.App
         private GameObject wishlistPanel;
         private HabitHeroChildGameView gameView;
         private HabitHeroChildWorldView worldView;
+        private HabitHeroChildWorldSceneView worldSceneView;
         private HabitHeroChildLedgerView ledgerView;
         private Text statusText;
         private Text pointsText;
@@ -38,6 +39,7 @@ namespace HabitHero.App
         private SupabaseTaskTimerSessionRecord[] timerSessions;
         private GameObject taskListObject;
         private SupabaseChildHomeSnapshot latestSnapshot;
+        private SupabaseChildWorldData latestWorldData;
         private CancellationTokenSource timerLoopCancellation;
         private Func<
             SupabaseChildTaskRecord,
@@ -50,6 +52,7 @@ namespace HabitHero.App
         private Func<string, Task<SupabaseRewardRedemptionResult>> redeemReward;
         private Func<string, Task<SupabaseWishlistMutationResult>> addWishlist;
         private Func<string, Task<SupabaseWishlistMutationResult>> deleteWishlist;
+        private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogueWorld;
         private string selectedMood;
         private int selectedDifficulty;
         private bool abandonConfirmationPending;
@@ -99,7 +102,9 @@ namespace HabitHero.App
             this.redeemReward = redeemReward;
             this.addWishlist = addWishlist;
             this.deleteWishlist = deleteWishlist;
+            this.completeNpcDialogueWorld = completeNpcDialogue;
             latestSnapshot = snapshot;
+            latestWorldData = worldData;
             timerSessions = snapshot.timers ?? new SupabaseTaskTimerSessionRecord[0];
             gameView = new HabitHeroChildGameView(canvasTransform, font);
             gameView.Show(
@@ -110,7 +115,11 @@ namespace HabitHero.App
                 setFollowingPets,
                 setRoamingPets);
             worldView = new HabitHeroChildWorldView(canvasTransform, font);
-            worldView.Show(worldData, unlockWorldScene, completeNpcDialogue);
+            worldView.Show(
+                worldData,
+                (sceneId) => UnlockWorldSceneAndApplyAsync(unlockWorldScene, sceneId),
+                (npcId) => CompleteNpcDialogueAndApplyAsync(completeNpcDialogue, npcId),
+                OpenWorldScene);
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -220,8 +229,10 @@ namespace HabitHero.App
             redeemReward = null;
             addWishlist = null;
             deleteWishlist = null;
+            completeNpcDialogueWorld = null;
             timerSessions = null;
             latestSnapshot = null;
+            latestWorldData = null;
             pointsText = null;
             taskListObject = null;
             CloseReportPanel();
@@ -239,6 +250,11 @@ namespace HabitHero.App
                 worldView.Dispose();
                 worldView = null;
             }
+            if (worldSceneView != null)
+            {
+                worldSceneView.Dispose();
+                worldSceneView = null;
+            }
             abandonConfirmationPending = false;
             if (panel != null)
             {
@@ -247,6 +263,54 @@ namespace HabitHero.App
             }
 
             statusText = null;
+        }
+
+        private async Task<SupabaseChildWorldData> UnlockWorldSceneAndApplyAsync(
+            Func<string, Task<SupabaseChildWorldData>> mutation,
+            string sceneId)
+        {
+            if (mutation == null) throw new SupabaseDataException("場景解鎖服務尚未連線。");
+            SupabaseChildWorldData refreshed = await mutation(sceneId);
+            if (refreshed == null) throw new SupabaseDataException("伺服器沒有回傳最新世界資料。");
+            latestWorldData = refreshed;
+            if (gameView != null) gameView.ApplyWorldData(refreshed);
+            return refreshed;
+        }
+
+        private async Task<SupabaseChildWorldData> CompleteNpcDialogueAndApplyAsync(
+            Func<string, Task<SupabaseChildWorldData>> mutation,
+            string npcId)
+        {
+            if (mutation == null) throw new SupabaseDataException("NPC 對話服務尚未連線。");
+            SupabaseChildWorldData refreshed = await mutation(npcId);
+            if (refreshed == null) throw new SupabaseDataException("伺服器沒有回傳最新世界資料。");
+            latestWorldData = refreshed;
+            if (gameView != null) gameView.ApplyWorldData(refreshed);
+            return refreshed;
+        }
+
+        private void OpenWorldScene(string sceneId)
+        {
+            if (latestWorldData == null || !latestWorldData.IsSceneUnlocked(sceneId)) return;
+            if (worldSceneView == null)
+            {
+                worldSceneView = new HabitHeroChildWorldSceneView(canvasTransform, font);
+            }
+
+            worldSceneView.Show(
+                latestWorldData,
+                sceneId,
+                (npcId) => CompleteNpcDialogueAndApplyAsync(completeNpcDialogueWorld, npcId),
+                CloseWorldScene);
+            worldSceneView.Open();
+        }
+
+        private void CloseWorldScene()
+        {
+            if (worldView != null && latestWorldData != null)
+            {
+                worldView.ApplyData(latestWorldData);
+            }
         }
 
         public void ApplySnapshot(SupabaseChildHomeSnapshot snapshot)

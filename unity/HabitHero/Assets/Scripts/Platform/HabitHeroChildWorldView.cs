@@ -15,6 +15,7 @@ namespace HabitHero.App
         private SupabaseChildWorldData latestData;
         private Func<string, Task<SupabaseChildWorldData>> unlockScene;
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue;
+        private Action<string> enterScene;
 
         public HabitHeroChildWorldView(Transform canvasTransform, Font font)
         {
@@ -27,12 +28,14 @@ namespace HabitHero.App
         public void Show(
             SupabaseChildWorldData data,
             Func<string, Task<SupabaseChildWorldData>> unlockScene,
-            Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue)
+            Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue,
+            Action<string> enterScene)
         {
             Close();
             latestData = data;
             this.unlockScene = unlockScene;
             this.completeNpcDialogue = completeNpcDialogue;
+            this.enterScene = enterScene;
         }
 
         public void ApplyData(SupabaseChildWorldData data)
@@ -136,6 +139,7 @@ namespace HabitHero.App
             latestData = null;
             unlockScene = null;
             completeNpcDialogue = null;
+            enterScene = null;
         }
 
         private void RenderScenes(Transform parent)
@@ -159,9 +163,15 @@ namespace HabitHero.App
                 AddFlexibleLayout(label.gameObject);
                 Button actionButton = CreateRowButton(
                     row.transform,
-                    isUnlocked ? "已解鎖" : "解鎖");
-                actionButton.interactable = !isUnlocked && unlockScene != null;
-                if (!isUnlocked && unlockScene != null)
+                    isUnlocked ? "進入" : "解鎖");
+                actionButton.interactable = isUnlocked
+                    ? enterScene != null
+                    : unlockScene != null;
+                if (isUnlocked && enterScene != null)
+                {
+                    actionButton.onClick.AddListener(() => enterScene(scene.id));
+                }
+                else if (!isUnlocked && unlockScene != null)
                 {
                     actionButton.onClick.AddListener(() => UnlockSceneAsync(
                         scene.id,
