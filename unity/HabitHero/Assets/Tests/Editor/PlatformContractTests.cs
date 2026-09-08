@@ -1547,6 +1547,121 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task CoopClientUsesTheServerRpcsAndMapsAuthoritativeState()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "[{\"id\":\"coop-1\",\"world_owner_child_profile_id\":\"owner-child-1\",\"title\":\"一起完成閱讀\",\"description\":\"一起讀完一章\",\"status\":\"active\",\"participant_count\":2,\"created_at\":\"2026-09-09T09:00:00Z\",\"completed_at\":null}]",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"adventures\":[{\"id\":\"coop-1\",\"world_owner_child_profile_id\":\"owner-child-1\",\"title\":\"一起完成閱讀\",\"description\":\"一起讀完一章\",\"status\":\"active\",\"participant_count\":2,\"created_at\":\"2026-09-09T09:00:00Z\",\"completed_at\":null}],\"participants\":[{\"id\":\"participant-1\",\"coop_adventure_id\":\"coop-1\",\"child_profile_id\":\"owner-child-1\",\"display_name\":\"小明\",\"role\":\"creator\",\"joined_at\":\"2026-09-09T09:01:00Z\"}],\"completions\":[{\"id\":\"completion-1\",\"coop_adventure_id\":\"coop-1\",\"participant_id\":\"participant-1\",\"status\":\"pending\",\"submitted_at\":null,\"reviewed_at\":null}],\"synced_at\":\"2026-09-09T09:02:00Z\"}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"coop_adventure_id\":\"coop-1\",\"world_owner_child_profile_id\":\"owner-child-1\",\"creator_child_profile_id\":\"child-1\",\"title\":\"一起完成閱讀\",\"created_at\":\"2026-09-09T09:00:00Z\"}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"coop_adventure_id\":\"coop-1\",\"participant_id\":\"participant-2\",\"status\":\"joined\"}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"coop_adventure_id\":\"coop-1\",\"participant_id\":\"participant-2\",\"completion_id\":\"completion-2\",\"status\":\"pending\"}",
+                    null),
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"coop_adventure_id\":\"coop-1\",\"participant_id\":\"participant-2\",\"completion_id\":\"completion-2\",\"status\":\"completed\"}",
+                    null));
+            SupabaseChildCoopAdventureClient client =
+                new SupabaseChildCoopAdventureClient(
+                    new SupabaseRestClient(settings, authClient, dataTransport));
+
+            SupabaseCoopAdventureSummary[] adventures = await client.ListAsync(
+                "owner-child-1",
+                CancellationToken.None);
+            SupabaseCoopAdventureState state = await client.LoadStateAsync(
+                "coop-1",
+                CancellationToken.None);
+            SupabaseCoopAdventureNotification created =
+                await client.CreateFromGeneralTaskAsync(
+                    "task-1",
+                    CancellationToken.None);
+            SupabaseCoopMutationResult joined = await client.JoinAsync(
+                "coop-1",
+                CancellationToken.None);
+            SupabaseCoopMutationResult submitted =
+                await client.SubmitCompletionAsync(
+                    "participant-2",
+                    new SupabaseCoopCompletionInput
+                    {
+                        idempotencyKey = "11111111-1111-1111-1111-111111111111",
+                        quickReport = "hard",
+                        reflection = "我完成了閱讀。",
+                        mood = "happy",
+                        difficulty = 4,
+                    },
+                    CancellationToken.None);
+            SupabaseCoopMutationResult reviewed =
+                await client.ReviewCompletionAsync(
+                    "participant-2",
+                    new SupabaseCoopReviewInput
+                    {
+                        approved = true,
+                        approvedPoints = 12,
+                        feedback = "做得很好",
+                        tone = "celebratory",
+                    },
+                    CancellationToken.None);
+
+            Assert.AreEqual(1, adventures.Length);
+            Assert.AreEqual("coop-1", adventures[0].id);
+            Assert.AreEqual(2, adventures[0].participant_count);
+            Assert.AreEqual("participant-1", state.participants[0].id);
+            Assert.AreEqual("pending", state.completions[0].status);
+            Assert.AreEqual("2026-09-09T09:02:00Z", state.synced_at);
+            Assert.AreEqual("coop-1", created.coop_adventure_id);
+            Assert.AreEqual("participant-2", joined.participant_id);
+            Assert.AreEqual("completion-2", submitted.completion_id);
+            Assert.AreEqual("completed", reviewed.status);
+            Assert.AreEqual(6, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/list_coop_adventures",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_world_owner_child_profile_id\":\"owner-child-1\"}",
+                dataTransport.Requests[0].Body);
+            Assert.AreEqual(
+                "{\"target_coop_adventure_id\":\"coop-1\"}",
+                dataTransport.Requests[1].Body);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\"}",
+                dataTransport.Requests[2].Body);
+            Assert.AreEqual(
+                "{\"target_participant_id\":\"participant-2\",\"idempotency_key\":\"11111111-1111-1111-1111-111111111111\",\"quick_report\":\"hard\",\"reflection\":\"我完成了閱讀。\",\"mood\":\"happy\",\"difficulty\":4}",
+                dataTransport.Requests[4].Body);
+            Assert.AreEqual(
+                "{\"target_participant_id\":\"participant-2\",\"approved\":true,\"approved_points\":12,\"feedback\":\"做得很好\",\"correction\":null,\"tone\":\"celebratory\",\"revision_note\":null}",
+                dataTransport.Requests[5].Body);
+        }
+
+        [Test]
         public async Task ParentSessionLoadsAnExplicitChildScopeWithoutUsingChildIdentity()
         {
             SupabaseClientSettings settings = CreateSettings();
