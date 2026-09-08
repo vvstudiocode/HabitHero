@@ -37,7 +37,7 @@ namespace HabitHero.Platform
         private bool initialized;
 
         public SupabaseAuthClient(SupabaseClientSettings settings)
-            : this(settings, new PlayerPrefsSupabaseSessionStore(), new UnityWebRequestTransport())
+            : this(settings, new SecureSupabaseSessionStore(), new UnityWebRequestTransport())
         {
         }
 

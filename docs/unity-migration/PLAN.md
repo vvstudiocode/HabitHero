@@ -83,7 +83,8 @@ Partially completed locally:
 
 Still required:
 
-- Native secure session persistence using iOS Keychain and Android Keystore.
+- Device build and recovery verification for the iOS Keychain and Android
+  Keystore session plugins.
 - Capacitor-to-Unity deep-link replacement.
 - Supabase Realtime transport adapters.
 - Native iOS/Android push and app URL plugins.
@@ -99,9 +100,9 @@ useful product loop:
 4. Points/ledger refresh.
 5. Offline queue and reconnect recovery.
 
-The current Unity slice covers items 1–3 and the transport part of item 5.
-It still needs a full report UI, timer state, cached snapshots for cold-start
-offline use, and a post-completion ledger refresh before this phase is closed.
+The current Unity slice covers items 1–3, timer transport/UI, and the
+transport part of item 5. It still needs cached snapshots for cold-start
+offline use and a post-completion ledger refresh before this phase is closed.
 The temporary PlayerPrefs queue is functional for the editor slice; production
 mobile release still requires encrypted/native storage review.
 
