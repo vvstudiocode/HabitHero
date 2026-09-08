@@ -25,12 +25,15 @@ namespace HabitHero.App
             new Dictionary<string, GameObject>();
         private readonly Dictionary<string, SupabaseFriendWorldAvatarState> remoteAvatarStates =
             new Dictionary<string, SupabaseFriendWorldAvatarState>();
+        private readonly Dictionary<string, float> remoteAvatarLastReceivedSeconds =
+            new Dictionary<string, float>();
         private SupabaseFriendWorldPresenceMember[] latestPresenceMembers;
         private string localConnectionId;
         private string localChildProfileId;
         private string localCharacterAssetKey;
         private long localAvatarSequence;
         private Action<SupabaseFriendWorldAvatarState> onLocalAvatarStateChanged;
+        private float realtimeSeconds;
 
         public HabitHeroChildFriendWorldView(Transform canvasTransform, Font font)
         {
@@ -64,6 +67,7 @@ namespace HabitHero.App
             latestData = data;
             if (!IsOpen) return;
 
+            PruneStaleRemoteAvatarStates();
             CloseInternal(false);
             CreateWorld();
             CreateOverlay();
@@ -78,6 +82,7 @@ namespace HabitHero.App
         public void Open()
         {
             if (latestData == null) return;
+            PruneStaleRemoteAvatarStates();
             CloseInternal(false);
             CreateWorld();
             CreateOverlay();
@@ -129,6 +134,8 @@ namespace HabitHero.App
             onLocalAvatarStateChanged = null;
             latestPresenceMembers = null;
             remoteAvatarStates.Clear();
+            remoteAvatarLastReceivedSeconds.Clear();
+            realtimeSeconds = 0f;
             foreach (GameObject avatar in remoteAvatars.Values)
             {
                 if (avatar != null) UnityEngine.Object.Destroy(avatar);
@@ -174,10 +181,9 @@ namespace HabitHero.App
 
             foreach (string connectionId in removedConnections)
             {
-                GameObject avatar = remoteAvatars[connectionId];
-                if (avatar != null) UnityEngine.Object.Destroy(avatar);
-                remoteAvatars.Remove(connectionId);
+                RemoveRemoteAvatar(connectionId);
                 remoteAvatarStates.Remove(connectionId);
+                remoteAvatarLastReceivedSeconds.Remove(connectionId);
             }
 
             List<string> removedCachedStates = new List<string>();
@@ -188,7 +194,10 @@ namespace HabitHero.App
             }
 
             foreach (string connectionId in removedCachedStates)
+            {
                 remoteAvatarStates.Remove(connectionId);
+                remoteAvatarLastReceivedSeconds.Remove(connectionId);
+            }
 
             SetRealtimeStatus(
                 "多人狀態：線上角色 "
@@ -211,13 +220,51 @@ namespace HabitHero.App
             }
 
             remoteAvatarStates[state.connectionId] = state;
+            remoteAvatarLastReceivedSeconds[state.connectionId] = realtimeSeconds;
             if (!IsOpen) return;
             RenderRemoteAvatarState(state);
         }
 
+        public void Tick(float deltaSeconds)
+        {
+            float safeDeltaSeconds = Mathf.Max(0f, deltaSeconds);
+            realtimeSeconds += safeDeltaSeconds;
+            PruneStaleRemoteAvatarStates();
+            if (!IsOpen) return;
+
+            float interpolationStep =
+                SupabaseFriendWorldAvatarMotionPolicy.GetInterpolationStep(
+                    safeDeltaSeconds);
+            foreach (KeyValuePair<string, SupabaseFriendWorldAvatarState> entry in
+                remoteAvatarStates)
+            {
+                GameObject avatar;
+                if (!remoteAvatars.TryGetValue(entry.Key, out avatar)
+                    || avatar == null)
+                {
+                    RenderRemoteAvatarState(entry.Value);
+                    continue;
+                }
+
+                Vector3 targetPosition = GetAvatarPosition(entry.Value);
+                avatar.transform.localPosition = Vector3.Lerp(
+                    avatar.transform.localPosition,
+                    targetPosition,
+                    interpolationStep);
+                Vector3 angles = avatar.transform.localEulerAngles;
+                angles.y = Mathf.LerpAngle(
+                    angles.y,
+                    entry.Value.rotationY,
+                    interpolationStep);
+                avatar.transform.localEulerAngles = angles;
+            }
+        }
+
         private void RenderRemoteAvatarState(SupabaseFriendWorldAvatarState state)
         {
+            if (state == null || string.IsNullOrWhiteSpace(state.connectionId)) return;
             GameObject avatar;
+            bool isNewAvatar = false;
             if (!remoteAvatars.TryGetValue(state.connectionId, out avatar)
                 || avatar == null)
             {
@@ -228,9 +275,24 @@ namespace HabitHero.App
                     new Vector3(0.72f, 1f, 0.72f),
                     new Color(0.35f, 0.9f, 0.95f, 1f));
                 remoteAvatars[state.connectionId] = avatar;
+                isNewAvatar = true;
             }
 
-            avatar.transform.localPosition = new Vector3(
+            if (isNewAvatar)
+            {
+                avatar.transform.localPosition = GetAvatarPosition(state);
+                avatar.transform.localRotation = Quaternion.Euler(0f, state.rotationY, 0f);
+            }
+            SetRealtimeStatus(
+                "多人狀態：已同步遠端角色 "
+                    + remoteAvatarStates.Count.ToString(CultureInfo.InvariantCulture)
+                    + " 位。",
+                false);
+        }
+
+        private Vector3 GetAvatarPosition(SupabaseFriendWorldAvatarState state)
+        {
+            return new Vector3(
                 Mathf.Clamp(
                     state.x,
                     -SupabaseFriendWorldRealtimeContracts.WorldBoundary,
@@ -240,12 +302,38 @@ namespace HabitHero.App
                     state.z,
                     -SupabaseFriendWorldRealtimeContracts.WorldBoundary,
                     SupabaseFriendWorldRealtimeContracts.WorldBoundary));
-            avatar.transform.localRotation = Quaternion.Euler(0f, state.rotationY, 0f);
-            SetRealtimeStatus(
-                "多人狀態：已同步遠端角色 "
-                    + remoteAvatarStates.Count.ToString(CultureInfo.InvariantCulture)
-                    + " 位。",
-                false);
+        }
+
+        private void PruneStaleRemoteAvatarStates()
+        {
+            List<string> staleConnections = new List<string>();
+            foreach (KeyValuePair<string, float> entry in remoteAvatarLastReceivedSeconds)
+            {
+                if (SupabaseFriendWorldAvatarMotionPolicy.IsStale(
+                        realtimeSeconds - entry.Value))
+                {
+                    staleConnections.Add(entry.Key);
+                }
+            }
+
+            foreach (string connectionId in staleConnections)
+            {
+                RemoveRemoteAvatar(connectionId);
+                remoteAvatarStates.Remove(connectionId);
+                remoteAvatarLastReceivedSeconds.Remove(connectionId);
+            }
+        }
+
+        private void RemoveRemoteAvatar(string connectionId)
+        {
+            GameObject avatar;
+            if (remoteAvatars.TryGetValue(connectionId, out avatar)
+                && avatar != null)
+            {
+                UnityEngine.Object.Destroy(avatar);
+            }
+
+            remoteAvatars.Remove(connectionId);
         }
 
         private void CreateWorld()

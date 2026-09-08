@@ -849,6 +849,11 @@ namespace HabitHero.App
             return await gameClient.LoadAsync(familyId, childProfileId, cancellationToken);
         }
 
+        public void Tick(float deltaSeconds)
+        {
+            if (view != null) view.Tick(deltaSeconds);
+        }
+
         public void Dispose()
         {
             StopFriendWorldRealtime();

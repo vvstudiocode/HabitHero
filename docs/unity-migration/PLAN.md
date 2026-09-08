@@ -163,8 +163,9 @@ Partially completed locally:
   movement, requests the latest peer state on join, keeps Presence visible when
   the preview opens after the socket handshake, and applies the same three-person
   capacity admission rule as the Web client, and reloads newer world snapshots
-  after a `world_revision_v1` event. Remote interpolation and
-  two-account/device verification remain pending.
+  after a `world_revision_v1` event. Remote placeholders now interpolate toward
+  newer states and are pruned after a bounded stale period. Two-account/device
+  verification remains pending.
 
 Still required:
 
@@ -178,8 +179,7 @@ Still required:
   the runtime handler, token-fragment recovery, and PKCE exchange contract are
   now in place. A code-only callback is rejected because Supabase requires the
   original PKCE verifier.
-- Unity remote-avatar interpolation and co-op flows, plus two-account/device
-  reconnect verification. The current
+- Unity co-op flows, plus two-account/device reconnect verification. The current
   live preview intentionally uses bounded placeholder avatars until the
   character asset contract and visual/device evidence are approved.
 - Native iOS/Android push and app URL plugins.

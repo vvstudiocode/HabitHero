@@ -463,6 +463,11 @@ namespace HabitHero.App
             if (socialView != null) socialView.ApplyFriendWorldData(data);
         }
 
+        public void Tick(float deltaSeconds)
+        {
+            if (socialView != null) socialView.Tick(deltaSeconds);
+        }
+
         private void OpenSocialPanel()
         {
             if (socialView == null || latestSocialData == null)

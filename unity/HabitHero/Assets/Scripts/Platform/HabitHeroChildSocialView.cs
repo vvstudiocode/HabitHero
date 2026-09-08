@@ -175,6 +175,11 @@ namespace HabitHero.App
             if (friendWorldView != null) friendWorldView.ApplyData(data);
         }
 
+        public void Tick(float deltaSeconds)
+        {
+            if (friendWorldView != null) friendWorldView.Tick(deltaSeconds);
+        }
+
         public void Open()
         {
             if (latestData == null) return;

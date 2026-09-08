@@ -41,6 +41,14 @@ namespace HabitHero.App
             Application.deepLinkActivated += HandleDeepLinkActivated;
         }
 
+        private void Update()
+        {
+            if (childHomeCoordinator != null)
+            {
+                childHomeCoordinator.Tick(Time.unscaledDeltaTime);
+            }
+        }
+
         private async void Start()
         {
             lifetimeCancellation = new CancellationTokenSource();

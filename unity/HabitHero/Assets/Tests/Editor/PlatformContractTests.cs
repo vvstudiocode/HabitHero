@@ -967,6 +967,24 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void FriendWorldAvatarMotionPolicyUsesSmoothStepsAndBoundedStaleness()
+        {
+            Assert.AreEqual(
+                0f,
+                SupabaseFriendWorldAvatarMotionPolicy.GetInterpolationStep(0f),
+                0.0001f);
+            float step = SupabaseFriendWorldAvatarMotionPolicy.GetInterpolationStep(0.1f);
+            Assert.Greater(step, 0f);
+            Assert.Less(step, 1f);
+            Assert.IsFalse(
+                SupabaseFriendWorldAvatarMotionPolicy.IsStale(
+                    SupabaseFriendWorldAvatarMotionPolicy.StaleAfterSeconds));
+            Assert.IsTrue(
+                SupabaseFriendWorldAvatarMotionPolicy.IsStale(
+                    SupabaseFriendWorldAvatarMotionPolicy.StaleAfterSeconds + 0.01f));
+        }
+
+        [Test]
         public void FriendWorldClientRejectsAnEmptyTargetBeforeNetworkAccess()
         {
             SupabaseClientSettings settings = CreateSettings();

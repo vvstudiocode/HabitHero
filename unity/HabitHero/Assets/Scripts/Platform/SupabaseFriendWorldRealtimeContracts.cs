@@ -158,6 +158,24 @@ namespace HabitHero.Platform
         }
     }
 
+    public static class SupabaseFriendWorldAvatarMotionPolicy
+    {
+        public const float InterpolationSharpness = 12f;
+        public const float StaleAfterSeconds = 8f;
+
+        public static float GetInterpolationStep(float deltaSeconds)
+        {
+            if (deltaSeconds <= 0f) return 0f;
+            double step = 1d - Math.Exp(-InterpolationSharpness * deltaSeconds);
+            return (float)Math.Max(0d, Math.Min(1d, step));
+        }
+
+        public static bool IsStale(float ageSeconds)
+        {
+            return ageSeconds > StaleAfterSeconds;
+        }
+    }
+
     [Serializable]
     public sealed class SupabaseFriendWorldAvatarState
     {
