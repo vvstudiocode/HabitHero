@@ -63,8 +63,26 @@ through an RLS-scoped update. Manual point changes use the server
 Child login accounts are managed through the authenticated
 `manage-child-account` Edge Function, including creation, password reset, and
 deletion; the Unity client never receives or stores a service-role key.
+The parent workbench also includes a read-only child-view preview. It selects
+one child from the authenticated family snapshot and filters every displayed
+task, reward, wishlist, ticket, and ledger row to that child; it does not
+impersonate a child session or create a second authorization path.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
+
+## CLI build smoke test
+
+With the Unity Editor installed, run:
+
+```text
+npm run build:unity-webgl
+```
+
+The command invokes the checked-in `BuildHabitHero` Editor entrypoint and
+writes the ignored output to `unity/HabitHero/Builds/WebGL`. Set
+`HABITHERO_UNITY_EDITOR_PATH` when Unity is installed at a different path.
+This verifies the Bootstrap scene and WebGL build pipeline; it is not a
+replacement for iOS/Android module and device verification.
 
 ## Local Supabase configuration
 

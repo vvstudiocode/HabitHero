@@ -20,6 +20,7 @@ namespace HabitHero.App
         private HabitHeroParentRewardManagementView rewardManagementView;
         private HabitHeroParentPointAdjustmentView pointAdjustmentView;
         private HabitHeroParentChildAccountView childAccountView;
+        private HabitHeroParentChildPreviewView childPreviewView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -182,6 +183,13 @@ namespace HabitHero.App
                 new Vector2(0.72f, 0.91f),
                 new Vector2(0.91f, 0.97f));
             signOutButton.onClick.AddListener(() => onSignOut());
+            Button childPreviewButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "孩子視角",
+                new Vector2(0.5f, 0.91f),
+                new Vector2(0.69f, 0.97f));
+            childPreviewButton.onClick.AddListener(OpenChildPreviewPanel);
 
             taskListObject = new GameObject(
                 "ParentPendingTaskList",
@@ -259,6 +267,7 @@ namespace HabitHero.App
             CloseRewardManagementPanel();
             ClosePointAdjustmentPanel();
             CloseChildAccountPanel();
+            CloseChildPreviewPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -271,6 +280,10 @@ namespace HabitHero.App
             if (snapshot == null || panel == null) return;
             latestSnapshot = snapshot;
             RenderSnapshot(snapshot);
+            if (childPreviewView != null)
+            {
+                childPreviewView.ApplySnapshot(snapshot);
+            }
             SetStatus("家庭資料、待審任務與點數已更新。", false);
         }
 
@@ -579,6 +592,36 @@ namespace HabitHero.App
                 ApplySnapshot,
                 SetStatus,
                 CloseChildAccountPanel);
+        }
+
+        private void OpenChildPreviewPanel()
+        {
+            if (latestSnapshot == null
+                || latestSnapshot.children == null
+                || latestSnapshot.children.Length == 0)
+            {
+                SetStatus("目前沒有可預覽的孩子資料。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            CloseWishlistApprovalPanel();
+            CloseReviewPanel();
+            CloseTaskCreatePanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            if (childPreviewView == null)
+            {
+                childPreviewView = new HabitHeroParentChildPreviewView(
+                    canvasTransform,
+                    font);
+            }
+
+            childPreviewView.Show(
+                latestSnapshot,
+                latestSnapshot.children[0].id,
+                CloseChildPreviewPanel);
         }
 
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
@@ -1016,6 +1059,13 @@ namespace HabitHero.App
             if (childAccountView == null) return;
             childAccountView.Dispose();
             childAccountView = null;
+        }
+
+        private void CloseChildPreviewPanel()
+        {
+            if (childPreviewView == null) return;
+            childPreviewView.Dispose();
+            childPreviewView = null;
         }
 
         private void SetReviewStatus(string message, bool isError)

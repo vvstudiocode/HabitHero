@@ -30,7 +30,7 @@ authorization into client-only rules.
 | Area | Current behavior to preserve | Unity acceptance gate | Status |
 | --- | --- | --- | --- |
 | Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started (child account management) |
-| Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Not started |
+| Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Foundation started (parent child preview) |
 | Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task creation/review/reward actions) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
@@ -95,9 +95,14 @@ Partially completed locally:
   `adjust_child_points` RPC and refreshed point balances.
 - Parent child-account creation, password reset, and deletion through the
   authenticated `manage-child-account` Edge Function.
+- Parent child-view preview with explicit child selection and client-side
+  snapshot filtering; preview is read-only and does not impersonate a child
+  session or bypass Supabase RLS.
 
 Still required:
 
+- Full parent-to-child mode switching with the same guarded behavior as the
+  Web client; the current Unity preview is intentionally read-only.
 - Device build and recovery verification for the iOS Keychain and Android
   Keystore session plugins.
 - Device build and callback verification for the Unity deep-link replacement;

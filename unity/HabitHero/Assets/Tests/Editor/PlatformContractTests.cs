@@ -243,6 +243,37 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void FamilyPreviewSelectsARequestedChildAndFallsBackSafely()
+        {
+            SupabaseParentHomeSnapshot snapshot = new SupabaseParentHomeSnapshot
+            {
+                children = new[]
+                {
+                    new SupabaseChildProfileRecord { id = "child-1", display_name = "小明" },
+                    new SupabaseChildProfileRecord { id = "child-2", display_name = "小安" },
+                },
+                tasks = new[]
+                {
+                    new SupabaseChildTaskRecord { id = "task-1", child_profile_id = "child-1" },
+                    new SupabaseChildTaskRecord { id = "task-2", child_profile_id = "child-2" },
+                },
+            };
+
+            Assert.AreEqual(
+                "child-2",
+                SupabaseFamilyPreview.SelectChild(snapshot, "child-2").id);
+            Assert.AreEqual(
+                "child-1",
+                SupabaseFamilyPreview.SelectChild(snapshot, "missing-child").id);
+            Assert.AreEqual(
+                1,
+                SupabaseFamilyPreview.FilterTasks(snapshot, "child-2").Length);
+            Assert.AreEqual(
+                "task-2",
+                SupabaseFamilyPreview.FilterTasks(snapshot, "child-2")[0].id);
+        }
+
+        [Test]
         public void ChildHomeSnapshotCacheIsOwnerScopedAndRoundTripsNonSecretData()
         {
             InMemorySupabaseChildHomeSnapshotStore store =
