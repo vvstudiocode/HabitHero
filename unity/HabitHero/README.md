@@ -70,6 +70,11 @@ The same parent workbench can create general adventures for selected children
 through the server `create_general_adventure` RPC, including report mode,
 duration, execution window, timer, and review settings; it refreshes the family
 snapshot after creation.
+The parent workbench also manages recurring daily-adventure schedules through
+the existing `task_schedules` boundary. Parents can create schedules for one
+or more children, edit future rules, and disable a schedule; the client asks
+Supabase to materialize today's occurrences instead of manufacturing tasks
+locally.
 Child login accounts are managed through the authenticated
 `manage-child-account` Edge Function, including creation, password reset, and
 deletion; the Unity client never receives or stores a service-role key.

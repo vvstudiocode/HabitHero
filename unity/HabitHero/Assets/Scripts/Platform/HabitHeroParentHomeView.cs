@@ -18,6 +18,7 @@ namespace HabitHero.App
         private GameObject taskListObject;
         private HabitHeroParentTaskCreateView taskCreateView;
         private HabitHeroParentGeneralAdventureCreateView generalAdventureCreateView;
+        private HabitHeroParentAdventureScheduleView adventureScheduleView;
         private HabitHeroParentRewardManagementView rewardManagementView;
         private HabitHeroParentPointAdjustmentView pointAdjustmentView;
         private HabitHeroParentChildAccountView childAccountView;
@@ -56,6 +57,18 @@ namespace HabitHero.App
         private Func<
             SupabaseParentGeneralAdventureCreateInput,
             Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure;
+        private Func<
+            Task<SupabaseParentAdventureScheduleRecord[]>> loadAdventureSchedules;
+        private Func<
+            SupabaseParentAdventureScheduleCreateInput,
+            Task<string[]>> createAdventureSchedule;
+        private Func<
+            string,
+            SupabaseParentAdventureScheduleUpdateInput,
+            Task<SupabaseParentAdventureScheduleRecord>> updateAdventureSchedule;
+        private Func<
+            string,
+            Task<SupabaseParentAdventureScheduleRecord>> disableAdventureSchedule;
         private Func<
             SupabaseParentRewardCreateInput,
             Task<SupabaseParentRewardMutationResult>> createReward;
@@ -107,6 +120,13 @@ namespace HabitHero.App
             Func<
                 SupabaseParentGeneralAdventureCreateInput,
                 Task<SupabaseParentAdventureMutationResult>> createGeneralAdventure,
+            Func<Task<SupabaseParentAdventureScheduleRecord[]>> loadAdventureSchedules,
+            Func<SupabaseParentAdventureScheduleCreateInput, Task<string[]>> createAdventureSchedule,
+            Func<
+                string,
+                SupabaseParentAdventureScheduleUpdateInput,
+                Task<SupabaseParentAdventureScheduleRecord>> updateAdventureSchedule,
+            Func<string, Task<SupabaseParentAdventureScheduleRecord>> disableAdventureSchedule,
             Func<
                 SupabaseParentRewardCreateInput,
                 Task<SupabaseParentRewardMutationResult>> createReward,
@@ -138,6 +158,10 @@ namespace HabitHero.App
             this.fulfillTicket = fulfillTicket;
             this.createTask = createTask;
             this.createGeneralAdventure = createGeneralAdventure;
+            this.loadAdventureSchedules = loadAdventureSchedules;
+            this.createAdventureSchedule = createAdventureSchedule;
+            this.updateAdventureSchedule = updateAdventureSchedule;
+            this.disableAdventureSchedule = disableAdventureSchedule;
             this.createReward = createReward;
             this.updateReward = updateReward;
             this.deleteReward = deleteReward;
@@ -235,15 +259,22 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "願望與獎勵券",
-                new Vector2(0.54f, 0.18f),
+                new Vector2(0.66f, 0.18f),
                 new Vector2(0.92f, 0.24f));
             rewardButton.onClick.AddListener(OpenRewardPanel);
+            Button scheduleButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "每日排程",
+                new Vector2(0.37f, 0.18f),
+                new Vector2(0.63f, 0.24f));
+            scheduleButton.onClick.AddListener(OpenAdventureSchedulePanel);
             Button childAccountButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "孩子帳號",
                 new Vector2(0.08f, 0.18f),
-                new Vector2(0.46f, 0.24f));
+                new Vector2(0.34f, 0.24f));
             childAccountButton.onClick.AddListener(OpenChildAccountPanel);
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
@@ -263,6 +294,10 @@ namespace HabitHero.App
             fulfillTicket = null;
             createTask = null;
             createGeneralAdventure = null;
+            loadAdventureSchedules = null;
+            createAdventureSchedule = null;
+            updateAdventureSchedule = null;
+            disableAdventureSchedule = null;
             createReward = null;
             updateReward = null;
             deleteReward = null;
@@ -281,6 +316,7 @@ namespace HabitHero.App
             CloseRewardPanel();
             CloseTaskCreatePanel();
             CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
             CloseRewardManagementPanel();
             ClosePointAdjustmentPanel();
             CloseChildAccountPanel();
@@ -552,6 +588,41 @@ namespace HabitHero.App
                 CloseGeneralAdventurePanel);
         }
 
+        private void OpenAdventureSchedulePanel()
+        {
+            if (latestSnapshot == null
+                || loadAdventureSchedules == null
+                || createAdventureSchedule == null
+                || updateAdventureSchedule == null
+                || disableAdventureSchedule == null)
+            {
+                SetStatus("每日冒險排程尚未連線。", true);
+                return;
+            }
+
+            CloseTaskCreatePanel();
+            CloseGeneralAdventurePanel();
+            CloseRewardPanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            if (adventureScheduleView == null)
+            {
+                adventureScheduleView = new HabitHeroParentAdventureScheduleView(
+                    canvasTransform,
+                    font);
+            }
+
+            adventureScheduleView.Show(
+                latestSnapshot,
+                loadAdventureSchedules,
+                createAdventureSchedule,
+                updateAdventureSchedule,
+                disableAdventureSchedule,
+                SetStatus,
+                CloseAdventureSchedulePanel);
+        }
+
         private void OpenRewardManagementPanel()
         {
             if (latestSnapshot == null
@@ -653,6 +724,7 @@ namespace HabitHero.App
             CloseRewardManagementPanel();
             ClosePointAdjustmentPanel();
             CloseChildAccountPanel();
+            CloseAdventureSchedulePanel();
             if (childPreviewView == null)
             {
                 childPreviewView = new HabitHeroParentChildPreviewView(
@@ -1087,6 +1159,13 @@ namespace HabitHero.App
             if (generalAdventureCreateView == null) return;
             generalAdventureCreateView.Dispose();
             generalAdventureCreateView = null;
+        }
+
+        private void CloseAdventureSchedulePanel()
+        {
+            if (adventureScheduleView == null) return;
+            adventureScheduleView.Dispose();
+            adventureScheduleView = null;
         }
 
         private void CloseRewardManagementPanel()

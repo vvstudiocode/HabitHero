@@ -31,10 +31,10 @@ authorization into client-only rules.
 | --- | --- | --- | --- |
 | Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started (child account management) |
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Foundation started (parent child preview) |
-| Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task/adventure creation, review, reward actions) |
+| Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task/adventure/schedule creation, review, reward actions) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
-| Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment) |
+| Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Foundation started (timer, completion, abandonment, daily schedule) |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
 | Pets/characters | GLB assets, five-action animation contract, follow/roam, grounding, labels, shadows | Asset audit plus Unity visual/device evidence; no existing pet asset mutation | Not started |
 | Economy | Catalog, wallet, inventory, loadout, decorations, placement, server validation | RLS/RPC contract and rollback tests | Not started |
@@ -94,6 +94,11 @@ Partially completed locally:
 - Parent general-adventure creation for one or more selected children through
   the server `create_general_adventure` RPC, followed by a fresh family
   snapshot.
+- Parent daily-adventure scheduling through the existing `task_schedules`
+  read boundary and `create_adventure_schedule`, `update_adventure_schedule`,
+  `disable_adventure_schedule`, and `ensure_daily_adventure_occurrences`
+  RPCs. Unity now exposes create, edit, and disable actions in the parent
+  workbench.
 - Parent wishlist approval through the server `approve_wishlist_item` RPC and
   reward-ticket fulfillment through an RLS-scoped redemption update, both
   followed by a fresh family snapshot.

@@ -74,6 +74,20 @@ namespace HabitHero.App
                         snapshot.familyId,
                         input,
                         cancellationToken),
+                    () => client.LoadAdventureSchedulesAsync(
+                        snapshot.familyId,
+                        cancellationToken),
+                    (input) => client.CreateAdventureScheduleAsync(
+                        snapshot.familyId,
+                        input,
+                        cancellationToken),
+                    (scheduleId, input) => client.UpdateAdventureScheduleAsync(
+                        scheduleId,
+                        input,
+                        cancellationToken),
+                    (scheduleId) => client.DisableAdventureScheduleAsync(
+                        scheduleId,
+                        cancellationToken),
                     (input) => client.CreateRewardAndRefreshAsync(
                         snapshot.familyId,
                         input,
