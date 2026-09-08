@@ -419,6 +419,161 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void FriendWorldLiveRealtimeMapsPresenceAndAvatarStateContracts()
+        {
+            SupabaseRealtimeEnvelope presenceEnvelope;
+            SupabaseRealtimeEnvelope avatarEnvelope;
+            string error;
+            Assert.IsTrue(
+                SupabaseRealtimeMessageParser.TryParseEnvelope(
+                    "{\"topic\":\"realtime:friend-world-live:owner-1\",\"event\":\"presence_state\",\"payload\":{\"connection-a\":[{\"connectionId\":\"connection-a\",\"childProfileId\":\"child-a\",\"joinedAt\":\"2026-09-08T10:00:00Z\"}],\"connection-b\":[{\"connectionId\":\"connection-b\",\"childProfileId\":\"child-b\",\"joinedAt\":\"2026-09-08T10:01:00Z\"}]}}",
+                    out presenceEnvelope,
+                    out error),
+                error);
+            Assert.IsTrue(
+                SupabaseRealtimeMessageParser.TryParseEnvelope(
+                    "{\"topic\":\"realtime:friend-world-live:owner-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"avatar_state_v1\",\"payload\":{\"v\":1,\"connectionId\":\"connection-b\",\"childProfileId\":\"child-b\",\"characterAssetKey\":\"character-fox\",\"seq\":7,\"x\":1.25,\"z\":-2.5,\"rotationY\":1.57,\"motion\":\"walk\",\"emote\":\"none\",\"sentAt\":1725789660000}}}",
+                    out avatarEnvelope,
+                    out error),
+                error);
+
+            SupabaseFriendWorldPresenceMember[] members;
+            Assert.IsTrue(
+                SupabaseChildFriendWorldRealtimeMapper.TryMapPresenceState(
+                    presenceEnvelope,
+                    "owner-1",
+                    out members));
+            Assert.AreEqual(2, members.Length);
+            Assert.AreEqual("connection-a", members[0].connectionId);
+            Assert.AreEqual("child-b", members[1].childProfileId);
+
+            SupabaseFriendWorldAvatarState avatar;
+            Assert.IsTrue(
+                SupabaseChildFriendWorldRealtimeMapper.TryMapAvatarState(
+                    avatarEnvelope,
+                    "owner-1",
+                    out avatar));
+            Assert.AreEqual(1, avatar.version);
+            Assert.AreEqual("connection-b", avatar.connectionId);
+            Assert.AreEqual(7, avatar.sequence);
+            Assert.AreEqual(1.25f, avatar.x, 0.001f);
+            Assert.AreEqual("walk", avatar.motion);
+        }
+
+        [Test]
+        public void FriendWorldLiveRealtimeRejectsInvalidAvatarStateAndStaleSequence()
+        {
+            SupabaseRealtimeEnvelope invalidEnvelope;
+            SupabaseRealtimeEnvelope firstEnvelope;
+            SupabaseRealtimeEnvelope staleEnvelope;
+            string error;
+            Assert.IsTrue(
+                SupabaseRealtimeMessageParser.TryParseEnvelope(
+                    "{\"topic\":\"realtime:friend-world-live:owner-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"avatar_state_v1\",\"payload\":{\"v\":1,\"connectionId\":\"connection-b\",\"childProfileId\":\"child-b\",\"seq\":8,\"x\":9,\"z\":0,\"rotationY\":0,\"motion\":\"idle\",\"emote\":\"none\",\"sentAt\":1725789660000}}}",
+                    out invalidEnvelope,
+                    out error),
+                error);
+            Assert.IsTrue(
+                SupabaseRealtimeMessageParser.TryParseEnvelope(
+                    "{\"topic\":\"realtime:friend-world-live:owner-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"avatar_state_v1\",\"payload\":{\"v\":1,\"connectionId\":\"connection-b\",\"childProfileId\":\"child-b\",\"seq\":8,\"x\":1,\"z\":0,\"rotationY\":0,\"motion\":\"idle\",\"emote\":\"none\",\"sentAt\":1725789660000}}}",
+                    out firstEnvelope,
+                    out error),
+                error);
+            Assert.IsTrue(
+                SupabaseRealtimeMessageParser.TryParseEnvelope(
+                    "{\"topic\":\"realtime:friend-world-live:owner-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"avatar_state_v1\",\"payload\":{\"v\":1,\"connectionId\":\"connection-b\",\"childProfileId\":\"child-b\",\"seq\":7,\"x\":1,\"z\":0,\"rotationY\":0,\"motion\":\"idle\",\"emote\":\"none\",\"sentAt\":1725789660000}}}",
+                    out staleEnvelope,
+                    out error),
+                error);
+
+            SupabaseFriendWorldAvatarState avatar;
+            Assert.IsFalse(
+                SupabaseChildFriendWorldRealtimeMapper.TryMapAvatarState(
+                    invalidEnvelope,
+                    "owner-1",
+                    out avatar));
+
+            SupabaseFriendWorldAvatarStateTracker tracker =
+                new SupabaseFriendWorldAvatarStateTracker();
+            Assert.IsTrue(
+                tracker.TryAccept(firstEnvelope, "owner-1", out avatar));
+            Assert.IsFalse(
+                tracker.TryAccept(staleEnvelope, "owner-1", out avatar));
+        }
+
+        [Test]
+        public void FriendWorldLiveRealtimeSubscriptionUsesPrivateLiveTopicAndPresenceTrack()
+        {
+            Assert.AreEqual(
+                "friend-world-live:owner-1",
+                SupabaseChildFriendWorldRealtimeClient.GetLiveTopic("owner-1"));
+            Assert.AreEqual(
+                "{\"connectionId\":\"connection-1\",\"childProfileId\":\"child-1\",\"joinedAt\":\"2026-09-08T10:00:00Z\"}",
+                SupabaseChildFriendWorldRealtimeClient.BuildPresencePayload(
+                    "connection-1",
+                    "child-1",
+                    "2026-09-08T10:00:00Z"));
+        }
+
+        [Test]
+        public async Task FriendWorldLiveRealtimeClientJoinsPrivateChannelAndTracksPresence()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                new InMemorySupabaseSessionStore(),
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(200, "{}", null)));
+            SupabaseSession ignoredSession;
+            string error;
+            Assert.IsTrue(
+                authClient.TrySetSessionFromCallback(
+                    "access-token",
+                    "refresh-token",
+                    false,
+                    out ignoredSession,
+                    out error),
+                error);
+
+            FakeRealtimeTransport transport = new FakeRealtimeTransport();
+            SupabaseChildFriendWorldRealtimeClient client =
+                new SupabaseChildFriendWorldRealtimeClient(
+                    new SupabaseRestClient(
+                        settings,
+                        authClient,
+                        new FakeSupabaseTransport(
+                            new SupabaseHttpResponse(200, "{}", null))),
+                    () => transport);
+            SupabaseChildFriendWorldRealtimeSubscription subscription =
+                await client.SubscribeAsync(
+                    "owner-1",
+                    "connection-1",
+                    "child-1",
+                    null,
+                    null,
+                    null,
+                    null,
+                    CancellationToken.None);
+            try
+            {
+                Assert.AreEqual(2, transport.SentMessages.Count);
+                StringAssert.Contains(
+                    "\"topic\":\"realtime:friend-world-live:owner-1\"",
+                    transport.SentMessages[0]);
+                StringAssert.Contains("\"private\":true", transport.SentMessages[0]);
+                StringAssert.Contains("\"enabled\":true", transport.SentMessages[0]);
+                StringAssert.Contains("\"key\":\"connection-1\"", transport.SentMessages[0]);
+                StringAssert.Contains("\"event\":\"presence\"", transport.SentMessages[1]);
+                StringAssert.Contains("\"connectionId\":\"connection-1\"", transport.SentMessages[1]);
+                StringAssert.Contains("\"childProfileId\":\"child-1\"", transport.SentMessages[1]);
+            }
+            finally
+            {
+                subscription.Dispose();
+            }
+        }
+
+        [Test]
         public void JsonArrayParserMapsPostgrestChildTaskRows()
         {
             SupabaseChildTaskRecord[] tasks;
@@ -2719,7 +2874,9 @@ namespace HabitHero.Tests
             public Task SendTextAsync(string message, CancellationToken cancellationToken)
             {
                 SentMessages.Add(message);
-                if (message.Contains("\"event\":\"phx_join\""))
+                if (message.Contains("\"event\":\"phx_join\"")
+                    || message.Contains("\"event\":\"presence\"")
+                    || message.Contains("\"event\":\"phx_leave\""))
                 {
                     Enqueue(
                         "{\"topic\":\""

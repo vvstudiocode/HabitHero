@@ -154,8 +154,12 @@ Partially completed locally:
   broadcast, leave, and incoming envelope parsing. Native platforms use the
   managed WebSocket transport and WebGL uses a browser WebSocket bridge.
   Chat subscription wiring now retries channel join with bounded backoff after
-  a socket interruption; presence/avatar feature wiring and two-account/device
-  verification remain pending.
+  a socket interruption. The friend-world live foundation now also uses the
+  dedicated `friend-world-live:<owner>` private topic, maps Presence state/diff
+  and avatar broadcasts, rejects stale or out-of-bounds avatar state, tracks
+  Presence again after reconnect, and exposes avatar state/request callbacks.
+  Unity 3D remote-avatar rendering, capacity admission UI, world-revision
+  reload, and two-account/device verification remain pending.
 
 Still required:
 
@@ -169,8 +173,9 @@ Still required:
   the runtime handler, token-fragment recovery, and PKCE exchange contract are
   now in place. A code-only callback is rejected because Supabase requires the
   original PKCE verifier.
-- Supabase Realtime presence, avatar broadcast, and co-op flows, plus
-  two-account/device reconnect verification.
+- Unity wiring for Supabase Realtime presence, avatar broadcast, capacity
+  admission, remote-avatar interpolation, world-revision reload, and co-op
+  flows, plus two-account/device reconnect verification.
 - Native iOS/Android push and app URL plugins.
 
 ### Phase 2 — child core loop
