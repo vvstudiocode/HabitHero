@@ -31,6 +31,7 @@ namespace HabitHero.App
         private readonly string friendWorldRealtimeConnectionId = Guid.NewGuid().ToString("N");
         private SupabaseFriendWorldAvatarState latestLocalFriendWorldAvatarState;
         private bool friendWorldRealtimeCrowded;
+        private int friendWorldRevisionRefreshVersion;
         private int friendWorldRealtimeVersion;
 
         public HabitHeroChildHomeCoordinator(
@@ -537,11 +538,68 @@ namespace HabitHero.App
 
         private void HandleFriendWorldRevision()
         {
+            if (view == null || friendWorldRealtimeSubscription == null) return;
+            int requestVersion = friendWorldRealtimeVersion;
+            int refreshVersion = ++friendWorldRevisionRefreshVersion;
+            _ = RefreshFriendWorldSnapshotAsync(
+                friendWorldRealtimeOwner,
+                requestVersion,
+                refreshVersion);
+        }
+
+        private async Task RefreshFriendWorldSnapshotAsync(
+            string worldOwnerChildProfileId,
+            int requestVersion,
+            int refreshVersion)
+        {
+            if (string.IsNullOrWhiteSpace(worldOwnerChildProfileId)) return;
             if (view != null)
             {
                 view.NotifyFriendWorldRealtimeStatus(
-                    "好友世界資料有新版本；請返回好友列表後重新造訪。",
+                    "好友世界資料已更新，正在重新同步…",
                     false);
+            }
+
+            try
+            {
+                SupabaseChildFriendWorldData refreshedData =
+                    await friendWorldClient.LoadAsync(
+                        worldOwnerChildProfileId,
+                        friendWorldRealtimeCancellation == null
+                            ? CancellationToken.None
+                            : friendWorldRealtimeCancellation.Token);
+                if (view == null
+                    || friendWorldRealtimeSubscription == null
+                    || requestVersion != friendWorldRealtimeVersion
+                    || refreshVersion != friendWorldRevisionRefreshVersion
+                    || !SupabaseFriendWorldRevisionPolicy.ShouldApply(
+                        view.FriendWorldCurrentRevision,
+                        refreshedData.revision))
+                {
+                    return;
+                }
+
+                view.ApplyFriendWorldData(refreshedData);
+                view.NotifyFriendWorldRealtimeStatus(
+                    friendWorldRealtimeCrowded
+                        ? "這個好友世界目前已滿，最多只能 3 人；仍可查看唯讀快照。"
+                        : "好友世界已更新；正在同步線上角色。",
+                    friendWorldRealtimeCrowded);
+            }
+            catch (OperationCanceledException)
+            {
+                // The selected world or child session was replaced.
+            }
+            catch
+            {
+                if (view != null
+                    && requestVersion == friendWorldRealtimeVersion
+                    && refreshVersion == friendWorldRevisionRefreshVersion)
+                {
+                    view.NotifyFriendWorldRealtimeStatus(
+                        "好友世界更新暫時失敗；目前仍顯示上一版唯讀快照。",
+                        true);
+                }
             }
         }
 
@@ -605,6 +663,7 @@ namespace HabitHero.App
         private void StopFriendWorldRealtime()
         {
             friendWorldRealtimeVersion += 1;
+            friendWorldRevisionRefreshVersion += 1;
             if (view != null) view.ClearFriendWorldRealtime();
             if (friendWorldRealtimeCancellation != null)
             {

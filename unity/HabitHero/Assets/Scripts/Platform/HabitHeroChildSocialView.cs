@@ -165,6 +165,16 @@ namespace HabitHero.App
             }
         }
 
+        public long FriendWorldCurrentRevision
+        {
+            get { return friendWorldView == null ? 0 : friendWorldView.CurrentRevision; }
+        }
+
+        public void ApplyFriendWorldData(SupabaseChildFriendWorldData data)
+        {
+            if (friendWorldView != null) friendWorldView.ApplyData(data);
+        }
+
         public void Open()
         {
             if (latestData == null) return;

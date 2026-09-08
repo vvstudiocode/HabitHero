@@ -453,6 +453,16 @@ namespace HabitHero.App
             }
         }
 
+        public long FriendWorldCurrentRevision
+        {
+            get { return socialView == null ? 0 : socialView.FriendWorldCurrentRevision; }
+        }
+
+        public void ApplyFriendWorldData(SupabaseChildFriendWorldData data)
+        {
+            if (socialView != null) socialView.ApplyFriendWorldData(data);
+        }
+
         private void OpenSocialPanel()
         {
             if (socialView == null || latestSocialData == null)

@@ -53,6 +53,28 @@ namespace HabitHero.App
             get { return panel != null && worldRoot != null; }
         }
 
+        public long CurrentRevision
+        {
+            get { return latestData == null ? 0 : latestData.revision; }
+        }
+
+        public void ApplyData(SupabaseChildFriendWorldData data)
+        {
+            if (data == null) throw new ArgumentNullException("data");
+            latestData = data;
+            if (!IsOpen) return;
+
+            CloseInternal(false);
+            CreateWorld();
+            CreateOverlay();
+            ApplyPresence(latestPresenceMembers, localConnectionId);
+            foreach (SupabaseFriendWorldAvatarState state in remoteAvatarStates.Values)
+            {
+                RenderRemoteAvatarState(state);
+            }
+            PublishLocalAvatarState();
+        }
+
         public void Open()
         {
             if (latestData == null) return;

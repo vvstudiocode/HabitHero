@@ -959,6 +959,14 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void FriendWorldRevisionPolicyOnlyAcceptsNewerSnapshots()
+        {
+            Assert.IsTrue(SupabaseFriendWorldRevisionPolicy.ShouldApply(7, 8));
+            Assert.IsFalse(SupabaseFriendWorldRevisionPolicy.ShouldApply(7, 7));
+            Assert.IsFalse(SupabaseFriendWorldRevisionPolicy.ShouldApply(7, 6));
+        }
+
+        [Test]
         public void FriendWorldClientRejectsAnEmptyTargetBeforeNetworkAccess()
         {
             SupabaseClientSettings settings = CreateSettings();

@@ -150,6 +150,14 @@ namespace HabitHero.Platform
         }
     }
 
+    public static class SupabaseFriendWorldRevisionPolicy
+    {
+        public static bool ShouldApply(long currentRevision, long incomingRevision)
+        {
+            return incomingRevision > currentRevision;
+        }
+    }
+
     [Serializable]
     public sealed class SupabaseFriendWorldAvatarState
     {
