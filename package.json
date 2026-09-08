@@ -15,6 +15,7 @@
     "test": "tsx --test tests/*.test.ts",
     "test:unity-platform": "node scripts/verify-unity-platform.mjs",
     "test:unity-editmode": "node scripts/run-unity-editmode-tests.mjs",
+    "test:unity-playmode": "node scripts/run-unity-playmode-tests.mjs",
     "build:unity-webgl": "node scripts/build-unity-webgl.mjs",
     "build:unity:ios": "node scripts/build-unity-native.mjs ios",
     "build:unity:android": "node scripts/build-unity-native.mjs android",

@@ -41,6 +41,9 @@ The pure C# platform slice remains executable without the Unity editor:
 `npm run test:unity-platform` compiles and runs the Supabase settings,
 authentication callback, and request contracts. With Unity installed locally,
 `npm run test:unity-editmode` runs the Editor-side platform contract tests.
+`npm run test:unity-playmode` runs a headless Bootstrap smoke test that loads
+the login shell, verifies the Canvas/EventSystem/title, and fails on runtime
+errors without requiring a real account or writing to Supabase.
 The first Bootstrap scene and UGUI login shell now pass the Editor compile and
 scene-entrypoint contract. Device builds now select the native iOS Keychain or
 Android Keystore session plugin by default; the Editor and non-mobile fallback

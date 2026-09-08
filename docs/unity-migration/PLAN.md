@@ -80,6 +80,7 @@ Partially completed locally:
   sign-out, user refresh, password recovery, and password update contracts.
 - Local C# smoke test: `npm run test:unity-platform`.
 - Unity Editor contract test: `npm run test:unity-editmode`.
+- Unity PlayMode Bootstrap smoke test: `npm run test:unity-playmode`.
 - Supabase PostgREST table reads and server-authoritative adventure completion
   RPC payloads with idempotency keys.
 - Child task completion queue with duplicate protection, offline persistence,
@@ -308,12 +309,14 @@ The migration is not complete until all of the following are true:
 
 Current local verification:
 
-- Web tests: `1158` passed across `141` suites; lint and security scan passed.
+- Web tests: `1165` passed across `141` suites; lint and security scan passed.
 - Structure governance still reports `12` pre-existing source-size violations
   in Web dashboard/world/CSS hotspots; no unrelated Web restructuring was done.
 - Unity platform contract smoke test passed.
 - Unity EditMode `PlatformContractTests` passed, including all current parent
   Supabase contract checks (`116` tests in the latest run).
+- Unity PlayMode `BootstrapPlayModeTests` passed: the login shell loaded with
+  no runtime errors in the headless Unity Editor run.
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
 - Native iOS/Android modules are not installed on this machine, so native
   export, device behavior, and store update evidence are intentionally not
