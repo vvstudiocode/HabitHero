@@ -85,7 +85,12 @@ deletion; the Unity client never receives or stores a service-role key.
 The parent workbench also includes a read-only child-view preview. It selects
 one child from the authenticated family snapshot and filters every displayed
 task, reward, wishlist, ticket, and ledger row to that child; it does not
-impersonate a child session or create a second authorization path.
+impersonate a child session or create a second authorization path. The preview
+can now enter an interactive child mode through the same parent Supabase
+session, with an explicit family/child scope and the existing RLS/RPC
+authorization. Returning to the parent workbench requires re-authenticating
+the parent password; social/friend-world controls stay disabled in this parent
+child mode because those RPCs are child-actor scoped.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
 

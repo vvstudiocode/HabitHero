@@ -30,7 +30,7 @@ authorization into client-only rules.
 | Area | Current behavior to preserve | Unity acceptance gate | Status |
 | --- | --- | --- | --- |
 | Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started (child account management) |
-| Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Foundation started (parent child preview) |
+| Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Foundation started (read-only preview plus guarded interactive parent-child mode) |
 | Parent workflow | Task creation, task edit/delete, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Foundation started (task CRUD, adventure/schedule creation, review, reward actions) |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Foundation started (child wallet, redeem, wishlist, parent reward/point actions) |
@@ -182,8 +182,6 @@ Partially completed locally:
 
 Still required:
 
-- Full parent-to-child mode switching with the same guarded behavior as the
-  Web client; the current Unity preview is intentionally read-only.
 - Parent adventure scheduling and general-adventure management parity with the
   existing Web client.
 - Device build and recovery verification for the iOS Keychain and Android
