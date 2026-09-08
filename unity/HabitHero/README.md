@@ -128,8 +128,9 @@ hold and `Wave`/`Dance` as looping optional actions, and drives the child
 avatar's idle/walk state and facing direction from world movement. Existing
 five-action assets and their root-motion contract remain read-only; following
 pets and server-bounded roaming NPC pets now use the shared motion and
-animation adapters. Grounding, labels/shadows, and device visual evidence are
-still pending.
+animation adapters. NPC and pet labels follow the loaded model or fallback
+placeholder and face the world camera. Grounding, shadows, and device visual
+evidence are still pending.
 The portable Unity notification client also reads and updates the shared
 `profiles.notifications_enabled` preference, disables the parent's registered
 `push_devices` rows when notifications are turned off, and upserts a device

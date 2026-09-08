@@ -33,6 +33,8 @@ namespace HabitHero.App
         private Vector2 joystickDirection;
         private readonly List<HabitHeroWorldPetActor> petActors =
             new List<HabitHeroWorldPetActor>();
+        private readonly List<HabitHeroWorldLabelBinding> worldLabelBindings =
+            new List<HabitHeroWorldLabelBinding>();
         private Text sceneStatus;
         private SupabaseChildWorldData latestData;
         private SupabaseChildGameData latestGameData;
@@ -62,6 +64,7 @@ namespace HabitHero.App
             public HabitHeroWorldModelAnimation animation;
             public HabitHeroPetMotionState motionState;
             public SupabaseGameWorldRoamBoundsRecord roamBounds;
+            public HabitHeroWorldLabelBinding label;
 
             public Transform VisualRoot
             {
@@ -69,6 +72,26 @@ namespace HabitHero.App
                 {
                     if (animation != null) return animation.transform;
                     return placeholder == null ? null : placeholder.transform;
+                }
+            }
+        }
+
+        private sealed class HabitHeroWorldLabelBinding
+        {
+            public GameObject labelObject;
+            public Transform target;
+            public Vector3 offset;
+
+            public void Update(Camera camera)
+            {
+                if (labelObject == null || target == null || camera == null) return;
+                labelObject.transform.position = target.position + offset;
+                Vector3 toCamera = labelObject.transform.position - camera.transform.position;
+                if (toCamera.sqrMagnitude > 0.0001f)
+                {
+                    labelObject.transform.rotation = Quaternion.LookRotation(
+                        toCamera,
+                        Vector3.up);
                 }
             }
         }
@@ -124,6 +147,7 @@ namespace HabitHero.App
             float safeDelta = Mathf.Max(0f, deltaSeconds);
             UpdatePlayerFromJoystick(safeDelta);
             UpdatePetActors(safeDelta);
+            UpdateWorldLabels();
             atmosphereRefreshTimer -= safeDelta;
             UpdateWorldAtmosphere(false);
         }
@@ -413,6 +437,11 @@ namespace HabitHero.App
                         0.28f,
                         placeholder,
                         npc.roam_bounds);
+                    actor.label = CreateWorldLabelBinding(
+                        string.IsNullOrWhiteSpace(npc.name) ? "寵物" : npc.name,
+                        placeholder.transform,
+                        1.1f,
+                        new Color(1f, 0.9f, 0.72f, 1f));
                     petActors.Add(actor);
                     StartModelLoad(
                         placeholder,
@@ -425,12 +454,21 @@ namespace HabitHero.App
                 }
                 else
                 {
+                    HabitHeroWorldLabelBinding npcLabel = CreateWorldLabelBinding(
+                        string.IsNullOrWhiteSpace(npc.name) ? "NPC" : npc.name,
+                        placeholder.transform,
+                        1.55f,
+                        Color.white);
                     StartModelLoad(
                         placeholder,
                         npc.asset_key,
                         new Vector3(npc.position_x, npc.position_y, npc.position_z),
                         Vector3.zero,
-                        1f);
+                        1f,
+                        animation =>
+                        {
+                            if (npcLabel != null) npcLabel.target = animation.transform;
+                        });
                 }
             }
         }
@@ -476,6 +514,11 @@ namespace HabitHero.App
                         GetPetFollowingIndex(entity.inventory_item_id),
                         GetPetRadius(item, entity.scale),
                         placeholder);
+                    actor.label = CreateWorldLabelBinding(
+                        GetPetDisplayName(entity.inventory_item_id, item),
+                        placeholder.transform,
+                        1.1f * Mathf.Clamp(visualScale, 0.5f, 2.5f),
+                        new Color(1f, 0.9f, 0.72f, 1f));
                     petActors.Add(actor);
                     StartModelLoad(
                         placeholder,
@@ -598,6 +641,11 @@ namespace HabitHero.App
                     index,
                     radius,
                     placeholder);
+                actor.label = CreateWorldLabelBinding(
+                    GetPetDisplayName(inventoryItemId, item),
+                    placeholder.transform,
+                    1.1f * GetModelScaleMultiplier("pet", item.asset_key),
+                    new Color(1f, 0.9f, 0.72f, 1f));
                 petActors.Add(actor);
                 StartModelLoad(
                     placeholder,
@@ -616,6 +664,7 @@ namespace HabitHero.App
         {
             if (actor == null || animation == null) return;
             actor.animation = animation;
+            if (actor.label != null) actor.label.target = animation.transform;
             if (actor.placeholder == null) return;
             Vector3 loadedPosition = animation.transform.position;
             Vector3 placeholderPosition = actor.placeholder.transform.position;
@@ -783,6 +832,38 @@ namespace HabitHero.App
             return result.ToArray();
         }
 
+        private SupabaseChildInventoryItemRecord FindInventoryItem(
+            string inventoryItemId)
+        {
+            foreach (SupabaseChildInventoryItemRecord inventory in
+                latestGameData == null
+                    ? new SupabaseChildInventoryItemRecord[0]
+                    : latestGameData.inventory ?? new SupabaseChildInventoryItemRecord[0])
+            {
+                if (inventory != null && inventory.id == inventoryItemId) return inventory;
+            }
+
+            return null;
+        }
+
+        private string GetPetDisplayName(
+            string inventoryItemId,
+            SupabaseGameCatalogItemRecord item)
+        {
+            SupabaseChildInventoryItemRecord inventory = FindInventoryItem(inventoryItemId);
+            if (inventory != null && !string.IsNullOrWhiteSpace(inventory.display_name))
+            {
+                return inventory.display_name.Trim();
+            }
+
+            if (item != null && !string.IsNullOrWhiteSpace(item.name))
+            {
+                return item.name.Trim();
+            }
+
+            return "寵物";
+        }
+
         private static float GetPetRadius(
             SupabaseGameCatalogItemRecord item,
             float scale)
@@ -795,6 +876,48 @@ namespace HabitHero.App
                 0.25f,
                 3f);
             return Mathf.Max(0.12f, radius * effectiveScale);
+        }
+
+        private HabitHeroWorldLabelBinding CreateWorldLabelBinding(
+            string text,
+            Transform target,
+            float height,
+            Color color)
+        {
+            if (string.IsNullOrWhiteSpace(text) || target == null || worldRoot == null)
+            {
+                return null;
+            }
+
+            GameObject labelObject = new GameObject("WorldLabel", typeof(TextMesh));
+            labelObject.transform.SetParent(worldRoot.transform, false);
+            TextMesh label = labelObject.GetComponent<TextMesh>();
+            label.text = text.Trim();
+            label.font = font;
+            label.fontSize = 48;
+            label.characterSize = 0.04f;
+            label.anchor = TextAnchor.MiddleCenter;
+            label.alignment = TextAlignment.Center;
+            label.color = color;
+            label.richText = false;
+
+            HabitHeroWorldLabelBinding binding = new HabitHeroWorldLabelBinding
+            {
+                labelObject = labelObject,
+                target = target,
+                offset = Vector3.up * Mathf.Max(0.35f, height),
+            };
+            worldLabelBindings.Add(binding);
+            binding.Update(worldCamera);
+            return binding;
+        }
+
+        private void UpdateWorldLabels()
+        {
+            foreach (HabitHeroWorldLabelBinding binding in worldLabelBindings)
+            {
+                if (binding != null) binding.Update(worldCamera);
+            }
         }
 
         private GameObject CreateWorldEntityPlaceholder(
@@ -1843,6 +1966,7 @@ namespace HabitHero.App
             worldJoystick = null;
             joystickDirection = Vector2.zero;
             petActors.Clear();
+            worldLabelBindings.Clear();
             worldCollisionProxies = new HabitHeroWorldCollisionProxy[0];
             authoredCollisionProxyIndices.Clear();
             activeSceneProfile = null;
