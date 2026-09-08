@@ -264,6 +264,13 @@ namespace HabitHero.Tests
 
                 Assert.IsTrue(hasPetLabel, "World pet labels were not created.");
                 Assert.IsNotNull(GameObject.Find("ChildWorldScenePanel"));
+                Assert.IsNotNull(GameObject.Find("WorldDecorationEditor"));
+                Assert.IsTrue(worldView.BeginDecorationPlacement("fixture-sofa-inventory"));
+                Assert.IsNotNull(GameObject.Find("WorldPlacementPreview"));
+                Assert.IsTrue(worldView.ApplyPlacementControl(
+                    HabitHeroWorldPlacementControl.RotateRight));
+                worldView.CancelDecorationPlacement();
+                Assert.IsNull(GameObject.Find("WorldPlacementPreview"));
             }
             finally
             {
