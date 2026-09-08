@@ -150,9 +150,11 @@ Partially completed locally:
   authored terrain and landmark modules for Sunrise Village, Forest Valley,
   Cloud Workshop, Tideglow Archipelago, and Star-Sand Wasteland load through
   the existing glTFast pipeline while keeping the primitive fallback, server
-  scene gating, NPC data, and world-entity flow intact. Full module coverage,
-  collision parity, camera/weather/audio parity, and device visual evidence
-  remain pending.
+  scene gating, NPC data, and world-entity flow intact. Unity scene profiles
+  also preserve each authored scene's spawn anchor and movement boundary,
+  including the expanded Forest Valley and Cloud Workshop ranges. Full module
+  coverage, collision parity, camera/weather/audio parity, and device visual
+  evidence remain pending.
 - Unity child social foundation now reads the server-provided friend code,
   friend list, and pending requests. Send, accept, decline, remove, and block
   actions call the existing Supabase RPCs and reload the child-scoped social

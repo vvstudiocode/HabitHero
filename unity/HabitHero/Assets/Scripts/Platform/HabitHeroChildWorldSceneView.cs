@@ -23,6 +23,7 @@ namespace HabitHero.App
         private SupabaseChildWorldData latestData;
         private SupabaseChildGameData latestGameData;
         private string sceneId;
+        private HabitHeroWorldSceneProfile activeSceneProfile;
         private Func<string, Task<SupabaseChildWorldData>> completeNpcDialogue;
         private Action onClose;
         private readonly List<Material> runtimeMaterials = new List<Material>();
@@ -101,6 +102,8 @@ namespace HabitHero.App
         {
             worldRoot = new GameObject("ChildWorldRuntime");
             modelLoadingCancellation = new CancellationTokenSource();
+            activeSceneProfile = ResolveSceneProfile(scene.id);
+            float movementBoundary = activeSceneProfile.MovementBoundary;
             GameObject cameraObject = new GameObject("ChildWorldCamera");
             cameraObject.transform.SetParent(worldRoot.transform, false);
             worldCamera = cameraObject.AddComponent<Camera>();
@@ -115,44 +118,47 @@ namespace HabitHero.App
                 PrimitiveType.Plane,
                 "WorldGround",
                 new Vector3(0f, 0f, 0f),
-                new Vector3(2f, 1f, 2f),
+                new Vector3(movementBoundary / 5f, 1f, movementBoundary / 5f),
                 GetGroundColor(scene.id));
+            float boundaryEdge = movementBoundary + 1.5f;
+            float boundarySpan = boundaryEdge * 2f;
             CreatePrimitive(
                 PrimitiveType.Cube,
                 "WorldNorthBoundary",
-                new Vector3(0f, 0.35f, 9.5f),
-                new Vector3(20f, 0.7f, 0.35f),
+                new Vector3(0f, 0.35f, boundaryEdge),
+                new Vector3(boundarySpan, 0.7f, 0.35f),
                 new Color(0.08f, 0.14f, 0.2f, 1f));
             CreatePrimitive(
                 PrimitiveType.Cube,
                 "WorldSouthBoundary",
-                new Vector3(0f, 0.35f, -9.5f),
-                new Vector3(20f, 0.7f, 0.35f),
+                new Vector3(0f, 0.35f, -boundaryEdge),
+                new Vector3(boundarySpan, 0.7f, 0.35f),
                 new Color(0.08f, 0.14f, 0.2f, 1f));
             CreatePrimitive(
                 PrimitiveType.Cube,
                 "WorldEastBoundary",
-                new Vector3(9.5f, 0.35f, 0f),
-                new Vector3(0.35f, 0.7f, 20f),
+                new Vector3(boundaryEdge, 0.35f, 0f),
+                new Vector3(0.35f, 0.7f, boundarySpan),
                 new Color(0.08f, 0.14f, 0.2f, 1f));
             CreatePrimitive(
                 PrimitiveType.Cube,
                 "WorldWestBoundary",
-                new Vector3(-9.5f, 0.35f, 0f),
-                new Vector3(0.35f, 0.7f, 20f),
+                new Vector3(-boundaryEdge, 0.35f, 0f),
+                new Vector3(0.35f, 0.7f, boundarySpan),
                 new Color(0.08f, 0.14f, 0.2f, 1f));
             RenderAuthoredWorldModules(scene.id);
 
+            Vector3 spawnPosition = activeSceneProfile.SpawnPosition;
             player = CreatePrimitive(
                 PrimitiveType.Capsule,
                 "ChildAvatarPlaceholder",
-                new Vector3(0f, 1f, -4f),
+                spawnPosition + Vector3.up,
                 new Vector3(0.75f, 1f, 0.75f),
                 HabitHeroUiFactory.AccentColor);
             StartModelLoad(
                 player,
                 FindEquippedCharacterAssetKey(),
-                new Vector3(0f, 0f, -4f),
+                spawnPosition,
                 Vector3.zero,
                 1f);
             RenderNpcPlaceholders();
@@ -801,8 +807,11 @@ namespace HabitHero.App
         {
             if (player == null) return;
             Vector3 position = player.transform.position;
-            position.x = Mathf.Clamp(position.x + direction.x * 0.8f, -8f, 8f);
-            position.z = Mathf.Clamp(position.z + direction.y * 0.8f, -8f, 8f);
+            float movementLimit = Mathf.Max(1f, activeSceneProfile == null
+                ? 8f
+                : activeSceneProfile.MovementBoundary - 0.4f);
+            position.x = Mathf.Clamp(position.x + direction.x * 0.8f, -movementLimit, movementLimit);
+            position.z = Mathf.Clamp(position.z + direction.y * 0.8f, -movementLimit, movementLimit);
             player.transform.position = position;
             SetStatus("孩子角色已移動到 " + position.x.ToString("0.0") + ", " + position.z.ToString("0.0") + "。", false);
         }
@@ -860,6 +869,20 @@ namespace HabitHero.App
             }
 
             return primitive;
+        }
+
+        private static HabitHeroWorldSceneProfile ResolveSceneProfile(string targetSceneId)
+        {
+            HabitHeroWorldSceneProfile profile;
+            if (HabitHeroWorldSceneProfileCatalog.TryGetProfile(targetSceneId, out profile))
+            {
+                return profile;
+            }
+
+            return new HabitHeroWorldSceneProfile(
+                targetSceneId,
+                new Vector3(0f, 0f, -4f),
+                8f);
         }
 
         private static Material CreateMaterial(Color color)
@@ -955,6 +978,7 @@ namespace HabitHero.App
             runtimeMaterials.Clear();
             worldCamera = null;
             player = null;
+            activeSceneProfile = null;
             sceneStatus = null;
             if (notify && onClose != null) onClose();
         }
