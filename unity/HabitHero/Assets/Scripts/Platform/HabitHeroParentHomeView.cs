@@ -18,6 +18,7 @@ namespace HabitHero.App
         private GameObject taskListObject;
         private HabitHeroParentTaskCreateView taskCreateView;
         private HabitHeroParentRewardManagementView rewardManagementView;
+        private HabitHeroParentPointAdjustmentView pointAdjustmentView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -58,6 +59,7 @@ namespace HabitHero.App
             int,
             Task<SupabaseParentRewardMutationResult>> updateReward;
         private Func<string, Task<SupabaseParentRewardMutationResult>> deleteReward;
+        private Func<string, int, string, Task<SupabaseParentPointMutationResult>> adjustPoints;
 
         public HabitHeroParentHomeView(Transform canvasTransform, Font font)
         {
@@ -95,6 +97,7 @@ namespace HabitHero.App
                 int,
                 Task<SupabaseParentRewardMutationResult>> updateReward,
             Func<string, Task<SupabaseParentRewardMutationResult>> deleteReward,
+            Func<string, int, string, Task<SupabaseParentPointMutationResult>> adjustPoints,
             Action onSignOut)
         {
             if (snapshot == null) throw new ArgumentNullException("snapshot");
@@ -108,6 +111,7 @@ namespace HabitHero.App
             this.createReward = createReward;
             this.updateReward = updateReward;
             this.deleteReward = deleteReward;
+            this.adjustPoints = adjustPoints;
             panel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
                 HabitHeroUiFactory.PanelColor,
@@ -207,6 +211,7 @@ namespace HabitHero.App
             createReward = null;
             updateReward = null;
             deleteReward = null;
+            adjustPoints = null;
             latestSnapshot = null;
             activeReviewTask = null;
             activeWishlist = null;
@@ -218,6 +223,7 @@ namespace HabitHero.App
             CloseRewardPanel();
             CloseTaskCreatePanel();
             CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -333,6 +339,13 @@ namespace HabitHero.App
                 new Vector2(0.62f, 0.84f),
                 new Vector2(0.92f, 0.9f));
             manageRewardButton.onClick.AddListener(OpenRewardManagementPanel);
+            Button adjustPointsButton = HabitHeroUiFactory.CreateButton(
+                card.transform,
+                font,
+                "調整點數",
+                new Vector2(0.08f, 0.84f),
+                new Vector2(0.38f, 0.9f));
+            adjustPointsButton.onClick.AddListener(OpenPointAdjustmentPanel);
             HabitHeroUiFactory.CreateText(
                 card.transform,
                 font,
@@ -476,6 +489,30 @@ namespace HabitHero.App
                 ApplySnapshot,
                 SetStatus,
                 CloseRewardManagementPanel);
+        }
+
+        private void OpenPointAdjustmentPanel()
+        {
+            if (latestSnapshot == null || adjustPoints == null)
+            {
+                SetStatus("點數調整尚未連線。", true);
+                return;
+            }
+
+            CloseRewardPanel();
+            if (pointAdjustmentView == null)
+            {
+                pointAdjustmentView = new HabitHeroParentPointAdjustmentView(
+                    canvasTransform,
+                    font);
+            }
+
+            pointAdjustmentView.Show(
+                latestSnapshot,
+                adjustPoints,
+                ApplySnapshot,
+                SetStatus,
+                ClosePointAdjustmentPanel);
         }
 
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
@@ -899,6 +936,13 @@ namespace HabitHero.App
             if (rewardManagementView == null) return;
             rewardManagementView.Dispose();
             rewardManagementView = null;
+        }
+
+        private void ClosePointAdjustmentPanel()
+        {
+            if (pointAdjustmentView == null) return;
+            pointAdjustmentView.Dispose();
+            pointAdjustmentView = null;
         }
 
         private void SetReviewStatus(string message, bool isError)

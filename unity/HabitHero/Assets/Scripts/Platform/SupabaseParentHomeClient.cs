@@ -74,6 +74,21 @@ namespace HabitHero.Platform
         public string icon;
     }
 
+    public sealed class SupabaseParentPointMutationResult
+    {
+        public int PointsBalance { get; set; }
+
+        public SupabaseParentHomeSnapshot RefreshedSnapshot { get; set; }
+
+        public string RefreshError { get; set; }
+    }
+
+    [Serializable]
+    internal sealed class SupabasePointAdjustmentResponse
+    {
+        public int points_balance;
+    }
+
     public sealed class SupabaseParentHomeClient
     {
         private readonly SupabaseRestClient restClient;
@@ -357,6 +372,80 @@ namespace HabitHero.Platform
             }
 
             return reward;
+        }
+
+        public async Task<int> AdjustChildPointsAsync(
+            string childProfileId,
+            int pointsDelta,
+            string note,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(childProfileId))
+            {
+                throw new SupabaseDataException("孩子 ID 不可為空。");
+            }
+            if (pointsDelta == 0 || Math.Abs((long)pointsDelta) > 10000)
+            {
+                throw new SupabaseDataException("點數調整必須介於 -10000 到 10000，且不可為 0。");
+            }
+
+            string normalizedNote = note == null ? string.Empty : note.Trim();
+            if (normalizedNote.Length < 1 || normalizedNote.Length > 200)
+            {
+                throw new SupabaseDataException("點數調整原因長度必須介於 1 到 200 個字元。");
+            }
+
+            string body = "{\"target_child_profile_id\":"
+                + SupabaseJson.Quote(childProfileId)
+                + ",\"points_delta\":"
+                + pointsDelta.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                + ",\"adjustment_note\":" + SupabaseJson.Quote(normalizedNote) + "}";
+            string response = await restClient.CallRpcAsync(
+                "adjust_child_points",
+                body,
+                cancellationToken);
+            SupabasePointAdjustmentResponse parsed;
+            string error;
+            if (!SupabaseJsonObjectParser.TryParseObject(
+                    response,
+                    out parsed,
+                    out error))
+            {
+                throw new SupabaseDataException(error);
+            }
+
+            return parsed.points_balance;
+        }
+
+        public async Task<SupabaseParentPointMutationResult> AdjustChildPointsAndRefreshAsync(
+            string childProfileId,
+            int pointsDelta,
+            string note,
+            CancellationToken cancellationToken)
+        {
+            SupabaseParentPointMutationResult result =
+                new SupabaseParentPointMutationResult
+                {
+                    PointsBalance = await AdjustChildPointsAsync(
+                        childProfileId,
+                        pointsDelta,
+                        note,
+                        cancellationToken),
+                };
+            try
+            {
+                result.RefreshedSnapshot = await LoadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result.RefreshError = exception.Message;
+            }
+
+            return result;
         }
 
         public async Task CreateRewardAsync(

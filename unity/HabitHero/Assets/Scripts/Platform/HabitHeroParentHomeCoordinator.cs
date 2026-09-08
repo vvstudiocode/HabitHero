@@ -82,6 +82,12 @@ namespace HabitHero.App
                     (rewardId) => client.DeleteRewardAndRefreshAsync(
                         rewardId,
                         cancellationToken),
+                    (childProfileId, pointsDelta, note) =>
+                        client.AdjustChildPointsAndRefreshAsync(
+                            childProfileId,
+                            pointsDelta,
+                            note,
+                            cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;

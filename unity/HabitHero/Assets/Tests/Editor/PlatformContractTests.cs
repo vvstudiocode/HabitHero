@@ -923,6 +923,48 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public async Task ParentPointAdjustmentUsesServerAuthoritativeRpc()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            SupabaseAuthClient authClient = new SupabaseAuthClient(
+                settings,
+                authStore,
+                new FakeSupabaseTransport(
+                    new SupabaseHttpResponse(
+                        200,
+                        "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"parent-user-1\",\"email\":\"parent@example.com\"}}",
+                        null)));
+            await authClient.SignInWithPasswordAsync(
+                "parent@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            FakeSupabaseTransport dataTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"points_balance\":35,\"ledger_entry\":{\"id\":\"ledger-2\"}}",
+                    null));
+            SupabaseParentHomeClient client = new SupabaseParentHomeClient(
+                new SupabaseRestClient(settings, authClient, dataTransport));
+
+            int balance = await client.AdjustChildPointsAsync(
+                "child-1",
+                15,
+                "完成額外家事",
+                CancellationToken.None);
+
+            Assert.AreEqual(35, balance);
+            Assert.AreEqual(1, dataTransport.Requests.Count);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/adjust_child_points",
+                dataTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_child_profile_id\":\"child-1\",\"points_delta\":15,\"adjustment_note\":\"完成額外家事\"}",
+                dataTransport.Requests[0].Body);
+        }
+
+        [Test]
         public void TaskCompletionQueueDeduplicatesByTaskAndPersistsOwnerScope()
         {
             InMemorySupabaseTaskCompletionQueueStore store =
