@@ -49,6 +49,11 @@ namespace HabitHero.Platform
             return authClient.EnsureFreshSessionAsync(cancellationToken);
         }
 
+        public SupabaseSession CurrentSession
+        {
+            get { return authClient.CurrentSession; }
+        }
+
         public async Task<T[]> SelectManyAsync<T>(
             string table,
             IEnumerable<SupabaseRestFilter> filters,

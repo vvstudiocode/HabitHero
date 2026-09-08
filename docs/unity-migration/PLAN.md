@@ -32,7 +32,7 @@ authorization into client-only rules.
 | Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Foundation started |
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Not started |
 | Parent workflow | Task creation, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Not started |
-| Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Not started |
+| Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Foundation started |
 | Points/rewards | Ledger, approvals, scrolls, reward celebration, historical notice handling | Same RPC payloads, idempotency, and displayed-event semantics | Not started |
 | Adventure | Daily/general adventures, occurrences, reports, timers, abandonment | Contract tests plus device flow for timer and reconnect | Not started |
 | 3D world | Five scenes, authored terrain, gates, NPCs, weather, day/night, movement | Unity scene and mobile performance evidence at fixed viewports | Not started |
@@ -76,17 +76,22 @@ Partially completed locally:
   sign-out, user refresh, password recovery, and password update contracts.
 - Local C# smoke test: `npm run test:unity-platform`.
 - Unity Editor contract test: `npm run test:unity-editmode`.
+- Supabase PostgREST table reads and server-authoritative adventure completion
+  RPC payloads with idempotency keys.
+- Child task completion queue with duplicate protection, offline persistence,
+  reconnect drain, and EditMode coverage.
 
 Still required:
 
 - Native secure session persistence using iOS Keychain and Android Keystore.
 - Capacitor-to-Unity deep-link replacement.
-- Supabase REST/RPC/Realtime transport adapters.
+- Supabase Realtime transport adapters.
 - Native iOS/Android push and app URL plugins.
 
 ### Phase 2 — child core loop
 
-Port the smallest useful product slice first:
+The first data slice is now implemented locally. Continue with the smallest
+useful product loop:
 
 1. Authenticated child session.
 2. Hydrated child profile and today tasks.
@@ -94,7 +99,11 @@ Port the smallest useful product slice first:
 4. Points/ledger refresh.
 5. Offline queue and reconnect recovery.
 
-This phase must be usable before the world runtime is ported.
+The current Unity slice covers items 1–3 and the transport part of item 5.
+It still needs a full report UI, timer state, cached snapshots for cold-start
+offline use, and a post-completion ledger refresh before this phase is closed.
+The temporary PlayerPrefs queue is functional for the editor slice; production
+mobile release still requires encrypted/native storage review.
 
 ### Phase 3 — world and game systems
 

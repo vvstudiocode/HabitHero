@@ -48,12 +48,7 @@ namespace HabitHero.App
                 if (view == null) view = new HabitHeroChildHomeView(canvasTransform, font);
                 view.Show(
                     snapshot,
-                    (taskId) => client.SubmitTaskReflectionAsync(
-                        taskId,
-                        "在 Unity 完成任務",
-                        null,
-                        null,
-                        cancellationToken),
+                    (task) => SubmitTaskAsync(task, cancellationToken),
                     onSignOut);
                 hideLogin();
                 return true;
@@ -68,6 +63,26 @@ namespace HabitHero.App
                 setStatus("載入孩子資料失敗：" + exception.Message, true);
                 return false;
             }
+        }
+
+        private async Task SubmitTaskAsync(
+            SupabaseChildTaskRecord task,
+            CancellationToken cancellationToken)
+        {
+            if (task == null) throw new ArgumentNullException("task");
+
+            string reportMode = task.completion_report_mode;
+            string quickReport = reportMode == "quick" ? "smooth" : null;
+            string reflection = reportMode == "reflection" ? "在 Unity 完成任務" : null;
+            string mood = reportMode == "reflection" ? "happy" : null;
+            int? difficulty = reportMode == "reflection" ? 3 : (int?)null;
+            await client.SubmitTaskCompletionAsync(
+                task.id,
+                quickReport,
+                reflection,
+                mood,
+                difficulty,
+                cancellationToken);
         }
 
         public void Dispose()

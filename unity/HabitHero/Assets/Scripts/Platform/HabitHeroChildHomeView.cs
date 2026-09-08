@@ -12,7 +12,7 @@ namespace HabitHero.App
         private readonly Font font;
         private GameObject panel;
         private Text statusText;
-        private Func<string, Task> submitTask;
+        private Func<SupabaseChildTaskRecord, Task> submitTask;
 
         public HabitHeroChildHomeView(Transform canvasTransform, Font font)
         {
@@ -24,7 +24,7 @@ namespace HabitHero.App
 
         public void Show(
             SupabaseChildHomeSnapshot snapshot,
-            Func<string, Task> submitTask,
+            Func<SupabaseChildTaskRecord, Task> submitTask,
             Action onSignOut)
         {
             if (snapshot == null || snapshot.child == null)
@@ -96,11 +96,14 @@ namespace HabitHero.App
                 Button taskButton = HabitHeroUiFactory.CreateButton(
                     taskListObject.transform,
                     font,
-                    task.name + " 　+" + task.points + " 點",
+                    task.pendingSync
+                        ? task.name + "　同步待處理"
+                        : task.name + " 　+" + task.points + " 點",
                     Vector2.zero,
                     Vector2.one);
                 RectTransform taskRect = taskButton.GetComponent<RectTransform>();
                 taskRect.sizeDelta = new Vector2(0f, 58f);
+                taskButton.interactable = !task.pendingSync;
                 taskButton.onClick.AddListener(() => HandleTaskSubmit(task, taskButton));
                 visibleTaskCount += 1;
             }
@@ -153,7 +156,7 @@ namespace HabitHero.App
             SetStatus("正在送出「" + task.name + "」…", false);
             try
             {
-                await submitTask(task.id);
+                await submitTask(task);
                 if (buttonText != null) buttonText.text = "已送出回報：" + task.name;
                 SetStatus("任務已送出，等待家長確認點數。", false);
             }
@@ -177,7 +180,6 @@ namespace HabitHero.App
         private static bool IsActionable(string status)
         {
             return status == "todo"
-                || status == "pending"
                 || status == "revision_requested"
                 || status == "proposed"
                 || status == "proposal_revision_requested";

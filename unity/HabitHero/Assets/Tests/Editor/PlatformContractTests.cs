@@ -193,16 +193,140 @@ namespace HabitHero.Tests
                 "{\"target_child_profile_id\":\"child-1\"}",
                 dataTransport.Requests[2].Body);
 
-            await childClient.SubmitTaskReflectionAsync(
+            SupabaseTaskCompletionResult reflectionResult =
+                await childClient.SubmitTaskCompletionAsync(
                 "task-1",
+                null,
                 "完成了",
                 "happy",
                 3,
                 CancellationToken.None);
             Assert.AreEqual(9, dataTransport.Requests.Count);
             Assert.AreEqual(
-                "{\"target_task_id\":\"task-1\",\"reflection\":\"完成了\",\"mood\":\"happy\",\"difficulty\":3}",
+                "https://example.supabase.co/rest/v1/rpc/submit_adventure_completion",
+                dataTransport.Requests[8].Url);
+            StringAssert.Contains(
+                "{\"target_task_id\":\"task-1\",\"idempotency_key\":\""
+                    + reflectionResult.IdempotencyKey
+                    + "\",\"quick_report\":null,\"reflection\":\"完成了\",\"mood\":\"happy\",\"difficulty\":3}",
                 dataTransport.Requests[8].Body);
+        }
+
+        [Test]
+        public void TaskCompletionQueueDeduplicatesByTaskAndPersistsOwnerScope()
+        {
+            InMemorySupabaseTaskCompletionQueueStore store =
+                new InMemorySupabaseTaskCompletionQueueStore();
+            SupabaseTaskCompletionQueue queue = new SupabaseTaskCompletionQueue(store);
+            SupabaseTaskCompletionQueueEntry first = new SupabaseTaskCompletionQueueEntry
+            {
+                ownerUserId = "user-1",
+                taskId = "task-1",
+                idempotencyKey = "key-1",
+                queuedAt = "2026-09-08T06:00:00Z",
+                reflection = "完成了",
+                mood = "happy",
+                difficulty = 3,
+                hasDifficulty = true,
+            };
+
+            queue.Enqueue(first);
+            queue.Enqueue(new SupabaseTaskCompletionQueueEntry
+            {
+                ownerUserId = "user-1",
+                taskId = "task-1",
+                idempotencyKey = "key-2",
+                queuedAt = "2026-09-08T06:01:00Z",
+                reflection = "更新後的回報",
+            });
+
+            List<SupabaseTaskCompletionQueueEntry> entries = queue.Load("user-1");
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("key-2", entries[0].idempotencyKey);
+            Assert.AreEqual(0, queue.Load("other-user").Count);
+
+            queue.Remove("user-1", "key-2");
+            Assert.AreEqual(0, queue.Load("user-1").Count);
+        }
+
+        [Test]
+        public async Task ChildCompletionUsesIdempotentRpcAndFlushesOfflineQueue()
+        {
+            SupabaseClientSettings settings = CreateSettings();
+            InMemorySupabaseSessionStore authStore = new InMemorySupabaseSessionStore();
+            FakeSupabaseTransport authTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(
+                    200,
+                    "{\"access_token\":\"access-token\",\"refresh_token\":\"refresh-token\",\"expires_in\":3600,\"user\":{\"id\":\"child-user-1\",\"email\":\"child@example.com\"}}",
+                    null));
+            SupabaseAuthClient authClient = new SupabaseAuthClient(settings, authStore, authTransport);
+            await authClient.SignInWithPasswordAsync(
+                "child@example.com",
+                "secret-password",
+                CancellationToken.None);
+
+            InMemorySupabaseTaskCompletionQueueStore queueStore =
+                new InMemorySupabaseTaskCompletionQueueStore();
+            FakeSupabaseTransport onlineTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "{}", null));
+            SupabaseChildHomeClient onlineClient = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, onlineTransport),
+                queueStore,
+                () => true);
+
+            SupabaseTaskCompletionResult onlineResult =
+                await onlineClient.SubmitTaskCompletionAsync(
+                    "task-1",
+                    null,
+                    null,
+                    null,
+                    null,
+                    CancellationToken.None);
+
+            Assert.IsFalse(onlineResult.QueuedForRetry);
+            Assert.AreEqual(
+                "https://example.supabase.co/rest/v1/rpc/submit_adventure_completion",
+                onlineTransport.Requests[0].Url);
+            Assert.AreEqual(
+                "{\"target_task_id\":\"task-1\",\"idempotency_key\":\""
+                    + onlineResult.IdempotencyKey
+                    + "\",\"quick_report\":null,\"reflection\":null,\"mood\":null,\"difficulty\":null}",
+                onlineTransport.Requests[0].Body);
+
+            FakeSupabaseTransport offlineTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(0, string.Empty, "offline"));
+            SupabaseChildHomeClient offlineClient = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, offlineTransport),
+                queueStore,
+                () => false);
+            SupabaseTaskCompletionResult queuedResult =
+                await offlineClient.SubmitTaskCompletionAsync(
+                    "task-2",
+                    "smooth",
+                    null,
+                    null,
+                    null,
+                    CancellationToken.None);
+
+            Assert.IsTrue(queuedResult.QueuedForRetry);
+            Assert.AreEqual(1, offlineClient.PendingCompletionCount);
+            Assert.AreEqual(0, offlineTransport.Requests.Count);
+
+            FakeSupabaseTransport flushTransport = new FakeSupabaseTransport(
+                new SupabaseHttpResponse(200, "{}", null));
+            SupabaseChildHomeClient flushClient = new SupabaseChildHomeClient(
+                new SupabaseRestClient(settings, authClient, flushTransport),
+                queueStore,
+                () => true);
+            SupabaseTaskCompletionFlushResult flushResult =
+                await flushClient.FlushPendingCompletionsAsync(CancellationToken.None);
+
+            Assert.AreEqual(1, flushResult.SucceededCount);
+            Assert.AreEqual(0, flushResult.RemainingCount);
+            Assert.AreEqual(1, flushTransport.Requests.Count);
+            StringAssert.Contains(
+                "\"idempotency_key\":\"" + queuedResult.IdempotencyKey + "\"",
+                flushTransport.Requests[0].Body);
         }
 
         [Test]

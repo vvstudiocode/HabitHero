@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace HabitHero.Platform
 {
@@ -50,11 +51,18 @@ namespace HabitHero.Platform
         public string child_reflection_text;
         public string child_mood;
         public int child_difficulty;
+        public string adventure_type;
+        public string completion_report_mode;
+        public string quick_report;
+        public bool requires_timer;
+        public string description;
         public string submitted_at;
         public string reviewed_at;
         public int approved_points;
         public string created_at;
         public string updated_at;
+        [NonSerialized]
+        public bool pendingSync;
     }
 
     [Serializable]
@@ -111,14 +119,70 @@ namespace HabitHero.Platform
         public SupabaseChildLedgerRecord[] ledger;
     }
 
+    public sealed class SupabaseTaskCompletionResult
+    {
+        public string IdempotencyKey { get; set; }
+
+        public bool QueuedForRetry { get; set; }
+    }
+
+    public sealed class SupabaseTaskCompletionFlushResult
+    {
+        public int SucceededCount { get; set; }
+
+        public int PermanentFailureCount { get; set; }
+
+        public int RemainingCount { get; set; }
+
+        public string Error { get; set; }
+    }
+
     public sealed class SupabaseChildHomeClient
     {
         private readonly SupabaseRestClient restClient;
+        private readonly SupabaseTaskCompletionQueue completionQueue;
+        private readonly Func<bool> isNetworkAvailable;
 
         public SupabaseChildHomeClient(SupabaseRestClient restClient)
+            : this(
+                restClient,
+                new PlayerPrefsSupabaseTaskCompletionQueueStore(),
+                IsNetworkAvailable)
+        {
+        }
+
+        public SupabaseChildHomeClient(
+            SupabaseRestClient restClient,
+            ISupabaseTaskCompletionQueueStore completionQueueStore,
+            Func<bool> isNetworkAvailable)
         {
             if (restClient == null) throw new ArgumentNullException("restClient");
+            if (completionQueueStore == null)
+            {
+                throw new ArgumentNullException("completionQueueStore");
+            }
+            if (isNetworkAvailable == null)
+            {
+                throw new ArgumentNullException("isNetworkAvailable");
+            }
+
             this.restClient = restClient;
+            completionQueue = new SupabaseTaskCompletionQueue(completionQueueStore);
+            this.isNetworkAvailable = isNetworkAvailable;
+        }
+
+        public int PendingCompletionCount
+        {
+            get
+            {
+                SupabaseSession session = restClient.CurrentSession;
+                if (session == null || session.User == null)
+                {
+                    return 0;
+                }
+
+                return completionQueue.Load(session.User.Id).Count;
+            }
         }
 
         public async Task<SupabaseChildHomeSnapshot> LoadAsync(
@@ -168,6 +232,7 @@ namespace HabitHero.Platform
                 new SupabaseRestFilter("family_id", "eq", familyId),
                 new SupabaseRestFilter("child_profile_id", "eq", child.id),
             };
+            await FlushPendingCompletionsAsync(cancellationToken);
             Task<SupabaseChildTaskRecord[]> tasks = restClient.SelectManyAsync<SupabaseChildTaskRecord>(
                 "tasks",
                 childFilters,
@@ -205,6 +270,19 @@ namespace HabitHero.Platform
                 cancellationToken);
 
             await Task.WhenAll(tasks, rewards, wishlist, tickets, ledger);
+            List<SupabaseTaskCompletionQueueEntry> pendingCompletions =
+                completionQueue.Load(userId);
+            foreach (SupabaseChildTaskRecord task in tasks.Result)
+            {
+                foreach (SupabaseTaskCompletionQueueEntry pending in pendingCompletions)
+                {
+                    if (pending.taskId == task.id)
+                    {
+                        task.pendingSync = true;
+                        break;
+                    }
+                }
+            }
             return new SupabaseChildHomeSnapshot
             {
                 familyId = familyId,
@@ -217,8 +295,25 @@ namespace HabitHero.Platform
             };
         }
 
-        public Task SubmitTaskReflectionAsync(
+        public async Task SubmitTaskReflectionAsync(
             string taskId,
+            string reflection,
+            string mood,
+            int? difficulty,
+            CancellationToken cancellationToken)
+        {
+            await SubmitTaskCompletionAsync(
+                taskId,
+                null,
+                reflection,
+                mood,
+                difficulty,
+                cancellationToken);
+        }
+
+        public async Task<SupabaseTaskCompletionResult> SubmitTaskCompletionAsync(
+            string taskId,
+            string quickReport,
             string reflection,
             string mood,
             int? difficulty,
@@ -229,21 +324,164 @@ namespace HabitHero.Platform
                 throw new SupabaseDataException("任務 ID 不可為空。");
             }
 
-            string difficultyJson = difficulty.HasValue
-                ? difficulty.Value.ToString(CultureInfo.InvariantCulture)
-                : "null";
-            string body = "{\"target_task_id\":" + SupabaseJson.Quote(taskId)
-                + ",\"reflection\":" + SupabaseJson.Quote(reflection ?? string.Empty)
-                + ",\"mood\":" + SupabaseJson.NullableString(mood)
-                + ",\"difficulty\":" + difficultyJson + "}";
-            return SubmitTaskReflectionInternalAsync(body, cancellationToken);
+            SupabaseSession session = restClient.CurrentSession;
+            if (session == null || session.User == null
+                || string.IsNullOrWhiteSpace(session.User.Id))
+            {
+                session = await restClient.EnsureSessionAsync(cancellationToken);
+            }
+
+            if (session == null || session.User == null
+                || string.IsNullOrWhiteSpace(session.User.Id))
+            {
+                throw new SupabaseDataException("Supabase session 缺少使用者 ID。");
+            }
+
+            SupabaseTaskCompletionQueueEntry entry = new SupabaseTaskCompletionQueueEntry
+            {
+                ownerUserId = session.User.Id,
+                taskId = taskId,
+                idempotencyKey = Guid.NewGuid().ToString(),
+                quickReport = quickReport,
+                reflection = reflection,
+                mood = mood,
+                difficulty = difficulty.GetValueOrDefault(),
+                hasDifficulty = difficulty.HasValue,
+                queuedAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+            };
+
+            if (!isNetworkAvailable())
+            {
+                completionQueue.Enqueue(entry);
+                return QueuedResult(entry.idempotencyKey);
+            }
+
+            try
+            {
+                await SendTaskCompletionAsync(entry, cancellationToken);
+                completionQueue.Remove(entry.ownerUserId, entry.idempotencyKey);
+                return SentResult(entry.idempotencyKey);
+            }
+            catch (SupabaseDataException exception) when (IsRetryable(exception.StatusCode))
+            {
+                completionQueue.Enqueue(entry);
+                return QueuedResult(entry.idempotencyKey);
+            }
+            catch (SupabaseAuthException exception) when (IsRetryable(exception.StatusCode))
+            {
+                completionQueue.Enqueue(entry);
+                return QueuedResult(entry.idempotencyKey);
+            }
         }
 
-        private async Task SubmitTaskReflectionInternalAsync(
-            string body,
+        public async Task<SupabaseTaskCompletionFlushResult> FlushPendingCompletionsAsync(
             CancellationToken cancellationToken)
         {
-            await restClient.CallRpcAsync("submit_task_reflection", body, cancellationToken);
+            SupabaseTaskCompletionFlushResult result =
+                new SupabaseTaskCompletionFlushResult();
+            if (!isNetworkAvailable())
+            {
+                result.RemainingCount = PendingCompletionCount;
+                return result;
+            }
+
+            SupabaseSession session;
+            try
+            {
+                session = await restClient.EnsureSessionAsync(cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                result.Error = exception.Message;
+                result.RemainingCount = PendingCompletionCount;
+                return result;
+            }
+
+            if (session == null || session.User == null
+                || string.IsNullOrWhiteSpace(session.User.Id))
+            {
+                result.Error = "Supabase session 缺少使用者 ID。";
+                return result;
+            }
+
+            List<SupabaseTaskCompletionQueueEntry> entries =
+                completionQueue.Load(session.User.Id);
+            foreach (SupabaseTaskCompletionQueueEntry entry in entries)
+            {
+                try
+                {
+                    await SendTaskCompletionAsync(entry, cancellationToken);
+                    completionQueue.Remove(entry.ownerUserId, entry.idempotencyKey);
+                    result.SucceededCount += 1;
+                }
+                catch (SupabaseDataException exception)
+                {
+                    result.Error = exception.Message;
+                    if (IsRetryable(exception.StatusCode)) break;
+                    completionQueue.Remove(entry.ownerUserId, entry.idempotencyKey);
+                    result.PermanentFailureCount += 1;
+                }
+                catch (SupabaseAuthException exception)
+                {
+                    result.Error = exception.Message;
+                    if (IsRetryable(exception.StatusCode)) break;
+                    completionQueue.Remove(entry.ownerUserId, entry.idempotencyKey);
+                    result.PermanentFailureCount += 1;
+                }
+            }
+
+            result.RemainingCount = completionQueue.Load(session.User.Id).Count;
+            return result;
+        }
+
+        private async Task SendTaskCompletionAsync(
+            SupabaseTaskCompletionQueueEntry entry,
+            CancellationToken cancellationToken)
+        {
+            string difficultyJson = entry.hasDifficulty
+                ? entry.difficulty.ToString(CultureInfo.InvariantCulture)
+                : "null";
+            string body = "{\"target_task_id\":" + SupabaseJson.Quote(entry.taskId)
+                + ",\"idempotency_key\":" + SupabaseJson.Quote(entry.idempotencyKey)
+                + ",\"quick_report\":" + SupabaseJson.NullableString(entry.quickReport)
+                + ",\"reflection\":" + SupabaseJson.NullableString(entry.reflection)
+                + ",\"mood\":" + SupabaseJson.NullableString(entry.mood)
+                + ",\"difficulty\":" + difficultyJson + "}";
+            await restClient.CallRpcAsync(
+                "submit_adventure_completion",
+                body,
+                cancellationToken);
+        }
+
+        private static SupabaseTaskCompletionResult SentResult(string idempotencyKey)
+        {
+            return new SupabaseTaskCompletionResult
+            {
+                IdempotencyKey = idempotencyKey,
+                QueuedForRetry = false,
+            };
+        }
+
+        private static SupabaseTaskCompletionResult QueuedResult(string idempotencyKey)
+        {
+            return new SupabaseTaskCompletionResult
+            {
+                IdempotencyKey = idempotencyKey,
+                QueuedForRetry = true,
+            };
+        }
+
+        private static bool IsRetryable(long statusCode)
+        {
+            return statusCode == 0
+                || statusCode == 408
+                || statusCode == 429
+                || statusCode >= 500;
+        }
+
+        private static bool IsNetworkAvailable()
+        {
+            return Application.internetReachability != NetworkReachability.NotReachable;
         }
 
     }
