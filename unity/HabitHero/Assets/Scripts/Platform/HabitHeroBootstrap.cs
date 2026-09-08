@@ -103,6 +103,7 @@ namespace HabitHero.App
                 OpenNotificationSettings);
             parentHomeCoordinator = new HabitHeroParentHomeCoordinator(
                 new SupabaseParentHomeClient(restClient),
+                new SupabaseChildCoopAdventureClient(restClient),
                 canvas.transform,
                 uiFont,
                 OpenNotificationSettings);

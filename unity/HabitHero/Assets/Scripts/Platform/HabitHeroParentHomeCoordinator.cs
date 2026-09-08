@@ -9,6 +9,7 @@ namespace HabitHero.App
     public sealed class HabitHeroParentHomeCoordinator
     {
         private readonly SupabaseParentHomeClient client;
+        private readonly SupabaseChildCoopAdventureClient coopAdventureClient;
         private readonly Transform canvasTransform;
         private readonly Font font;
         private readonly Action openNotificationSettings;
@@ -17,14 +18,20 @@ namespace HabitHero.App
 
         public HabitHeroParentHomeCoordinator(
             SupabaseParentHomeClient client,
+            SupabaseChildCoopAdventureClient coopAdventureClient,
             Transform canvasTransform,
             Font font,
             Action openNotificationSettings = null)
         {
             if (client == null) throw new ArgumentNullException("client");
+            if (coopAdventureClient == null)
+            {
+                throw new ArgumentNullException("coopAdventureClient");
+            }
             if (canvasTransform == null) throw new ArgumentNullException("canvasTransform");
             if (font == null) throw new ArgumentNullException("font");
             this.client = client;
+            this.coopAdventureClient = coopAdventureClient;
             this.canvasTransform = canvasTransform;
             this.font = font;
             this.openNotificationSettings = openNotificationSettings;
@@ -151,6 +158,16 @@ namespace HabitHero.App
                     (childProfileId) => client.DeleteChildAccountAndRefreshAsync(
                         snapshot.familyId,
                         childProfileId,
+                        cancellationToken),
+                    (worldOwnerChildProfileId) => coopAdventureClient.ListAsync(
+                        worldOwnerChildProfileId,
+                        cancellationToken),
+                    (adventureId) => coopAdventureClient.LoadStateAsync(
+                        adventureId,
+                        cancellationToken),
+                    (participantId, input) => coopAdventureClient.ReviewCompletionAsync(
+                        participantId,
+                        input,
                         cancellationToken),
                     enterChildMode == null
                         ? null

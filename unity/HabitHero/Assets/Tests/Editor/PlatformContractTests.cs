@@ -1587,6 +1587,21 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void ParentCoopReviewEligibilityOnlyShowsUnresolvedReports()
+        {
+            Assert.IsTrue(HabitHeroParentCoopReviewEligibility.NeedsReview(
+                new SupabaseCoopAdventureCompletion { status = "pending" }));
+            Assert.IsTrue(HabitHeroParentCoopReviewEligibility.NeedsReview(
+                new SupabaseCoopAdventureCompletion
+                {
+                    status = "revision_requested",
+                }));
+            Assert.IsFalse(HabitHeroParentCoopReviewEligibility.NeedsReview(
+                new SupabaseCoopAdventureCompletion { status = "completed" }));
+            Assert.IsFalse(HabitHeroParentCoopReviewEligibility.NeedsReview(null));
+        }
+
+        [Test]
         public async Task CoopClientUsesTheServerRpcsAndMapsAuthoritativeState()
         {
             SupabaseClientSettings settings = CreateSettings();

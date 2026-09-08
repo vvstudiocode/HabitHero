@@ -25,6 +25,7 @@ namespace HabitHero.App
         private HabitHeroParentPointAdjustmentView pointAdjustmentView;
         private HabitHeroParentChildAccountView childAccountView;
         private HabitHeroParentChildPreviewView childPreviewView;
+        private HabitHeroParentCoopAdventureView coopAdventureView;
         private Text statusText;
         private Text summaryText;
         private Text reviewStatus;
@@ -106,6 +107,16 @@ namespace HabitHero.App
         private Func<
             string,
             Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount;
+        private Func<
+            string,
+            Task<SupabaseCoopAdventureSummary[]>> listCoopAdventures;
+        private Func<
+            string,
+            Task<SupabaseCoopAdventureState>> loadCoopAdventureState;
+        private Func<
+            string,
+            SupabaseCoopReviewInput,
+            Task<SupabaseCoopMutationResult>> reviewCoopCompletion;
         private Func<string, Task<bool>> enterChildMode;
         private Action onOpenNotificationSettings;
 
@@ -181,6 +192,12 @@ namespace HabitHero.App
             Func<
                 string,
                 Task<SupabaseParentChildAccountMutationResult>> deleteChildAccount,
+            Func<string, Task<SupabaseCoopAdventureSummary[]>> listCoopAdventures,
+            Func<string, Task<SupabaseCoopAdventureState>> loadCoopAdventureState,
+            Func<
+                string,
+                SupabaseCoopReviewInput,
+                Task<SupabaseCoopMutationResult>> reviewCoopCompletion,
             Func<string, Task<bool>> enterChildMode,
             Action onSignOut,
             Action onOpenNotificationSettings)
@@ -210,6 +227,9 @@ namespace HabitHero.App
             this.createChildAccount = createChildAccount;
             this.resetChildPassword = resetChildPassword;
             this.deleteChildAccount = deleteChildAccount;
+            this.listCoopAdventures = listCoopAdventures;
+            this.loadCoopAdventureState = loadCoopAdventureState;
+            this.reviewCoopCompletion = reviewCoopCompletion;
             this.enterChildMode = enterChildMode;
             this.onOpenNotificationSettings = onOpenNotificationSettings;
             panel = HabitHeroUiFactory.CreatePanel(
@@ -328,23 +348,30 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "願望與獎勵券",
-                new Vector2(0.66f, 0.18f),
+                new Vector2(0.72f, 0.18f),
                 new Vector2(0.92f, 0.24f));
             rewardButton.onClick.AddListener(OpenRewardPanel);
             Button scheduleButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "每日排程",
-                new Vector2(0.37f, 0.18f),
-                new Vector2(0.63f, 0.24f));
+                new Vector2(0.31f, 0.18f),
+                new Vector2(0.5f, 0.24f));
             scheduleButton.onClick.AddListener(OpenAdventureSchedulePanel);
             Button childAccountButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "孩子帳號",
                 new Vector2(0.08f, 0.18f),
-                new Vector2(0.34f, 0.24f));
+                new Vector2(0.29f, 0.24f));
             childAccountButton.onClick.AddListener(OpenChildAccountPanel);
+            Button coopAdventureButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "合作批改",
+                new Vector2(0.52f, 0.18f),
+                new Vector2(0.7f, 0.24f));
+            coopAdventureButton.onClick.AddListener(OpenCoopAdventurePanel);
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
                 font,
@@ -379,6 +406,9 @@ namespace HabitHero.App
             createChildAccount = null;
             resetChildPassword = null;
             deleteChildAccount = null;
+            listCoopAdventures = null;
+            loadCoopAdventureState = null;
+            reviewCoopCompletion = null;
             enterChildMode = null;
             onOpenNotificationSettings = null;
             latestSnapshot = null;
@@ -399,6 +429,7 @@ namespace HabitHero.App
             ClosePointAdjustmentPanel();
             CloseChildAccountPanel();
             CloseChildPreviewPanel();
+            CloseCoopAdventurePanel();
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -908,6 +939,44 @@ namespace HabitHero.App
                 enterChildMode);
         }
 
+        private void OpenCoopAdventurePanel()
+        {
+            if (latestSnapshot == null
+                || listCoopAdventures == null
+                || loadCoopAdventureState == null
+                || reviewCoopCompletion == null)
+            {
+                SetStatus("合作冒險批改尚未連線。", true);
+                return;
+            }
+
+            CloseReviewPanel();
+            CloseWishlistApprovalPanel();
+            CloseRewardPanel();
+            CloseTaskCreatePanel();
+            CloseTaskManagementPanel();
+            CloseTaskTemplatePanel();
+            CloseGeneralAdventurePanel();
+            CloseAdventureSchedulePanel();
+            CloseRewardManagementPanel();
+            ClosePointAdjustmentPanel();
+            CloseChildAccountPanel();
+            CloseChildPreviewPanel();
+            if (coopAdventureView == null)
+            {
+                coopAdventureView = new HabitHeroParentCoopAdventureView(
+                    canvasTransform,
+                    font);
+            }
+
+            coopAdventureView.Show(
+                latestSnapshot,
+                listCoopAdventures,
+                loadCoopAdventureState,
+                reviewCoopCompletion,
+                CloseCoopAdventurePanel);
+        }
+
         private void OpenWishlistApprovalPanel(SupabaseChildWishlistRecord wishlist)
         {
             if (wishlist == null || approveWishlist == null) return;
@@ -1378,6 +1447,16 @@ namespace HabitHero.App
             if (childPreviewView == null) return;
             childPreviewView.Dispose();
             childPreviewView = null;
+        }
+
+        private void CloseCoopAdventurePanel()
+        {
+            if (coopAdventureView != null)
+            {
+                coopAdventureView.Close();
+                coopAdventureView = null;
+            }
+            SetStatus("已返回家長工作台。", false);
         }
 
         private void SetReviewStatus(string message, bool isError)
