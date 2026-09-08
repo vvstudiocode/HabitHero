@@ -324,6 +324,11 @@ The migration is not complete until all of the following are true:
 Current local verification:
 
 - Web tests: `1165` passed across `141` suites; lint and security scan passed.
+- Vercel production build passed with `npm run build`; the production Supabase
+  environment check passed and Vite emitted the configured `dist` output.
+- The configured public Supabase Auth settings and PostgREST root both returned
+  HTTP `200` using the ignored local publishable-key configuration; this does
+  not claim an authenticated account or RLS/device flow.
 - Structure governance still reports `12` pre-existing source-size violations
   in Web dashboard/world/CSS hotspots; no unrelated Web restructuring was done.
 - Unity platform contract smoke test passed.
@@ -335,6 +340,10 @@ Current local verification:
   labels, shadows, decoration editor controls, and runtime cleanup) loaded with
   no runtime errors in the headless Unity Editor run.
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
+- A direct Unity Editor smoke run also opened `Bootstrap`, entered Play Mode,
+  rendered the login shell, and exited cleanly without a captured runtime
+  error; this is an additional entrypoint check, not authenticated feature or
+  device evidence.
 - Native iOS/Android modules are not installed on this machine, so native
   export, device behavior, and store update evidence are intentionally not
   claimed yet.
