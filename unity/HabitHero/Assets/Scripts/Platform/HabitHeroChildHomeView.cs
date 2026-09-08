@@ -604,6 +604,14 @@ namespace HabitHero.App
             }
         }
 
+        public void NotifyCoopAdventureChanged()
+        {
+            if (coopAdventureView != null)
+            {
+                coopAdventureView.NotifyRealtimeChanged();
+            }
+        }
+
         public void AttachFriendWorldRealtime(
             string localConnectionId,
             string localChildProfileId,

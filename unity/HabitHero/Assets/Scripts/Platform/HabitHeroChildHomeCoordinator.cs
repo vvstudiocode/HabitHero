@@ -15,6 +15,7 @@ namespace HabitHero.App
         private readonly SupabaseChildWorldClient worldClient;
         private readonly SupabaseChildSocialClient socialClient;
         private readonly SupabaseChildCoopAdventureClient coopAdventureClient;
+        private readonly SupabaseChildCoopAdventureRealtimeClient coopAdventureRealtimeClient;
         private readonly SupabaseChildFriendWorldClient friendWorldClient;
         private readonly SupabaseChildWorldChatClient worldChatClient;
         private readonly SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient;
@@ -31,6 +32,10 @@ namespace HabitHero.App
         private CancellationTokenSource friendWorldRealtimeCancellation;
         private string friendWorldRealtimeOwner;
         private string friendWorldRealtimeChildProfileId;
+        private IDisposable coopAdventureRealtimeSubscription;
+        private CancellationTokenSource coopAdventureRealtimeCancellation;
+        private string coopAdventureRealtimeOwner;
+        private int coopAdventureRealtimeVersion;
         private readonly string friendWorldRealtimeConnectionId = Guid.NewGuid().ToString("N");
         private SupabaseFriendWorldAvatarState latestLocalFriendWorldAvatarState;
         private bool friendWorldRealtimeCrowded;
@@ -46,6 +51,7 @@ namespace HabitHero.App
             SupabaseChildWorldClient worldClient,
             SupabaseChildSocialClient socialClient,
             SupabaseChildCoopAdventureClient coopAdventureClient,
+            SupabaseChildCoopAdventureRealtimeClient coopAdventureRealtimeClient,
             SupabaseChildFriendWorldClient friendWorldClient,
             SupabaseChildWorldChatClient worldChatClient,
             SupabaseChildFriendWorldRealtimeClient friendWorldRealtimeClient,
@@ -62,6 +68,10 @@ namespace HabitHero.App
             {
                 throw new ArgumentNullException("coopAdventureClient");
             }
+            if (coopAdventureRealtimeClient == null)
+            {
+                throw new ArgumentNullException("coopAdventureRealtimeClient");
+            }
             if (friendWorldClient == null) throw new ArgumentNullException("friendWorldClient");
             if (worldChatClient == null) throw new ArgumentNullException("worldChatClient");
             if (friendWorldRealtimeClient == null)
@@ -75,6 +85,7 @@ namespace HabitHero.App
             this.worldClient = worldClient;
             this.socialClient = socialClient;
             this.coopAdventureClient = coopAdventureClient;
+            this.coopAdventureRealtimeClient = coopAdventureRealtimeClient;
             this.friendWorldClient = friendWorldClient;
             this.worldChatClient = worldChatClient;
             this.friendWorldRealtimeClient = friendWorldRealtimeClient;
@@ -982,7 +993,73 @@ namespace HabitHero.App
                 viewerCharacterAssetKey,
                 friendChildProfileId,
                 cancellationToken);
+            _ = EnsureCoopAdventureRealtimeAsync(
+                friendChildProfileId,
+                cancellationToken);
             return data;
+        }
+
+        private async Task EnsureCoopAdventureRealtimeAsync(
+            string worldOwnerChildProfileId,
+            CancellationToken cancellationToken)
+        {
+            string normalizedOwner = (worldOwnerChildProfileId ?? string.Empty).Trim();
+            if (string.Equals(
+                    coopAdventureRealtimeOwner,
+                    normalizedOwner,
+                    StringComparison.Ordinal)
+                && coopAdventureRealtimeSubscription != null)
+            {
+                return;
+            }
+
+            StopCoopAdventureRealtime();
+            int requestVersion = coopAdventureRealtimeVersion;
+            CancellationTokenSource subscriptionCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            coopAdventureRealtimeCancellation = subscriptionCancellation;
+            try
+            {
+                IDisposable subscription =
+                    await coopAdventureRealtimeClient.SubscribeAsync(
+                        normalizedOwner,
+                        HandleCoopAdventureRealtimeChanged,
+                        subscriptionCancellation.Token);
+                if (subscriptionCancellation.IsCancellationRequested
+                    || requestVersion != coopAdventureRealtimeVersion
+                    || view == null)
+                {
+                    subscription.Dispose();
+                    return;
+                }
+
+                coopAdventureRealtimeSubscription = subscription;
+                coopAdventureRealtimeOwner = normalizedOwner;
+            }
+            catch (OperationCanceledException)
+            {
+                // The current child session or selected world was replaced.
+            }
+            catch
+            {
+                // RPC snapshots remain usable if the co-op hint channel is unavailable.
+            }
+            finally
+            {
+                if (ReferenceEquals(
+                        coopAdventureRealtimeCancellation,
+                        subscriptionCancellation))
+                {
+                    coopAdventureRealtimeCancellation = null;
+                }
+
+                subscriptionCancellation.Dispose();
+            }
+        }
+
+        private void HandleCoopAdventureRealtimeChanged()
+        {
+            if (view != null) view.NotifyCoopAdventureChanged();
         }
 
         private async Task EnsureFriendWorldRealtimeAsync(
@@ -1249,6 +1326,7 @@ namespace HabitHero.App
         {
             friendWorldRealtimeVersion += 1;
             friendWorldRevisionRefreshVersion += 1;
+            StopCoopAdventureRealtime();
             if (view != null) view.ClearFriendWorldRealtime();
             if (friendWorldRealtimeCancellation != null)
             {
@@ -1266,6 +1344,24 @@ namespace HabitHero.App
             friendWorldRealtimeChildProfileId = null;
             friendWorldRealtimeCrowded = false;
             latestLocalFriendWorldAvatarState = null;
+        }
+
+        private void StopCoopAdventureRealtime()
+        {
+            coopAdventureRealtimeVersion += 1;
+            if (coopAdventureRealtimeCancellation != null)
+            {
+                coopAdventureRealtimeCancellation.Cancel();
+                coopAdventureRealtimeCancellation = null;
+            }
+
+            if (coopAdventureRealtimeSubscription != null)
+            {
+                coopAdventureRealtimeSubscription.Dispose();
+                coopAdventureRealtimeSubscription = null;
+            }
+
+            coopAdventureRealtimeOwner = null;
         }
 
         private Task<SupabaseChildWorldChatData> LoadWorldChatAsync(

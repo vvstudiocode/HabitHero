@@ -41,6 +41,7 @@ namespace HabitHero.App
         private Button smoothButton;
         private Button hardButton;
         private Button helpButton;
+        private int realtimeRefreshVersion;
 
         private sealed class CoopAdventureEntry
         {
@@ -218,6 +219,13 @@ namespace HabitHero.App
             ClosePanel();
         }
 
+        public void NotifyRealtimeChanged()
+        {
+            if (panel == null || listAdventures == null) return;
+            int requestVersion = ++realtimeRefreshVersion;
+            _ = RefreshRealtimeAsync(requestVersion);
+        }
+
         private async Task ReloadAsync()
         {
             if (listAdventures == null)
@@ -272,6 +280,33 @@ namespace HabitHero.App
             else
             {
                 SetStatus("合作冒險已同步。點選冒險查看參與者。", false);
+            }
+        }
+
+        private async Task RefreshRealtimeAsync(int requestVersion)
+        {
+            await ReloadAsync();
+            if (panel == null
+                || requestVersion != realtimeRefreshVersion
+                || string.IsNullOrWhiteSpace(selectedAdventureId)
+                || loadState == null)
+            {
+                return;
+            }
+
+            try
+            {
+                selectedState = await loadState(selectedAdventureId);
+                if (panel == null || requestVersion != realtimeRefreshVersion) return;
+                RenderState();
+                SetStatus("合作冒險已即時更新。", false);
+            }
+            catch (Exception exception)
+            {
+                if (panel != null && requestVersion == realtimeRefreshVersion)
+                {
+                    SetStatus("合作冒險狀態更新失敗：" + exception.Message, true);
+                }
             }
         }
 
@@ -822,6 +857,7 @@ namespace HabitHero.App
 
         private void ClosePanel()
         {
+            realtimeRefreshVersion += 1;
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);

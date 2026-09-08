@@ -1602,6 +1602,31 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void CoopRealtimeOnlyAcceptsTheVersionedFriendWorldBroadcast()
+        {
+            Assert.AreEqual(
+                "friend-world:owner-1",
+                SupabaseChildCoopAdventureRealtimeClient.GetTopic("owner-1"));
+
+            SupabaseRealtimeEnvelope envelope;
+            string error;
+            bool parsed = SupabaseRealtimeMessageParser.TryParseEnvelope(
+                "{\"topic\":\"realtime:friend-world:owner-1\",\"event\":\"broadcast\",\"payload\":{\"type\":\"broadcast\",\"event\":\"coop_changed_v1\",\"payload\":{\"version\":1,\"event\":\"coop_changed_v1\",\"type\":\"coop_completion_submitted\"}},\"ref\":null,\"join_ref\":\"1\"}",
+                out envelope,
+                out error);
+
+            Assert.IsTrue(parsed, error);
+            Assert.IsTrue(
+                SupabaseChildCoopAdventureRealtimeClient.IsChange(
+                    envelope,
+                    "owner-1"));
+            Assert.IsFalse(
+                SupabaseChildCoopAdventureRealtimeClient.IsChange(
+                    envelope,
+                    "owner-2"));
+        }
+
+        [Test]
         public async Task CoopClientUsesTheServerRpcsAndMapsAuthoritativeState()
         {
             SupabaseClientSettings settings = CreateSettings();
