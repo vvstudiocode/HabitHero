@@ -18,6 +18,9 @@ namespace HabitHero.App
         private readonly System.Collections.Generic.HashSet<string> handledSignatures =
             new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         private Coroutine queryCoroutine;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private Coroutine androidLaunchCoroutine;
+#endif
         private bool initialized;
         private bool disposed;
 
@@ -49,6 +52,9 @@ namespace HabitHero.App
                 NotificationCenter.OnNotificationReceived += HandleNotificationReceived;
                 initialized = true;
                 queryCoroutine = host.StartCoroutine(ObserveTappedNotifications());
+#if UNITY_ANDROID
+                androidLaunchCoroutine = host.StartCoroutine(ObserveAndroidLaunchPayload());
+#endif
             }
             catch (Exception exception)
             {
@@ -69,6 +75,13 @@ namespace HabitHero.App
                 host.StopCoroutine(queryCoroutine);
                 queryCoroutine = null;
             }
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (androidLaunchCoroutine != null)
+            {
+                host.StopCoroutine(androidLaunchCoroutine);
+                androidLaunchCoroutine = null;
+            }
+#endif
 
             if (initialized)
             {
@@ -165,7 +178,55 @@ namespace HabitHero.App
                     : string.Empty)
                 + ":" + target.ReferenceId
                 + ":" + target.Event;
-            if (!handledSignatures.Add(signature)) return;
+            DispatchTarget(target, signature);
+        }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private IEnumerator ObserveAndroidLaunchPayload()
+        {
+            yield return null;
+            while (!disposed && initialized)
+            {
+                try
+                {
+                    using (AndroidJavaClass player = new AndroidJavaClass(
+                        "com.unity3d.player.UnityPlayer"))
+                    using (AndroidJavaObject activity = player.GetStatic<AndroidJavaObject>(
+                        "currentActivity"))
+                    using (AndroidJavaClass bridge = new AndroidJavaClass(
+                        "com.vvstudiocode.habithero.HabitHeroFirebaseMessagingBridge"))
+                    {
+                        string rawData = bridge.CallStatic<string>(
+                            "consumeLaunchPayload",
+                            activity);
+                        if (!string.IsNullOrWhiteSpace(rawData))
+                        {
+                            HabitHeroNotificationTarget target;
+                            if (HabitHeroNotificationPayload.TryParse(rawData, out target)
+                                && target != null)
+                            {
+                                DispatchTarget(target, "fcm:" + rawData);
+                            }
+                        }
+                    }
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning(
+                        "HabitHero Firebase notification launch payload could not be read: "
+                        + exception.Message);
+                }
+
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
+        }
+#endif
+
+        private void DispatchTarget(
+            HabitHeroNotificationTarget target,
+            string signature)
+        {
+            if (target == null || !handledSignatures.Add(signature)) return;
 
             try
             {

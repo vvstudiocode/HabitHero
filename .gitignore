@@ -30,6 +30,7 @@ unity/**/Build/
 unity/**/MemoryCaptures/
 unity/**/.vs/
 unity/**/.utmp/
+unity/HabitHero/Assets/Plugins/Android/google-services.json
 unity/**/*.csproj
 unity/**/*.sln
 unity/**/ExportedObj/

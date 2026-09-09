@@ -229,16 +229,18 @@ Partially completed locally:
   `(profile_id, token)` conflict boundary. It sends only the public Supabase
   session and remains subject to the existing RLS policies. Unity Mobile
   Notifications `2.4.2` is pinned for Unity 6.0; the iOS provider requests
-  permission and obtains the APNs token in an iOS build, while Editor/WebGL and
-  Android return an explicit unsupported result. Parent and child Unity home
-  screens now expose the same notification preference flow, automatically retry
-  registration for the active family/child scope, and clear the context on
-  sign-out or scope changes. The Edge Function now includes a stringified
-  `data` payload for Unity while preserving the flat task/schedule fields for
-  Capacitor. Unity parses and deduplicates cold-start, foreground, and
-  background-return targets, then opens the matching parent review, parent
-  schedule editor, or child task surface after authentication. Android push
-  token/delivery and real-device verification remain pending.
+  permission and obtains the APNs token in an iOS build, while the Android
+  provider uses a native Firebase Cloud Messaging bridge. Parent and child
+  Unity home screens now expose the same notification preference flow,
+  automatically retry registration for the active family/child scope, and
+  clear the context on sign-out or scope changes. The Edge Function now
+  includes a stringified `data` payload for Unity while preserving the flat
+  task/schedule fields for Capacitor, sends Android devices through FCM HTTP
+  v1, and disables invalid device tokens. Unity parses and deduplicates
+  cold-start, foreground, and background-return targets, then opens the
+  matching parent review, parent schedule editor, or child task surface after
+  authentication. Firebase credentials, Android device delivery, and
+  real-device verification remain external release gates.
 
 Remaining migration gates:
 
@@ -355,5 +357,5 @@ Current local verification:
   confirmed `com.vvstudiocode.habithero`, version `1.44 (49)`, and the
   `com.vvstudiocode.habithero://` VIEW/BROWSABLE deep link.
 - Native device behavior, Android push delivery, and store update evidence
-  remain intentionally unclaimed until device and TestFlight/closed-testing
-  verification is completed.
+  remain intentionally unclaimed until credentials, device, and
+  TestFlight/closed-testing verification is completed.

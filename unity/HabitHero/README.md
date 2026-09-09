@@ -144,13 +144,28 @@ and child home screens expose the same notification settings flow and
 automatically bind the active family/child scope after login or a protected
 parent-to-child switch. Unity Mobile Notifications `2.4.2` is pinned for
 Unity 6.0; iOS builds request permission and obtain the APNs token, while
-Editor/WebGL and Android return an explicit unsupported result. Android push
-token/delivery and real-device verification are still pending; the Unity
-client now parses the shared APNs payload, deduplicates notification targets,
-and opens the related parent review, parent schedule editor, or child task
-surface after a cold start, background return, or foreground delivery.
+Editor/WebGL remain local-only; Android builds use the native Firebase Cloud
+Messaging bridge, register an FCM token, show foreground notifications, and
+route notification taps through the same task/schedule payload contract.
+Android's `google-services.json` is intentionally local-only and is copied into
+the generated launcher project during an Android build when present. The Unity
+client now parses the shared APNs/FCM payload, deduplicates notification
+targets, and opens the related parent review, parent schedule editor, or child
+task surface after a cold start, background return, or foreground delivery.
+Firebase project credentials, Android device delivery, and real-device
+verification remain external release gates.
 Unity UI, native plugins, and feature flows must not be marked complete until
 they pass their own editor/device tests.
+
+### Android FCM deployment boundary
+
+The Unity repository does not contain Firebase credentials. To enable Android
+push for a local or CI release, place the Firebase Android app configuration at
+`Assets/Plugins/Android/google-services.json` (the file is ignored by Git), and
+configure the Supabase Edge Function secrets `FCM_PROJECT_ID`,
+`FCM_CLIENT_EMAIL`, and `FCM_PRIVATE_KEY`. The service account must have
+permission to send through the Firebase Cloud Messaging HTTP v1 API. The
+Android application ID must remain `com.vvstudiocode.habithero`.
 
 ## CLI build smoke test
 

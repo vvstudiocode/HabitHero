@@ -43,6 +43,77 @@ function apnsPrivateKeyBytes() {
   return decodeBase64(value.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', ''));
 }
 
+function fcmPrivateKeyBytes() {
+  const value = Deno.env.get('FCM_PRIVATE_KEY')?.replace(/\\n/g, '\n');
+  if (!value) return null;
+  return decodeBase64(value.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', ''));
+}
+
+function hasFcmConfiguration() {
+  return Boolean(
+    Deno.env.get('FCM_PROJECT_ID')
+      && Deno.env.get('FCM_CLIENT_EMAIL')
+      && fcmPrivateKeyBytes(),
+  );
+}
+
+let fcmAccessToken: { value: string; expiresAt: number } | null = null;
+
+async function createFcmAccessToken() {
+  const projectId = Deno.env.get('FCM_PROJECT_ID');
+  const clientEmail = Deno.env.get('FCM_CLIENT_EMAIL');
+  const keyBytes = fcmPrivateKeyBytes();
+  if (!projectId || !clientEmail || !keyBytes) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (fcmAccessToken && fcmAccessToken.expiresAt > now + 60) {
+    return fcmAccessToken.value;
+  }
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    keyBytes,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const header = base64Url(utf8(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const payload = base64Url(utf8(JSON.stringify({
+    iss: clientEmail,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  })));
+  const unsigned = `${header}.${payload}`;
+  const signature = await crypto.subtle.sign(
+    { name: 'RSASSA-PKCS1-v1_5' },
+    key,
+    utf8(unsigned),
+  );
+  const assertion = `${unsigned}.${base64Url(new Uint8Array(signature))}`;
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+  });
+  if (!response.ok) {
+    console.error('FCM access token request failed', response.status, await response.text());
+    return null;
+  }
+
+  const result = await response.json() as { access_token?: string; expires_in?: number };
+  if (!result.access_token) return null;
+  fcmAccessToken = {
+    value: result.access_token,
+    expiresAt: now + (result.expires_in ?? 3600),
+  };
+  return result.access_token;
+}
+
 async function createApnsToken(environment: 'sandbox' | 'production') {
   const keyId = Deno.env.get('APNS_KEY_ID');
   const teamId = environment === 'production'
@@ -74,7 +145,7 @@ async function sendApns(
   const bundleId = Deno.env.get('APNS_BUNDLE_ID') ?? 'com.vvstudiocode.habithero';
   const environment = Deno.env.get('APNS_ENVIRONMENT') === 'production' ? 'production' : 'sandbox';
   const jwt = await createApnsToken(environment);
-  if (!jwt) return { configured: false, status: 0 };
+  if (!jwt) return { configured: false, status: 0, invalidToken: false };
 
   const host = environment === 'production' ? 'api.push.apple.com' : 'api.sandbox.push.apple.com';
   const response = await fetch(`https://${host}/3/device/${encodeURIComponent(token)}`, {
@@ -95,7 +166,52 @@ async function sendApns(
       ...payload,
     }),
   });
-  return { configured: true, status: response.status };
+  return {
+    configured: true,
+    status: response.status,
+    invalidToken: response.status === 400 || response.status === 410,
+  };
+}
+
+async function sendFcm(
+  token: string,
+  title: string,
+  body: string,
+  payload: TaskNotificationPayload,
+) {
+  const projectId = Deno.env.get('FCM_PROJECT_ID');
+  const accessToken = await createFcmAccessToken();
+  if (!projectId || !accessToken) {
+    return { configured: false, status: 0, invalidToken: false };
+  }
+
+  const data: Record<string, string> = { event: payload.event };
+  if (payload.taskId) data.taskId = payload.taskId;
+  if (payload.scheduleId) data.scheduleId = payload.scheduleId;
+  const response = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/messages:send`,
+    {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'content-type': 'application/json; UTF-8',
+      },
+      body: JSON.stringify({
+        message: {
+          token,
+          notification: { title, body },
+          data,
+        },
+      }),
+    },
+  );
+  const responseText = await response.text();
+  const invalidToken = response.status === 404
+    || response.status === 400 && /UNREGISTERED|registration-token-not-registered/i.test(responseText);
+  if (!response.ok && response.status !== 400 && response.status !== 404) {
+    console.error('FCM notification delivery failed', response.status, responseText);
+  }
+  return { configured: true, status: response.status, invalidToken };
 }
 
 Deno.serve(async request => {
@@ -215,37 +331,45 @@ Deno.serve(async request => {
       }
     }
 
-    if (targetProfileIds.length === 0) return json({ sent: 0, configured: Boolean(apnsPrivateKeyBytes()) });
+    const configured = Boolean(apnsPrivateKeyBytes()) || hasFcmConfiguration();
+    if (targetProfileIds.length === 0) return json({ sent: 0, configured });
     const { data: profiles } = await adminClient.from('profiles').select('id').in('id', targetProfileIds).eq('notifications_enabled', true);
     const enabledProfileIds = (profiles ?? []).map(profile => profile.id);
-    if (enabledProfileIds.length === 0) return json({ sent: 0, configured: Boolean(apnsPrivateKeyBytes()) });
+    if (enabledProfileIds.length === 0) return json({ sent: 0, configured });
     const { data: devices } = await adminClient
       .from('push_devices')
-      .select('id, token')
+      .select('id, token, platform')
       .eq('family_id', task.family_id)
       .in('profile_id', enabledProfileIds)
-      .eq('platform', 'ios')
+      .in('platform', ['ios', 'android'])
       .eq('enabled', true);
 
     let sent = 0;
-    let configured = false;
+    let deliveryConfigured = false;
     const notificationPayload: TaskNotificationPayload = hasTaskId
       ? { taskId: referenceId, event }
       : { scheduleId: referenceId, event };
     for (const device of devices ?? []) {
-      const result = await sendApns(
+      const result = device.platform === 'android'
+        ? await sendFcm(
+          device.token,
+          title,
+          message,
+          notificationPayload,
+        )
+        : await sendApns(
         device.token,
         title,
         message,
         notificationPayload,
       );
-      configured = result.configured;
+      deliveryConfigured = deliveryConfigured || result.configured;
       if (result.status >= 200 && result.status < 300) sent += 1;
-      if (result.status === 400 || result.status === 410) {
+      if (result.invalidToken || result.status === 410) {
         await adminClient.from('push_devices').update({ enabled: false }).eq('id', device.id);
       }
     }
-    return json({ sent, configured });
+    return json({ sent, configured: configured || deliveryConfigured });
   } catch (error) {
     console.error('notify-task-created failed', error);
     return json({ error: 'Notification delivery failed' }, 500);

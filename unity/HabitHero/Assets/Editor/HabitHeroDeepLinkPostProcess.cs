@@ -13,6 +13,10 @@ namespace HabitHero.Editor
     public sealed class HabitHeroDeepLinkPostProcess : IPostGenerateGradleAndroidProject
     {
         private const string AndroidNamespace = "http://schemas.android.com/apk/res/android";
+        private const string FirebaseMessagingDependency =
+            "implementation 'com.google.firebase:firebase-messaging:25.1.2'";
+        private const string GoogleServicesPlugin =
+            "id 'com.google.gms.google-services' version '4.5.0' apply false";
 
         public int callbackOrder
         {
@@ -21,7 +25,9 @@ namespace HabitHero.Editor
 
         public void OnPostGenerateGradleAndroidProject(string path)
         {
-            AddAndroidIntentFilter(path);
+            string projectRoot = FindGradleProjectRoot(path);
+            AddAndroidIntentFilter(projectRoot ?? path);
+            AddAndroidFirebaseMessaging(projectRoot ?? path);
         }
 
         [PostProcessBuild(100)]
@@ -118,7 +124,7 @@ namespace HabitHero.Editor
             XmlNamespaceManager namespaces = new XmlNamespaceManager(document.NameTable);
             namespaces.AddNamespace("android", AndroidNamespace);
             XmlElement activity = document.SelectSingleNode(
-                "/manifest/application/activity[intent-filter/action[@android:name='android.intent.action.MAIN']]",
+                "/manifest/application/activity[not(@android:enabled='false') and intent-filter/action[@android:name='android.intent.action.MAIN']]",
                 namespaces) as XmlElement;
             if (activity == null)
             {
@@ -146,6 +152,96 @@ namespace HabitHero.Editor
             WriteXml(document, manifestPath);
         }
 
+        private static void AddAndroidFirebaseMessaging(string buildPath)
+        {
+            string projectRoot = FindGradleProjectRoot(buildPath);
+            if (projectRoot == null) return;
+
+            AddGradleDependency(
+                Path.Combine(projectRoot, "unityLibrary", "build.gradle"));
+            AddGradleDependency(
+                Path.Combine(projectRoot, "launcher", "build.gradle"));
+
+            string sourcePath = Path.Combine(
+                Application.dataPath,
+                "Plugins",
+                "Android",
+                "google-services.json");
+            if (!File.Exists(sourcePath)) return;
+
+            string launcherConfigPath = Path.Combine(
+                projectRoot,
+                "launcher",
+                "google-services.json");
+            File.Copy(sourcePath, launcherConfigPath, true);
+
+            string rootBuildPath = Path.Combine(projectRoot, "build.gradle");
+            string rootBuild = File.Exists(rootBuildPath)
+                ? File.ReadAllText(rootBuildPath)
+                : string.Empty;
+            rootBuild = InsertIntoGradleBlock(
+                rootBuild,
+                "plugins {",
+                GoogleServicesPlugin);
+            File.WriteAllText(rootBuildPath, rootBuild);
+
+            string launcherBuildPath = Path.Combine(
+                projectRoot,
+                "launcher",
+                "build.gradle");
+            string launcherBuild = File.Exists(launcherBuildPath)
+                ? File.ReadAllText(launcherBuildPath)
+                : string.Empty;
+            if (!launcherBuild.Contains("com.google.gms.google-services"))
+            {
+                launcherBuild = "apply plugin: 'com.google.gms.google-services'\n"
+                    + launcherBuild;
+                File.WriteAllText(launcherBuildPath, launcherBuild);
+            }
+        }
+
+        private static void AddGradleDependency(string path)
+        {
+            if (!File.Exists(path)) return;
+            string source = File.ReadAllText(path);
+            string updated = InsertIntoGradleBlock(
+                source,
+                "dependencies {",
+                FirebaseMessagingDependency);
+            if (updated != source) File.WriteAllText(path, updated);
+        }
+
+        private static string InsertIntoGradleBlock(
+            string source,
+            string blockStart,
+            string line)
+        {
+            if (string.IsNullOrWhiteSpace(source)
+                || source.Contains(line)) return source;
+            int blockIndex = source.IndexOf(blockStart, StringComparison.Ordinal);
+            if (blockIndex < 0) return source;
+            int insertIndex = blockIndex + blockStart.Length;
+            return source.Insert(insertIndex, "\n    " + line);
+        }
+
+        private static string FindGradleProjectRoot(string buildPath)
+        {
+            if (string.IsNullOrWhiteSpace(buildPath)) return null;
+            DirectoryInfo current = new DirectoryInfo(buildPath);
+            for (int depth = 0; current != null && depth < 6; depth += 1)
+            {
+                if (File.Exists(Path.Combine(current.FullName, "build.gradle"))
+                    && File.Exists(Path.Combine(current.FullName, "launcher", "build.gradle"))
+                    && File.Exists(Path.Combine(current.FullName, "unityLibrary", "build.gradle")))
+                {
+                    return current.FullName;
+                }
+                current = current.Parent;
+            }
+
+            return null;
+        }
+
         private static string FindAndroidManifest(string buildPath)
         {
             string[] candidates = Directory.GetFiles(
@@ -154,7 +250,10 @@ namespace HabitHero.Editor
                 SearchOption.AllDirectories);
             foreach (string candidate in candidates)
             {
-                if (candidate.Replace('\\', '/').Contains("/launcher/src/main/"))
+                string source = File.ReadAllText(candidate);
+                if (source.IndexOf(
+                        "android.intent.action.MAIN",
+                        StringComparison.Ordinal) >= 0)
                 {
                     return candidate;
                 }
