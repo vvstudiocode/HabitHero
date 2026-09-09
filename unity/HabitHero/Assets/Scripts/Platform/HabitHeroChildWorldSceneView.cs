@@ -2035,8 +2035,8 @@ namespace HabitHero.App
             GameObject npcList = CreateList(
                 scenePanel.transform,
                 "WorldNpcList",
-                new Vector2(0.04f, 0.34f),
-                new Vector2(0.44f, 0.73f));
+                new Vector2(0.04f, 0.53f),
+                new Vector2(0.64f, 0.73f));
             RenderNpcActions(npcList.transform);
             CreateDecorationEditor();
 

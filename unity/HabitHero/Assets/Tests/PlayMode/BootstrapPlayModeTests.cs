@@ -363,8 +363,12 @@ namespace HabitHero.Tests
                 }
 
                 Assert.IsTrue(hasPetLabel, "World pet labels were not created.");
-                Assert.IsNotNull(GameObject.Find("ChildWorldScenePanel"));
-                Assert.IsNotNull(GameObject.Find("WorldDecorationEditor"));
+                GameObject worldScenePanel = GameObject.Find("ChildWorldScenePanel");
+                Assert.IsNotNull(worldScenePanel);
+                AssertNoOverlappingButtons(worldScenePanel);
+                GameObject decorationEditor = GameObject.Find("WorldDecorationEditor");
+                Assert.IsNotNull(decorationEditor);
+                AssertNoOverlappingButtons(decorationEditor);
                 Assert.IsTrue(worldView.BeginDecorationPlacement("fixture-sofa-inventory"));
                 Assert.IsNotNull(GameObject.Find("WorldPlacementPreview"));
                 Assert.IsTrue(worldView.ApplyPlacementControl(
@@ -825,21 +829,29 @@ namespace HabitHero.Tests
                 Button manageRewardButton = FindButton(parentRewardPanel, "管理獎勵");
                 Assert.IsNotNull(manageRewardButton);
                 manageRewardButton.onClick.Invoke();
-                Assert.IsNotNull(GameObject.Find("ParentRewardManagementPanel"));
+                GameObject parentRewardManagementPanel = GameObject.Find(
+                    "ParentRewardManagementPanel");
+                Assert.IsNotNull(parentRewardManagementPanel);
+                AssertNoOverlappingButtons(parentRewardManagementPanel);
                 OpenPanelFromHome(parentHomePanel, "願望與獎勵券", "ParentRewardPanel");
                 parentRewardPanel = GameObject.Find("ParentRewardPanel");
                 Assert.IsNotNull(parentRewardPanel);
                 Button adjustPointsButton = FindButton(parentRewardPanel, "調整點數");
                 Assert.IsNotNull(adjustPointsButton);
                 adjustPointsButton.onClick.Invoke();
-                Assert.IsNotNull(GameObject.Find("ParentPointAdjustmentPanel"));
+                GameObject parentPointAdjustmentPanel = GameObject.Find(
+                    "ParentPointAdjustmentPanel");
+                Assert.IsNotNull(parentPointAdjustmentPanel);
+                AssertNoOverlappingButtons(parentPointAdjustmentPanel);
                 OpenPanelFromHome(parentHomePanel, "願望與獎勵券", "ParentRewardPanel");
                 parentRewardPanel = GameObject.Find("ParentRewardPanel");
                 Assert.IsNotNull(parentRewardPanel);
                 Button parentLedgerButton = FindButton(parentRewardPanel, "點數紀錄");
                 Assert.IsNotNull(parentLedgerButton);
                 parentLedgerButton.onClick.Invoke();
-                Assert.IsNotNull(GameObject.Find("ParentLedgerPanel"));
+                GameObject parentLedgerPanel = GameObject.Find("ParentLedgerPanel");
+                Assert.IsNotNull(parentLedgerPanel);
+                AssertNoOverlappingButtons(parentLedgerPanel);
             }
             finally
             {
