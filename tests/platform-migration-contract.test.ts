@@ -134,6 +134,7 @@ test('Unity Android deep-link hook edits the Gradle project before APK packaging
     postProcessSource,
     /File\.ReadAllText\(candidate\)[\s\S]{0,160}android\.intent\.action\.MAIN/u,
   );
+  assert.match(postProcessSource, /not\(@android:enabled='false'\)/u);
   assert.match(postProcessSource, /Directory\.Exists\(buildPath\)/u);
   assert.match(postProcessSource, /File\.Exists\(buildPath\)/u);
 });
