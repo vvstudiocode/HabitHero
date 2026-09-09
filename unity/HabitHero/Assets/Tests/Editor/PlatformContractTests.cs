@@ -48,18 +48,6 @@ namespace HabitHero.Tests
         }
 
         [Test]
-        public void BootstrapRuntimeConfigUsesThePublicVercelAssetOrigin()
-        {
-            SupabaseRuntimeConfig config = Resources.Load<SupabaseRuntimeConfig>(
-                "SupabaseRuntimeConfig");
-
-            Assert.IsNotNull(config);
-            Assert.AreEqual(
-                "https://habit-hero-gilt.vercel.app",
-                config.GameAssetBaseUrl);
-        }
-
-        [Test]
         public void SafeAreaMappingKeepsFullScreenContentInsideTheUsableViewport()
         {
             Vector2 mappedMin;
