@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { detectUnityNativeModules } from '../scripts/unity-release-contract.mjs';
 
 const repositoryRoot = process.cwd();
 const contractPath = path.join(repositoryRoot, 'config', 'platform-contract.json');
@@ -56,6 +58,28 @@ test('Unity migration shell has an explicit owner document', () => {
 
   assert.ok(fs.existsSync(unityReadme));
   assert.match(fs.readFileSync(unityReadme, 'utf8'), /Supabase backend remains shared/);
+});
+
+test('release preflight detects native modules beside the Unity app bundle', () => {
+  const installationRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'habithero-unity-'));
+  const editorPath = path.join(installationRoot, 'Unity.app', 'Contents', 'MacOS', 'Unity');
+  const playbackEnginesRoot = path.join(installationRoot, 'PlaybackEngines');
+
+  try {
+    fs.mkdirSync(path.dirname(editorPath), { recursive: true });
+    fs.writeFileSync(editorPath, '');
+    fs.mkdirSync(path.join(playbackEnginesRoot, 'iOSSupport'), { recursive: true });
+    fs.mkdirSync(path.join(playbackEnginesRoot, 'AndroidPlayer'), { recursive: true });
+
+    const modules = detectUnityNativeModules(editorPath);
+
+    assert.equal(modules.ios, true);
+    assert.equal(modules.android, true);
+    assert.equal(modules.paths.ios, path.join(playbackEnginesRoot, 'iOSSupport'));
+    assert.equal(modules.paths.android, path.join(playbackEnginesRoot, 'AndroidPlayer'));
+  } finally {
+    fs.rmSync(installationRoot, { recursive: true, force: true });
+  }
 });
 
 test('Vercel keeps the Vite SPA build and history fallback explicit', () => {
