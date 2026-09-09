@@ -364,7 +364,9 @@ Current local verification:
   approval callback and point input, nested reward-management and
   point-adjustment panels, notifications/sign-out controls, and cleanup for
   every opened panel) loaded and cleaned up with no runtime errors in the
-  headless Unity Editor run (`4/4` tests passed).
+  headless Unity Editor run (`4/4` tests passed). The same PlayMode fixtures
+  also validate button-rectangle separation on top-level and nested feature
+  panels, including the authored world HUD and decoration editor.
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
 - A direct Unity Editor smoke run also opened `Bootstrap`, entered Play Mode,
   rendered the login shell, and exited cleanly without a captured runtime
