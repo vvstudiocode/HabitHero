@@ -41,6 +41,7 @@ test('Unity Android push registration uses the native FCM bridge', () => {
   assert.doesNotMatch(bridge, /FirebaseMessaging\.getInstance\(app\)/);
   assert.match(bridge, /consumeLaunchPayload/);
   assert.match(manifest, /com\.unity3d\.player\.UnityPlayerActivity/);
+  assert.match(manifest, /com\.unity3d\.player\.UnityPlayerGameActivity/);
   assert.match(manifest, /android\.intent\.action\.MAIN/);
   assert.match(postProcess, /firebase-messaging:25\.1\.2/);
   assert.match(postProcess, /google-services\.json/);
