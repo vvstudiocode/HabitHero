@@ -57,6 +57,19 @@ npx supabase migration list --linked
 
 本次檢查的結論是：實際 schema 基本一致，差異主要在 migration history；本次沒有修改遠端資料庫。
 
+## 2026-09-09 唯讀稽核
+
+- `npx supabase migration list --linked` 顯示本地 migration 檔案與遠端
+  history 對齊。
+- `npx supabase migration list --local` 顯示本機 Docker database 尚未套用
+  `20260818051923_tune_arcadia_oum_nibus_walk_grounding.sql`；這是本機
+  history drift，不是遠端缺 migration。
+- `npx supabase db diff --local` 完成且 `dropStatements` 為空；輸出主要是
+  本機角色權限與 default privileges 的 baseline 差異，沒有把它自動轉成
+  migration。
+- 本次沒有執行 `db reset`、history repair、`db push` 或
+  `db push --include-all`。
+
 ## 正常的本地優先流程
 
 ### 1. 建立變更

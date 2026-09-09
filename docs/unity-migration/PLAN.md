@@ -325,9 +325,14 @@ The migration is not complete until all of the following are true:
 
 Current local verification:
 
-- Web tests: `1169` passed across `141` suites; lint and security scan passed.
+- Web tests: `1175` passed across `141` suites; lint and security scan passed.
 - Vercel production build passed with `npm run build`; the production Supabase
   environment check passed and Vite emitted the configured `dist` output.
+- Supabase `migration list --linked` matched the checked-in migration files and
+  remote history. The local Docker database is missing only local application
+  of `20260818051923`; `db diff --local` completed without drop statements and
+  reported only local role/privilege baseline noise. No migration repair or
+  remote push was run.
 - The configured public Supabase Auth settings and PostgREST root both returned
   HTTP `200` using the ignored local publishable-key configuration; this does
   not claim an authenticated account or RLS/device flow.

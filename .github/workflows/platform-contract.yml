@@ -28,6 +28,9 @@ jobs:
       - name: Type-check the Web client
         run: npm run lint
 
+      - name: Run Web regression tests
+        run: npm test
+
       - name: Run security checks
         run: npm run security:check
 
