@@ -76,14 +76,14 @@ export function parseEditorBuildSettings(source) {
   return paths;
 }
 
-function resolveUnityAppRoot(editorPath) {
+function resolveUnityInstallationRoot(editorPath) {
   const normalizedEditorPath = path.resolve(editorPath);
-  return path.resolve(path.dirname(normalizedEditorPath), '..', '..');
+  return path.resolve(path.dirname(normalizedEditorPath), '..', '..', '..');
 }
 
 export function detectUnityNativeModules(editorPath = DEFAULT_UNITY_EDITOR_PATH) {
-  const appRoot = resolveUnityAppRoot(editorPath);
-  const playbackEnginesRoot = path.join(appRoot, 'Contents', 'PlaybackEngines');
+  const installationRoot = resolveUnityInstallationRoot(editorPath);
+  const playbackEnginesRoot = path.join(installationRoot, 'PlaybackEngines');
   const iosPath = path.join(playbackEnginesRoot, 'iOSSupport');
   const androidPath = path.join(playbackEnginesRoot, 'AndroidPlayer');
 
