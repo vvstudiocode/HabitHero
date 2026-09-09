@@ -117,6 +117,19 @@ test('Unity notification bridge qualifies Unified query operation types', () => 
   );
 });
 
+test('Unity Android deep-link hook edits the Gradle project before APK packaging', () => {
+  const postProcessPath = path.join(
+    repositoryRoot,
+    'unity/HabitHero/Assets/Editor/HabitHeroDeepLinkPostProcess.cs',
+  );
+  const postProcessSource = fs.readFileSync(postProcessPath, 'utf8');
+
+  assert.match(postProcessSource, /IPostGenerateGradleAndroidProject/u);
+  assert.match(postProcessSource, /OnPostGenerateGradleAndroidProject/u);
+  assert.match(postProcessSource, /Directory\.Exists\(buildPath\)/u);
+  assert.match(postProcessSource, /File\.Exists\(buildPath\)/u);
+});
+
 test('Vercel keeps the Vite SPA build and history fallback explicit', () => {
   const vercelConfigPath = path.join(repositoryRoot, 'vercel.json');
   assert.ok(fs.existsSync(vercelConfigPath));
