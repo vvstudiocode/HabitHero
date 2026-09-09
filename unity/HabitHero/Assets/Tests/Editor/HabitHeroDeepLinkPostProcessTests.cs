@@ -20,6 +20,7 @@ namespace HabitHero.Tests
                 malformedHeader);
 
             StringAssert.DoesNotContain("\"[]>", normalized);
+            StringAssert.DoesNotContain("<!DOCTYPE", normalized);
             XmlDocument document = new XmlDocument();
             Assert.DoesNotThrow(() => document.LoadXml(normalized));
         }
