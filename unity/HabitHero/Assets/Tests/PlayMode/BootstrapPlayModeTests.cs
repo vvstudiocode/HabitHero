@@ -317,11 +317,40 @@ namespace HabitHero.Tests
                 display_name = "小勇者",
                 points_balance = 10,
             };
+            bool childTaskSubmitted = false;
+            bool timerStarted = false;
+            bool timerPaused = false;
+            bool timerResumed = false;
+            bool parentTaskReviewed = false;
+            bool parentReviewApproved = false;
+            int parentReviewPoints = -1;
+            SupabaseChildTaskRecord reportTask = new SupabaseChildTaskRecord
+            {
+                id = "fixture-report-task",
+                family_id = "fixture-family",
+                child_profile_id = "fixture-child",
+                name = "喝水",
+                points = 5,
+                status = "todo",
+                completion_report_mode = "quick",
+            };
+            SupabaseChildTaskRecord timerTask = new SupabaseChildTaskRecord
+            {
+                id = "fixture-timer-task",
+                family_id = "fixture-family",
+                child_profile_id = "fixture-child",
+                name = "閱讀10分鐘",
+                points = 8,
+                status = "todo",
+                duration_minutes = 1,
+                requires_timer = true,
+                completion_report_mode = "none",
+            };
             SupabaseChildHomeSnapshot childSnapshot = new SupabaseChildHomeSnapshot
             {
                 familyId = "fixture-family",
                 child = child,
-                tasks = new SupabaseChildTaskRecord[0],
+                tasks = new[] { reportTask, timerTask },
                 rewards = new SupabaseChildRewardRecord[0],
                 wishlist = new SupabaseChildWishlistRecord[0],
                 tickets = new SupabaseChildTicketRecord[0],
@@ -377,6 +406,18 @@ namespace HabitHero.Tests
                 friends = new SupabaseFriendSummaryRecord[0],
                 requests = new SupabaseFriendRequestRecord[0],
             };
+            SupabaseChildTaskRecord reviewTask = new SupabaseChildTaskRecord
+            {
+                id = "fixture-review-task",
+                family_id = "fixture-family",
+                child_profile_id = "fixture-child",
+                name = "整理書桌",
+                points = 7,
+                status = "pending",
+                child_reflection_text = "我已經把書本分類好了。",
+                child_mood = "proud",
+                child_difficulty = 2,
+            };
             SupabaseParentHomeSnapshot parentSnapshot = new SupabaseParentHomeSnapshot
             {
                 familyId = "fixture-family",
@@ -386,7 +427,7 @@ namespace HabitHero.Tests
                     name = "測試家庭",
                 },
                 children = new[] { child },
-                tasks = new SupabaseChildTaskRecord[0],
+                tasks = new[] { reviewTask },
                 rewards = new SupabaseChildRewardRecord[0],
                 wishlist = new SupabaseChildWishlistRecord[0],
                 tickets = new SupabaseChildTicketRecord[0],
@@ -438,10 +479,52 @@ namespace HabitHero.Tests
                         Task.FromResult<SupabaseCoopMutationResult>(null),
                     submitCoopCompletion: (adventureId, input) =>
                         Task.FromResult<SupabaseCoopMutationResult>(null),
-                    submitTask: null,
-                    startTimer: null,
-                    pauseTimer: null,
-                    resumeTimer: null,
+                    submitTask: (task, draft) =>
+                    {
+                        childTaskSubmitted = task != null
+                            && task.id == "fixture-report-task"
+                            && draft != null
+                            && draft.quickReport == "smooth";
+                        task.status = "pending";
+                        return Task.FromResult(new SupabaseTaskCompletionResult
+                        {
+                            IdempotencyKey = "fixture-completion",
+                            RefreshedSnapshot = childSnapshot,
+                        });
+                    },
+                    startTimer: taskId =>
+                    {
+                        timerStarted = taskId == "fixture-timer-task";
+                        return Task.FromResult(new SupabaseTaskTimerSessionRecord
+                        {
+                            id = "fixture-timer-session",
+                            task_id = taskId,
+                            status = "running",
+                            accumulated_seconds = 0,
+                        });
+                    },
+                    pauseTimer: taskId =>
+                    {
+                        timerPaused = taskId == "fixture-timer-task";
+                        return Task.FromResult(new SupabaseTaskTimerSessionRecord
+                        {
+                            id = "fixture-timer-session",
+                            task_id = taskId,
+                            status = "paused",
+                            accumulated_seconds = 1,
+                        });
+                    },
+                    resumeTimer: taskId =>
+                    {
+                        timerResumed = taskId == "fixture-timer-task";
+                        return Task.FromResult(new SupabaseTaskTimerSessionRecord
+                        {
+                            id = "fixture-timer-session",
+                            task_id = taskId,
+                            status = "running",
+                            accumulated_seconds = 1,
+                        });
+                    },
                     abandonAdventure: null,
                     proposeGoal: input =>
                         Task.FromResult<SupabaseChildGoalProposalResult>(null),
@@ -467,6 +550,41 @@ namespace HabitHero.Tests
                 Assert.IsNotNull(FindButton(childHomePanel, "通知"));
                 Assert.IsNotNull(FindButton(childHomePanel, "登出"));
                 Assert.IsNotNull(FindButton(childHomePanel, "回到家長模式"));
+                Button reportTaskButton = FindButtonContaining(childHomePanel, "喝水");
+                Assert.IsNotNull(reportTaskButton);
+                reportTaskButton.onClick.Invoke();
+                GameObject reportPanel = GameObject.Find("TaskReportPanel");
+                Assert.IsNotNull(reportPanel);
+                Button quickReportButton = FindButton(reportPanel, "順利完成");
+                Assert.IsNotNull(quickReportButton);
+                quickReportButton.onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(childTaskSubmitted, "Child completion callback was not invoked.");
+                Assert.IsNull(GameObject.Find("TaskReportPanel"));
+
+                Button timerTaskButton = FindButtonContaining(childHomePanel, "閱讀10分鐘");
+                Assert.IsNotNull(timerTaskButton);
+                timerTaskButton.onClick.Invoke();
+                GameObject timerPanel = GameObject.Find("TaskTimerPanel");
+                Assert.IsNotNull(timerPanel);
+                Button timerActionButton = FindButton(timerPanel, "開始計時");
+                Assert.IsNotNull(timerActionButton);
+                timerActionButton.onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(timerStarted, "Timer start callback was not invoked.");
+                timerActionButton = FindButton(timerPanel, "暫停計時");
+                Assert.IsNotNull(timerActionButton);
+                timerActionButton.onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(timerPaused, "Timer pause callback was not invoked.");
+                timerActionButton = FindButton(timerPanel, "繼續計時");
+                Assert.IsNotNull(timerActionButton);
+                timerActionButton.onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(timerResumed, "Timer resume callback was not invoked.");
+                FindButton(timerPanel, "關閉").onClick.Invoke();
+                yield return null;
+
                 OpenPanelFromHome(childHomePanel, "冒險商店", "ChildGamePanel");
                 OpenPanelFromHome(childHomePanel, "世界", "ChildWorldPanel");
                 OpenPanelFromHome(childHomePanel, "好友", "ChildSocialPanel");
@@ -478,7 +596,18 @@ namespace HabitHero.Tests
                 parentView.Show(
                     snapshot: parentSnapshot,
                     reviewTask: (task, approved, points, feedback, mood, difficulty, reflection) =>
-                        Task.FromResult<SupabaseParentTaskReviewResult>(null),
+                    {
+                        parentTaskReviewed = task != null && task.id == "fixture-review-task";
+                        parentReviewApproved = approved;
+                        parentReviewPoints = points ?? -1;
+                        task.status = approved ? "completed" : "revision_requested";
+                        child.points_balance += points ?? 0;
+                        return Task.FromResult(new SupabaseParentTaskReviewResult
+                        {
+                            Task = task,
+                            RefreshedSnapshot = parentSnapshot,
+                        });
+                    },
                     batchReviewDailyAdventures: taskIds =>
                         Task.FromResult<SupabaseParentBatchReviewResult>(null),
                     revokeTaskApproval: taskId =>
@@ -554,6 +683,19 @@ namespace HabitHero.Tests
                 Assert.IsNotNull(parentHomePanel);
                 Assert.IsNotNull(FindButton(parentHomePanel, "通知"));
                 Assert.IsNotNull(FindButton(parentHomePanel, "登出"));
+                Button pendingTaskButton = FindButtonContaining(parentHomePanel, "整理書桌");
+                Assert.IsNotNull(pendingTaskButton);
+                pendingTaskButton.onClick.Invoke();
+                GameObject reviewPanel = GameObject.Find("ParentTaskReviewPanel");
+                Assert.IsNotNull(reviewPanel);
+                Button approveTaskButton = FindButton(reviewPanel, "核准完成");
+                Assert.IsNotNull(approveTaskButton);
+                approveTaskButton.onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(parentTaskReviewed, "Parent review callback was not invoked.");
+                Assert.IsTrue(parentReviewApproved, "Parent review did not approve the task.");
+                Assert.AreEqual(7, parentReviewPoints);
+                Assert.IsNull(GameObject.Find("ParentTaskReviewPanel"));
                 OpenPanelFromHome(parentHomePanel, "設定", "ParentSettingsPanel");
                 OpenPanelFromHome(parentHomePanel, "孩子視角", "ParentChildPreviewPanel");
                 OpenPanelFromHome(parentHomePanel, "任務管理", "ParentTaskManagementPanel");
@@ -611,7 +753,10 @@ namespace HabitHero.Tests
             Assert.IsNull(GameObject.Find("ChildLedgerPanel"));
             Assert.IsNull(GameObject.Find("ChildGoalProposalPanel"));
             Assert.IsNull(GameObject.Find("ChildCoopAdventurePanel"));
+            Assert.IsNull(GameObject.Find("TaskTimerPanel"));
+            Assert.IsNull(GameObject.Find("TaskReportPanel"));
             Assert.IsNull(GameObject.Find("ParentHomePanel"));
+            Assert.IsNull(GameObject.Find("ParentTaskReviewPanel"));
             Assert.IsNull(GameObject.Find("ParentSettingsPanel"));
             Assert.IsNull(GameObject.Find("ParentChildPreviewPanel"));
             Assert.IsNull(GameObject.Find("ParentTaskManagementPanel"));
@@ -649,6 +794,20 @@ namespace HabitHero.Tests
             {
                 Text text = button.GetComponentInChildren<Text>(true);
                 if (text != null && text.text == label)
+                {
+                    return button;
+                }
+            }
+
+            return null;
+        }
+
+        private static Button FindButtonContaining(GameObject root, string labelFragment)
+        {
+            foreach (Button button in root.GetComponentsInChildren<Button>(true))
+            {
+                Text text = button.GetComponentInChildren<Text>(true);
+                if (text != null && text.text.Contains(labelFragment))
                 {
                     return button;
                 }

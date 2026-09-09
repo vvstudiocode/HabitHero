@@ -349,9 +349,11 @@ Current local verification:
   child-world fixture (NPC, roaming pet, following pet, decoration, labels,
   shadows, decoration editor controls, and runtime cleanup), and a child/parent
   home-surface fixture (all child/parent top-level feature entry points,
-  nested reward-management and point-adjustment panels, notifications/sign-out
-  controls, and cleanup for every opened panel) loaded and cleaned up with no
-  runtime errors in the headless Unity Editor run (`3/3` tests passed).
+  child completion/report callbacks, timer start/pause/resume callbacks, parent
+  approval callback and point input, nested reward-management and
+  point-adjustment panels, notifications/sign-out controls, and cleanup for
+  every opened panel) loaded and cleaned up with no runtime errors in the
+  headless Unity Editor run (`3/3` tests passed).
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
 - A direct Unity Editor smoke run also opened `Bootstrap`, entered Play Mode,
   rendered the login shell, and exited cleanly without a captured runtime
