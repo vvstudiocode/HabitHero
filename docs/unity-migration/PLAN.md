@@ -333,9 +333,12 @@ Current local verification:
   of `20260818051923`; `db diff --local` completed without drop statements and
   reported only local role/privilege baseline noise. No migration repair or
   remote push was run.
-- The configured public Supabase Auth settings and PostgREST root both returned
-  HTTP `200` using the ignored local publishable-key configuration; this does
-  not claim an authenticated account or RLS/device flow.
+- The configured public Supabase Auth settings returned HTTP `200`. Anonymous
+  PostgREST table reads were rejected with HTTP `401` and an explicit anon
+  privilege/RLS boundary, so no unauthenticated data was exposed; this does
+  not claim an authenticated account or user-scoped RLS/device flow.
+- The deployed Vercel root, a representative world GLB, a pet GLB, and the
+  shared timer-complete audio asset each returned HTTP `200`.
 - Structure governance still reports `12` pre-existing source-size violations
   in Web dashboard/world/CSS hotspots; no unrelated Web restructuring was done.
 - Unity platform contract smoke test passed.
