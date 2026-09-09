@@ -125,7 +125,7 @@ test('forbidden secret scan returns only matching tracked files', () => {
   assert.deepEqual(matches, ['Assets/Scripts/Leaked.cs']);
 });
 
-test('native module detection follows the Unity editor installation root', () => {
+test('native module detection follows the Unity installation root outside the app bundle', () => {
   const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), 'habithero-unity-'));
   const editorPath = path.join(
     temporaryRoot,
@@ -136,10 +136,10 @@ test('native module detection follows the Unity editor installation root', () =>
   );
 
   try {
-    mkdirSync(path.join(temporaryRoot, 'Unity.app/Contents/PlaybackEngines/iOSSupport'), {
+    mkdirSync(path.join(temporaryRoot, 'PlaybackEngines/iOSSupport'), {
       recursive: true,
     });
-    mkdirSync(path.join(temporaryRoot, 'Unity.app/Contents/PlaybackEngines/AndroidPlayer'), {
+    mkdirSync(path.join(temporaryRoot, 'PlaybackEngines/AndroidPlayer'), {
       recursive: true,
     });
 
@@ -147,8 +147,8 @@ test('native module detection follows the Unity editor installation root', () =>
       ios: true,
       android: true,
       paths: {
-        ios: path.join(temporaryRoot, 'Unity.app/Contents/PlaybackEngines/iOSSupport'),
-        android: path.join(temporaryRoot, 'Unity.app/Contents/PlaybackEngines/AndroidPlayer'),
+        ios: path.join(temporaryRoot, 'PlaybackEngines/iOSSupport'),
+        android: path.join(temporaryRoot, 'PlaybackEngines/AndroidPlayer'),
       },
     });
   } finally {
