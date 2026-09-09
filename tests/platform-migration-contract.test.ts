@@ -100,6 +100,23 @@ test('Unity runtime references mobile notification assemblies for native builds'
   }
 });
 
+test('Unity notification bridge qualifies Unified query operation types', () => {
+  const bridgePath = path.join(
+    repositoryRoot,
+    'unity/HabitHero/Assets/Scripts/Platform/HabitHeroMobileNotificationBridge.cs',
+  );
+  const bridgeSource = fs.readFileSync(bridgePath, 'utf8');
+
+  assert.match(
+    bridgeSource,
+    /Unity\.Notifications\.QueryLastRespondedNotificationOp\s+operation/u,
+  );
+  assert.match(
+    bridgeSource,
+    /Unity\.Notifications\.QueryLastRespondedNotificationState\.HaveRespondedNotification/u,
+  );
+});
+
 test('Vercel keeps the Vite SPA build and history fallback explicit', () => {
   const vercelConfigPath = path.join(repositoryRoot, 'vercel.json');
   assert.ok(fs.existsSync(vercelConfigPath));
