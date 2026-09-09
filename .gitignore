@@ -29,6 +29,7 @@ unity/**/Builds/
 unity/**/Build/
 unity/**/MemoryCaptures/
 unity/**/.vs/
+unity/**/.utmp/
 unity/**/*.csproj
 unity/**/*.sln
 unity/**/ExportedObj/

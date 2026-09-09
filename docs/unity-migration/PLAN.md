@@ -29,7 +29,7 @@ authorization into client-only rules.
 
 | Area | Current behavior to preserve | Unity acceptance gate | Status |
 | --- | --- | --- | --- |
-| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Unity contracts and parent recovery/account controls implemented; native/deep-link/device verification pending |
+| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Unity contracts and parent recovery/account controls implemented; iOS/Android export deep links verified; device/session verification pending |
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Unity parent/child hydration, preview, guarded child mode, naming and account controls implemented; two-account/device verification pending |
 | Parent workflow | Task creation, task edit/delete, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Unity task/template/adventure scheduling, review/batch review, general-adventure title management, rewards, ledger, points, child accounts, settings, legal and growth views implemented; device parity pending |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Unity core loop, timer, completion, offline queue and refresh contracts implemented; device/reconnect evidence pending |
@@ -41,7 +41,7 @@ authorization into client-only rules.
 | Social | Friends, friend worlds, visitors, chat, presence, broadcast, co-op adventures | Realtime authorization and reconnect tests with two accounts | Foundation started (friend code, friend list, requests, server mutations, read-only friend-world snapshot, chat RPC/UI, live Presence, local avatar broadcast, and validated remote-avatar placeholder rendering) |
 | Notifications | Push registration, task notifications, taps, device token lifecycle | iOS/Android native plugin test and Edge Function auth | Shared preference/device binding, iOS APNs provider, context-aware registration, Unity settings UI, APNs payload contract, and Unity task-target routing implemented; Android delivery/device verification pending |
 | Web/parent | Dashboard, settings, privacy/legal documents, family management | Vercel build and browser regression remain green | Existing client retained |
-| Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Contract preflight and native build entrypoints implemented; device/store verification pending |
+| Release | Same iOS Bundle ID, Android package, signing, version/build numbers | TestFlight/closed testing update from existing app without data loss | Contract preflight, native modules, iOS export, and Android APK build verified; device/store verification pending |
 
 ## Implementation phases
 
@@ -242,10 +242,10 @@ Partially completed locally:
 
 Remaining migration gates:
 
-- Install the Unity iOS and Android modules, then verify native builds, secure
-  session storage, password recovery/deep links, device safe-area rendering,
-  push tokens, notification taps, background audio, and production identifiers
-  on devices.
+- Verify native secure session storage, password recovery/deep links, device
+  safe-area rendering, push tokens, notification taps, background audio, and
+  production identifiers on devices. The iOS and Android Unity modules and
+  both native exports are now available locally.
 - Verify two-account Realtime, friend-world/co-op reconnect, and offline
   recovery behavior on real devices.
 - Capture mobile visual/performance evidence for authored scenes, pets,
@@ -323,7 +323,7 @@ The migration is not complete until all of the following are true:
 
 Current local verification:
 
-- Web tests: `1165` passed across `141` suites; lint and security scan passed.
+- Web tests: `1169` passed across `141` suites; lint and security scan passed.
 - Vercel production build passed with `npm run build`; the production Supabase
   environment check passed and Vite emitted the configured `dist` output.
 - The configured public Supabase Auth settings and PostgREST root both returned
@@ -346,6 +346,14 @@ Current local verification:
   rendered the login shell, and exited cleanly without a captured runtime
   error; this is an additional entrypoint check, not authenticated feature or
   device evidence.
-- Native iOS/Android modules are not installed on this machine, so native
-  export, device behavior, and store update evidence are intentionally not
-  claimed yet.
+- Unity Hub installed the `iOSSupport` and `AndroidPlayer` modules for Editor
+  `6000.6.0f1`; strict release preflight passed with both modules present.
+- Unity iOS export passed to `unity/HabitHero/Builds/iOS`, including the
+  `com.vvstudiocode.habithero` URL scheme in the generated `Info.plist`.
+- Unity Android release export passed to
+  `unity/HabitHero/Builds/Android/HabitHero.apk`; Android package inspection
+  confirmed `com.vvstudiocode.habithero`, version `1.44 (49)`, and the
+  `com.vvstudiocode.habithero://` VIEW/BROWSABLE deep link.
+- Native device behavior, Android push delivery, and store update evidence
+  remain intentionally unclaimed until device and TestFlight/closed-testing
+  verification is completed.
