@@ -148,7 +148,7 @@ namespace HabitHero.App
                 card.transform,
                 "ParentAccountChildList",
                 new Vector2(0.08f, 0.67f),
-                new Vector2(0.92f, 0.84f));
+                new Vector2(0.92f, 0.82f));
             RenderChildList();
 
             formTitle = HabitHeroUiFactory.CreateText(

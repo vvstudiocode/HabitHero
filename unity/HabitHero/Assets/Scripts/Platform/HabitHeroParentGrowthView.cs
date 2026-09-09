@@ -154,8 +154,8 @@ namespace HabitHero.App
             childListObject = CreateVerticalList(
                 card.transform,
                 "ParentGrowthChildList",
-                new Vector2(0.08f, 0.64f),
-                new Vector2(0.92f, 0.84f));
+                new Vector2(0.08f, 0.63f),
+                new Vector2(0.92f, 0.77f));
             selectedChildText = HabitHeroUiFactory.CreateText(
                 card.transform,
                 font,
@@ -163,8 +163,8 @@ namespace HabitHero.App
                 18,
                 TextAnchor.MiddleLeft,
                 Color.white,
-                new Vector2(0.08f, 0.59f),
-                new Vector2(0.92f, 0.64f));
+                new Vector2(0.08f, 0.57f),
+                new Vector2(0.92f, 0.62f));
             detailObject = new GameObject(
                 "ParentGrowthDetail",
                 typeof(RectTransform),
@@ -172,7 +172,7 @@ namespace HabitHero.App
             detailObject.transform.SetParent(card.transform, false);
             RectTransform detailRect = detailObject.GetComponent<RectTransform>();
             detailRect.anchorMin = new Vector2(0.08f, 0.17f);
-            detailRect.anchorMax = new Vector2(0.92f, 0.58f);
+            detailRect.anchorMax = new Vector2(0.92f, 0.55f);
             detailRect.offsetMin = Vector2.zero;
             detailRect.offsetMax = Vector2.zero;
             VerticalLayoutGroup detailLayout = detailObject.GetComponent<VerticalLayoutGroup>();

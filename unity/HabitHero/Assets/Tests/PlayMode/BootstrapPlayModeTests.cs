@@ -892,7 +892,9 @@ namespace HabitHero.Tests
             Assert.IsNotNull(button, "Missing home button: " + buttonLabel);
             Assert.IsTrue(button.interactable, "Home button is disabled: " + buttonLabel);
             button.onClick.Invoke();
-            Assert.IsNotNull(GameObject.Find(panelName), "Panel did not open: " + panelName);
+            GameObject panel = GameObject.Find(panelName);
+            Assert.IsNotNull(panel, "Panel did not open: " + panelName);
+            AssertNoOverlappingButtons(panel);
         }
 
         private static Button FindButton(GameObject root, string label)
@@ -947,6 +949,41 @@ namespace HabitHero.Tests
             Assert.IsFalse(
                 overlaps,
                 "Buttons overlap: " + firstLabel + " / " + secondLabel);
+        }
+
+        private static void AssertNoOverlappingButtons(GameObject root)
+        {
+            Canvas.ForceUpdateCanvases();
+            Button[] buttons = root.GetComponentsInChildren<Button>(true);
+            for (int firstIndex = 0; firstIndex < buttons.Length; firstIndex += 1)
+            {
+                RectTransform firstRect = buttons[firstIndex].GetComponent<RectTransform>();
+                if (firstRect == null) continue;
+                Vector3[] firstCorners = new Vector3[4];
+                firstRect.GetWorldCorners(firstCorners);
+                for (int secondIndex = firstIndex + 1;
+                    secondIndex < buttons.Length;
+                    secondIndex += 1)
+                {
+                    RectTransform secondRect = buttons[secondIndex].GetComponent<RectTransform>();
+                    if (secondRect == null) continue;
+                    Vector3[] secondCorners = new Vector3[4];
+                    secondRect.GetWorldCorners(secondCorners);
+                    bool overlaps = firstCorners[0].x < secondCorners[2].x
+                        && firstCorners[2].x > secondCorners[0].x
+                        && firstCorners[0].y < secondCorners[2].y
+                        && firstCorners[2].y > secondCorners[0].y;
+                    if (!overlaps) continue;
+
+                    Text firstText = buttons[firstIndex].GetComponentInChildren<Text>(true);
+                    Text secondText = buttons[secondIndex].GetComponentInChildren<Text>(true);
+                    string firstLabel = firstText == null ? buttons[firstIndex].name : firstText.text;
+                    string secondLabel = secondText == null ? buttons[secondIndex].name : secondText.text;
+                    Assert.Fail(
+                        "Buttons overlap in " + root.name + ": "
+                        + firstLabel + " / " + secondLabel);
+                }
+            }
         }
     }
 }
