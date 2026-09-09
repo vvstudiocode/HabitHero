@@ -90,7 +90,7 @@ namespace HabitHero.App
             yield return null;
             while (!disposed && initialized)
             {
-                QueryLastRespondedNotificationOp operation = null;
+                Unity.Notifications.QueryLastRespondedNotificationOp operation = null;
                 try
                 {
                     operation = NotificationCenter.QueryLastRespondedNotification();
@@ -111,7 +111,8 @@ namespace HabitHero.App
 
                     if (!disposed
                         && operation.State
-                            == QueryLastRespondedNotificationState.HaveRespondedNotification)
+                            == Unity.Notifications.QueryLastRespondedNotificationState
+                                .HaveRespondedNotification)
                     {
                         try
                         {

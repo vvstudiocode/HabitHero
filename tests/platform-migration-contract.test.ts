@@ -113,7 +113,7 @@ test('Unity notification bridge qualifies Unified query operation types', () => 
   );
   assert.match(
     bridgeSource,
-    /Unity\.Notifications\.QueryLastRespondedNotificationState\.HaveRespondedNotification/u,
+    /Unity\.Notifications\.QueryLastRespondedNotificationState\s*\.\s*HaveRespondedNotification/u,
   );
 });
 
