@@ -2,7 +2,10 @@
   "name": "HabitHero.Runtime",
   "rootNamespace": "HabitHero",
   "references": [
-    "glTFast"
+    "glTFast",
+    "Unity.Notifications.Unified",
+    "Unity.Notifications.iOS",
+    "Unity.Notifications.Android"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
