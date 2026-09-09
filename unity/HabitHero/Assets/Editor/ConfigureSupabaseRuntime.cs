@@ -9,6 +9,8 @@ namespace HabitHero.Editor
     public static class ConfigureSupabaseRuntime
     {
         private const string AssetPath = "Assets/Resources/SupabaseRuntimeConfig.asset";
+        private const string DefaultGameAssetBaseUrl =
+            "https://habit-hero-gilt.vercel.app";
 
         [MenuItem("HabitHero/Configure Supabase Runtime")]
         public static void Apply()
@@ -52,6 +54,10 @@ namespace HabitHero.Editor
             {
                 gameAssetBaseUrl = Environment.GetEnvironmentVariable(
                     "VITE_PUBLIC_WEB_ORIGIN");
+            }
+            if (string.IsNullOrWhiteSpace(gameAssetBaseUrl))
+            {
+                gameAssetBaseUrl = DefaultGameAssetBaseUrl;
             }
             config.SetGameAssetBaseUrl(gameAssetBaseUrl);
             EditorUtility.SetDirty(config);

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -59,4 +60,14 @@ test('Unity runtime validation rejects server secrets and non-production URLs', 
     }),
     /HTTPS|server secret/i,
   );
+});
+
+test('Unity export scripts configure runtime settings before building', () => {
+  const packageJson = JSON.parse(
+    readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+  ) as { scripts: Record<string, string> };
+
+  for (const scriptName of ['build:unity-webgl', 'build:unity:ios', 'build:unity:android']) {
+    assert.match(packageJson.scripts[scriptName], /configure:unity-runtime/);
+  }
 });
