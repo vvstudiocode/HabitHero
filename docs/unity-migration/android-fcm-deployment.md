@@ -4,6 +4,9 @@ The Unity client includes the Android native FCM bridge and the Supabase Edge
 Function delivery path, but credentials are intentionally not committed to the
 repository.
 
+For the complete handoff list covering Vercel, Supabase, Firebase, APNs, and
+store signing, see [external-settings-checklist.md](./external-settings-checklist.md).
+
 ## Local Android build
 
 1. In Firebase Console, register an Android app with package ID
