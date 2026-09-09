@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.IO;
+using System.Text;
 using System.Xml;
 using HabitHero.Platform;
 using UnityEditor;
@@ -30,12 +31,13 @@ namespace HabitHero.Editor
             AddAndroidFirebaseMessaging(projectRoot ?? path);
         }
 
-        [PostProcessBuild(100)]
+        [PostProcessBuild(10000)]
         public static void OnPostprocessBuild(BuildTarget target, string buildPath)
         {
             if (target == BuildTarget.iOS)
             {
                 AddIosUrlScheme(buildPath);
+                NormalizeWrittenIosPlist(buildPath);
                 return;
             }
 
@@ -69,7 +71,7 @@ namespace HabitHero.Editor
             }
 
             XmlDocument document = new XmlDocument();
-            document.Load(plistPath);
+            document.LoadXml(NormalizeIosPlistXml(File.ReadAllText(plistPath)));
             XmlElement dictionary = document.SelectSingleNode("/plist/dict") as XmlElement;
             if (dictionary == null)
             {
@@ -108,6 +110,52 @@ namespace HabitHero.Editor
             urlEntry.AppendChild(schemes);
             urlTypes.AppendChild(urlEntry);
             WriteXml(document, plistPath);
+        }
+
+        public static string NormalizeIosPlistXml(string source)
+        {
+            if (string.IsNullOrEmpty(source)) return source;
+
+            // Unity 6 can emit an empty internal DTD subset (`[]>`). macOS
+            // plutil and Xcode reject that otherwise harmless serialization.
+            // Remove only that malformed declaration before XmlDocument parses
+            // and writes the plist, so the exporter cannot reintroduce it.
+            const string doctypeStart = "<!DOCTYPE";
+            int declarationStart = source.IndexOf(doctypeStart, StringComparison.Ordinal);
+            while (declarationStart >= 0)
+            {
+                int declarationEnd = source.IndexOf(">", declarationStart, StringComparison.Ordinal);
+                if (declarationEnd < 0) return source;
+
+                string declaration = source.Substring(
+                    declarationStart,
+                    declarationEnd - declarationStart + 1);
+                if (declaration.IndexOf("[]>", StringComparison.Ordinal) >= 0)
+                {
+                    return source.Remove(
+                        declarationStart,
+                        declarationEnd - declarationStart + 1);
+                }
+
+                declarationStart = source.IndexOf(
+                    doctypeStart,
+                    declarationEnd + 1,
+                    StringComparison.Ordinal);
+            }
+
+            return source;
+        }
+
+        private static void NormalizeWrittenIosPlist(string buildPath)
+        {
+            string plistPath = Path.Combine(buildPath, "Info.plist");
+            if (!File.Exists(plistPath)) return;
+
+            string source = File.ReadAllText(plistPath);
+            string normalized = NormalizeIosPlistXml(source);
+            if (normalized == source) return;
+
+            File.WriteAllText(plistPath, normalized, new UTF8Encoding(false));
         }
 
         private static void AddAndroidIntentFilter(string buildPath)
