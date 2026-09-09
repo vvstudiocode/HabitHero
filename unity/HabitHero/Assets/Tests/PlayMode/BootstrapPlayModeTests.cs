@@ -648,7 +648,11 @@ namespace HabitHero.Tests
                 Assert.IsNotNull(childHomePanel);
                 Assert.IsNotNull(FindButton(childHomePanel, "通知"));
                 Assert.IsNotNull(FindButton(childHomePanel, "登出"));
-                Assert.IsNotNull(FindButton(childHomePanel, "回到家長模式"));
+                Assert.IsNotNull(FindButton(childHomePanel, "家長模式"));
+                AssertButtonsDoNotOverlap(
+                    childHomePanel,
+                    "合作冒險",
+                    "家長模式");
                 Button reportTaskButton = FindButtonContaining(childHomePanel, "喝水");
                 Assert.IsNotNull(reportTaskButton);
                 reportTaskButton.onClick.Invoke();
@@ -917,6 +921,32 @@ namespace HabitHero.Tests
             }
 
             return null;
+        }
+
+        private static void AssertButtonsDoNotOverlap(
+            GameObject root,
+            string firstLabel,
+            string secondLabel)
+        {
+            Button first = FindButton(root, firstLabel);
+            Button second = FindButton(root, secondLabel);
+            Assert.IsNotNull(first, "Missing first overlap-check button: " + firstLabel);
+            Assert.IsNotNull(second, "Missing second overlap-check button: " + secondLabel);
+
+            RectTransform firstRect = first.GetComponent<RectTransform>();
+            RectTransform secondRect = second.GetComponent<RectTransform>();
+            Vector3[] firstCorners = new Vector3[4];
+            Vector3[] secondCorners = new Vector3[4];
+            firstRect.GetWorldCorners(firstCorners);
+            secondRect.GetWorldCorners(secondCorners);
+
+            bool overlaps = firstCorners[0].x < secondCorners[2].x
+                && firstCorners[2].x > secondCorners[0].x
+                && firstCorners[0].y < secondCorners[2].y
+                && firstCorners[2].y > secondCorners[0].y;
+            Assert.IsFalse(
+                overlaps,
+                "Buttons overlap: " + firstLabel + " / " + secondLabel);
         }
     }
 }

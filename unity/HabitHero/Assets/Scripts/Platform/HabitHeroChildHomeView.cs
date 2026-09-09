@@ -338,7 +338,7 @@ namespace HabitHero.App
                     font,
                     "通知",
                     new Vector2(0.08f, 0.91f),
-                    new Vector2(0.25f, 0.97f));
+                    new Vector2(0.2f, 0.97f));
                 notificationButton.onClick.AddListener(
                     () => onOpenNotificationSettings());
             }
@@ -349,8 +349,8 @@ namespace HabitHero.App
                     panel.transform,
                     font,
                     "建立冒險",
-                    new Vector2(0.27f, 0.91f),
-                    new Vector2(0.48f, 0.97f));
+                    new Vector2(0.22f, 0.91f),
+                    new Vector2(0.38f, 0.97f));
                 goalButton.onClick.AddListener(OpenGoalProposalPanel);
             }
 
@@ -360,8 +360,8 @@ namespace HabitHero.App
                     panel.transform,
                     font,
                     "合作冒險",
-                    new Vector2(0.5f, 0.91f),
-                    new Vector2(0.69f, 0.97f));
+                    new Vector2(0.4f, 0.91f),
+                    new Vector2(0.55f, 0.97f));
                 coopButton.onClick.AddListener(OpenCoopAdventurePanel);
             }
 
@@ -369,7 +369,7 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "登出",
-                new Vector2(0.72f, 0.91f),
+                new Vector2(0.74f, 0.91f),
                 new Vector2(0.91f, 0.97f));
             signOutButton.onClick.AddListener(() => onSignOut());
             if (onSwitchToParent != null)
@@ -377,9 +377,9 @@ namespace HabitHero.App
                 Button parentModeButton = HabitHeroUiFactory.CreateButton(
                     panel.transform,
                     font,
-                    "回到家長模式",
-                    new Vector2(0.5f, 0.91f),
-                    new Vector2(0.69f, 0.97f));
+                    "家長模式",
+                    new Vector2(0.57f, 0.91f),
+                    new Vector2(0.72f, 0.97f));
                 parentModeButton.onClick.AddListener(() => onSwitchToParent());
             }
 
