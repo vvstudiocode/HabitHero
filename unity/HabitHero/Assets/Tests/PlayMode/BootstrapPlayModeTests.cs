@@ -428,17 +428,23 @@ namespace HabitHero.Tests
                     sendWorldChat: null,
                     markWorldChatRead: null,
                     reportWorldChat: null,
-                    listCoopAdventures: null,
-                    loadCoopAdventureState: null,
-                    createCoopAdventure: null,
-                    joinCoopAdventure: null,
-                    submitCoopCompletion: null,
+                    listCoopAdventures: childId =>
+                        Task.FromResult(new SupabaseCoopAdventureSummary[0]),
+                    loadCoopAdventureState: adventureId =>
+                        Task.FromResult<SupabaseCoopAdventureState>(null),
+                    createCoopAdventure: childId =>
+                        Task.FromResult<SupabaseCoopAdventureNotification>(null),
+                    joinCoopAdventure: adventureId =>
+                        Task.FromResult<SupabaseCoopMutationResult>(null),
+                    submitCoopCompletion: (adventureId, input) =>
+                        Task.FromResult<SupabaseCoopMutationResult>(null),
                     submitTask: null,
                     startTimer: null,
                     pauseTimer: null,
                     resumeTimer: null,
                     abandonAdventure: null,
-                    proposeGoal: null,
+                    proposeGoal: input =>
+                        Task.FromResult<SupabaseChildGoalProposalResult>(null),
                     redeemReward: id =>
                         Task.FromResult<SupabaseRewardRedemptionResult>(null),
                     addWishlist: null,
@@ -458,62 +464,130 @@ namespace HabitHero.Tests
 
                 GameObject childHomePanel = GameObject.Find("ChildHomePanel");
                 Assert.IsNotNull(childHomePanel);
+                Assert.IsNotNull(FindButton(childHomePanel, "通知"));
+                Assert.IsNotNull(FindButton(childHomePanel, "登出"));
+                Assert.IsNotNull(FindButton(childHomePanel, "回到家長模式"));
                 OpenPanelFromHome(childHomePanel, "冒險商店", "ChildGamePanel");
                 OpenPanelFromHome(childHomePanel, "世界", "ChildWorldPanel");
                 OpenPanelFromHome(childHomePanel, "好友", "ChildSocialPanel");
                 OpenPanelFromHome(childHomePanel, "獎勵商店", "RewardPanel");
                 OpenPanelFromHome(childHomePanel, "點數紀錄", "ChildLedgerPanel");
+                OpenPanelFromHome(childHomePanel, "建立冒險", "ChildGoalProposalPanel");
+                OpenPanelFromHome(childHomePanel, "合作冒險", "ChildCoopAdventurePanel");
 
                 parentView.Show(
                     snapshot: parentSnapshot,
-                    reviewTask: null,
-                    batchReviewDailyAdventures: null,
-                    revokeTaskApproval: null,
-                    confirmChildGoal: null,
-                    returnChildGoal: null,
+                    reviewTask: (task, approved, points, feedback, mood, difficulty, reflection) =>
+                        Task.FromResult<SupabaseParentTaskReviewResult>(null),
+                    batchReviewDailyAdventures: taskIds =>
+                        Task.FromResult<SupabaseParentBatchReviewResult>(null),
+                    revokeTaskApproval: taskId =>
+                        Task.FromResult<SupabaseParentTaskApprovalReversalResult>(null),
+                    confirmChildGoal: (task, feedback, points, mood) =>
+                        Task.FromResult<SupabaseParentTaskReviewResult>(null),
+                    returnChildGoal: (task, feedback) =>
+                        Task.FromResult<SupabaseParentTaskReviewResult>(null),
                     approveWishlist: (wishlist, points) =>
                         Task.FromResult<SupabaseParentRewardMutationResult>(null),
                     fulfillTicket: ticketId =>
                         Task.FromResult<SupabaseParentRewardMutationResult>(null),
-                    createTask: null,
-                    updateTask: null,
-                    deleteTask: null,
-                    createTaskTemplate: null,
-                    updateTaskTemplate: null,
-                    deleteTaskTemplate: null,
-                    createGeneralAdventure: null,
-                    updateGeneralAdventureTitle: null,
-                    loadAdventureSchedules: null,
-                    createAdventureSchedule: null,
-                    updateAdventureSchedule: null,
-                    disableAdventureSchedule: null,
-                    createReward: null,
-                    updateReward: null,
-                    deleteReward: null,
-                    adjustPoints: null,
-                    createChildAccount: null,
-                    resetChildPassword: null,
-                    updateChildName: null,
-                    deleteChildAccount: null,
-                    loadGameStore: null,
-                    setGamePrice: null,
-                    resetGamePrice: null,
-                    listCoopAdventures: null,
-                    loadCoopAdventureState: null,
-                    reviewCoopCompletion: null,
-                    recordParentConsent: null,
-                    updateParentPassword: null,
-                    deleteParentAccount: null,
-                    enterChildMode: null,
+                    createTask: input =>
+                        Task.FromResult<SupabaseParentTaskMutationResult>(null),
+                    updateTask: (taskId, input) =>
+                        Task.FromResult<SupabaseParentTaskMutationResult>(null),
+                    deleteTask: taskId =>
+                        Task.FromResult<SupabaseParentTaskMutationResult>(null),
+                    createTaskTemplate: input =>
+                        Task.FromResult<SupabaseParentTaskTemplateMutationResult>(null),
+                    updateTaskTemplate: (templateId, input) =>
+                        Task.FromResult<SupabaseParentTaskTemplateMutationResult>(null),
+                    deleteTaskTemplate: templateId =>
+                        Task.FromResult<SupabaseParentTaskTemplateMutationResult>(null),
+                    createGeneralAdventure: input =>
+                        Task.FromResult<SupabaseParentAdventureMutationResult>(null),
+                    updateGeneralAdventureTitle: (groupId, title) =>
+                        Task.FromResult<SupabaseParentAdventureTitleMutationResult>(null),
+                    loadAdventureSchedules: () =>
+                        Task.FromResult(new SupabaseParentAdventureScheduleRecord[0]),
+                    createAdventureSchedule: input =>
+                        Task.FromResult(new string[0]),
+                    updateAdventureSchedule: (scheduleId, input) =>
+                        Task.FromResult<SupabaseParentAdventureScheduleRecord>(null),
+                    disableAdventureSchedule: scheduleId =>
+                        Task.FromResult<SupabaseParentAdventureScheduleRecord>(null),
+                    createReward: input =>
+                        Task.FromResult<SupabaseParentRewardMutationResult>(null),
+                    updateReward: (reward, name, points) =>
+                        Task.FromResult<SupabaseParentRewardMutationResult>(null),
+                    deleteReward: rewardId =>
+                        Task.FromResult<SupabaseParentRewardMutationResult>(null),
+                    adjustPoints: (childId, points, reason) =>
+                        Task.FromResult<SupabaseParentPointMutationResult>(null),
+                    createChildAccount: input =>
+                        Task.FromResult<SupabaseParentChildAccountMutationResult>(null),
+                    resetChildPassword: (childId, password) =>
+                        Task.FromResult<SupabaseParentChildAccountMutationResult>(null),
+                    updateChildName: (childId, name) =>
+                        Task.FromResult<SupabaseParentChildAccountMutationResult>(null),
+                    deleteChildAccount: childId =>
+                        Task.FromResult<SupabaseParentChildAccountMutationResult>(null),
+                    loadGameStore: () => Task.FromResult(childGameData),
+                    setGamePrice: (catalogItemId, price) =>
+                        Task.FromResult(childGameData),
+                    resetGamePrice: catalogItemId => Task.FromResult(childGameData),
+                    listCoopAdventures: childId =>
+                        Task.FromResult(new SupabaseCoopAdventureSummary[0]),
+                    loadCoopAdventureState: adventureId =>
+                        Task.FromResult<SupabaseCoopAdventureState>(null),
+                    reviewCoopCompletion: (completionId, input) =>
+                        Task.FromResult<SupabaseCoopMutationResult>(null),
+                    recordParentConsent: version =>
+                        Task.FromResult<SupabaseParentConsentRecord>(null),
+                    updateParentPassword: (currentPassword, newPassword) =>
+                        Task.CompletedTask,
+                    deleteParentAccount: () => Task.CompletedTask,
+                    enterChildMode: childId => Task.FromResult(false),
                     onSignOut: () => { },
                     onOpenNotificationSettings: () => { });
 
                 GameObject parentHomePanel = GameObject.Find("ParentHomePanel");
                 Assert.IsNotNull(parentHomePanel);
+                Assert.IsNotNull(FindButton(parentHomePanel, "通知"));
+                Assert.IsNotNull(FindButton(parentHomePanel, "登出"));
                 OpenPanelFromHome(parentHomePanel, "設定", "ParentSettingsPanel");
+                OpenPanelFromHome(parentHomePanel, "孩子視角", "ParentChildPreviewPanel");
+                OpenPanelFromHome(parentHomePanel, "任務管理", "ParentTaskManagementPanel");
+                OpenPanelFromHome(parentHomePanel, "建立孩子任務", "ParentTaskCreatePanel");
+                OpenPanelFromHome(parentHomePanel, "任務模板", "ParentTaskTemplatePanel");
+                OpenPanelFromHome(
+                    parentHomePanel,
+                    "一般冒險",
+                    "ParentGeneralAdventureManagementPanel");
+                OpenPanelFromHome(
+                    parentHomePanel,
+                    "每日排程",
+                    "ParentAdventureSchedulePanel");
+                OpenPanelFromHome(parentHomePanel, "孩子帳號", "ParentChildAccountPanel");
+                OpenPanelFromHome(parentHomePanel, "合作批改", "ParentCoopAdventurePanel");
+                OpenPanelFromHome(parentHomePanel, "商店價格", "ParentGamePricePanel");
                 OpenPanelFromHome(parentHomePanel, "成長", "ParentGrowthPanel");
+                OpenPanelFromHome(parentHomePanel, "批核", "ParentBatchReviewPanel");
                 OpenPanelFromHome(parentHomePanel, "願望與獎勵券", "ParentRewardPanel");
                 GameObject parentRewardPanel = GameObject.Find("ParentRewardPanel");
+                Assert.IsNotNull(parentRewardPanel);
+                Button manageRewardButton = FindButton(parentRewardPanel, "管理獎勵");
+                Assert.IsNotNull(manageRewardButton);
+                manageRewardButton.onClick.Invoke();
+                Assert.IsNotNull(GameObject.Find("ParentRewardManagementPanel"));
+                OpenPanelFromHome(parentHomePanel, "願望與獎勵券", "ParentRewardPanel");
+                parentRewardPanel = GameObject.Find("ParentRewardPanel");
+                Assert.IsNotNull(parentRewardPanel);
+                Button adjustPointsButton = FindButton(parentRewardPanel, "調整點數");
+                Assert.IsNotNull(adjustPointsButton);
+                adjustPointsButton.onClick.Invoke();
+                Assert.IsNotNull(GameObject.Find("ParentPointAdjustmentPanel"));
+                OpenPanelFromHome(parentHomePanel, "願望與獎勵券", "ParentRewardPanel");
+                parentRewardPanel = GameObject.Find("ParentRewardPanel");
                 Assert.IsNotNull(parentRewardPanel);
                 Button parentLedgerButton = FindButton(parentRewardPanel, "點數紀錄");
                 Assert.IsNotNull(parentLedgerButton);
@@ -535,10 +609,24 @@ namespace HabitHero.Tests
             Assert.IsNull(GameObject.Find("ChildSocialPanel"));
             Assert.IsNull(GameObject.Find("RewardPanel"));
             Assert.IsNull(GameObject.Find("ChildLedgerPanel"));
+            Assert.IsNull(GameObject.Find("ChildGoalProposalPanel"));
+            Assert.IsNull(GameObject.Find("ChildCoopAdventurePanel"));
             Assert.IsNull(GameObject.Find("ParentHomePanel"));
             Assert.IsNull(GameObject.Find("ParentSettingsPanel"));
+            Assert.IsNull(GameObject.Find("ParentChildPreviewPanel"));
+            Assert.IsNull(GameObject.Find("ParentTaskManagementPanel"));
+            Assert.IsNull(GameObject.Find("ParentTaskCreatePanel"));
+            Assert.IsNull(GameObject.Find("ParentTaskTemplatePanel"));
+            Assert.IsNull(GameObject.Find("ParentGeneralAdventureManagementPanel"));
+            Assert.IsNull(GameObject.Find("ParentAdventureSchedulePanel"));
+            Assert.IsNull(GameObject.Find("ParentChildAccountPanel"));
+            Assert.IsNull(GameObject.Find("ParentCoopAdventurePanel"));
+            Assert.IsNull(GameObject.Find("ParentGamePricePanel"));
             Assert.IsNull(GameObject.Find("ParentGrowthPanel"));
+            Assert.IsNull(GameObject.Find("ParentBatchReviewPanel"));
             Assert.IsNull(GameObject.Find("ParentRewardPanel"));
+            Assert.IsNull(GameObject.Find("ParentRewardManagementPanel"));
+            Assert.IsNull(GameObject.Find("ParentPointAdjustmentPanel"));
             Assert.IsNull(GameObject.Find("ParentLedgerPanel"));
             Assert.IsEmpty(errors, "Home views emitted runtime errors: " + string.Join(" | ", errors));
         }
