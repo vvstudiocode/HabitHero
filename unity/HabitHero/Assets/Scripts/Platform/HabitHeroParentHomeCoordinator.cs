@@ -312,6 +312,28 @@ namespace HabitHero.App
             return result;
         }
 
+        public async Task<SupabaseParentConsentRecord> RecordParentConsentAsync(
+            string consentVersion,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(activeFamilyId))
+            {
+                throw new SupabaseDataException("目前沒有可記錄同意的家庭資料。");
+            }
+
+            SupabaseParentConsentRecord consent =
+                await client.RecordParentConsentAsync(
+                    activeFamilyId,
+                    consentVersion,
+                    cancellationToken);
+            if (view != null)
+            {
+                view.ApplyParentConsent(consent);
+            }
+
+            return consent;
+        }
+
         private async Task<SupabaseParentTaskApprovalReversalResult>
             RevokeTaskApprovalAsync(
                 string taskId,

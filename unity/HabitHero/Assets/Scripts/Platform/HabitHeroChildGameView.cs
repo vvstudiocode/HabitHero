@@ -834,7 +834,7 @@ namespace HabitHero.App
                 : new Color(0.84f, 0.89f, 0.96f, 1f);
         }
 
-        private void Close()
+        public void Close()
         {
             if (gamePanel != null)
             {

@@ -48,6 +48,103 @@ namespace HabitHero.Tests
         }
 
         [Test]
+        public void ParentRegistrationValidationMatchesTheWebCredentialBoundary()
+        {
+            string error;
+            Assert.IsTrue(HabitHeroAuthValidation.TryValidateParentRegistration(
+                "parent@example.com",
+                "Abcdef12",
+                out error), error);
+            Assert.IsFalse(HabitHeroAuthValidation.TryValidateParentRegistration(
+                "not-an-email",
+                "Abcdef12",
+                out error));
+            Assert.AreEqual("請輸入有效的 Email。", error);
+            Assert.IsFalse(HabitHeroAuthValidation.TryValidateParentRegistration(
+                "parent@example.com",
+                "abcdef12",
+                out error));
+            StringAssert.Contains("大小寫", error);
+        }
+
+        [Test]
+        public void ParentRegistrationValidationRequiresMatchingConfirmation()
+        {
+            string error;
+            Assert.IsFalse(HabitHeroAuthValidation.TryValidatePasswordConfirmation(
+                "Abcdef12",
+                "",
+                out error));
+            Assert.AreEqual("請再次輸入相同的家長密碼。", error);
+            Assert.IsFalse(HabitHeroAuthValidation.TryValidatePasswordConfirmation(
+                "Abcdef12",
+                "Abcdef13",
+                out error));
+            Assert.AreEqual("兩次輸入的密碼不一致。", error);
+            Assert.IsTrue(HabitHeroAuthValidation.TryValidatePasswordConfirmation(
+                "Abcdef12",
+                "Abcdef12",
+                out error), error);
+        }
+
+        [Test]
+        public void ChildGrowthStatsUseServerTaskStatusesAndApprovedLedgerPoints()
+        {
+            HabitHeroChildGrowthSummary summary =
+                HabitHeroChildGrowthStats.Calculate(
+                    new SupabaseChildHomeSnapshot
+                    {
+                        tasks = new[]
+                        {
+                            new SupabaseChildTaskRecord
+                            {
+                                status = "completed",
+                                category = "learning",
+                                approved_points = 8,
+                            },
+                            new SupabaseChildTaskRecord
+                            {
+                                status = "pending",
+                                category = "health",
+                            },
+                            new SupabaseChildTaskRecord
+                            {
+                                status = "revision_requested",
+                                category = "learning",
+                                revision_note = "請補充心得",
+                            },
+                            new SupabaseChildTaskRecord
+                            {
+                                status = "cancelled",
+                                category = "health",
+                            },
+                        },
+                        ledger = new[]
+                        {
+                            new SupabaseChildLedgerRecord
+                            {
+                                entry_type = "task_approved",
+                                points_delta = 8,
+                            },
+                            new SupabaseChildLedgerRecord
+                            {
+                                entry_type = "reward_redemption",
+                                points_delta = -4,
+                            },
+                        },
+                    });
+
+            Assert.AreEqual(3, summary.TotalGoals);
+            Assert.AreEqual(1, summary.CompletedGoals);
+            Assert.AreEqual(1, summary.PendingReviews);
+            Assert.AreEqual(1, summary.RevisionRequests);
+            Assert.AreEqual(8, summary.EarnedPoints);
+            Assert.AreEqual(33, summary.CompletionRate);
+            Assert.AreEqual(2, summary.CategoryCounts["learning"]);
+            Assert.AreEqual(1, summary.CategoryCounts["health"]);
+        }
+
+        [Test]
         public void SafeAreaMappingKeepsFullScreenContentInsideTheUsableViewport()
         {
             Vector2 mappedMin;

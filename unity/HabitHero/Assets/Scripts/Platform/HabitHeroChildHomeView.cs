@@ -26,6 +26,8 @@ namespace HabitHero.App
         private HabitHeroChildSocialView socialView;
         private HabitHeroChildCoopAdventureView coopAdventureView;
         private HabitHeroChildLedgerView ledgerView;
+        private HabitHeroChildGrowthView growthView;
+        private HabitHeroChildSettingsView settingsView;
         private Text statusText;
         private Text pointsText;
         private Text reportStatus;
@@ -101,6 +103,7 @@ namespace HabitHero.App
             string,
             SupabaseCoopCompletionInput,
             Task<SupabaseCoopMutationResult>> submitCoopCompletion;
+        private Action onSignOut;
         private Action onSwitchToParent;
         private Action onOpenNotificationSettings;
         private string selectedMood;
@@ -211,6 +214,7 @@ namespace HabitHero.App
             this.createCoopAdventure = createCoopAdventure;
             this.joinCoopAdventure = joinCoopAdventure;
             this.submitCoopCompletion = submitCoopCompletion;
+            this.onSignOut = onSignOut;
             this.onSwitchToParent = onSwitchToParent;
             this.onOpenNotificationSettings = onOpenNotificationSettings;
             latestSnapshot = snapshot;
@@ -402,40 +406,62 @@ namespace HabitHero.App
                 panel.transform,
                 font,
                 "冒險商店",
-                new Vector2(0.23f, 0.14f),
-                new Vector2(0.4f, 0.2f));
+                new Vector2(0.19f, 0.14f),
+                new Vector2(0.3f, 0.2f));
             gameButton.interactable = gameData != null;
-            gameButton.onClick.AddListener(() => gameView.Open());
+            gameButton.onClick.AddListener(() =>
+            {
+                CloseChildOverlayPanels();
+                if (gameView != null) gameView.Open();
+            });
             Button worldButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "世界",
                 new Vector2(0.08f, 0.14f),
-                new Vector2(0.22f, 0.2f));
+                new Vector2(0.18f, 0.2f));
             worldButton.interactable = worldData != null;
-            worldButton.onClick.AddListener(() => worldView.Open());
+            worldButton.onClick.AddListener(() =>
+            {
+                CloseChildOverlayPanels();
+                if (worldView != null) worldView.Open();
+            });
             Button socialButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "好友",
-                new Vector2(0.41f, 0.14f),
-                new Vector2(0.58f, 0.2f));
+                new Vector2(0.31f, 0.14f),
+                new Vector2(0.42f, 0.2f));
             socialButton.interactable = socialData != null;
             socialButton.onClick.AddListener(OpenSocialPanel);
             Button rewardsButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "獎勵商店",
-                new Vector2(0.59f, 0.14f),
-                new Vector2(0.76f, 0.2f));
+                new Vector2(0.43f, 0.14f),
+                new Vector2(0.54f, 0.2f));
             rewardsButton.onClick.AddListener(OpenRewardPanel);
             Button ledgerButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "點數紀錄",
-                new Vector2(0.77f, 0.14f),
-                new Vector2(0.92f, 0.2f));
+                new Vector2(0.55f, 0.14f),
+                new Vector2(0.66f, 0.2f));
             ledgerButton.onClick.AddListener(OpenLedgerPanel);
+            Button growthButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "成長",
+                new Vector2(0.67f, 0.14f),
+                new Vector2(0.78f, 0.2f));
+            growthButton.onClick.AddListener(OpenGrowthPanel);
+            Button settingsButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "設定",
+                new Vector2(0.79f, 0.14f),
+                new Vector2(0.92f, 0.2f));
+            settingsButton.onClick.AddListener(OpenSettingsPanel);
 
             statusText = HabitHeroUiFactory.CreateText(
                 panel.transform,
@@ -480,6 +506,7 @@ namespace HabitHero.App
             createCoopAdventure = null;
             joinCoopAdventure = null;
             submitCoopCompletion = null;
+            onSignOut = null;
             onSwitchToParent = null;
             onOpenNotificationSettings = null;
             timerSessions = null;
@@ -502,6 +529,8 @@ namespace HabitHero.App
             CloseRewardPanel();
             CloseWishlistPanel();
             CloseLedgerPanel();
+            CloseGrowthPanel();
+            CloseSettingsPanel();
             if (gameView != null)
             {
                 gameView.Dispose();
@@ -768,11 +797,7 @@ namespace HabitHero.App
                 return;
             }
 
-            CloseReportPanel();
-            CloseTimerPanel();
-            CloseRewardPanel();
-            CloseWishlistPanel();
-            CloseLedgerPanel();
+            CloseChildOverlayPanels();
             if (goalProposalView == null)
             {
                 goalProposalView = new HabitHeroChildGoalProposalView(
@@ -814,12 +839,82 @@ namespace HabitHero.App
                 return;
             }
 
+            CloseChildOverlayPanels();
+            socialView.Open();
+        }
+
+        private void OpenGrowthPanel()
+        {
+            if (latestSnapshot == null || latestSnapshot.child == null)
+            {
+                SetStatus("成長紀錄尚未載入。", true);
+                return;
+            }
+
+            CloseChildOverlayPanels();
+            if (growthView == null)
+            {
+                growthView = new HabitHeroChildGrowthView(
+                    canvasTransform,
+                    font);
+            }
+
+            growthView.Show(latestSnapshot, CloseGrowthPanel);
+        }
+
+        private void CloseGrowthPanel()
+        {
+            if (growthView == null) return;
+            growthView.Dispose();
+            growthView = null;
+        }
+
+        private void OpenSettingsPanel()
+        {
+            if (latestSnapshot == null || latestSnapshot.child == null)
+            {
+                SetStatus("孩子設定尚未載入。", true);
+                return;
+            }
+
+            CloseChildOverlayPanels();
+            if (settingsView == null)
+            {
+                settingsView = new HabitHeroChildSettingsView(
+                    canvasTransform,
+                    font);
+            }
+
+            settingsView.Show(
+                latestSnapshot.child.id,
+                onOpenNotificationSettings,
+                onSwitchToParent,
+                onSignOut,
+                CloseSettingsPanel);
+        }
+
+        private void CloseSettingsPanel()
+        {
+            if (settingsView == null) return;
+            settingsView.Dispose();
+            settingsView = null;
+        }
+
+        private void CloseChildOverlayPanels()
+        {
             CloseReportPanel();
             CloseTimerPanel();
+            CloseGoalProposalPanel();
             CloseRewardPanel();
             CloseWishlistPanel();
             CloseLedgerPanel();
-            socialView.Open();
+            CloseGrowthPanel();
+            CloseSettingsPanel();
+            if (gameView != null) gameView.Close();
+            if (worldView != null) worldView.Close();
+            if (worldSceneView != null) worldSceneView.Close();
+            if (socialView != null) socialView.Close();
+            if (coopAdventureView != null) coopAdventureView.Close();
         }
 
         private void CloseSocialPanel()
@@ -836,11 +931,7 @@ namespace HabitHero.App
                 return;
             }
 
-            CloseReportPanel();
-            CloseTimerPanel();
-            CloseRewardPanel();
-            CloseWishlistPanel();
-            CloseLedgerPanel();
+            CloseChildOverlayPanels();
             if (coopAdventureView == null)
             {
                 coopAdventureView = new HabitHeroChildCoopAdventureView(
@@ -881,6 +972,10 @@ namespace HabitHero.App
             if (ledgerView != null)
             {
                 ledgerView.ApplySnapshot(snapshot);
+            }
+            if (growthView != null)
+            {
+                growthView.ApplySnapshot(snapshot);
             }
             SetStatus("點數與任務資料已更新。", false);
         }
@@ -1002,6 +1097,7 @@ namespace HabitHero.App
                 return;
             }
 
+            CloseChildOverlayPanels();
             CloseRewardPanel();
             rewardPanel = HabitHeroUiFactory.CreatePanel(
                 canvasTransform,
@@ -1123,10 +1219,7 @@ namespace HabitHero.App
                 return;
             }
 
-            CloseReportPanel();
-            CloseTimerPanel();
-            CloseRewardPanel();
-            CloseWishlistPanel();
+            CloseChildOverlayPanels();
             if (ledgerView == null)
             {
                 ledgerView = new HabitHeroChildLedgerView(canvasTransform, font);
@@ -1143,6 +1236,7 @@ namespace HabitHero.App
                 return;
             }
 
+            CloseChildOverlayPanels();
             CloseRewardPanel();
             CloseWishlistPanel();
             wishlistPanel = HabitHeroUiFactory.CreatePanel(

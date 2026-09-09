@@ -29,7 +29,7 @@ authorization into client-only rules.
 
 | Area | Current behavior to preserve | Unity acceptance gate | Status |
 | --- | --- | --- | --- |
-| Auth | Parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Unity contracts and parent recovery/account controls implemented; iOS/Android export deep links verified; device/session verification pending |
+| Auth | Parent registration, parent/child sign-in, session restore, password recovery, parent switch, account deletion | C# contract, native deep link, real Supabase session tests, re-login/update test | Unity registration with consent, contracts, recovery, and account controls implemented; iOS/Android export deep links verified; device/session verification pending |
 | Family | Family selection, child profiles, child preview mode, profile isolation | Same user/profile IDs and RLS behavior across both clients | Unity parent/child hydration, preview, guarded child mode, naming and account controls implemented; two-account/device verification pending |
 | Parent workflow | Task creation, task edit/delete, scheduling, review, return, feedback, growth summary | Existing parent Web remains available; Unity must consume the same resulting data | Unity task/template/adventure scheduling, review/batch review, general-adventure title management, rewards, ledger, points, child accounts, settings, legal and growth views implemented; device parity pending |
 | Child habit loop | Today board, task timer, completion report, pending offline state | Online/offline/reconnect tests and server-authoritative point result | Unity core loop, timer, completion, offline queue and refresh contracts implemented; device/reconnect evidence pending |
@@ -74,6 +74,9 @@ Partially completed locally:
 - Unity package manifest pins `com.unity.ugui` `2.6.0` for the login shell.
 
 - Pure C# Supabase client configuration validation.
+- Unity parent registration UI with matching email/password validation, password
+  confirmation, consent document, Supabase sign-up, confirmation-required
+  fallback, and automatic parent-consent recording after the new family loads.
 - Auth callback parsing for fragment tokens, OAuth code, login, and recovery;
   PKCE codes exchange through Supabase when the callback includes the verifier.
 - Auth request builders, session serialization, restore/refresh, sign-in,
@@ -91,6 +94,11 @@ Partially completed locally:
   wallet/ledger refresh, and RLS-scoped wishlist add/cancel flows.
 - Child point-ledger history view reads the same server-returned ledger rows
   used by wallet refreshes; it does not calculate or mutate balances locally.
+- Child growth view now derives completion, review, feedback, correction,
+  category, recent-adventure, and approved-ledger-point summaries from the
+  current Supabase snapshot. Child settings now expose notification settings,
+  parent mode, sign-out, background music, pet-name display, and day/night
+  preferences with child-scoped local persistence.
 - Child adventure abandonment calls the server `abandon_child_adventure` RPC
   and refreshes the same snapshot; the client never mutates adventure status
   locally.
@@ -344,16 +352,19 @@ Current local verification:
 - Unity platform contract smoke test passed.
 - Unity EditMode tests passed, including all current parent Supabase contract
   checks, notification payload parsing, safe-area mapping, and decoration
-  placement rules (`131` tests in the latest run).
+  placement rules, plus parent registration and child growth validation
+  (`135` tests in the latest run).
 - Unity PlayMode `BootstrapPlayModeTests` passed: the login shell, an offline
-  child-world fixture (NPC, roaming pet, following pet, decoration, labels,
+  parent-signup fixture (consent document, validation, and submit callback), an
+  offline child-world fixture (NPC, roaming pet, following pet, decoration, labels,
   shadows, decoration editor controls, and runtime cleanup), and a child/parent
   home-surface fixture (all child/parent top-level feature entry points,
+  child growth and settings panels,
   child completion/report callbacks, timer start/pause/resume callbacks, parent
   approval callback and point input, nested reward-management and
   point-adjustment panels, notifications/sign-out controls, and cleanup for
   every opened panel) loaded and cleaned up with no runtime errors in the
-  headless Unity Editor run (`3/3` tests passed).
+  headless Unity Editor run (`4/4` tests passed).
 - Unity WebGL build passed with Unity Editor `6000.6.0f1`.
 - A direct Unity Editor smoke run also opened `Bootstrap`, entered Play Mode,
   rendered the login shell, and exited cleanly without a captured runtime

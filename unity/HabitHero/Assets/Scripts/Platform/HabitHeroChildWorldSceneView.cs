@@ -234,6 +234,11 @@ namespace HabitHero.App
             UpdateWorldAtmosphere(false);
         }
 
+        public void Close()
+        {
+            CloseInternal(false);
+        }
+
         public void Open()
         {
             SupabaseGameWorldSceneRecord scene = FindScene(sceneId);
@@ -1219,6 +1224,12 @@ namespace HabitHero.App
             string inventoryItemId,
             SupabaseGameCatalogItemRecord item)
         {
+            if (!HabitHeroChildDisplayPreferences.GetShowPetNames(
+                GetChildProfileId()))
+            {
+                return string.Empty;
+            }
+
             SupabaseChildInventoryItemRecord inventory = FindInventoryItem(inventoryItemId);
             if (inventory != null && !string.IsNullOrWhiteSpace(inventory.display_name))
             {
@@ -1481,6 +1492,11 @@ namespace HabitHero.App
             HabitHeroWorldTimePhase phase = HabitHeroWorldWeather.GetTimePhase(
                 taipeiNow.Hour,
                 taipeiNow.Minute);
+            if (!HabitHeroChildDisplayPreferences.GetDayNightEnabled(
+                GetChildProfileId()))
+            {
+                phase = HabitHeroWorldTimePhase.Day;
+            }
             SupabaseWorldWeatherRecord weather = HabitHeroWorldWeather.Normalize(
                 latestData == null ? null : latestData.weather);
             HabitHeroWorldWeatherCondition condition =

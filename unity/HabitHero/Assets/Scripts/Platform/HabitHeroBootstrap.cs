@@ -14,6 +14,7 @@ namespace HabitHero.App
 
         private CancellationTokenSource lifetimeCancellation;
         private SupabaseAuthClient authClient;
+        private SupabaseParentHomeClient parentHomeClient;
         private SupabaseNotificationClient notificationClient;
         private ISupabasePushTokenProvider pushTokenProvider;
         private HabitHeroNotificationSettingsController notificationSettingsController;
@@ -27,6 +28,7 @@ namespace HabitHero.App
         private GameObject forgotPasswordPanel;
         private GameObject recoveryPanel;
         private Font uiFont;
+        private HabitHeroParentSignupView parentSignupView;
         private InputField accountInput;
         private InputField passwordInput;
         private InputField forgotPasswordEmailInput;
@@ -36,6 +38,7 @@ namespace HabitHero.App
         private Button loginButton;
         private Button signOutButton;
         private Button forgotPasswordButton;
+        private Button parentSignupButton;
         private Button forgotPasswordSubmitButton;
         private Button recoverySubmitButton;
         private GameObject parentUnlockPanel;
@@ -113,8 +116,7 @@ namespace HabitHero.App
                 uiFont,
                 config.GameAssetBaseUrl,
                 OpenNotificationSettings);
-            SupabaseParentHomeClient parentHomeClient =
-                new SupabaseParentHomeClient(restClient);
+            parentHomeClient = new SupabaseParentHomeClient(restClient);
             parentHomeCoordinator = new HabitHeroParentHomeCoordinator(
                 parentHomeClient,
                 new SupabaseChildGameClient(restClient),
@@ -197,6 +199,12 @@ namespace HabitHero.App
                 parentHomeCoordinator.Dispose();
                 parentHomeCoordinator = null;
             }
+            if (parentSignupView != null)
+            {
+                parentSignupView.Dispose();
+                parentSignupView = null;
+            }
+            parentHomeClient = null;
 
             ClearNotificationContext();
 
@@ -302,18 +310,26 @@ namespace HabitHero.App
                 new Vector2(0.43f, 0.17f));
             loginButton.onClick.AddListener(HandleLoginClicked);
 
+            parentSignupButton = HabitHeroUiFactory.CreateButton(
+                panel.transform,
+                font,
+                "建立家長帳號",
+                new Vector2(0.45f, 0.08f),
+                new Vector2(0.66f, 0.17f));
+            parentSignupButton.onClick.AddListener(ShowParentSignupPanel);
+
             signOutButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "登出",
-                new Vector2(0.57f, 0.08f),
+                new Vector2(0.68f, 0.08f),
                 new Vector2(0.9f, 0.17f));
             signOutButton.onClick.AddListener(HandleSignOutClicked);
             forgotPasswordButton = HabitHeroUiFactory.CreateButton(
                 panel.transform,
                 font,
                 "忘記密碼",
-                new Vector2(0.57f, 0.08f),
+                new Vector2(0.68f, 0.08f),
                 new Vector2(0.9f, 0.17f));
             forgotPasswordButton.onClick.AddListener(ShowForgotPasswordPanel);
 
@@ -328,6 +344,98 @@ namespace HabitHero.App
                 new Vector2(0.92f, 0.075f));
             HandleChildModeChanged(false);
             SetSignedInControls(false);
+        }
+
+        private void ShowParentSignupPanel()
+        {
+            if (canvas == null || authClient == null || isBusy) return;
+            if (parentSignupView == null)
+            {
+                parentSignupView = new HabitHeroParentSignupView(
+                    canvas.transform,
+                    uiFont);
+            }
+
+            if (loginPanel != null) loginPanel.SetActive(false);
+            parentSignupView.Show(
+                SignUpParentAsync,
+                HandleParentSignupCompleted,
+                CloseParentSignupAndShowLogin);
+        }
+
+        private async Task<SupabaseSession> SignUpParentAsync(
+            string email,
+            string password)
+        {
+            SupabaseAuthResponse response = await authClient.SignUpAsync(
+                email,
+                password,
+                lifetimeCancellation.Token);
+            SupabaseSession session = authClient.CurrentSession;
+            if (session != null) return session;
+
+            if (response == null || response.user == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return await authClient.SignInWithPasswordAsync(
+                    email,
+                    password,
+                    lifetimeCancellation.Token);
+            }
+            catch (SupabaseAuthException)
+            {
+                // Supabase may require email confirmation before the first sign-in.
+                return null;
+            }
+        }
+
+        private async void HandleParentSignupCompleted(SupabaseSession session)
+        {
+            if (session == null) return;
+            ShowSignedIn(session);
+            bool shown = await TryShowParentHomeAsync(session);
+            if (!shown)
+            {
+                SetStatus("帳號已建立，但家庭資料尚未完成載入。請重新登入再試。", true);
+                return;
+            }
+
+            if (parentHomeClient == null || parentHomeCoordinator == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await parentHomeCoordinator.RecordParentConsentAsync(
+                    HabitHeroLegalVersions.ParentConsent,
+                    lifetimeCancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Scene shutdown cancels the request.
+            }
+            catch (Exception exception)
+            {
+                SetStatus(
+                    "帳號已建立；家長同意紀錄稍後可從設定完成：" + exception.Message,
+                    true);
+            }
+        }
+
+        private void CloseParentSignupAndShowLogin()
+        {
+            if (parentSignupView != null)
+            {
+                parentSignupView.Dispose();
+            }
+            if (loginPanel != null) loginPanel.SetActive(true);
+            SetSignedInControls(false);
+            SetStatus("請輸入帳號與密碼登入。", false);
         }
 
         private void ShowForgotPasswordPanel()
@@ -952,6 +1060,10 @@ namespace HabitHero.App
             {
                 forgotPasswordButton.gameObject.SetActive(!signedIn);
             }
+            if (parentSignupButton != null)
+            {
+                parentSignupButton.gameObject.SetActive(!signedIn);
+            }
             if (titleText != null) titleText.text = signedIn ? "歡迎回來" : "習慣冒險島";
         }
 
@@ -961,6 +1073,7 @@ namespace HabitHero.App
             if (loginButton != null) loginButton.interactable = !busy;
             if (signOutButton != null) signOutButton.interactable = !busy;
             if (forgotPasswordButton != null) forgotPasswordButton.interactable = !busy;
+            if (parentSignupButton != null) parentSignupButton.interactable = !busy;
             if (forgotPasswordSubmitButton != null)
             {
                 forgotPasswordSubmitButton.interactable = !busy;

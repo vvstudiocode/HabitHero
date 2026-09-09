@@ -87,6 +87,105 @@ namespace HabitHero.Tests
         }
 
         [UnityTest]
+        public IEnumerator ParentSignupViewRequiresConsentAndCompletesWithValidInput()
+        {
+            List<string> errors = new List<string>();
+            Application.LogCallback callback = (message, stackTrace, type) =>
+            {
+                if (type == LogType.Error || type == LogType.Exception)
+                {
+                    errors.Add(message);
+                }
+            };
+            Application.logMessageReceived += callback;
+
+            GameObject canvasObject = new GameObject(
+                "ParentSignupFixtureCanvas",
+                typeof(RectTransform),
+                typeof(Canvas),
+                typeof(CanvasScaler),
+                typeof(GraphicRaycaster));
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            HabitHeroParentSignupView signupView = new HabitHeroParentSignupView(
+                canvas.transform,
+                font);
+            bool submitCalled = false;
+            bool completed = false;
+            bool closed = false;
+
+            try
+            {
+                signupView.Show(
+                    (email, password) =>
+                    {
+                        submitCalled = email == "parent@example.com"
+                            && password == "Abcdef12";
+                        return Task.FromResult(new SupabaseSession
+                        {
+                            access_token = "fixture-access-token",
+                            refresh_token = "fixture-refresh-token",
+                            user = new SupabaseUser
+                            {
+                                id = "fixture-parent",
+                                email = email,
+                            },
+                        });
+                    },
+                    session => completed = session != null,
+                    () => closed = true);
+
+                GameObject signupPanel = GameObject.Find("ParentSignupPanel");
+                Assert.IsNotNull(signupPanel);
+                Button consentDocumentButton = FindButton(signupPanel, "閱讀同意說明");
+                Assert.IsNotNull(consentDocumentButton);
+                consentDocumentButton.onClick.Invoke();
+                GameObject legalPanel = GameObject.Find("ParentLegalDocumentPanel");
+                Assert.IsNotNull(legalPanel);
+                Button closeLegalButton = FindButton(legalPanel, "返回設定");
+                Assert.IsNotNull(closeLegalButton);
+                closeLegalButton.onClick.Invoke();
+                yield return null;
+                Assert.IsNotNull(GameObject.Find("ParentSignupPanel"));
+
+                InputField[] inputs = signupPanel.GetComponentsInChildren<InputField>(true);
+                Assert.AreEqual(3, inputs.Length);
+                inputs[0].text = "parent@example.com";
+                inputs[1].text = "Abcdef12";
+                inputs[2].text = "Abcdef13";
+                Button submitButton = FindButton(signupPanel, "建立帳號");
+                Assert.IsNotNull(submitButton);
+                submitButton.onClick.Invoke();
+                yield return null;
+                Assert.IsFalse(submitCalled);
+                Assert.IsFalse(completed);
+
+                Toggle consentToggle = signupPanel.GetComponentInChildren<Toggle>(true);
+                Assert.IsNotNull(consentToggle);
+                consentToggle.isOn = true;
+                inputs[2].text = "Abcdef12";
+                submitButton.onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(submitCalled);
+                Assert.IsTrue(completed);
+                Assert.IsNull(GameObject.Find("ParentSignupPanel"));
+                Assert.IsFalse(closed);
+            }
+            finally
+            {
+                signupView.Dispose();
+                Object.Destroy(canvasObject);
+                Application.logMessageReceived -= callback;
+            }
+
+            yield return null;
+            Assert.IsNull(GameObject.Find("ParentSignupPanel"));
+            Assert.IsNull(GameObject.Find("ParentLegalDocumentPanel"));
+            Assert.IsEmpty(errors, "Parent signup emitted runtime errors: " + string.Join(" | ", errors));
+        }
+
+        [UnityTest]
         public IEnumerator ChildWorldRendersFixtureActorsAndCleansUpRuntimeResources()
         {
             List<string> errors = new List<string>();
@@ -590,6 +689,8 @@ namespace HabitHero.Tests
                 OpenPanelFromHome(childHomePanel, "好友", "ChildSocialPanel");
                 OpenPanelFromHome(childHomePanel, "獎勵商店", "RewardPanel");
                 OpenPanelFromHome(childHomePanel, "點數紀錄", "ChildLedgerPanel");
+                OpenPanelFromHome(childHomePanel, "成長", "ChildGrowthPanel");
+                OpenPanelFromHome(childHomePanel, "設定", "ChildSettingsPanel");
                 OpenPanelFromHome(childHomePanel, "建立冒險", "ChildGoalProposalPanel");
                 OpenPanelFromHome(childHomePanel, "合作冒險", "ChildCoopAdventurePanel");
 
@@ -751,6 +852,8 @@ namespace HabitHero.Tests
             Assert.IsNull(GameObject.Find("ChildSocialPanel"));
             Assert.IsNull(GameObject.Find("RewardPanel"));
             Assert.IsNull(GameObject.Find("ChildLedgerPanel"));
+            Assert.IsNull(GameObject.Find("ChildGrowthPanel"));
+            Assert.IsNull(GameObject.Find("ChildSettingsPanel"));
             Assert.IsNull(GameObject.Find("ChildGoalProposalPanel"));
             Assert.IsNull(GameObject.Find("ChildCoopAdventurePanel"));
             Assert.IsNull(GameObject.Find("TaskTimerPanel"));

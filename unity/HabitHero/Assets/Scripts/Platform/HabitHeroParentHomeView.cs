@@ -623,6 +623,12 @@ namespace HabitHero.App
             SetStatus("家庭資料、待審任務與點數已更新。", false);
         }
 
+        public void ApplyParentConsent(SupabaseParentConsentRecord consent)
+        {
+            if (consent == null || latestSnapshot == null) return;
+            latestSnapshot.parentConsent = consent;
+        }
+
         public bool OpenTaskNotification(string taskId, string eventName)
         {
             if (latestSnapshot == null || string.IsNullOrWhiteSpace(taskId)) return false;
