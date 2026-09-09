@@ -4,14 +4,25 @@ using System.IO;
 using System.Xml;
 using HabitHero.Platform;
 using UnityEditor;
+using UnityEditor.Android;
 using UnityEditor.Callbacks;
 using UnityEngine;
 
 namespace HabitHero.Editor
 {
-    public static class HabitHeroDeepLinkPostProcess
+    public sealed class HabitHeroDeepLinkPostProcess : IPostGenerateGradleAndroidProject
     {
         private const string AndroidNamespace = "http://schemas.android.com/apk/res/android";
+
+        public int callbackOrder
+        {
+            get { return 100; }
+        }
+
+        public void OnPostGenerateGradleAndroidProject(string path)
+        {
+            AddAndroidIntentFilter(path);
+        }
 
         [PostProcessBuild(100)]
         public static void OnPostprocessBuild(BuildTarget target, string buildPath)
@@ -24,7 +35,21 @@ namespace HabitHero.Editor
 
             if (target == BuildTarget.Android)
             {
-                AddAndroidIntentFilter(buildPath);
+                if (Directory.Exists(buildPath))
+                {
+                    AddAndroidIntentFilter(buildPath);
+                    return;
+                }
+
+                if (File.Exists(buildPath))
+                {
+                    Debug.Log(
+                        "HabitHero Android deep link was applied during Gradle project generation: " +
+                        buildPath);
+                    return;
+                }
+
+                Debug.LogWarning("HabitHero Android build output was not found: " + buildPath);
             }
         }
 
