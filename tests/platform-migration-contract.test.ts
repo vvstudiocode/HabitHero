@@ -82,6 +82,24 @@ test('release preflight detects native modules beside the Unity app bundle', () 
   }
 });
 
+test('Unity runtime references mobile notification assemblies for native builds', () => {
+  const asmdefPath = path.join(
+    repositoryRoot,
+    'unity/HabitHero/Assets/Scripts/HabitHero.Runtime.asmdef',
+  );
+  const asmdef = JSON.parse(fs.readFileSync(asmdefPath, 'utf8')) as {
+    references?: string[];
+  };
+
+  for (const reference of [
+    'Unity.Notifications.Unified',
+    'Unity.Notifications.iOS',
+    'Unity.Notifications.Android',
+  ]) {
+    assert.ok(asmdef.references?.includes(reference), `Missing asmdef reference: ${reference}`);
+  }
+});
+
 test('Vercel keeps the Vite SPA build and history fallback explicit', () => {
   const vercelConfigPath = path.join(repositoryRoot, 'vercel.json');
   assert.ok(fs.existsSync(vercelConfigPath));
