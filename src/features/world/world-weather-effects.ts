@@ -215,10 +215,11 @@ function createRain(THREE: ThreeNamespace, quality: WeatherQuality, fieldSize: n
 
 export function createWorldWeatherEffects(
   THREE: ThreeNamespace,
-  { quality, fieldSize, walkableSize = fieldSize * 0.4 }: {
+  { quality, fieldSize, walkableSize = fieldSize * 0.4, starsEnabled = true }: {
     quality: WeatherQuality;
     fieldSize: number;
     walkableSize?: number;
+    starsEnabled?: boolean;
   },
 ): WorldWeatherEffects {
   const group = new THREE.Group();
@@ -250,11 +251,11 @@ export function createWorldWeatherEffects(
     const firefliesMaterial = fireflies.material as import('three').ShaderMaterial;
     const rainMaterial = rain.material as import('three').ShaderMaterial;
     stars.position.copy(camera.position);
-    stars.visible = isNight;
+    stars.visible = starsEnabled && isNight;
     fireflies.visible = isNight;
     rain.visible = isRain;
     starsMaterial.uniforms.uTime.value = prefersReducedMotion ? 0 : time;
-    starsMaterial.uniforms.uOpacity.value = isNight ? 0.84 : 0;
+    starsMaterial.uniforms.uOpacity.value = starsEnabled && isNight ? 0.84 : 0;
     firefliesMaterial.uniforms.uTime.value = prefersReducedMotion ? 0 : time;
     firefliesMaterial.uniforms.uOpacity.value = isNight ? 0.7 : 0;
     rainMaterial.uniforms.uTime.value = time;

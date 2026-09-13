@@ -13,12 +13,12 @@
         - generic [ref=f1e330]: 家長 Email
         - textbox "家長 Email" [ref=f1e331]:
           - /placeholder: parent@example.com
-          - text: f1272837411@gmail.com
+          - text: "[redacted test email]"
         - generic [ref=f1e332]: 通關密語
         - generic [ref=f1e333]:
           - textbox "通關密語" [ref=f1e334]:
             - /placeholder: 至少 6 碼
-            - text: Aa123456
+            - text: "[redacted test password]"
           - button "顯示密碼" [ref=f1e335]
         - button "登入任務森林" [ref=f1e339]
         - button "已安裝 App？開啟 App 登入" [ref=f1e340]

@@ -82,6 +82,17 @@ test('release preflight detects native modules beside the Unity app bundle', () 
   }
 });
 
+test('WebGL realtime bridge is excluded from native Unity targets', () => {
+  const pluginMetaPath = path.join(
+    repositoryRoot,
+    'unity/HabitHero/Assets/Plugins/WebGL/HabitHeroRealtimeWebSocket.jslib.meta',
+  );
+  const pluginMeta = fs.readFileSync(pluginMetaPath, 'utf8');
+
+  assert.match(pluginMeta, /Any:\n\s+second:\n\s+enabled: 0/u);
+  assert.match(pluginMeta, /WebGL: WebGL\n\s+second:\n\s+enabled: 1/u);
+});
+
 test('Unity runtime references mobile notification assemblies for native builds', () => {
   const asmdefPath = path.join(
     repositoryRoot,

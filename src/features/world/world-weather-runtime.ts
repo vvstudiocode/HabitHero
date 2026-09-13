@@ -6,12 +6,15 @@ import {
   getWorldTimeState,
   WORLD_TIME_LIGHTING,
   WORLD_TIME_PHASES,
+  WORLD_TIME_PHASE_SCHEDULE,
   WORLD_WEATHER_REFRESH_MS,
   type WorldTimePhase,
   type WorldWeatherState,
 } from './world-weather';
 import { fetchCwaWorldWeather } from './world-weather-client';
 import { createWorldWeatherEffects } from './world-weather-effects';
+import { createProceduralSky } from './procedural-sky/create-procedural-sky';
+import type { ProceduralSkyFrame } from './procedural-sky/procedural-sky-palette';
 import { PROTOTYPE_WORLD_ASSETS } from './world-runtime-assets';
 import { getNaturalWorldVisualSettings } from '../../../terrain-prototype/natural-world-visuals.js';
 
@@ -32,6 +35,7 @@ export interface WorldWeatherRuntimeOptions {
   fieldSize: number;
   walkableSize: number;
   dayNightEnabled: boolean;
+  useProceduralSky?: boolean;
   fixedTimePhase?: WorldTimePhase;
   skyboxUrl?: string;
   skyboxOffset?: Readonly<{ x: number; y: number }>;
@@ -51,6 +55,11 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError';
 }
 
+function getProceduralSkyStartHour(worldTime: { phase: WorldTimePhase; phaseProgress: number }): number {
+  const schedule = WORLD_TIME_PHASE_SCHEDULE[worldTime.phase];
+  return (schedule.startMinute + schedule.durationMinutes * worldTime.phaseProgress) / 60 % 24;
+}
+
 export function createWorldWeatherRuntime({
   THREE,
   scene,
@@ -59,6 +68,7 @@ export function createWorldWeatherRuntime({
   fieldSize,
   walkableSize,
   dayNightEnabled: initialDayNightEnabled,
+  useProceduralSky = false,
   fixedTimePhase,
   skyboxUrl,
   skyboxOffset,
@@ -75,16 +85,35 @@ export function createWorldWeatherRuntime({
 }: WorldWeatherRuntimeOptions): WorldWeatherRuntime {
   scene.background = new THREE.Color(visualSettings.backgroundColor);
   scene.fog = null;
-  const weatherEffects = createWorldWeatherEffects(THREE, { quality, fieldSize, walkableSize });
-  scene.add(weatherEffects.group);
-  const pollenMaterial = pollen.material as import('three').ShaderMaterial;
   let dayNightEnabled = initialDayNightEnabled;
   const getActiveWorldTimeState = () => fixedTimePhase
-    ? { phase: fixedTimePhase, phaseIndex: WORLD_TIME_PHASES.indexOf(fixedTimePhase), phaseProgress: 0 }
+    ? {
+      phase: fixedTimePhase,
+      phaseIndex: WORLD_TIME_PHASES.indexOf(fixedTimePhase),
+      phaseProgress: 0,
+    }
     : dayNightEnabled
       ? getWorldTimeState()
       : { phase: 'day' as const, phaseIndex: 1, phaseProgress: 0 };
   let currentWorldTime = getActiveWorldTimeState();
+  const proceduralSky = useProceduralSky
+    ? createProceduralSky({
+      THREE,
+      prefersReducedMotion,
+      quality,
+      cycleSeconds: 3600,
+      startHour: getProceduralSkyStartHour(currentWorldTime),
+    })
+    : undefined;
+  const weatherEffects = createWorldWeatherEffects(THREE, {
+    quality,
+    fieldSize,
+    walkableSize,
+    starsEnabled: !proceduralSky,
+  });
+  scene.add(weatherEffects.group);
+  if (proceduralSky) scene.add(proceduralSky.group);
+  const pollenMaterial = pollen.material as import('three').ShaderMaterial;
   let currentWeather: WorldWeatherState = DEFAULT_WORLD_WEATHER;
   let appliedWorldVisualKey = '';
   let activeSkyPhase: WorldTimePhase | undefined;
@@ -142,12 +171,27 @@ export function createWorldWeatherRuntime({
     butterflies.visible = !isNight && weather.condition === 'clear';
   };
 
+  const applyProceduralLighting = (frame: ProceduralSkyFrame, weather: WorldWeatherState) => {
+    const isCloudyWeather = weather.condition === 'cloudy' || weather.condition === 'storm';
+    const weatherLightFactor = isCloudyWeather ? 0.72 : 1;
+    const daylight = 1 - frame.night;
+    ambient.intensity = (0.55 + daylight * 1.17 + frame.moonVisibility * 0.15) * weatherLightFactor;
+    sun.position.fromArray(frame.sunDirection).multiplyScalar(28);
+    sun.intensity = (0.05 + frame.sunVisibility * 2.65) * weatherLightFactor;
+    sun.color.setRGB(frame.sun[0], frame.sun[1], frame.sun[2]);
+    nightFill.intensity = frame.night * 1.05;
+    moonFill.position.fromArray(frame.moonDirection).multiplyScalar(24);
+    moonFill.intensity = frame.moonVisibility * 0.5;
+    moonFill.color.setRGB(frame.moon[0], frame.moon[1], frame.moon[2]);
+    scene.environmentIntensity = (0.15 + daylight * 0.12) * weatherLightFactor;
+  };
+
   const loadSkyForPhase = (phase: WorldTimePhase) => new Promise<import('three').Texture>((resolve, reject) => {
     textureLoader.load(skyboxUrl ?? PROTOTYPE_WORLD_ASSETS.skyboxes[phase], resolve, undefined, reject);
   });
 
   const applySkyForPhase = async (phase: WorldTimePhase) => {
-    if (activeSkyPhase === phase || signal.aborted) return;
+    if (proceduralSky || activeSkyPhase === phase || signal.aborted) return;
     const requestSequence = ++skyRequestSequence;
     const loadedTexture = await loadSkyForPhase(phase);
     if (signal.aborted || requestSequence !== skyRequestSequence) {
@@ -207,6 +251,10 @@ export function createWorldWeatherRuntime({
     if (weatherRefreshTimer !== undefined) window.clearTimeout(weatherRefreshTimer);
     activeSkyTexture?.dispose();
     activeSkyTexture = undefined;
+    if (proceduralSky) {
+      scene.remove(proceduralSky.group);
+      proceduralSky.dispose();
+    }
     if (skyboxDome) {
       scene.remove(skyboxDome.mesh);
       skyboxDome.material.map?.dispose();
@@ -231,22 +279,34 @@ export function createWorldWeatherRuntime({
           if (!signal.aborted) console.warn('Unable to switch the world time sky texture.', error);
         });
       }
-      const weatherKey = `${currentWorldTime.phase}:${currentWeather.condition}:${currentWeather.intensity}`;
+      const proceduralFrame = proceduralSky?.update({
+        time,
+        camera,
+        dayNightEnabled,
+        // Keep a readable cloud layer even when the live weather endpoint
+        // reports a clear sky; weather still increases it above this floor.
+        cloudCover: Math.max(currentWeather.cloudCover, 72),
+      });
+      const visualPhase = proceduralFrame?.phase ?? currentWorldTime.phase;
+      const weatherKey = `${visualPhase}:${currentWeather.condition}:${currentWeather.intensity}`;
       if (weatherKey !== appliedWorldVisualKey) {
         appliedWorldVisualKey = weatherKey;
-        applyWorldVisualState(currentWorldTime.phase, currentWeather);
+        applyWorldVisualState(visualPhase, currentWeather);
       }
+      if (proceduralFrame) applyProceduralLighting(proceduralFrame, currentWeather);
       const lightningStrength = weatherEffects.update({
         time,
         delta,
-        phase: currentWorldTime.phase,
+        phase: visualPhase,
         weather: currentWeather,
         camera,
         prefersReducedMotion,
       });
-      const lighting = WORLD_TIME_LIGHTING[currentWorldTime.phase];
+      const lighting = WORLD_TIME_LIGHTING[visualPhase];
       const weatherExposureFactor = currentWeather.condition === 'cloudy' || currentWeather.condition === 'storm' ? 0.82 : 1;
-      renderer.toneMappingExposure = lighting.exposure * weatherExposureFactor + lightningStrength * 0.06;
+      renderer.toneMappingExposure = proceduralFrame
+        ? proceduralFrame.exposure * weatherExposureFactor + lightningStrength * 0.06
+        : lighting.exposure * weatherExposureFactor + lightningStrength * 0.06;
     },
     setDayNightEnabled,
   };

@@ -12,7 +12,7 @@
 - iOS / Android 原生輸出、Auth callback scheme、Supabase REST / Realtime
   contract 與 Edge Function payload 均有自動化測試。
 
-## 必須由外部平台完成的設定
+## 核心部署必須由外部平台完成的設定
 
 ### 1. Vercel Web
 
@@ -32,7 +32,8 @@ Unity 需要與 Web 相同的公開 Supabase 設定：
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - 可選：`HABITHERO_GAME_ASSET_BASE_URL`，若要載入 Vercel 上的公開 GLB / 音效
 
-Unity Android 若要啟用 FCM，另外以本機檔案或 CI secret file 注入：
+Unity Android 的核心登入、任務、同步與連線測試不需要 Firebase。只有要啟用
+Android FCM 推播時，才另外以本機檔案或 CI secret file 注入：
 
 - `unity/HabitHero/Assets/Plugins/Android/google-services.json`
 - Firebase Android package 必須是 `com.vvstudiocode.habithero`
@@ -44,14 +45,16 @@ Unity WebGL 或 iOS bundle。
 
 在 Supabase project `rqofqnoyxnmlsuejeyld` 的 Edge Function secrets 設定：
 
-#### FCM HTTP v1
+#### 可選：FCM HTTP v1（目前不列為核心部署門檻）
 
 - `FCM_PROJECT_ID`
 - `FCM_CLIENT_EMAIL`
 - `FCM_PRIVATE_KEY`：service-account PKCS#8 PEM，或以 `\\n` 表示換行
 
-另外要在 Firebase Console 啟用 Firebase Cloud Messaging API，並授予該
-service account 發送 FCM HTTP v1 的權限。
+若未使用 Firebase Console，這三個 secrets 可以先不設定；Android client
+仍可建置並使用核心功能，但不會完成 FCM token 註冊與 Android 推播送達。
+日後要啟用時，才需要在 Firebase/Google Cloud 啟用 Firebase Cloud Messaging
+API，並授予該 service account 發送 FCM HTTP v1 的權限。
 
 #### APNs
 
@@ -66,9 +69,9 @@ Edge Function 平台本身提供的 `SUPABASE_URL`、
 `SUPABASE_SERVICE_ROLE_KEY` 也必須只存在 Supabase secret environment，不能
 進入 Unity、Web bundle、Vercel public env、GitHub 或任何 app binary。
 
-### 4. Firebase / Android
+### 4. 可選：Firebase / Android 推播
 
-- Firebase project 與 HabitHero 使用同一個 Android package：
+- 若日後啟用 Android 推播，Firebase project 與 HabitHero 使用同一個 Android package：
   `com.vvstudiocode.habithero`
 - 下載對應 Android app 的 `google-services.json`
 - 啟用 FCM API
@@ -91,7 +94,8 @@ Edge Function 平台本身提供的 `SUPABASE_URL`、
 - 一組 parent 測試帳號與至少一個 child 測試帳號
 - 兩個可同時登入的測試裝置，用來驗證 Realtime、friend world、co-op 與
   reconnect
-- 已設定的 Firebase / APNs secrets，用來驗證 token 註冊、通知送達與通知點擊
+- 若要驗證原生推播，才需要已設定的 APNs secrets；Android 另外需要 Firebase
+  檔案與 FCM secrets。這些不阻塞核心 Web/Unity 部署驗收。
 - TestFlight 與 Google Play closed testing 的測試軌道
 
 在上述外部條件完成前，CI/build/contract 通過只能代表「可部署邊界完整」；

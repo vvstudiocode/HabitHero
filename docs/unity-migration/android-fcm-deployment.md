@@ -7,7 +7,10 @@ repository.
 For the complete handoff list covering Vercel, Supabase, Firebase, APNs, and
 store signing, see [external-settings-checklist.md](./external-settings-checklist.md).
 
-## Local Android build
+## Local Android build (optional push capability)
+
+The core Unity Android build does not require Firebase. The following setup is
+only needed when Android FCM push is part of the release scope:
 
 1. In Firebase Console, register an Android app with package ID
    `com.vvstudiocode.habithero`.
@@ -20,18 +23,21 @@ store signing, see [external-settings-checklist.md](./external-settings-checklis
 4. On Android 13 or later, grant the app notification permission. Devices and
    emulators must provide Google Play services for FCM token registration.
 
-## Supabase Edge Function secrets
+## Optional Supabase Edge Function secrets
 
-Configure these secrets for `notify-task-created`:
+Configure these secrets for `notify-task-created` only when Android FCM is enabled:
 
 - `FCM_PROJECT_ID`: Firebase project ID.
 - `FCM_CLIENT_EMAIL`: service-account client email.
 - `FCM_PRIVATE_KEY`: the service-account PKCS#8 private key, retaining PEM
   line breaks or using escaped `\\n` line breaks.
 
-Enable the Firebase Cloud Messaging API and grant the service account the
-permission required to send through the FCM HTTP v1 API. Never put the service
-account private key in Unity, Vercel, GitHub source, or a mobile bundle.
+If Firebase is not being used, leave these secrets unset. The Edge Function
+will skip FCM delivery while preserving the rest of the task notification
+flow. If FCM is enabled later, enable the Firebase Cloud Messaging API and
+grant the service account the permission required to send through the FCM HTTP
+v1 API. Never put the service account private key in Unity, Vercel, GitHub
+source, or a mobile bundle.
 
 ## Verification boundary
 

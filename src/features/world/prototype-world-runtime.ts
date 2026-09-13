@@ -1749,6 +1749,7 @@ export function mountPrototypeWorld(options: PrototypeWorldRuntimeOptions): Prot
       const weatherRuntime = createWorldWeatherRuntime({
         THREE, scene: worldScene, renderer: rendererInstance, quality, fieldSize: terrainWidth, walkableSize: walkableWidth,
         dayNightEnabled: (sunriseVillageSource || cloudWorkshopSource || forestValleySource) ? false : options.dayNightEnabled,
+        useProceduralSky: options.worldLocation === 'my-world',
         fixedTimePhase: forestValleySource ? 'night' : undefined, visualSettings,
         skyboxUrl: forestValleySource
           ? FOREST_VALLEY_SKYBOX_URL
