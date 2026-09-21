@@ -287,6 +287,34 @@ test('today adventure and wishlist sections omit redundant explanatory copy', ()
   assert.doesNotMatch(dashboard, /送出後等爸媽核准，就會變成可以兌換的獎勵/);
 });
 
+test('child adventure sections stay visible and collapsible without a backpack add control', () => {
+  const summary = read('../src/features/adventures/components/TodayAdventureSummary.tsx');
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+
+  assert.match(summary, /useState\(true\)/);
+  assert.match(summary, /useState\(false\)/);
+  assert.match(summary, /hh-child-adventure-section-toggle/);
+  assert.match(summary, /aria-expanded=\{expanded\}/);
+  assert.match(summary, /aria-controls=\{contentId\}/);
+  assert.doesNotMatch(summary, /onCreateGeneral|hh-child-adventure-section-action|新增一般冒險/);
+  assert.doesNotMatch(summary, /summary\.generalActive\.length > 0 \|\| summary\.generalHistoryByDate\.length > 0/);
+  assert.match(dashboard, /<ChildAdventureBoard/);
+  assert.match(dashboard, /onCreateGeneral=\{\(\) => setShowGoalForm\(true\)\}/);
+  assert.doesNotMatch(dashboard, /<TodayAdventureSummary[\s\S]{0,220}onCreateGeneral/);
+});
+
+test('child task cards open only the selected adventure detail', () => {
+  const dashboard = read('../src/components/ChildDashboard.tsx');
+
+  assert.match(dashboard, /const \[selectedAdventureTaskId, setSelectedAdventureTaskId\]/);
+  assert.match(dashboard, /<AdventureTaskDetail/);
+  assert.match(dashboard, /onRequestClose=\{\(\) => setSelectedAdventureTaskId\(null\)\}/);
+  assert.match(dashboard, /<ChildAdventureBoard/);
+  assert.match(dashboard, /const openAdventureBoard = \(\) =>/);
+  assert.match(dashboard, /onOpenBoard=\{openAdventureBoard\}/);
+  assert.doesNotMatch(dashboard, /adventureOpenRequest|requestedTask=\{/);
+});
+
 test('adventures use only the adventure board completion entry, not the legacy goal list', () => {
   assert.equal(isLegacyGrowthTask(task('general', 'todo')), false);
   assert.equal(isLegacyGrowthTask(task('daily', 'todo', { adventureType: 'daily', isDaily: true })), false);
@@ -332,7 +360,7 @@ test('child adventure UI is composed from reusable accessible components', () =>
   const overlayStyles = read('../src/styles/overlays.css');
   const tokens = read('../src/styles/tokens.css');
 
-  assert.match(dashboard, /<ChildAdventureBoard/);
+  assert.match(dashboard, /<AdventureTaskDetail/);
   assert.match(board, /openCard/);
   assert.match(card, /now: number/);
   assert.match(card, /now=\{now\}/);

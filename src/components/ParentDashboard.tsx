@@ -48,6 +48,7 @@ import { ParentGamePricePanel } from '../features/world/components/ParentGamePri
 import { CURRENT_WORLD_CHARACTER_ID, WORLD_CHARACTER_CATALOG } from '../features/characters/world-character-catalog';
 import { getParentBackgroundMusicPreference, setParentBackgroundMusicPreference } from '../lib/parent-background-music-preference';
 import { validatePointLedgerAdjustment } from '../lib/point-ledger';
+import { trackAnalyticsScreen } from '../lib/analytics';
 
 interface ParentDashboardProps {
   onSwitchToChild: (childId?: string) => void;
@@ -91,6 +92,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
   useEffect(() => {
     window.scrollTo(0, 0);
     featureContentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    trackAnalyticsScreen(`parent:${heroFeature ?? activeTab}`);
   }, [activeTab, heroFeature]);
 
   const observedLoading = useRef(false);

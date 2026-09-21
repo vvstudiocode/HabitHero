@@ -177,7 +177,7 @@ test('child today goals show the new adventure summary instead of legacy goal se
 
   assert.match(adventureState, /const adventureTasks = tasks\.filter\(\(task\) => !isLegacyGrowthTask\(task\)\)/);
   assert.match(adventureState, /todayAdventureSummary: getTodayAdventureSummary\(adventureTasks, adventureDate\)/);
-  assert.match(source, /<TodayAdventureSummary summary=\{todayAdventureSummary\}/);
+  assert.match(source, /<TodayAdventureSummary\s+summary=\{todayAdventureSummary\}/);
   assert.doesNotMatch(source, /<GoalCard/);
   assert.doesNotMatch(source, /parentGoalTasks|childGoalTasks|goalCopy\.child\.parentTitle/);
 });

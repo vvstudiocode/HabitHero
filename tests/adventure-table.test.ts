@@ -118,6 +118,7 @@ describe('adventure table landmark', () => {
     assert.match(childDashboardSource, /開始冒險/);
     assert.match(childDashboardSource, /onAdventureTableScreenPositionChange/);
     assert.match(childDashboardSource, /onAdventureTableIndicatorScreenPositionChange/);
+    assert.match(childDashboardSource, /openAdventureBoard/);
     assert.match(childDashboardSource, /setAdventureBoardOpen\(true\)/);
   });
 

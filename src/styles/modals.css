@@ -2030,6 +2030,78 @@
   line-height: 1.45;
 }
 
+.hh-child-adventure-section {
+  display: grid;
+  gap: 12px;
+}
+
+.hh-child-adventure-section-header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hh-child-adventure-section-heading {
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.hh-child-adventure-section-toggle {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  text-align: left;
+  touch-action: manipulation;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.hh-child-adventure-section-toggle:focus-visible {
+  outline: 3px solid var(--hh-character-focus-ring);
+  outline-offset: 2px;
+}
+
+.hh-child-adventure-section-chevron {
+  flex: 0 0 auto;
+  transition: transform var(--hh-adventure-enter-duration) ease-out;
+}
+
+.hh-child-adventure-section-chevron.is-expanded {
+  transform: rotate(180deg);
+}
+
+.hh-child-adventure-section-progress {
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.hh-child-adventure-section-content {
+  display: grid;
+  gap: 12px;
+}
+
+.hh-child-adventure-section-content[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hh-child-adventure-section-toggle,
+  .hh-child-adventure-section-chevron {
+    transition: none;
+  }
+}
+
 @media (orientation: landscape) {
   .hh-parent-content-modal--child .hh-child-feature-page {
     width: 100%;

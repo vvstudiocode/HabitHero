@@ -56,7 +56,9 @@ import {
 import { getBackgroundMusicPreference, setBackgroundMusicPreference } from '../lib/background-music-preference';
 import { useSafeAreaCutoutSide } from '../hooks/useSafeAreaCutoutSide';
 import { useDayNightPreference } from '../features/world/use-day-night-preference';
+import { trackAnalyticsEvent, trackAnalyticsScreen } from '../lib/analytics';
 import { ChildAdventureBoard } from '../features/adventures/components/ChildAdventureBoard';
+import { AdventureTaskDetail } from '../features/adventures/components/AdventureTaskDetail';
 import { AdventureTableDialogue } from '../features/adventures/components/AdventureTableDialogue';
 import type { AdventureTableScreenPosition } from '../features/world/adventure-table';
 import { ForestValleyGateDialogue } from '../features/world/components/ForestValleyGateDialogue';
@@ -238,6 +240,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   useEffect(() => {
     window.scrollTo(0, 0);
     featureContentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    trackAnalyticsScreen(`child:${heroFeature ?? activeTab}`);
   }, [activeTab, heroFeature]);
   
   // A direct child session uses its own child id. In parent child-mode, the
@@ -269,6 +272,33 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   );
   const [showPetNames, setShowPetNames] = useState(() => getPetNameDisplayPreference(activeChildId ?? '')), [backgroundMusicEnabled, setBackgroundMusicEnabled] = useState(() => getBackgroundMusicPreference(activeChildId ?? ''));
   const { dayNightEnabled, onDayNightChange } = useDayNightPreference(activeChildId);
+
+  useEffect(() => {
+    if (!activeChildId || getStoredWorldLocation(activeChildId) !== worldLocation) return undefined;
+    let visibleStartedAt = document.visibilityState === 'visible' ? Date.now() : 0;
+    let visibleDurationMs = 0;
+    const closeVisibleSegment = () => {
+      if (visibleStartedAt === 0) return;
+      visibleDurationMs += Math.max(0, Date.now() - visibleStartedAt);
+      visibleStartedAt = 0;
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') closeVisibleSegment();
+      else if (visibleStartedAt === 0) visibleStartedAt = Date.now();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    trackAnalyticsScreen(`world:${worldLocation}`);
+    trackAnalyticsEvent('world_enter', { location: worldLocation });
+    trackAnalyticsEvent('scene_enter', { scene: worldLocation });
+    return () => {
+      closeVisibleSegment();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      const durationSeconds = Math.max(0, Math.round(visibleDurationMs / 1000));
+      trackAnalyticsEvent('scene_exit', { scene: worldLocation });
+      trackAnalyticsEvent('scene_dwell', { scene: worldLocation, duration_seconds: durationSeconds });
+      trackAnalyticsEvent('world_exit', { location: worldLocation });
+    };
+  }, [activeChildId, worldLocation]);
 
   useEffect(() => {
     setShowPetNames(getPetNameDisplayPreference(activeChildId ?? ''));
@@ -525,7 +555,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   // Wishlist Form
   const [showWishlistForm, setShowWishlistForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
-  const [adventureOpenRequest, setAdventureOpenRequest] = useState<{ id: string; requestId: number } | null>(null);
+  const [selectedAdventureTaskId, setSelectedAdventureTaskId] = useState<string | null>(null);
   const [wishName, setWishName] = useState('');
   const [wishlistToCancel, setWishlistToCancel] = useState<import('../types').WishlistItem | null>(null);
   const [rewardToConfirm, setRewardToConfirm] = useState<Reward | null>(null);
@@ -591,9 +621,12 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     if (toastTimer.current) clearTimeout(toastTimer.current);
   }, []);
 
-  // The adventure board is the only place that starts or completes an
-  // adventure. Today's Goals is a read-only progress and history summary.
+  // Today's Goals is a read-only progress and history summary. The selected
+  // task opens its own detail surface for execution and completion.
   const { adventureTasks, adventureDate, todayAdventureSummary } = selectChildAdventureState(tasks, now);
+  const selectedAdventureTask = selectedAdventureTaskId
+    ? adventureTasks.find((task) => task.id === selectedAdventureTaskId) ?? null
+    : null;
   const hasCompletedAdventureToday = todayAdventureSummary.daily.some((task) => task.status === 'completed')
     || todayAdventureSummary.generalHistoryByDate.some(
       (group) => group.dateKey === adventureDate && group.tasks.some((task) => task.status === 'completed'),
@@ -607,6 +640,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
     setAdventureTablePromptPosition(null);
     setAdventureTableScreenPosition(null);
     setAdventureBoardOpen(false);
+    setSelectedAdventureTaskId(null);
   }, [activeChildId]);
 
   useEffect(() => {
@@ -896,6 +930,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
 
   const openChildFeature = (feature: ChildFeature) => {
     setWorldNpcDialogueNpcId(null);
+    setSelectedAdventureTaskId(null);
     if (feature === 'goals' || feature === 'growth' || feature === 'wishlist') setActiveTab(feature);
     setHeroFeature(feature);
     setHeroMenuGroup(null);
@@ -913,6 +948,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   const closeChildFeature = (afterClose?: () => void) => {
     dismissWithAnimation(() => {
       setHeroFeature(null);
+      setSelectedAdventureTaskId(null);
       afterClose?.();
     }, '.hh-parent-content-modal', 260);
     setHeroMenuGroup(null);
@@ -1075,18 +1111,33 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
   ];
   const isGameFeature = heroFeature === 'inventory' || heroFeature === 'shop' || heroFeature === 'settings';
 
+  const getAdventureTaskExecution = (task: AdventureTask) => {
+    if (task.status === 'proposed') return { allowed: false, reason: '等待爸媽確認後，就能開始這個冒險。' };
+    if (task.status === 'proposal_revision_requested') return { allowed: false, reason: '請先補充冒險內容，再交給爸媽確認。' };
+    if (task.status === 'pending' || task.status === 'completed') return { allowed: false, reason: null };
+    if (hasStartedAdventureTimer(task)) return { allowed: true, reason: null };
+    const executionState = getTaskExecutionState(task.dueTime, task.endTime);
+    if (executionState === 'not_started') return { allowed: false, reason: `還沒到可開始時間：${formatTaskTime(task.dueTime)}。` };
+    if (executionState === 'expired') return { allowed: false, reason: `這次冒險已截止：${formatTaskWindow(task)}。` };
+    return { allowed: true, reason: null };
+  };
+
   const handleOpenAdventureTask = (task: AdventureTask) => {
-    setAdventureOpenRequest({ id: task.id, requestId: Date.now() });
-    setAdventureBoardOpen(true);
+    setSelectedAdventureTaskId(task.id);
   };
 
   const openAdventureBoard = () => {
+    setSelectedAdventureTaskId(null);
     setAdventureBoardOpen(true);
   };
 
   const closeAdventureBoard = () => {
     setAdventureBoardOpen(false);
   };
+
+  const selectedAdventureExecution = selectedAdventureTask
+    ? getAdventureTaskExecution(selectedAdventureTask)
+    : null;
 
   if (sessionLoading || loading) {
     return <WorldPreparingScreen detail="正在同步孩子的世界資料…" />;
@@ -1357,17 +1408,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         generalTitle={activeGeneralAdventureGroup?.title}
         now={now}
         loading={actionPending}
-        requestedTask={adventureOpenRequest}
-        isTaskExecutable={(task) => {
-          if (task.status === 'proposed') return { allowed: false, reason: '等待爸媽確認後，就能開始這個冒險。' };
-          if (task.status === 'proposal_revision_requested') return { allowed: false, reason: '請先補充冒險內容，再交給爸媽確認。' };
-          if (task.status === 'pending' || task.status === 'completed') return { allowed: false };
-          if (hasStartedAdventureTimer(task)) return { allowed: true };
-          const executionState = getTaskExecutionState(task.dueTime, task.endTime);
-          if (executionState === 'not_started') return { allowed: false, reason: `還沒到可開始時間：${formatTaskTime(task.dueTime)}。` };
-          if (executionState === 'expired') return { allowed: false, reason: `這次冒險已截止：${formatTaskWindow(task)}。` };
-          return { allowed: true };
-        }}
+        isTaskExecutable={getAdventureTaskExecution}
         onCreateGeneral={() => setShowGoalForm(true)}
         onTimerToggle={(task) => {
           void toggleTimer(task).catch(() => showToast('計時狀態更新失敗，請再試一次。'));
@@ -1375,6 +1416,22 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         onComplete={handleAdventureCompletion}
         onAbandon={handleAbandonAdventure}
       />
+
+      {heroFeature && selectedAdventureTask && selectedAdventureExecution && (
+        <AdventureTaskDetail
+          task={selectedAdventureTask}
+          now={now}
+          canExecute={selectedAdventureExecution.allowed}
+          blockedReason={selectedAdventureExecution.reason}
+          loading={actionPending}
+          onRequestClose={() => setSelectedAdventureTaskId(null)}
+          onTimerToggle={(task) => {
+            void toggleTimer(task).catch(() => showToast('計時狀態更新失敗，請再試一次。'));
+          }}
+          onComplete={handleAdventureCompletion}
+          onAbandon={handleAbandonAdventure}
+        />
+      )}
 
       {/* Main Content */}
       {heroFeature && <div className="hh-child-feature-backdrop" aria-hidden="true" />}
@@ -1532,7 +1589,11 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
         </nav>
 
         {!isGameFeature && activeTab === 'goals' && (
-          <TodayAdventureSummary summary={todayAdventureSummary} today={adventureDate} onTaskSelect={handleOpenAdventureTask} />
+          <TodayAdventureSummary
+            summary={todayAdventureSummary}
+            today={adventureDate}
+            onTaskSelect={handleOpenAdventureTask}
+          />
         )}
 
         {!isGameFeature && activeTab === 'growth' && growthSummary && (

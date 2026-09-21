@@ -227,7 +227,7 @@ test('general adventure form uses an icon-only sheet header and hides scrollbar 
   assert.match(neutralStyles, /\.hh-goal-proposal-backdrop:hover,[\s\S]*?background:\s*rgb\(18 57 59 \/ 30%\)\s*!important/);
 });
 
-test('a newly created general adventure waits for the child to open it from the board', () => {
+test('a newly created general adventure is reachable from the child adventure board', () => {
   const board = read('../src/features/adventures/components/ChildAdventureBoard.tsx');
   const dashboard = read('../src/components/ChildDashboard.tsx');
   const proposalForm = read('../src/features/growth/components/GoalProposalForm.tsx');
@@ -241,9 +241,14 @@ test('a newly created general adventure waits for the child to open it from the 
   assert.match(board, /task\.id === requestedTask\.id/);
   assert.match(board, /setSelectedTaskId\(requestedTask\.id\)/);
   assert.match(board, /handledRequestId\.current === requestedTask\.requestId/);
-  assert.match(dashboard, /requestedTask=\{adventureOpenRequest\}/);
+  assert.match(dashboard, /selectedAdventureTaskId/);
+  assert.match(dashboard, /<TodayAdventureSummary/);
+  assert.match(dashboard, /<ChildAdventureBoard/);
+  assert.match(dashboard, /onCreateGeneral=\{\(\) => setShowGoalForm\(true\)\}/);
+  assert.match(dashboard, /openAdventureBoard/);
+  assert.doesNotMatch(dashboard, /requestedTask=\{adventureOpenRequest\}/);
   assert.doesNotMatch(submitHandler, /setAdventureOpenRequest/);
-  assert.match(dashboard, /setAdventureOpenRequest\(\{ id: task\.id, requestId: Date\.now\(\) \}\)/);
+  assert.doesNotMatch(dashboard, /setAdventureOpenRequest\(\{ id: task\.id, requestId: Date\.now\(\) \}\)/);
   assert.match(dashboard, /dismissWithAnimation\([\s\S]*?\.hh-goal-proposal-overlay/);
   assert.match(proposalForm, /建立冒險/);
   assert.match(proposalForm, /回到一般冒險項目，想開始時再點開/);

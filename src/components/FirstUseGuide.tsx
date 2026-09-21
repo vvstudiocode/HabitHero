@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, Gift, ListChecks, Settings, Sparkles, UserRound } from 'lucide-react';
+import { trackAnalyticsEvent } from '../lib/analytics';
 
 export const FIRST_USE_GUIDE_STORAGE_KEY = 'habithero:first-use-guide:v1';
 
@@ -177,6 +178,7 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
 
   useEffect(() => {
     copyRef.current?.focus();
+    trackAnalyticsEvent('tutorial_step', { step: stepIndex + 1, action: 'view' });
   }, [stepIndex]);
 
   useLayoutEffect(() => {
@@ -189,12 +191,14 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
     return () => observer.disconnect();
   }, [stepIndex, targetRect]);
 
-  const finish = () => {
+  const finish = (action: 'skip' | 'complete' = 'complete') => {
+    trackAnalyticsEvent('tutorial_step', { step: stepIndex + 1, action });
     completeFirstUseGuide();
     onClose();
   };
 
   const goToStep = (nextIndex: number) => {
+    trackAnalyticsEvent('tutorial_step', { step: stepIndex + 1, action: nextIndex > stepIndex ? 'next' : 'back' });
     onStepChange?.(nextIndex);
     setStepIndex(nextIndex);
   };
@@ -259,12 +263,12 @@ export function FirstUseGuide({ onClose, onStepChange }: FirstUseGuideProps) {
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-0.5">
-            <button type="button" onClick={finish} className={`min-h-8 rounded-lg px-2 text-[11px] font-bold transition-colors hover:bg-black/20 ${usesLightCopy ? 'text-gray-950' : 'text-white/80 hover:text-white'}`}>跳過</button>
+            <button type="button" onClick={() => finish('skip')} className={`min-h-8 rounded-lg px-2 text-[11px] font-bold transition-colors hover:bg-black/20 ${usesLightCopy ? 'text-gray-950' : 'text-white/80 hover:text-white'}`}>跳過</button>
             <div className="flex gap-1">
               <button type="button" onClick={() => goToStep(Math.max(0, stepIndex - 1))} disabled={stepIndex === 0} className={`flex min-h-8 items-center gap-0.5 rounded-lg border px-1.5 text-[11px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${usesLightCopy ? 'border-gray-300 bg-gray-50 text-gray-950 hover:bg-gray-100' : 'border-white/60 bg-black/20 text-white hover:bg-black/40'}`}>
                 <ArrowLeft size={13} aria-hidden="true" /> 上一步
               </button>
-              <button type="button" onClick={() => isLastStep ? finish() : goToStep(stepIndex + 1)} className="flex min-h-8 items-center gap-0.5 rounded-lg border border-cyan-200 bg-cyan-600/90 px-1.5 text-[11px] font-bold text-white transition-colors hover:bg-cyan-500">
+              <button type="button" onClick={() => isLastStep ? finish('complete') : goToStep(stepIndex + 1)} className="flex min-h-8 items-center gap-0.5 rounded-lg border border-cyan-200 bg-cyan-600/90 px-1.5 text-[11px] font-bold text-white transition-colors hover:bg-cyan-500">
                 {isLastStep ? '完成' : '下一步'}
                 {!isLastStep && <ArrowRight size={13} aria-hidden="true" />}
               </button>

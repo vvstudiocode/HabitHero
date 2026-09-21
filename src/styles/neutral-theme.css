@@ -241,6 +241,12 @@ body,
   transition: background 180ms ease, color 180ms ease;
 }
 
+.hh-sprite-theme .hh-child-adventure-section-toggle {
+  color: var(--hh-neutral-ink);
+  background: transparent;
+  box-shadow: none;
+}
+
 .hh-child-feature-nav-button:hover,
 .hh-child-feature-nav-button:focus-visible {
   color: var(--hh-neutral-ink) !important;

@@ -17,10 +17,11 @@ import { isPublicAuthView, PARENT_IDLE_LOCK_MS } from './lib/view-access';
 import { canOpenFamilyPicker, resolveActiveChildId } from './lib/family-switch';
 import { PasswordRecovery } from './components/PasswordRecovery';
 import { WorldPreparingScreen } from './components/WorldPreparingScreen';
-import { AuthLinkBridge } from './components/AuthLinkBridge';
+import { AuthBridgeWithAnalytics } from './components/AuthBridgeWithAnalytics';
 import { getAppLinkIntent, getInitialAuthCallbackUrl } from './lib/auth-deep-link';
 import { isNativeApp, openAppLink } from './lib/app-links';
 import { openPasswordRecoveryInApp } from './lib/auth-recovery-handoff';
+import { AdminAnalyticsDashboard } from './features/admin-analytics/components/AdminAnalyticsDashboard';
 
 function MainApp() {
   const { state, clearProtectedState, hasSession, loading, initialLoading, dataReady, role, error, retry, setChildLoggedIn, setParentActiveChild } = useAppStore();
@@ -41,7 +42,6 @@ function MainApp() {
   const [childPreview, setChildPreview] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setCurrentView('resetPassword');
@@ -169,13 +169,7 @@ function MainApp() {
   const webAppLoginAction = isNativeApp() ? undefined : handleOpenAppLogin;
   const webAppRecoveryAction = isNativeApp() ? undefined : handleOpenAppRecovery;
 
-  const authLinkBridge = (
-    <AuthLinkBridge
-      onLoginLink={() => { setRecoveryError(null); setCurrentView('login'); }}
-      onRecoveryLink={() => { setRecoveryError(null); setCurrentView('resetPassword'); }}
-      onRecoveryError={setRecoveryError}
-    />
-  );
+  const authLinkBridge = <AuthBridgeWithAnalytics currentView={currentView} onLoginLink={() => { setRecoveryError(null); setCurrentView('login'); }} onRecoveryLink={() => { setRecoveryError(null); setCurrentView('resetPassword'); }} onRecoveryError={setRecoveryError} />;
   const renderWithAuthLinkBridge = (content: React.ReactNode) => <>{authLinkBridge}{content}</>;
 
   const renderLoginBackgroundScreen = (content: React.ReactNode) => (
@@ -280,6 +274,15 @@ function MainApp() {
 }
 
 export default function App() {
+  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin/analytics');
+  if (isAdminRoute) {
+    return (
+      <div className="hh-sprite-theme min-h-[100dvh]">
+        <AdminAnalyticsDashboard />
+      </div>
+    );
+  }
+
   return (
     <AppProvider>
       <div className="hh-sprite-theme min-h-[100dvh]">

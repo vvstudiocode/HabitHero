@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, ChevronDown, Circle, CloudUpload, Clock3 } from 'lucide-react';
+import { useId, useState, type ReactNode } from 'react';
 import { formatAdventureTaskWindow, getAdventureProgress, getAdventureStatusLabel, getAdventureTaskState } from '../adventure-progress';
-import type { AdventureTask, AdventureTaskVisualState } from '../types';
+import type { AdventureProgress, AdventureTask, AdventureTaskVisualState } from '../types';
 import type { AdventureDateGroup, TodayAdventureSummary } from '../today-adventure-summary';
 import { PointValue } from '../../../components/shared/PointValue';
 
@@ -8,6 +9,57 @@ interface TodayAdventureSummaryProps {
   summary: TodayAdventureSummary;
   today: string;
   onTaskSelect: (task: AdventureTask) => void;
+}
+
+interface CollapsibleAdventureSectionProps {
+  id: string;
+  title: string;
+  progress: AdventureProgress;
+  expanded: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}
+
+function CollapsibleAdventureSection({
+  id,
+  title,
+  progress,
+  expanded,
+  onToggle,
+  children,
+}: CollapsibleAdventureSectionProps) {
+  const instanceId = useId().replaceAll(':', '');
+  const titleId = `${id}-title-${instanceId}`;
+  const contentId = `${id}-content-${instanceId}`;
+
+  return (
+    <section className="hh-child-feature-section hh-child-adventure-section" aria-labelledby={titleId}>
+      <div className="hh-child-adventure-section-header">
+        <h2 id={titleId} className="hh-child-adventure-section-heading">
+          <button
+            type="button"
+            className="hh-child-adventure-section-toggle"
+            aria-expanded={expanded}
+            aria-controls={contentId}
+            onClick={onToggle}
+          >
+            <ChevronDown
+              className={`hh-child-adventure-section-chevron${expanded ? ' is-expanded' : ''}`}
+              size={20}
+              aria-hidden="true"
+            />
+            <span className="min-w-0 flex-1">{title}</span>
+            <span className="hh-child-adventure-section-progress" aria-label={`完成 ${progress.completed} 個，共 ${progress.total} 個`}>
+              {progress.completed}/{progress.total}
+            </span>
+          </button>
+        </h2>
+      </div>
+      <div id={contentId} className="hh-child-adventure-section-content" hidden={!expanded}>
+        {children}
+      </div>
+    </section>
+  );
 }
 
 function getStateIcon(state: AdventureTaskVisualState) {
@@ -111,16 +163,19 @@ function CompletedDateGroup({ group, today, onTaskSelect }: { key?: string; grou
 
 export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdventureSummaryProps) {
   const dailyProgress = getAdventureProgress(summary.daily);
+  const generalProgress = getAdventureProgress(summary.generalActive);
+  const [dailyExpanded, setDailyExpanded] = useState(true);
+  const [generalExpanded, setGeneralExpanded] = useState(false);
 
   return (
     <div className="hh-child-feature-page hh-child-feature-page--adventure space-y-6" aria-label="今日冒險進度">
-      <section className="hh-child-feature-section space-y-3" aria-labelledby="today-daily-adventure-title">
-        <div className="flex items-end justify-between gap-3 px-2">
-          <div>
-            <h2 id="today-daily-adventure-title" className="font-black text-gray-800">每日冒險</h2>
-          </div>
-          <span className="shrink-0 text-lg font-black tabular-nums text-gray-700">{dailyProgress.completed}/{dailyProgress.total}</span>
-        </div>
+      <CollapsibleAdventureSection
+        id="today-daily-adventure"
+        title="每日冒險"
+        progress={dailyProgress}
+        expanded={dailyExpanded}
+        onToggle={() => setDailyExpanded((current) => !current)}
+      >
         {summary.daily.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-5 text-center text-sm font-bold text-gray-400">今天沒有每日冒險。</p>
         ) : (
@@ -128,33 +183,37 @@ export function TodayAdventureSummary({ summary, today, onTaskSelect }: TodayAdv
             {summary.daily.map((task) => <AdventureSummaryTask key={task.id} task={task} onSelect={onTaskSelect} />)}
           </ul>
         )}
-      </section>
+      </CollapsibleAdventureSection>
 
-      {(summary.generalActive.length > 0 || summary.generalHistoryByDate.length > 0) && (
-        <section className="hh-child-feature-section space-y-3" aria-labelledby="today-general-adventure-title">
-          <div className="px-2">
-            <h2 id="today-general-adventure-title" className="font-black text-gray-800">一般冒險</h2>
+      <CollapsibleAdventureSection
+        id="today-general-adventure"
+        title="一般冒險"
+        progress={generalProgress}
+        expanded={generalExpanded}
+        onToggle={() => setGeneralExpanded((current) => !current)}
+      >
+        {summary.generalActive.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="px-2 text-sm font-black text-gray-500">進行中</h3>
+            <ul className="space-y-2">
+              {summary.generalActive.map((task) => <AdventureSummaryTask key={task.id} task={task} onSelect={onTaskSelect} />)}
+            </ul>
           </div>
+        )}
 
-          {summary.generalActive.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="px-2 text-sm font-black text-gray-500">進行中</h3>
-              <ul className="space-y-2">
-                {summary.generalActive.map((task) => <AdventureSummaryTask key={task.id} task={task} onSelect={onTaskSelect} />)}
-              </ul>
-            </div>
-          )}
+        {summary.generalHistoryByDate.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="px-2 text-sm font-black text-gray-500">完成紀錄</h3>
+            {summary.generalHistoryByDate.map((group) => (
+              <CompletedDateGroup key={group.dateKey} group={group} today={today} onTaskSelect={onTaskSelect} />
+            ))}
+          </div>
+        )}
 
-          {summary.generalHistoryByDate.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="px-2 text-sm font-black text-gray-500">完成紀錄</h3>
-              {summary.generalHistoryByDate.map((group) => (
-                <CompletedDateGroup key={group.dateKey} group={group} today={today} onTaskSelect={onTaskSelect} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+        {summary.generalActive.length === 0 && summary.generalHistoryByDate.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-5 text-center text-sm font-bold text-gray-400">目前沒有一般冒險。</p>
+        )}
+      </CollapsibleAdventureSection>
 
     </div>
   );

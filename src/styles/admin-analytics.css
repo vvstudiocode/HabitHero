@@ -1,0 +1,503 @@
+.hh-admin-page,
+.hh-admin-login-page {
+  min-height: 100dvh;
+  color: #153b3d;
+  background:
+    radial-gradient(circle at 90% -10%, rgb(244 185 66 / 22%), transparent 28rem),
+    linear-gradient(145deg, #f6f7f1 0%, #eef5f1 55%, #fff8e7 100%);
+}
+
+.hh-admin-page {
+  box-sizing: border-box;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 36px clamp(20px, 4vw, 68px) 72px;
+}
+
+.hh-admin-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.hh-admin-header h1,
+.hh-admin-login-card h1 {
+  margin: 5px 0 6px;
+  color: #12393b;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.hh-admin-header p:not(.hh-admin-eyebrow),
+.hh-admin-login-copy {
+  max-width: 620px;
+  margin: 0;
+  color: #58706a;
+  font-size: 0.95rem;
+}
+
+.hh-admin-eyebrow,
+.hh-admin-section-kicker {
+  margin: 0;
+  color: #2f7f78;
+  font-family: var(--hh-font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.hh-admin-header-actions,
+.hh-admin-toolbar,
+.hh-admin-data-strip,
+.hh-admin-panel-heading,
+.hh-admin-login-note,
+.hh-admin-secure-badge,
+.hh-admin-refresh-button,
+.hh-admin-secondary-button,
+.hh-admin-floating-logout {
+  display: flex;
+  align-items: center;
+}
+
+.hh-admin-header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.hh-admin-secure-badge {
+  min-height: 36px;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #b8ded4;
+  border-radius: 999px;
+  color: #216b66;
+  background: rgb(225 240 237 / 82%);
+  font-size: 0.77rem;
+  font-weight: 800;
+}
+
+.hh-admin-refresh-button,
+.hh-admin-secondary-button,
+.hh-admin-floating-logout {
+  min-height: 44px;
+  gap: 8px;
+  border: 1px solid #cbdcd7;
+  border-radius: 12px;
+  color: #216b66;
+  background: rgb(255 253 248 / 90%);
+  padding: 0 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.hh-admin-refresh-button:hover,
+.hh-admin-secondary-button:hover,
+.hh-admin-floating-logout:hover {
+  border-color: #78b9ad;
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.hh-admin-refresh-button:disabled,
+.hh-admin-primary-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.hh-admin-toolbar {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: #58706a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.hh-admin-toolbar button {
+  min-height: 40px;
+  min-width: 58px;
+  border: 1px solid #d2e0dc;
+  border-radius: 10px;
+  color: #3f6865;
+  background: rgb(255 253 248 / 76%);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.hh-admin-toolbar button.is-active {
+  border-color: #2f7f78;
+  color: #fffdf8;
+  background: #2f7f78;
+}
+
+.hh-admin-toolbar-hint {
+  margin-left: auto;
+  color: #7a918b;
+  font-weight: 600;
+}
+
+.hh-admin-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 13px 16px;
+  border: 1px solid #ebd596;
+  border-radius: 14px;
+  color: #74540b;
+  background: #fff8dd;
+  font-size: 0.83rem;
+  line-height: 1.55;
+}
+
+.hh-admin-info-banner svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.hh-admin-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.hh-admin-metric,
+.hh-admin-panel {
+  border: 1px solid rgb(193 216 209 / 82%);
+  border-radius: 18px;
+  background: rgb(255 253 248 / 88%);
+  box-shadow: 0 16px 38px rgb(24 74 66 / 7%);
+}
+
+.hh-admin-metric {
+  display: flex;
+  gap: 12px;
+  min-height: 124px;
+  box-sizing: border-box;
+  padding: 17px;
+}
+
+.hh-admin-metric-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.hh-admin-metric--blue .hh-admin-metric-icon { color: #2f7f78; background: #e1f0ed; }
+.hh-admin-metric--amber .hh-admin-metric-icon { color: #8a6508; background: #fff0bd; }
+.hh-admin-metric--green .hh-admin-metric-icon { color: #3e7449; background: #e5f0e6; }
+.hh-admin-metric--coral .hh-admin-metric-icon { color: #a94d3e; background: #fce6df; }
+
+.hh-admin-metric p {
+  margin: 0 0 5px;
+  color: #58706a;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.hh-admin-metric strong {
+  display: block;
+  color: #12393b;
+  font-family: var(--hh-font-display);
+  font-size: 1.65rem;
+  line-height: 1.1;
+}
+
+.hh-admin-metric small {
+  display: block;
+  margin-top: 5px;
+  color: #7a918b;
+  font-size: 0.68rem;
+}
+
+.hh-admin-main-grid,
+.hh-admin-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.hh-admin-secondary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hh-admin-panel {
+  min-width: 0;
+  padding: 20px;
+}
+
+.hh-admin-panel--wide {
+  min-height: 300px;
+}
+
+.hh-admin-panel--table {
+  overflow: hidden;
+}
+
+.hh-admin-panel-heading {
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.hh-admin-panel-heading h2 {
+  margin: 4px 0 0;
+  color: #153b3d;
+  font-size: 1.13rem;
+}
+
+.hh-admin-panel-heading > span {
+  flex: 0 0 auto;
+  color: #7a918b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.hh-admin-chart {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(5px, 1.3vw, 13px);
+  height: 190px;
+  padding: 15px 4px 0;
+  border-bottom: 1px solid #d8e5e0;
+}
+
+.hh-admin-chart-column {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.hh-admin-chart-value,
+.hh-admin-chart-column > span {
+  color: #7a918b;
+  font-size: 0.62rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.hh-admin-chart-bar-wrap {
+  display: flex;
+  width: 100%;
+  height: 136px;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.hh-admin-chart-bar {
+  width: min(28px, 70%);
+  min-height: 6px;
+  border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(180deg, #65c8bf, #2f7f78);
+}
+
+.hh-admin-data-strip {
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding-top: 15px;
+  color: #7a918b;
+  font-size: 0.72rem;
+}
+
+.hh-admin-data-strip b { color: #153b3d; font-size: 0.9rem; }
+
+.hh-admin-funnel,
+.hh-admin-step-list,
+.hh-admin-scene-list {
+  display: grid;
+  gap: 15px;
+}
+
+.hh-admin-funnel-row > div:first-child,
+.hh-admin-step-row,
+.hh-admin-scene-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hh-admin-funnel-row > div:first-child {
+  margin-bottom: 7px;
+  color: #58706a;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.hh-admin-funnel-row b { color: #153b3d; }
+.hh-admin-funnel-track,
+.hh-admin-step-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e8efeb;
+}
+
+.hh-admin-funnel-track i,
+.hh-admin-step-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f4b942, #f47c61);
+}
+
+.hh-admin-panel-footnote,
+.hh-admin-empty {
+  margin: 17px 0 0;
+  color: #7a918b;
+  font-size: 0.76rem;
+}
+
+.hh-admin-step-row {
+  color: #58706a;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.hh-admin-step-track { flex: 1; }
+.hh-admin-step-track i { background: linear-gradient(90deg, #65c8bf, #2f7f78); }
+.hh-admin-step-row b { min-width: 42px; color: #153b3d; text-align: right; }
+
+.hh-admin-retention-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #d8e5e0;
+  border-radius: 12px;
+  color: #58706a;
+  font-size: 0.78rem;
+}
+
+.hh-admin-retention-grid > * {
+  padding: 10px 9px;
+  border-bottom: 1px solid #d8e5e0;
+}
+
+.hh-admin-retention-grid > :nth-last-child(-n + 3) { border-bottom: 0; }
+.hh-admin-retention-grid > span:nth-child(-n + 3) { color: #7a918b; background: #f3f7f4; font-size: 0.68rem; font-weight: 800; }
+.hh-admin-retention-grid strong { color: #2f7f78; text-align: right; }
+
+.hh-admin-scene-row {
+  padding-bottom: 11px;
+  border-bottom: 1px solid #e0ebe6;
+}
+
+.hh-admin-scene-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.hh-admin-scene-row b,
+.hh-admin-scene-row small { display: block; }
+.hh-admin-scene-row b { color: #153b3d; font-size: 0.82rem; }
+.hh-admin-scene-row small { margin-top: 3px; color: #7a918b; font-size: 0.68rem; }
+.hh-admin-scene-row strong { color: #b27d0a; white-space: nowrap; }
+
+.hh-admin-table-scroll { overflow-x: auto; }
+.hh-admin-panel table { width: 100%; min-width: 760px; border-collapse: collapse; text-align: left; }
+.hh-admin-panel th { padding: 0 12px 10px; color: #7a918b; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap; }
+.hh-admin-panel td { padding: 13px 12px; border-top: 1px solid #e0ebe6; color: #58706a; font-size: 0.78rem; white-space: nowrap; }
+.hh-admin-panel td:first-child { color: #153b3d; }
+.hh-admin-panel td strong,
+.hh-admin-panel td small { display: block; }
+.hh-admin-panel td small { margin-top: 2px; color: #8ba09a; font-size: 0.65rem; }
+
+.hh-admin-login-page {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+.hh-admin-login-card {
+  width: min(100%, 440px);
+  box-sizing: border-box;
+  padding: clamp(24px, 5vw, 42px);
+  border: 1px solid rgb(193 216 209 / 90%);
+  border-radius: 24px;
+  background: rgb(255 253 248 / 94%);
+  box-shadow: 0 24px 64px rgb(24 74 66 / 12%);
+}
+
+.hh-admin-brand-mark,
+.hh-admin-denied-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  margin-bottom: 22px;
+  border-radius: 15px;
+  color: #fffdf8;
+  background: #2f7f78;
+}
+
+.hh-admin-login-card h1 { font-size: clamp(1.85rem, 6vw, 2.5rem); }
+.hh-admin-login-form { display: grid; gap: 9px; margin-top: 26px; }
+.hh-admin-login-form label { color: #3f6865; font-size: 0.78rem; font-weight: 800; }
+.hh-admin-login-form input {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  margin-bottom: 7px;
+  padding: 0 13px;
+  border: 1px solid #cbdcd7;
+  border-radius: 11px;
+  color: #153b3d;
+  background: #fff;
+  outline: none;
+}
+
+.hh-admin-login-form input:focus { border-color: #2f7f78; box-shadow: 0 0 0 3px rgb(47 127 120 / 18%); }
+.hh-admin-primary-button { min-height: 48px; margin-top: 7px; border: 0; border-radius: 12px; color: #fffdf8; background: #2f7f78; font-weight: 800; cursor: pointer; }
+.hh-admin-primary-button:hover { background: #246c66; }
+.hh-admin-login-note { gap: 7px; margin: 20px 0 0; color: #7a918b; font-size: 0.72rem; line-height: 1.5; }
+.hh-admin-denied-icon { color: #a94d3e; background: #fce6df; }
+.hh-admin-login-card--denied .hh-admin-denied-icon { color: #a94d3e; }
+.hh-admin-secondary-button { justify-content: center; margin-top: 22px; }
+.hh-admin-error { margin: 16px 0 0; color: #a94d3e; font-size: 0.8rem; font-weight: 800; }
+.hh-admin-loading { color: #58706a; font-weight: 800; }
+.hh-admin-floating-logout { position: fixed; right: 22px; bottom: 22px; z-index: 5; box-shadow: 0 12px 28px rgb(24 74 66 / 15%); }
+.hh-admin-spin { animation: hh-admin-spin 0.9s linear infinite; }
+
+@keyframes hh-admin-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 760px) {
+  .hh-admin-page { padding: 24px 16px 88px; }
+  .hh-admin-header { align-items: flex-start; flex-direction: column; gap: 18px; }
+  .hh-admin-header-actions { justify-content: flex-start; }
+  .hh-admin-toolbar-hint { width: 100%; margin-left: 0; }
+  .hh-admin-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hh-admin-main-grid,
+  .hh-admin-secondary-grid { grid-template-columns: 1fr; }
+  .hh-admin-chart { height: 170px; }
+  .hh-admin-chart-bar-wrap { height: 118px; }
+}
+
+@media (max-width: 390px) {
+  .hh-admin-page { padding-right: 12px; padding-left: 12px; }
+  .hh-admin-metric-grid { gap: 9px; }
+  .hh-admin-metric { min-height: 112px; padding: 12px; }
+  .hh-admin-metric-icon { width: 32px; height: 32px; }
+  .hh-admin-metric strong { font-size: 1.28rem; }
+  .hh-admin-panel { padding: 15px; }
+  .hh-admin-header h1 { font-size: 2rem; }
+  .hh-admin-floating-logout { right: 12px; bottom: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hh-admin-refresh-button,
+  .hh-admin-secondary-button,
+  .hh-admin-floating-logout { transition: none; }
+  .hh-admin-spin { animation: none; }
+}
