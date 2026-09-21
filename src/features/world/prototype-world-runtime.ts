@@ -306,6 +306,7 @@ export const PET_MAX_DIMENSION_RATIO = 0.42;
 const WORLD_NPC_GILT_GROUND_LIFT = 0.033;
 const WORLD_GLTF_LOAD_CONCURRENCY = 2;
 
+
 export function getPetWorldScale({
   requestedScale,
   petHeight,
