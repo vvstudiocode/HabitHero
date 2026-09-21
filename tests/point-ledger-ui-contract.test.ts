@@ -41,6 +41,14 @@ describe('point ledger UI contracts', () => {
     assert.match(parentDashboardSource, /historyChild\.tasks\.find/);
   });
 
+  it('makes each point ledger entry expandable so its task can be inspected', () => {
+    assert.match(pointLedgerHistorySource, /getTaskDetails\?:/);
+    assert.match(pointLedgerHistorySource, /<details key=\{entry\.id\}/);
+    assert.match(pointLedgerHistorySource, /<summary[\s\S]*?aria-controls=\{entryDetailsId\}/);
+    assert.match(pointLedgerHistorySource, /id=\{entryDetailsId\}/);
+    assert.match(childDashboardSource, /getTaskDetails=\{\(taskId\) => activeChild\.tasks\.find/);
+  });
+
   it('does not render the redundant point adjustment helper copy', () => {
     assert.doesNotMatch(parentDashboardSource, /這段原因會顯示在小孩的點數明細中。/);
   });
