@@ -40,6 +40,8 @@ export interface AdminDailyActivity {
   app_opens: number;
   sessions_started: number;
   sessions_ended: number;
+  /** Optional additive field from the SQL contract correction. */
+  sessions_observed?: number;
   session_seconds: number;
   avg_session_seconds: number;
   screen_views: number;
@@ -112,6 +114,11 @@ function asNumber(value: unknown) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function asOptionalNumber(value: unknown) {
+  if (value === undefined || value === null || value === '') return undefined;
+  return asNumber(value);
+}
+
 function asString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
@@ -161,6 +168,7 @@ export function parseAdminAnalyticsPayload(value: unknown): AdminAnalyticsPayloa
       app_opens: asNumber(row.app_opens),
       sessions_started: asNumber(row.sessions_started),
       sessions_ended: asNumber(row.sessions_ended),
+      sessions_observed: asOptionalNumber(row.sessions_observed),
       session_seconds: asNumber(row.session_seconds),
       avg_session_seconds: asNumber(row.avg_session_seconds),
       screen_views: asNumber(row.screen_views),
