@@ -1705,6 +1705,7 @@ export function ChildDashboard({ onLogout, onSwitchChild }: ChildDashboardProps)
               childProfileId={activeChild.id}
               childName={activeChild.name}
               loadPage={loadPointLedgerPage}
+              getTaskDetails={(taskId) => activeChild.tasks.find((task) => task.id === taskId) ?? null}
               collapsible
               defaultOpen={false}
             />

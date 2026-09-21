@@ -1595,6 +1595,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
               childName={historyChild.name}
               loadPage={loadPointLedgerPage}
               getTaskName={(taskId) => historyChild.tasks.find((task) => task.id === taskId)?.name ?? null}
+              getTaskDetails={(taskId) => historyChild.tasks.find((task) => task.id === taskId) ?? null}
             />
           </ModalShell>
         );

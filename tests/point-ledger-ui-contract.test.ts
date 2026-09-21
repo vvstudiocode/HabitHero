@@ -6,6 +6,7 @@ import type { PointLedgerViewModel } from '../src/types';
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const pointLedgerHistorySource = read('src/components/PointLedgerHistory.tsx');
+const childDashboardSource = read('src/components/ChildDashboard.tsx');
 const parentDashboardSource = read('src/components/ParentDashboard.tsx');
 const neutralThemeStyles = read('src/styles/neutral-theme.css');
 

@@ -12,11 +12,20 @@ interface PointLedgerHistoryProps {
   childName: string;
   loadPage: (childId: string, page: number, pageSize?: number) => Promise<PointLedgerPage>;
   getTaskName?: (taskId: string) => string | null;
+  getTaskDetails?: (taskId: string) => PointLedgerTaskDetails | null;
   pageSize?: number;
   title?: string;
   className?: string;
   collapsible?: boolean;
   defaultOpen?: boolean;
+}
+
+interface PointLedgerTaskDetails {
+  name: string;
+  description?: string | null;
+  reflection?: string | null;
+  parentFeedback?: string | null;
+  parentCorrection?: string | null;
 }
 
 function getEntryLabel(entry: PointLedgerViewModel): string {
@@ -55,6 +64,7 @@ export function PointLedgerHistory({
   childName,
   loadPage,
   getTaskName,
+  getTaskDetails,
   pageSize = DEFAULT_POINT_LEDGER_PAGE_SIZE,
   title = '點數明細',
   className = '',
@@ -136,24 +146,58 @@ export function PointLedgerHistory({
             {result.entries.map((entry) => {
               const positive = entry.pointsDelta > 0;
               const description = getEntryDescription(entry, getTaskName);
+              const taskDetails = entry.taskId ? getTaskDetails?.(entry.taskId) : null;
+              const entryDetailsId = `point-ledger-entry-${entry.id}`;
               return (
-                <article key={entry.id} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${positive ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`} aria-hidden="true">
-                    {getEntryIcon(entry.entryType, entry.pointsDelta)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <h4 className="font-black text-gray-900">{getEntryLabel(entry)}</h4>
-                      <time className="text-xs font-bold text-gray-400" dateTime={new Date(entry.createdAt).toISOString()}>{formatEntryDate(entry.createdAt)}</time>
+                <details key={entry.id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                  <summary
+                    aria-controls={entryDetailsId}
+                    className="flex min-h-20 cursor-pointer list-none items-center gap-3 p-3 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-400 [&::-webkit-details-marker]:hidden"
+                  >
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${positive ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`} aria-hidden="true">
+                      {getEntryIcon(entry.entryType, entry.pointsDelta)}
                     </div>
-                    {description && <p className="mt-1 break-words text-sm font-bold text-gray-500">{description}</p>}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h4 className="font-black text-gray-900">{getEntryLabel(entry)}</h4>
+                        <time className="text-xs font-bold text-gray-400" dateTime={new Date(entry.createdAt).toISOString()}>{formatEntryDate(entry.createdAt)}</time>
+                      </div>
+                      {description && <p className="mt-1 break-words text-sm font-bold text-gray-500">{description}</p>}
+                    </div>
+                    <div className={`shrink-0 text-right text-base font-black ${positive ? 'text-amber-700' : 'text-rose-700'}`}>
+                      <span aria-hidden="true">{positive ? '+' : ''}</span>
+                      <PointValue value={Math.abs(entry.pointsDelta)} iconSize={14} />
+                      <span className="sr-only">{positive ? '增加' : '扣除'} {Math.abs(entry.pointsDelta)} 點</span>
+                    </div>
+                    <ChevronDown size={18} className="shrink-0 text-gray-400 transition-transform group-open:rotate-180" aria-hidden="true" />
+                  </summary>
+                  <div id={entryDetailsId} className="space-y-3 border-t border-gray-100 bg-gray-50/70 px-4 py-3 text-sm" aria-label={`${taskDetails?.name ?? description ?? getEntryLabel(entry)}詳細內容`}>
+                    {entry.entryType === 'task_approved' ? (
+                      <>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-gray-500">任務</p>
+                          <p className="mt-1 break-words font-black text-gray-900">{taskDetails?.name ?? description ?? '任務已完成'}</p>
+                        </div>
+                        {taskDetails?.description && (
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-gray-500">任務說明</p>
+                            <p className="mt-1 whitespace-pre-wrap break-words leading-6 text-gray-700">{taskDetails.description}</p>
+                          </div>
+                        )}
+                        {(taskDetails?.reflection || taskDetails?.parentFeedback || taskDetails?.parentCorrection) && (
+                          <div className="space-y-1 rounded-xl bg-white p-3 leading-6 text-gray-700">
+                            {taskDetails.reflection && <p><strong>完成心得：</strong>{taskDetails.reflection}</p>}
+                            {taskDetails.parentFeedback && <p><strong>家長回饋：</strong>{taskDetails.parentFeedback}</p>}
+                            {taskDetails.parentCorrection && <p><strong>補充提醒：</strong>{taskDetails.parentCorrection}</p>}
+                          </div>
+                        )}
+                        {!taskDetails && <p className="text-gray-500">目前找不到這筆紀錄對應的任務內容。</p>}
+                      </>
+                    ) : (
+                      <p className="break-words text-gray-700">{description ?? '這筆紀錄沒有補充內容。'}</p>
+                    )}
                   </div>
-                  <div className={`shrink-0 text-right text-base font-black ${positive ? 'text-amber-700' : 'text-rose-700'}`}>
-                    <span aria-hidden="true">{positive ? '+' : ''}</span>
-                    <PointValue value={Math.abs(entry.pointsDelta)} iconSize={14} />
-                    <span className="sr-only">{positive ? '增加' : '扣除'} {Math.abs(entry.pointsDelta)} 點</span>
-                  </div>
-                </article>
+                </details>
               );
             })}
           </div>
