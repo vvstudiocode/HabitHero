@@ -228,8 +228,8 @@ export function ParentAdventureWorkspace({
             <button type="button" aria-pressed={view === 'list'} className={toolbarButtonClass(view === 'list')} onClick={() => setView('list')}>任務清單</button>
           </div>
           <div className="hh-adventure-actions">
-            <button data-tour="add-daily-adventure" type="button" disabled={children.length === 0} className={toolbarButtonClass(false)} onClick={() => openForm('daily')}>＋ 每日冒險</button>
-            <button type="button" disabled={children.length === 0} className={toolbarButtonClass(false)} onClick={() => openForm('general')}>＋ 一般冒險</button>
+            <button data-tour="add-daily-adventure" data-analytics-id="parent-daily-adventure-add" type="button" disabled={children.length === 0} className={toolbarButtonClass(false)} onClick={() => openForm('daily')}>＋ 每日冒險</button>
+            <button data-analytics-id="parent-general-adventure-add" type="button" disabled={children.length === 0} className={toolbarButtonClass(false)} onClick={() => openForm('general')}>＋ 一般冒險</button>
           </div>
         </div>
 

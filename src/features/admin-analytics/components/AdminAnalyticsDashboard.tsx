@@ -152,6 +152,8 @@ function AnalyticsContent({ payload, error, onRefresh, refreshing }: { payload: 
   }), { planned: 0, submitted: 0, completed: 0 });
   const hasBehaviorData = payload.dailyActivity.some((row) => row.total_analytics_events > 0);
   const tutorialMax = Math.max(1, ...payload.tutorial.map((row) => row.unique_users));
+  const parentFunnelSteps = payload.parentTaskFunnel;
+  const parentFunnelBase = parentFunnelSteps[0]?.unique_users ?? 0;
 
   return (
     <main className="hh-admin-page">
@@ -203,6 +205,105 @@ function AnalyticsContent({ payload, error, onRefresh, refreshing }: { payload: 
           </div>
           <p className="hh-admin-panel-footnote">完成率 {funnelTotals.planned ? `${(funnelTotals.completed / funnelTotals.planned * 100).toFixed(1)}%` : '尚無任務'} · 全部既有任務資料</p>
         </article>
+      </section>
+
+      <section className="hh-admin-panel" aria-label="家長發任務漏斗">
+        <div className="hh-admin-panel-heading"><div><p className="hh-admin-section-kicker">PARENT TASK FUNNEL</p><h2>家長發任務漏斗</h2></div><span>全部既有資料</span></div>
+        {parentFunnelSteps.length === 0
+          ? <p className="hh-admin-empty">尚未收到家長行為事件。</p>
+          : (
+          <div className="hh-admin-funnel">
+            {parentFunnelSteps.map((step, index) => {
+              const previous = index > 0 ? parentFunnelSteps[index - 1]?.unique_users ?? 0 : null;
+              const conversion = parentFunnelBase > 0 ? (step.unique_users / parentFunnelBase) * 100 : 0;
+              const drop = previous !== null ? previous - step.unique_users : null;
+              const width = parentFunnelBase > 0 ? Math.max(5, (step.unique_users / parentFunnelBase) * 100) : 5;
+              const isFamilyStep = step.step_key === 'parent_task_created';
+              return (
+                <div className="hh-admin-funnel-row" key={step.step_key}>
+                  <div>
+                    <span>{step.step_label}</span>
+                    <b>{step.unique_users} {isFamilyStep ? '家庭' : '帳號'}</b>
+                  </div>
+                  <div className="hh-admin-funnel-track"><i style={{ width: `${width}%` }} /></div>
+                  <small className="hh-admin-panel-footnote" style={{ marginTop: 4 }}>
+                    轉換 {conversion.toFixed(1)}% · 事件 {step.total_events} 次
+                    {drop !== null && drop > 0 ? ` · 上一步流失 ${drop} 個` : ''}
+                    {drop !== null && drop <= 0 ? ' · 無流失' : ''}
+                  </small>
+                </div>
+              );
+            })}
+          </div>
+            )}
+        <p className="hh-admin-panel-footnote">前三步算家長帳號數；「成功發佈任務」以有任務的家庭數計。行為事件從追蹤上線後開始累積，舊任務不受影響。</p>
+      </section>
+
+      <section className="hh-admin-panel" aria-label="家長審核漏斗">
+        <div className="hh-admin-panel-heading"><div><p className="hh-admin-section-kicker">PARENT REVIEW FUNNEL</p><h2>家長審核漏斗</h2></div><span>全部既有資料</span></div>
+        {payload.parentReviewFunnel.length === 0
+          ? <p className="hh-admin-empty">尚未收到家長審核行為事件。</p>
+          : (
+          <div className="hh-admin-funnel">
+            {payload.parentReviewFunnel.map((step, index) => {
+              const previous = index > 0 ? payload.parentReviewFunnel[index - 1]?.unique_users ?? 0 : null;
+              const base = payload.parentReviewFunnel[0]?.unique_users ?? 0;
+              const conversion = base > 0 ? (step.unique_users / base) * 100 : 0;
+              const drop = previous !== null ? previous - step.unique_users : null;
+              const width = base > 0 ? Math.max(5, (step.unique_users / base) * 100) : 5;
+              const isFamilyStep = step.step_key === 'parent_task_reviewed';
+              return (
+                <div className="hh-admin-funnel-row" key={step.step_key}>
+                  <div>
+                    <span>{step.step_label}</span>
+                    <b>{step.unique_users} {isFamilyStep ? '家庭' : '帳號'}</b>
+                  </div>
+                  <div className="hh-admin-funnel-track"><i style={{ width: `${width}%` }} /></div>
+                  <small className="hh-admin-panel-footnote" style={{ marginTop: 4 }}>
+                    轉換 {conversion.toFixed(1)}% · 事件 {step.total_events} 次
+                    {drop !== null && drop > 0 ? ` · 上一步流失 ${drop} 個` : ''}
+                    {drop !== null && drop <= 0 ? ' · 無流失' : ''}
+                  </small>
+                </div>
+              );
+            })}
+          </div>
+            )}
+        <p className="hh-admin-panel-footnote">前三步算家長帳號數；「完成審核」以有審核任務的家庭數計。行為事件從追蹤上線後開始累積。</p>
+      </section>
+
+      <section className="hh-admin-panel" aria-label="家長獎勵漏斗">
+        <div className="hh-admin-panel-heading"><div><p className="hh-admin-section-kicker">PARENT REWARD FUNNEL</p><h2>家長獎勵漏斗</h2></div><span>全部既有資料</span></div>
+        {payload.parentRewardFunnel.length === 0
+          ? <p className="hh-admin-empty">尚未收到家長獎勵行為事件。</p>
+          : (
+          <div className="hh-admin-funnel">
+            {payload.parentRewardFunnel.map((step, index) => {
+              const previous = index > 0 ? payload.parentRewardFunnel[index - 1]?.unique_users ?? 0 : null;
+              const base = payload.parentRewardFunnel[0]?.unique_users ?? 0;
+              const conversion = base > 0 ? (step.unique_users / base) * 100 : 0;
+              const drop = previous !== null ? previous - step.unique_users : null;
+              const width = base > 0 ? Math.max(5, (step.unique_users / base) * 100) : 5;
+              const isFamilyStep = ['parent_reward_created', 'parent_wishlist_approved'].includes(step.step_key);
+              const unit = isFamilyStep ? '家庭' : '帳號';
+              return (
+                <div className="hh-admin-funnel-row" key={step.step_key}>
+                  <div>
+                    <span>{step.step_label}</span>
+                    <b>{step.unique_users} {unit}</b>
+                  </div>
+                  <div className="hh-admin-funnel-track"><i style={{ width: `${width}%` }} /></div>
+                  <small className="hh-admin-panel-footnote" style={{ marginTop: 4 }}>
+                    轉換 {conversion.toFixed(1)}% · 事件 {step.total_events} 次
+                    {drop !== null && drop > 0 ? ` · 上一步流失 ${drop} 個` : ''}
+                    {drop !== null && drop <= 0 ? ' · 無流失' : ''}
+                  </small>
+                </div>
+              );
+            })}
+          </div>
+            )}
+        <p className="hh-admin-panel-footnote">前四步算家長帳號數；「成功建立獎勵」與「許願完成兌現」以有獎勵/已兌現許願的家庭數計。行為事件從追蹤上線後開始累積。</p>
       </section>
 
       <section className="hh-admin-secondary-grid">

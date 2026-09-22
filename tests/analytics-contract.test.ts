@@ -22,6 +22,39 @@ test('analytics migration stores authenticated events behind RPCs and RLS', asyn
   assert.match(migration, /scene_dwell/i);
 });
 
+test('parent task funnel migration exposes ordered steps through the admin RPC', async () => {
+  const funnelMigration = await readFile(
+    new URL('../supabase/migrations/20260922083608_add_parent_task_funnel.sql', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(funnelMigration, /create or replace view private\.analytics_parent_task_funnel/i);
+  assert.match(funnelMigration, /parent-task-add/i);
+  assert.match(funnelMigration, /parent-daily-adventure-add/i);
+  assert.match(funnelMigration, /parent-general-adventure-add/i);
+  assert.match(funnelMigration, /'parentTaskFunnel'/);
+  assert.match(funnelMigration, /revoke all on private\.analytics_parent_task_funnel from public, anon, authenticated/i);
+});
+
+test('parent review and reward funnel migration exposes ordered steps through the admin RPC', async () => {
+  const funnelMigration = await readFile(
+    new URL('../supabase/migrations/20260922084502_add_parent_review_reward_funnels.sql', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(funnelMigration, /create or replace view private\.analytics_parent_review_funnel/i);
+  assert.match(funnelMigration, /parent-review-open/i);
+  assert.match(funnelMigration, /parent-review-approve/i);
+  assert.match(funnelMigration, /parent-review-request/i);
+  assert.match(funnelMigration, /parent-reward-add/i);
+  assert.match(funnelMigration, /parent-reward-save/i);
+  assert.match(funnelMigration, /parent-wishlist-approve/i);
+  assert.match(funnelMigration, /'parentReviewFunnel'/);
+  assert.match(funnelMigration, /'parentRewardFunnel'/);
+  assert.match(funnelMigration, /revoke all on private\.analytics_parent_review_funnel from public, anon, authenticated/i);
+  assert.match(funnelMigration, /revoke all on private\.analytics_parent_reward_funnel from public, anon, authenticated/i);
+});
+
 test('admin dashboard is available as a Vercel SPA route outside the family data provider', async () => {
   const app = await readFile(appPath, 'utf8');
   const vercel = JSON.parse(await readFile(vercelPath, 'utf8')) as { rewrites?: Array<{ destination?: string; source?: string }> };

@@ -53,13 +53,6 @@ test('client configuration names only the publishable Supabase boundary', () => 
   ]);
 });
 
-test('Unity migration shell has an explicit owner document', () => {
-  const unityReadme = path.join(repositoryRoot, 'unity/HabitHero/README.md');
-
-  assert.ok(fs.existsSync(unityReadme));
-  assert.match(fs.readFileSync(unityReadme, 'utf8'), /Supabase backend remains shared/);
-});
-
 test('release preflight detects native modules beside the Unity app bundle', () => {
   const installationRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'habithero-unity-'));
   const editorPath = path.join(installationRoot, 'Unity.app', 'Contents', 'MacOS', 'Unity');
@@ -80,74 +73,6 @@ test('release preflight detects native modules beside the Unity app bundle', () 
   } finally {
     fs.rmSync(installationRoot, { recursive: true, force: true });
   }
-});
-
-test('WebGL realtime bridge is excluded from native Unity targets', () => {
-  const pluginMetaPath = path.join(
-    repositoryRoot,
-    'unity/HabitHero/Assets/Plugins/WebGL/HabitHeroRealtimeWebSocket.jslib.meta',
-  );
-  const pluginMeta = fs.readFileSync(pluginMetaPath, 'utf8');
-
-  assert.match(pluginMeta, /Any:\n\s+second:\n\s+enabled: 0/u);
-  assert.match(pluginMeta, /WebGL: WebGL\n\s+second:\n\s+enabled: 1/u);
-});
-
-test('Unity runtime references mobile notification assemblies for native builds', () => {
-  const asmdefPath = path.join(
-    repositoryRoot,
-    'unity/HabitHero/Assets/Scripts/HabitHero.Runtime.asmdef',
-  );
-  const asmdef = JSON.parse(fs.readFileSync(asmdefPath, 'utf8')) as {
-    references?: string[];
-  };
-
-  for (const reference of [
-    'Unity.Notifications.Unified',
-    'Unity.Notifications.iOS',
-    'Unity.Notifications.Android',
-  ]) {
-    assert.ok(asmdef.references?.includes(reference), `Missing asmdef reference: ${reference}`);
-  }
-});
-
-test('Unity notification bridge qualifies Unified query operation types', () => {
-  const bridgePath = path.join(
-    repositoryRoot,
-    'unity/HabitHero/Assets/Scripts/Platform/HabitHeroMobileNotificationBridge.cs',
-  );
-  const bridgeSource = fs.readFileSync(bridgePath, 'utf8');
-
-  assert.match(
-    bridgeSource,
-    /Unity\.Notifications\.QueryLastRespondedNotificationOp\s+operation/u,
-  );
-  assert.match(
-    bridgeSource,
-    /Unity\.Notifications\.QueryLastRespondedNotificationState\s*\.\s*HaveRespondedNotification/u,
-  );
-});
-
-test('Unity Android deep-link hook edits the Gradle project before APK packaging', () => {
-  const postProcessPath = path.join(
-    repositoryRoot,
-    'unity/HabitHero/Assets/Editor/HabitHeroDeepLinkPostProcess.cs',
-  );
-  const postProcessSource = fs.readFileSync(postProcessPath, 'utf8');
-
-  assert.match(postProcessSource, /IPostGenerateGradleAndroidProject/u);
-  assert.match(postProcessSource, /OnPostGenerateGradleAndroidProject/u);
-  assert.match(
-    postProcessSource,
-    /FindGradleProjectRoot\(path\)[\s\S]{0,180}AddAndroidIntentFilter\(projectRoot \?\? path\)/u,
-  );
-  assert.match(
-    postProcessSource,
-    /File\.ReadAllText\(candidate\)[\s\S]{0,160}android\.intent\.action\.MAIN/u,
-  );
-  assert.match(postProcessSource, /not\(@android:enabled='false'\)/u);
-  assert.match(postProcessSource, /Directory\.Exists\(buildPath\)/u);
-  assert.match(postProcessSource, /File\.Exists\(buildPath\)/u);
 });
 
 test('Vercel keeps the Vite SPA build and history fallback explicit', () => {

@@ -187,6 +187,15 @@ test('automatic clicks accept only explicit static control ids', () => {
   });
 
   assert.equal(getStaticAnalyticsControlId(node('child-open-inventory', '開啟背包', '背包')), 'child-open-inventory');
+  assert.equal(getStaticAnalyticsControlId(node('parent-task-add', null, '新增')), 'parent-task-add');
+  assert.equal(getStaticAnalyticsControlId(node('parent-daily-adventure-add', null, '每日冒險')), 'parent-daily-adventure-add');
+  assert.equal(getStaticAnalyticsControlId(node('parent-general-adventure-add', null, '一般冒險')), 'parent-general-adventure-add');
+  assert.equal(getStaticAnalyticsControlId(node('parent-review-open', null, '審核')), 'parent-review-open');
+  assert.equal(getStaticAnalyticsControlId(node('parent-review-approve', null, '通過')), 'parent-review-approve');
+  assert.equal(getStaticAnalyticsControlId(node('parent-review-request', null, '請補充')), 'parent-review-request');
+  assert.equal(getStaticAnalyticsControlId(node('parent-reward-add', null, '新增')), 'parent-reward-add');
+  assert.equal(getStaticAnalyticsControlId(node('parent-reward-save', null, '上架獎勵')), 'parent-reward-save');
+  assert.equal(getStaticAnalyticsControlId(node('parent-wishlist-approve', null, '上架')), 'parent-wishlist-approve');
   assert.equal(getStaticAnalyticsControlId(node(null, '開啟背包', '背包')), null);
   assert.equal(getStaticAnalyticsControlId(node(null, null, '包含使用者名稱')), null);
   assert.equal(getStaticAnalyticsControlId(node('user-name', null, null)), null);

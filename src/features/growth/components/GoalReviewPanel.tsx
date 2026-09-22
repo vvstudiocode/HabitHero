@@ -91,7 +91,7 @@ export function GoalReviewPanel({ proposedTasks, pendingTasks, loading = false, 
               task={task}
               childName={task.childName}
               action={(
-                <button type="button" onClick={() => setReviewingTaskId(task.id)} className="min-h-11 rounded-xl bg-green-500 px-3 text-sm font-black text-white">
+                <button type="button" data-analytics-id="parent-review-open" onClick={() => setReviewingTaskId(task.id)} className="min-h-11 rounded-xl bg-green-500 px-3 text-sm font-black text-white">
                   審核
                 </button>
               )}

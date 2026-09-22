@@ -53,6 +53,7 @@ export function ParentFeedbackForm({ task, childName, loading = false, onCancel,
           <button type="button" onClick={onCancel} className="hh-review-dialog-action hh-review-dialog-cancel">取消</button>
           <button
             type="button"
+            data-analytics-id="parent-review-request"
             onClick={() => void submit(false)}
             disabled={loading || !revisionNote.trim()}
             className="hh-review-dialog-action hh-review-dialog-request"
@@ -61,6 +62,7 @@ export function ParentFeedbackForm({ task, childName, loading = false, onCancel,
           </button>
           <button
             type="button"
+            data-analytics-id="parent-review-approve"
             onClick={() => void submit(true)}
             disabled={loading || approvedPoints < 1}
             className="hh-review-dialog-action hh-review-dialog-approve"

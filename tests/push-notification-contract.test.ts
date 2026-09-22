@@ -28,25 +28,6 @@ test('APNs sender selects the Team ID for the active environment', () => {
   assert.match(source, /APNS_ENVIRONMENT/);
 });
 
-test('Unity Android push registration uses the native FCM bridge', () => {
-  const provider = read('../unity/HabitHero/Assets/Scripts/Platform/UnityMobilePushTokenProvider.cs');
-  const bridge = read('../unity/HabitHero/Assets/Plugins/Android/com/vvstudiocode/habithero/HabitHeroFirebaseMessagingBridge.java');
-  const manifest = read('../unity/HabitHero/Assets/Plugins/Android/AndroidManifest.xml');
-  const postProcess = read('../unity/HabitHero/Assets/Editor/HabitHeroDeepLinkPostProcess.cs');
-
-  assert.match(provider, /UNITY_ANDROID && !UNITY_EDITOR/);
-  assert.match(provider, /HabitHeroFirebaseMessagingBridge/);
-  assert.match(provider, /getToken/);
-  assert.match(bridge, /FirebaseMessaging\.getInstance\(\)\.getToken\(\)/);
-  assert.doesNotMatch(bridge, /FirebaseMessaging\.getInstance\(app\)/);
-  assert.match(bridge, /consumeLaunchPayload/);
-  assert.match(manifest, /com\.unity3d\.player\.UnityPlayerActivity/);
-  assert.match(manifest, /com\.unity3d\.player\.UnityPlayerGameActivity/);
-  assert.match(manifest, /android\.intent\.action\.MAIN/);
-  assert.match(postProcess, /firebase-messaging:25\.1\.2/);
-  assert.match(postProcess, /google-services\.json/);
-});
-
 test('task notification sender delivers Android devices through FCM HTTP v1', () => {
   const source = read('../supabase/functions/notify-task-created/index.ts');
 

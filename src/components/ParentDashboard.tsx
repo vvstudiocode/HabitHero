@@ -930,7 +930,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             <section>
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-bold text-gray-900">今日任務清單</h2>
-                <button data-tour="task-add" onClick={() => openTaskForm()} disabled={state.children.length === 0} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg disabled:cursor-not-allowed disabled:opacity-50">
+                <button data-tour="task-add" data-analytics-id="parent-task-add" onClick={() => openTaskForm()} disabled={state.children.length === 0} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg disabled:cursor-not-allowed disabled:opacity-50">
                   <Plus size={16} /> 新增
                 </button>
               </div>
@@ -1111,7 +1111,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
             <section>
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-bold text-gray-900">獎勵</h2>
-                <button onClick={() => openRewardForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
+                <button data-analytics-id="parent-reward-add" onClick={() => openRewardForm()} className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg">
                   <Plus size={16} /> 新增
                 </button>
               </div>
@@ -1210,6 +1210,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                         onChange={(e) => setWishlistPricing(p => ({...p, [item.id]: Number(e.target.value)}))}
                       />
                       <button 
+                        data-analytics-id="parent-wishlist-approve"
                         onClick={() => void handleApproveWishlist(item.childId, item.id)} 
                         disabled={loading}
                         className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-xl text-sm font-bold shadow-sm disabled:cursor-wait disabled:opacity-50"
@@ -1713,7 +1714,7 @@ export function ParentDashboard({ onSwitchToChild, onLogout, signupConsentAccept
                 }} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" />
                 {rewardFormError && <p className="mt-1 text-sm font-medium text-red-600" role="alert">{rewardFormError}</p>}
               </div>
-              <button onClick={() => void handleSaveReward()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingReward ? '儲存變更' : '上架獎勵'}</button>
+              <button data-analytics-id="parent-reward-save" onClick={() => void handleSaveReward()} disabled={loading} className="w-full bg-blue-500 text-white p-4 rounded-xl font-medium mt-2 disabled:cursor-wait disabled:opacity-50">{loading ? '儲存中…' : editingReward ? '儲存變更' : '上架獎勵'}</button>
             </div>
         </ModalShell>
       )}

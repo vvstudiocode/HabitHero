@@ -81,6 +81,15 @@ export interface AdminSceneDwellRow {
   avg_dwell_seconds: number;
 }
 
+export interface AdminParentFunnelRow {
+  step_order: number;
+  step_key: string;
+  step_label: string;
+  unique_users: number;
+  unique_families: number;
+  total_events: number;
+}
+
 export interface AdminAnalyticsPayload {
   summary: AdminChildSummary[];
   funnel: AdminFunnelRow[];
@@ -88,6 +97,9 @@ export interface AdminAnalyticsPayload {
   retention: AdminRetentionRow[];
   tutorial: AdminTutorialRow[];
   sceneDwell: AdminSceneDwellRow[];
+  parentTaskFunnel: AdminParentFunnelRow[];
+  parentReviewFunnel: AdminParentFunnelRow[];
+  parentRewardFunnel: AdminParentFunnelRow[];
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -99,6 +111,9 @@ const emptyPayload: AdminAnalyticsPayload = {
   retention: [],
   tutorial: [],
   sceneDwell: [],
+  parentTaskFunnel: [],
+  parentReviewFunnel: [],
+  parentRewardFunnel: [],
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -204,6 +219,30 @@ export function parseAdminAnalyticsPayload(value: unknown): AdminAnalyticsPayloa
       dwell_seconds: asNumber(row.dwell_seconds),
       avg_dwell_seconds: asNumber(row.avg_dwell_seconds),
     })),
+    parentTaskFunnel: asArray(payload.parentTaskFunnel ?? payload.parent_task_funnel).map((row) => ({
+      step_order: asNumber(row.step_order),
+      step_key: asString(row.step_key),
+      step_label: asString(row.step_label, '未命名步驟'),
+      unique_users: asNumber(row.unique_users),
+      unique_families: asNumber(row.unique_families),
+      total_events: asNumber(row.total_events),
+    })).sort((left, right) => left.step_order - right.step_order),
+    parentReviewFunnel: asArray(payload.parentReviewFunnel ?? payload.parent_review_funnel).map((row) => ({
+      step_order: asNumber(row.step_order),
+      step_key: asString(row.step_key),
+      step_label: asString(row.step_label, '未命名步驟'),
+      unique_users: asNumber(row.unique_users),
+      unique_families: asNumber(row.unique_families),
+      total_events: asNumber(row.total_events),
+    })).sort((left, right) => left.step_order - right.step_order),
+    parentRewardFunnel: asArray(payload.parentRewardFunnel ?? payload.parent_reward_funnel).map((row) => ({
+      step_order: asNumber(row.step_order),
+      step_key: asString(row.step_key),
+      step_label: asString(row.step_label, '未命名步驟'),
+      unique_users: asNumber(row.unique_users),
+      unique_families: asNumber(row.unique_families),
+      total_events: asNumber(row.total_events),
+    })).sort((left, right) => left.step_order - right.step_order),
   };
 }
 
